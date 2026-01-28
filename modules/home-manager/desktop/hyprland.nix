@@ -1,6 +1,9 @@
 { config, pkgs, ... }:
 
 {
+  imports = [
+    ./waybar.nix
+  ];
   # Packages
   home.packages = with pkgs; [
     rofi
@@ -45,8 +48,8 @@
 
       # General
       general = {
-        gaps_in = 5;
-        gaps_out = 20;
+        gaps_in = 8;
+        gaps_out = 16;
         border_size = 2;
         "col.active_border" = "rgba(33ccffee) rgba(00ff99ee) 45deg";
         "col.inactive_border" = "rgba(595959aa)";
@@ -201,34 +204,7 @@
         "$mainMod, mouse:273, resizewindow"
       ];
 
-      # Window rules
-      windowrule = [
-        {
-          name = "suppress-maximize-events";
-          match = {
-            class = ".*";
-          };
-          suppress_event = "maximize";
-        }
-        {
-          name = "fix-xwayland-drags";
-          match = {
-            class = "^$";
-            title = "^$";
-            xwayland = true;
-            float = true;
-            fullscreen = false;
-            pin = false;
-          };
-          no_focus = true;
-        }
-      ];
     };
-  };
-
-  programs.waybar = {
-    enable = true;
-    systemd.enable = true;
   };
 
   services.dunst = {
