@@ -1,0 +1,16 @@
+# sops-nix age keys (private keys should never be committed)
+*.key
+
+# Decrypted sops files
+sops/sops.decrypted.yaml
+
+# NixOS build results
+result
+result-*
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

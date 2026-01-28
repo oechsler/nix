@@ -1,0 +1,8 @@
+keys:
+  - &user_samuel age1jd4xd4pa2gyq83cnhftndr7xl4km2cmhyctyj3k69q9vfu3wqc6sfjcp4j
+
+creation_rules:
+  - path_regex: sops/sops.*\.yaml$
+    key_groups:
+      - age:
+          - *user_samuel

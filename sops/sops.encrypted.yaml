@@ -1,0 +1,17 @@
+wifi_ssid: ENC[AES256_GCM,data:5ZFIRRdZ/lXw1YxE,iv:C7yNS75sfbAiCZ+JhUOLeA3FGLE8/ECEDEjOvFpAAEA=,tag:/JdHqGyFNUq3sxoMOnl4wg==,type:str]
+wifi_psk: ENC[AES256_GCM,data:vgB2rDBNJNZkMTi6ySrvz3rdY/EQBGgvC74g67I=,iv:1aAnrkyuK8bVhtJJnGRy+zOX8rD3mtmPmNKzyshMlKU=,tag:E3FXY2y7/yq1qPLw5W5+2w==,type:str]
+sops:
+    age:
+        - recipient: age1jd4xd4pa2gyq83cnhftndr7xl4km2cmhyctyj3k69q9vfu3wqc6sfjcp4j
+          enc: |
+            -----BEGIN AGE ENCRYPTED FILE-----
+            YWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSBsWFU0c1R6TFJXZkoxTGo0
+            ek9KTlBDNGg4dnA3blBVQlNSVkUxR2s0ZnhzCnZhaWN3UGFaTXdJNmpGZlBzdTcx
+            SU1RRSsxSTZoa3g2TXU2UVQ2NnErK28KLS0tIGFESzl6aEhBOEtmWnlscHc1TEcy
+            Uy9udUNheEUrdkhJaVZueHRlOTR0U00Ka5nOfhJjTWqA8fwoKLijdaj6iUE8Pb2N
+            ZT7R43HBEqrV5y1yIg+KRhCNc46E+SHnLyvoYmM4tOl73DUa/ZzM/A==
+            -----END AGE ENCRYPTED FILE-----
+    lastmodified: "2026-01-28T16:45:50Z"
+    mac: ENC[AES256_GCM,data:5RFRNiWqFvHQq8zrbq1eTusyjJroq1uWTktYEv0ePQAcXAfr4ndBdt+wvs+kdimT9hjpFWYmyMopzTfrnMGhc/KANU2n53UjYIsnEwflRjd63TzAAtvkDdWh6mMCb1LvB8NRO7oAe6Q3mBtdaB5gzmBOvcvL+GsFnk9m8LbATRk=,iv:JT8Tom7r3TUD+k1r3s9JtvBWewove6IAhDl09eARpwA=,tag:q1TO8U7rrehrWlL3FQu6lw==,type:str]
+    unencrypted_suffix: _unencrypted
+    version: 3.11.0
