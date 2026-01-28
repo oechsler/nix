@@ -5,5 +5,6 @@
     isNormalUser = true;
     description = "Samuel Oechsler";
     extraGroups = [ "networkmanager" "wheel" ];
+    shell = pkgs.fish;
   };
 }

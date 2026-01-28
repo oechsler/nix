@@ -2,8 +2,9 @@
 
 {
   imports = [
-    ./browsers.nix
-    ./dev-tools.nix
     ./system-tools.nix
+    ./terminal.nix
+    ./development.nix
+    ./browsers.nix
   ];  
 }

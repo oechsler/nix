@@ -1,14 +1,16 @@
 { config, pkgs, ... }:
 
 {
-  # X11
-  services.xserver.enable = true;
+  # Keyboard Layout
   services.xserver.xkb = {
     layout = "de";
     variant = "";
   };
   
-  # Plasma
-  services.displayManager.sddm.enable = true;
+  services.displayManager.sddm = {
+    enable = true;
+    wayland.enable = true;
+  };
+  
   services.desktopManager.plasma6.enable = true;
 }

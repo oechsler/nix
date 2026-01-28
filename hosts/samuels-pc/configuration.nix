@@ -7,7 +7,7 @@
 
     # System modules
     ../../modules/system/boot.nix
-    ../../modules/system/nix-ld.nix
+    ../../modules/system/compat.nix
     ../../modules/system/networking.nix
     ../../modules/system/locale.nix
     ../../modules/system/users.nix
@@ -16,7 +16,8 @@
     
     # Desktop
     ../../modules/desktop/plasma.nix
-  
+    ../../modules/desktop/hyprland.nix
+
     # Programs
     ../../modules/programs
   ];
@@ -41,6 +42,7 @@
   home-manager = {
     extraSpecialArgs = { inherit inputs; };
     users.samuel = import ./home.nix;
+    backupFileExtension = "bak";
   };
     
   # System
