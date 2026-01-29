@@ -41,7 +41,12 @@
   # Home Manager
   home-manager = {
     extraSpecialArgs = { inherit inputs; };
-    users.samuel = import ./home.nix;
+    users.samuel = {
+      imports = [
+        ./home.nix
+        inputs.catppuccin.homeModules.catppuccin
+      ];
+    };
     backupFileExtension = "bak";
   };
     

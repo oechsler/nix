@@ -53,8 +53,8 @@
         gaps_in = 8;
         gaps_out = 16;
         border_size = 2;
-        "col.active_border" = "rgba(b4befeff)";
-        "col.inactive_border" = "rgba(45475aaa)";
+        "col.active_border" = "$accent";
+        "col.inactive_border" = "$surface0";
         resize_on_border = false;
         allow_tearing = false;
         layout = "dwindle";

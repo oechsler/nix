@@ -9,13 +9,15 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    catppuccin.url = "github:catppuccin/nix";
+
     sops-nix = {
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
-  outputs = { self, nixpkgs, home-manager, sops-nix, ... }@inputs: 
+  outputs = { self, nixpkgs, home-manager, catppuccin, sops-nix, ... }@inputs: 
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};

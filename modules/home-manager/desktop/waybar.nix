@@ -1,6 +1,8 @@
 { config, pkgs, ... }:
 
 {
+  catppuccin.waybar.mode = "createLink";
+
   programs.waybar = {
     enable = true;
     systemd.enable = true;
@@ -100,6 +102,6 @@
       };
     };
 
-    style = builtins.readFile ./waybar-style.css;
+    style = builtins.readFile ./waybar-style.scss;
   };
 }
