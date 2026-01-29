@@ -4,8 +4,10 @@
   imports = [
     ./waybar.nix
   ];
+
   # Packages
   home.packages = with pkgs; [
+    swww
     rofi
     brightnessctl
     playerctl
@@ -51,8 +53,8 @@
         gaps_in = 8;
         gaps_out = 16;
         border_size = 2;
-        "col.active_border" = "rgba(33ccffee) rgba(00ff99ee) 45deg";
-        "col.inactive_border" = "rgba(595959aa)";
+        "col.active_border" = "rgba(b4befeff)";
+        "col.inactive_border" = "rgba(45475aaa)";
         resize_on_border = false;
         allow_tearing = false;
         layout = "dwindle";
@@ -60,7 +62,7 @@
 
       # Decoration
       decoration = {
-        rounding = 10;
+        rounding = 16;
         active_opacity = 1.0;
         inactive_opacity = 1.0;
 
@@ -212,4 +214,8 @@
   };  
 
   services.hyprpolkitagent.enable = true;
+
+  services.swww = {
+    enable = true;
+  };
 }

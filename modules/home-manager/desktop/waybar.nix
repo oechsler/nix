@@ -10,8 +10,8 @@
         layer = "top";
         position = "top";
         height = 16;
-        spacing = 8;
-        margin-top = 8;
+        spacing = 0;
+        margin-top = 12;
         margin-left = 16;
         margin-right = 16;
 
