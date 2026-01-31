@@ -5,6 +5,7 @@
     ./waybar.nix
     ./rofi.nix
     ./awww.nix
+    ./papirus.nix
   ];
 
   # Packages
@@ -143,7 +144,8 @@
         "$mainMod, M, exit,"
         "$mainMod, E, exec, dolphin"
         "$mainMod, V, togglefloating,"
-        "$mainMod, R, exec, rofi -show drun"
+        "$mainMod, R, exec, ${config.rofi.toggle}"
+        "$mainMod, W, exec, ${config.rofi.windowList}"
         "$mainMod, P, pseudo,"
         "$mainMod, J, togglesplit,"
 
