@@ -11,6 +11,8 @@
     enable = true;
     wayland.enable = true;
   };
+
+  catppuccin.sddm.enable = true;
   
   services.desktopManager.plasma6.enable = true;
 }

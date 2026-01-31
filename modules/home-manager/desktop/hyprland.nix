@@ -1,16 +1,16 @@
-{ config, pkgs, ... }:
+{ config, pkgs, inputs, ... }:
 
 {
   imports = [
     ./waybar.nix
+    ./rofi.nix
   ];
 
   # Packages
-  home.packages = with pkgs; [
-    swww
-    rofi
-    brightnessctl
-    playerctl
+  home.packages = [
+    pkgs.brightnessctl
+    pkgs.playerctl
+    inputs.awww.packages.${pkgs.stdenv.hostPlatform.system}.default
   ];
 
   wayland.windowManager.hyprland = {
@@ -21,7 +21,11 @@
 
     settings = {
       # Monitor
-      monitor = ",preferred,auto,auto";
+      monitor = ",preferred,auto,1.6";
+
+      exec-once = [
+        "uwsm-app -- awww-daemon"
+      ];
 
       # Environment variables
       env = [
@@ -214,8 +218,4 @@
   };  
 
   services.hyprpolkitagent.enable = true;
-
-  services.swww = {
-    enable = true;
-  };
 }

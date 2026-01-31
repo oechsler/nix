@@ -4,6 +4,7 @@
   imports = [
     ./hardware-configuration.nix
     inputs.home-manager.nixosModules.default
+    inputs.catppuccin.nixosModules.catppuccin
 
     # System modules
     ../../modules/system/boot.nix
@@ -13,7 +14,7 @@
     ../../modules/system/users.nix
     ../../modules/system/audio.nix
     ../../modules/system/bluetooth.nix
-    
+
     # Desktop
     ../../modules/desktop/plasma.nix
     ../../modules/desktop/hyprland.nix
@@ -53,6 +54,13 @@
   # System
   nixpkgs.config.allowUnfree = true;
   services.printing.enable = true;
-  
+
+  # Catppuccin system-wide theming
+  catppuccin = {
+    enable = true;
+    flavor = "mocha";
+    accent = "lavender";
+  };
+
   system.stateVersion = "25.11";
 }

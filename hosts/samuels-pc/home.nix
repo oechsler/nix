@@ -3,6 +3,7 @@
 {
   imports = [
     ../../modules/home-manager/desktop/hyprland.nix
+    ../../modules/home-manager/programs
   ];
 
   # Home Manager needs a bit of information about you and the paths it should
