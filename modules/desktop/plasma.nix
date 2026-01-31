@@ -12,7 +12,10 @@
     wayland.enable = true;
   };
 
-  catppuccin.sddm.enable = true;
+  catppuccin.sddm = {
+    enable = true;
+    background = ../../backgrounds/Cloudsnight.jpg;
+  };
   
   services.desktopManager.plasma6.enable = true;
 }
