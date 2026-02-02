@@ -14,6 +14,7 @@
     ../../modules/system/users.nix
     ../../modules/system/audio.nix
     ../../modules/system/bluetooth.nix
+    ../../modules/system/fonts.nix
 
     # Desktop
     ../../modules/desktop/plasma.nix
@@ -27,10 +28,7 @@
   sops = {
     defaultSopsFile = ../../sops/sops.encrypted.yaml;
     age.keyFile = "/home/samuel/.config/sops/age/keys.txt";
-    secrets = {
-      wifi_ssid = {};
-      wifi_psk = {};
-    };
+    # WiFi secrets werden automatisch in networking.nix generiert
   };
 
   # Flakes
@@ -41,7 +39,7 @@
   
   # Home Manager
   home-manager = {
-    extraSpecialArgs = { inherit inputs; };
+    extraSpecialArgs = { inherit inputs; fonts = config.fonts.defaults; };
     users.samuel = {
       imports = [
         ./home.nix
