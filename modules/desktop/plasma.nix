@@ -1,5 +1,14 @@
 { config, pkgs, ... }:
 
+let
+  wallpaper = ../../backgrounds/Cloudsnight.jpg;
+
+  blurredWallpaper = pkgs.runCommand "blurred-wallpaper.jpg" {
+    buildInputs = [ pkgs.imagemagick ];
+  } ''
+    convert ${wallpaper} -blur 0x30 $out
+  '';
+in
 {
   # Keyboard Layout
   services.xserver.xkb = {
@@ -14,7 +23,8 @@
 
   catppuccin.sddm = {
     enable = true;
-    background = ../../backgrounds/Cloudsnight.jpg;
+    background = blurredWallpaper;
+    loginBackground = true;
   };
   
   services.desktopManager.plasma6.enable = true;
