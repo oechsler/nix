@@ -1,7 +1,13 @@
-{ config, pkgs, ... }:
+{ config, pkgs, fonts, ... }:
 
 {
-  programs.kitty.enable = true;
+  programs.kitty = {
+    enable = true;
+    font = {
+      name = fonts.monospace;
+      size = fonts.size;
+    };
+  };
 
   programs.starship = {
     enable = true;

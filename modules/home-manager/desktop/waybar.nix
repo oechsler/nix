@@ -1,5 +1,14 @@
-{ config, pkgs, ... }:
+{ config, pkgs, fonts, ... }:
 
+let
+  accent = config.catppuccin.accent;
+
+  rawStyle = builtins.readFile ./waybar-style.scss;
+  style = builtins.replaceStrings
+    [ "@blue" "system_font" ]
+    [ "@${accent}" fonts.monospace ]
+    rawStyle;
+in
 {
   catppuccin.waybar.mode = "createLink";
 
@@ -20,11 +29,11 @@
         # Layout
         modules-left = [ "custom/launcher" "hyprland/workspaces" "hyprland/window" ];
         modules-center = [ ];
-        modules-right = [ "tray" "network" "bluetooth" "battery" "clock" ];
+        modules-right = [ "tray" "network" "bluetooth" "pulseaudio" "battery" "clock" ];
 
-        # Launcher
+        # Launcher (Nix Snowflake)
         "custom/launcher" = {
-          format = "rofi";
+          format = "<span size='x-large' rise='-2000'>󱄅</span>";
           on-click = "rofi -show drun";
           tooltip = false;
         };
@@ -63,22 +72,37 @@
 
         # Network
         "network" = {
-          format-wifi = "  {essid}";
-          format-ethernet = "  {ifname}";
-          format-disconnected = "  Disconnected";
+          format-wifi = "{icon}  {essid}";
+          format-ethernet = "<span size='large'>󰈀</span>  {ifname}";
+          format-disconnected = "<span size='large'>󰤭</span>  Getrennt";
+          format-icons = [ "<span size='large'>󰤯</span>" "<span size='large'>󰤟</span>" "<span size='large'>󰤢</span>" "<span size='large'>󰤥</span>" "<span size='large'>󰤨</span>" ];
           tooltip-format = "{ifname} via {gwaddr}";
           tooltip-format-wifi = "{essid} ({signalStrength}%)";
         };
 
         # Bluetooth
         "bluetooth" = {
-          format = " {status}";
-          format-connected = " {device_alias}";
-          format-connected-battery = " {device_alias} {device_battery_percentage}%";
+          format = "<span size='large'>󰂯</span>  An";
+          format-connected = "<span size='large'>󰂱</span>  {num_connections} verbunden";
+          format-connected-battery = "<span size='large'>󰂱</span>  {num_connections} verbunden";
+          format-off = "<span size='large'>󰂲</span>  Aus";
           tooltip-format = "{controller_alias}\t{controller_address}";
           tooltip-format-connected = "{controller_alias}\t{controller_address}\n\n{device_enumerate}";
           tooltip-format-enumerate-connected = "{device_alias}\t{device_address}";
           on-click = "blueberry";
+        };
+
+        # Audio
+        "pulseaudio" = {
+          format = "{icon}  {volume}%";
+          format-muted = "<span size='large'>󰝟</span>  Stumm";
+          format-icons = {
+            default = [ "<span size='large'>󰕿</span>" "<span size='large'>󰖀</span>" "<span size='large'>󰕾</span>" ];
+            headphone = "<span size='large'>󰋋</span>";
+            headset = "<span size='large'>󰋎</span>";
+          };
+          on-click = "pavucontrol";
+          tooltip-format = "{desc}";
         };
 
         # Battery
@@ -87,21 +111,33 @@
             warning = 30;
             critical = 15;
           };
-          format = "{icon} {capacity}%";
-          format-charging = " {capacity}%";
-          format-plugged = " {capacity}%";
-          format-icons = ["" "" "" "" ""];
+          format = "{icon}  {capacity}%";
+          format-charging = "<span size='large'>󰂄</span>  {capacity}%";
+          format-plugged = "<span size='large'>󰚥</span>  {capacity}%";
+          format-icons = [
+            "<span size='large'>󰂎</span>"
+            "<span size='large'>󰁺</span>"
+            "<span size='large'>󰁻</span>"
+            "<span size='large'>󰁼</span>"
+            "<span size='large'>󰁽</span>"
+            "<span size='large'>󰁾</span>"
+            "<span size='large'>󰁿</span>"
+            "<span size='large'>󰂀</span>"
+            "<span size='large'>󰂁</span>"
+            "<span size='large'>󰂂</span>"
+            "<span size='large'>󰁹</span>"
+          ];
         };
 
         # Clock
         "clock" = {
-          format = "{:L%a. %H:%M}";
+          format = "{:L%a. %d. %b %H:%M}";
           locale = "de_DE.utf8";
           tooltip = false;
         };
       };
     };
 
-    style = builtins.readFile ./waybar-style.scss;
+    style = style;
   };
 }
