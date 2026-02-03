@@ -1,8 +1,9 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, theme, ... }:
 
 {
   imports = [
     ../../modules/home-manager/desktop/hyprland.nix
+    ../../modules/home-manager/desktop/theme.nix
     ../../modules/home-manager/programs
   ];
 
@@ -76,11 +77,11 @@
     EDITOR = "vim";
   };
 
-  # Catppuccin Theme
+  # Catppuccin Theme - erbt von system config, kann hier überschrieben werden
   catppuccin = {
     enable = true;
-    flavor = "mocha";
-    accent = "lavender";
+    flavor = lib.mkDefault theme.catppuccin.flavor;
+    accent = lib.mkDefault theme.catppuccin.accent;
   };
 
   # Let Home Manager install and manage itself.
