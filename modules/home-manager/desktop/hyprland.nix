@@ -1,11 +1,11 @@
-{ config, pkgs, inputs, ... }:
+{ config, pkgs, inputs, theme, ... }:
 
 {
   imports = [
     ./waybar.nix
     ./rofi.nix
     ./awww.nix
-    ./papirus.nix
+    ./nautilus.nix
   ];
 
   # Packages
@@ -30,9 +30,19 @@
 
       # Environment variables
       env = [
-        "XCURSOR_SIZE,24"
-        "HYPRCURSOR_SIZE,24"
+        "XCURSOR_THEME,${theme.cursor.name}"
+        "XCURSOR_SIZE,${toString theme.cursor.size}"
+        "HYPRCURSOR_THEME,${theme.cursor.name}"
+        "HYPRCURSOR_SIZE,${toString theme.cursor.size}"
+        # Qt Theme - MUSS qt6ct sein, nicht kvantum!
+        "QT_QPA_PLATFORMTHEME,qt6ct"
+        # QT_STYLE_OVERRIDE NICHT setzen - das macht qt6ct
       ];
+
+      # Cursor
+      cursor = {
+        no_hardware_cursors = true;
+      };
 
       # Input - Deutsches Tastaturlayout
       input = {
@@ -142,7 +152,7 @@
         "$mainMod, Q, exec, kitty"
         "$mainMod, C, killactive,"
         "$mainMod, M, exit,"
-        "$mainMod, E, exec, dolphin"
+        "$mainMod, E, exec, nautilus"
         "$mainMod, V, togglefloating,"
         "$mainMod, R, exec, ${config.rofi.toggle}"
         "$mainMod, W, exec, ${config.rofi.windowList}"

@@ -1,4 +1,4 @@
-{ config, pkgs, lib, ... }:
+{ config, pkgs, lib, theme, ... }:
 
 let
   toggleRofi = mode: pkgs.writeShellScript "rofi-${mode}" ''
@@ -43,7 +43,7 @@ in
       enable = true;
       extraConfig = {
         show-icons = true;
-        icon-theme = "Papirus-Dark";
+        icon-theme = theme.icons.name;
         drun-match-fields = "name,exec";
         drun-display-format = "{name}";
         disable-history = false;

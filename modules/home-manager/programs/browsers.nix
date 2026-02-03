@@ -32,6 +32,10 @@
       };
 
       settings = {
+        # Dark Mode
+        "layout.css.prefers-color-scheme.content-override" = 0; # 0 = System
+        "ui.systemUsesDarkTheme" = 1; # Force dark theme for UI
+
         # Startup - restore previous session
         "browser.startup.homepage" = "https://dash.at.oechsler.it";
         "browser.startup.page" = 3; # 3 = Restore previous session

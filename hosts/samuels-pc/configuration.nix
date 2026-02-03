@@ -15,9 +15,10 @@
     ../../modules/system/audio.nix
     ../../modules/system/bluetooth.nix
     ../../modules/system/fonts.nix
+    ../../modules/system/theme.nix
 
     # Desktop
-    ../../modules/desktop/plasma.nix
+    ../../modules/desktop/sddm.nix
     ../../modules/desktop/hyprland.nix
 
     # Programs
@@ -39,7 +40,11 @@
   
   # Home Manager
   home-manager = {
-    extraSpecialArgs = { inherit inputs; fonts = config.fonts.defaults; };
+    extraSpecialArgs = {
+      inherit inputs;
+      fonts = config.fonts.defaults;
+      theme = config.theme;
+    };
     users.samuel = {
       imports = [
         ./home.nix
@@ -53,12 +58,13 @@
   nixpkgs.config.allowUnfree = true;
   services.printing.enable = true;
 
-  # Catppuccin system-wide theming
-  catppuccin = {
-    enable = true;
-    flavor = "mocha";
-    accent = "lavender";
-  };
+  # GVFS für Nautilus (Disks, Trash, Netzwerk)
+  services.gvfs.enable = true;
+  services.udisks2.enable = true;
+
+  # Theme-Werte können hier überschrieben werden:
+  # theme.catppuccin.flavor = "frappe";
+  # theme.catppuccin.accent = "blue";
 
   system.stateVersion = "25.11";
 }

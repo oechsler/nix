@@ -18,7 +18,7 @@ window#waybar {
 
 /* Launcher button */
 #custom-launcher {
-  background-color: alpha(@base, 0.9);
+  background-color: @base;
   color: @text;
   padding: 0.35em 2em 0.35em 1.6em;
   margin: 0;
@@ -41,7 +41,7 @@ window#waybar {
 
 /* Workspaces container */
 #workspaces {
-  background-color: alpha(@base, 0.9);
+  background-color: @base;
   border-radius: 1.5rem;
   border: 2px solid @blue;
   margin: 0;
@@ -70,7 +70,7 @@ window#waybar {
 
 /* Window title */
 #window {
-  background-color: alpha(@base, 0.9);
+  background-color: @base;
   color: @text;
   font-weight: bold;
   padding: 0.35em 1.5em;
@@ -81,7 +81,7 @@ window#waybar {
 
 /* Tray - separate pill */
 #tray {
-  background-color: alpha(@base, 0.9);
+  background-color: @base;
   padding: 0.35em 1.15em;
   margin: 0;
   margin-left: 1rem;
@@ -97,7 +97,7 @@ window#waybar {
 #pulseaudio,
 #battery,
 #clock {
-  background-color: alpha(@base, 0.9);
+  background-color: @base;
   padding: 0.35em 1.15em;
   margin: 0;
   border-radius: 1.5rem;
@@ -142,21 +142,17 @@ window#waybar {
 }
 
 #battery.charging {
-  background-color: alpha(@green, 0.2);
   color: @green;
 }
 
 #battery.warning:not(.charging) {
-  background-color: alpha(@peach, 0.2);
   color: @peach;
 }
 
 #battery.critical:not(.charging) {
-  background-color: alpha(@red, 0.2);
   color: @red;
 }
 
 #network.disconnected {
-  background-color: alpha(@red, 0.2);
   color: @red;
 }

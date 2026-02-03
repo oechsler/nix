@@ -22,9 +22,14 @@
       url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    cachyos-kernel = {
+      url = "github:xddxdd/nix-cachyos-kernel";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, catppuccin, sops-nix, ... }@inputs: 
+  outputs = { self, nixpkgs, home-manager, catppuccin, sops-nix, cachyos-kernel, ... }@inputs: 
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
@@ -40,6 +45,9 @@
             ./hosts/samuels-pc/configuration.nix
             home-manager.nixosModules.default
             sops-nix.nixosModules.sops
+            {
+              nixpkgs.overlays = [ cachyos-kernel.overlays.pinned ];
+            }
           ];
         };
         
