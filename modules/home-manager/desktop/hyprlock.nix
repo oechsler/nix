@@ -1,10 +1,6 @@
 { config, pkgs, theme, fonts, ... }:
 
-let
-  wallpaper = ../../../backgrounds/Cloudsnight.jpg;
-in
 {
-  # Nur Catppuccin-Farben laden, nicht das Default-Layout (hat eigene Uhr + Keyboard-Layout)
   catppuccin.hyprlock.useDefaultConfig = false;
 
   programs.hyprlock = {
@@ -18,7 +14,7 @@ in
 
       background = [
         {
-          path = "${wallpaper}";
+          path = "${theme.wallpaper}";
           blur_passes = 3;
           blur_size = 8;
         }
@@ -30,7 +26,7 @@ in
           position = "0, 10%";
           halign = "center";
           valign = "bottom";
-          outline_thickness = 2;
+          outline_thickness = theme.border.width;
           rounding = -1;
           dots_size = 0.25;
           dots_spacing = 0.2;
@@ -50,7 +46,6 @@ in
       ];
 
       label = [
-        # Uhrzeit
         {
           text = "$TIME";
           color = "$text";
@@ -61,7 +56,6 @@ in
           halign = "center";
           valign = "center";
         }
-        # Datum
         {
           text = "cmd[update:60000] date +'%A, %-d. %B'";
           color = "$subtext0";

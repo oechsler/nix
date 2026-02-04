@@ -1,18 +1,17 @@
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 let
-  # Prüft ob eine Batterie existiert und ob wir auf Batterie laufen
-  # Ohne Batterie (Desktop) → gilt als AC
+  cfg = config.hypridle;
+  # Check battery status (desktop without battery counts as AC)
   hasBattery = "(test -d /sys/class/power_supply/BAT0 || test -d /sys/class/power_supply/BAT1)";
   acOnline = "(cat /sys/class/power_supply/*/online 2>/dev/null | grep -q 1)";
   onBattery = "${hasBattery} && ! ${acOnline}";
   onAC = "! ${hasBattery} || ${acOnline}";
 
-  dimPercent = 10;
-  dimStepPercent = 5;
-  dimStepDelay = "0.05";
+  dimPercent = cfg.dim.percent;
+  dimStepPercent = cfg.dim.stepPercent;
+  dimStepDelay = cfg.dim.stepDelay;
 
-  # Smooth Dimmen: schrittweise von aktuellem Wert auf Ziel
   smoothDim = toString (pkgs.writeShellScript "smooth-dim" ''
     brightnessctl -s
     current=$(brightnessctl get)
@@ -52,7 +51,49 @@ let
   '');
 in
 {
-  services.hypridle = {
+  options.hypridle = {
+    timeouts = {
+      dimBattery = lib.mkOption {
+        type = lib.types.int;
+        default = 120;
+        description = "Seconds until screen dims on battery";
+      };
+      dimAcLockBattery = lib.mkOption {
+        type = lib.types.int;
+        default = 300;
+        description = "Seconds until screen dims on AC / locks on battery";
+      };
+      suspendBattery = lib.mkOption {
+        type = lib.types.int;
+        default = 300;
+        description = "Seconds until suspend on battery";
+      };
+      lockSuspendAc = lib.mkOption {
+        type = lib.types.int;
+        default = 1800;
+        description = "Seconds until lock + suspend on AC";
+      };
+    };
+    dim = {
+      percent = lib.mkOption {
+        type = lib.types.int;
+        default = 10;
+        description = "Target brightness percentage when dimmed";
+      };
+      stepPercent = lib.mkOption {
+        type = lib.types.int;
+        default = 5;
+        description = "Brightness step size for smooth dimming";
+      };
+      stepDelay = lib.mkOption {
+        type = lib.types.str;
+        default = "0.05";
+        description = "Delay between dim steps in seconds";
+      };
+    };
+  };
+
+  config.services.hypridle = {
     enable = true;
 
     settings = {
@@ -63,29 +104,29 @@ in
       };
 
       listener = [
-        # 2 Min: Dimmen auf Batterie
+        # dim on battery
         {
-          timeout = 120;
+          timeout = cfg.timeouts.dimBattery;
           on-timeout = dimBattery;
           on-resume = undim;
         }
 
-        # 5 Min: Dimmen auf Netzteil, Lock auf Batterie
+        # dim on AC, lock on battery
         {
-          timeout = 300;
+          timeout = cfg.timeouts.dimAcLockBattery;
           on-timeout = dimAcLockBattery;
           on-resume = undim;
         }
 
-        # 5 Min: Suspend auf Batterie
+        # suspend on battery
         {
-          timeout = 300;
+          timeout = cfg.timeouts.suspendBattery;
           on-timeout = suspendBattery;
         }
 
-        # 30 Min: Lock + Suspend auf Netzteil
+        # lock + suspend on AC
         {
-          timeout = 1800;
+          timeout = cfg.timeouts.lockSuspendAc;
           on-timeout = lockSuspendAC;
         }
       ];

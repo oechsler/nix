@@ -1,6 +1,6 @@
 { config, pkgs, ... }:
 
 {
-  # Fish bleibt auf System-Ebene da es als Login-Shell gesetzt ist
+  # Fish at system level (used as login shell)
   programs.fish.enable = true;
 }

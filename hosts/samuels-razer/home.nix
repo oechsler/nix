@@ -19,15 +19,14 @@
     "nextcloud --background"
     "discord --start-minimized"
     "steam -silent"
-    "coolercontrol"
     "jetbrains-toolbox --minimize"
     "sleep 3 && trayscale --hide-window"
   ];
 
   hypridle.timeouts = {
-    dimBattery = 300;
-    dimAcLockBattery = 600;
-    suspendBattery = 600;
-    lockSuspendAc = 3600;
+    dimBattery = 120;
+    dimAcLockBattery = 300;
+    suspendBattery = 300;
+    lockSuspendAc = 1800;
   };
 }

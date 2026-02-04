@@ -49,5 +49,8 @@ in
     secrets = wifiSecrets;
   };
 
+  # Tailscale VPN
+  services.tailscale.enable = true;
+
   # networking.firewall.enable = false;
 }

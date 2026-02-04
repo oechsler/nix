@@ -2,6 +2,7 @@
 
 {
   imports = [
+    ./apps.nix
     ./browsers.nix
     ./terminal.nix
     ./development.nix

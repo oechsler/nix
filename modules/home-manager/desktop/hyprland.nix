@@ -1,7 +1,7 @@
-{ config, pkgs, inputs, theme, fonts, ... }:
+{ config, pkgs, inputs, lib, theme, fonts, locale, ... }:
 
 let
-  # Volume-Notification mit Progress Bar (Nerd Font Icons)
+  cfg = config.hyprland;
   volumeNotify = pkgs.writeShellScript "volume-notify" ''
     volume=$(${pkgs.wireplumber}/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ | ${pkgs.gawk}/bin/awk '{printf "%.0f", $2 * 100}')
     muted=$(${pkgs.wireplumber}/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ | ${pkgs.gnugrep}/bin/grep -c MUTED)
@@ -27,7 +27,6 @@ let
       "$text"
   '';
 
-  # Brightness-Notification mit Progress Bar (Nerd Font Icons)
   brightnessNotify = pkgs.writeShellScript "brightness-notify" ''
     brightness=$(${pkgs.brightnessctl}/bin/brightnessctl -m | ${pkgs.gawk}/bin/awk -F, '{print substr($4, 0, length($4)-1)}')
 
@@ -44,6 +43,32 @@ let
       -h int:value:"$brightness" \
       "$icon  Helligkeit ''${brightness}%"
   '';
+
+  batteryWarning = pkgs.writeShellScript "battery-warning" ''
+    warned=""
+    while true; do
+      capacity=$(cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -1)
+      status=$(cat /sys/class/power_supply/BAT*/status 2>/dev/null | head -1)
+
+      if [ -n "$capacity" ] && [ "$status" = "Discharging" ]; then
+        if [ "$capacity" -le 5 ]; then
+          ${pkgs.dunst}/bin/dunstify -a "battery" -u critical -t 5000 \
+            -h string:x-dunst-stack-tag:battery \
+            "󰂃  Akku kritisch" "Gerät wird in den Ruhezustand versetzt."
+          sleep 5
+          systemctl suspend
+        elif [ "$capacity" -le 10 ] && [ -z "$warned" ]; then
+          ${pkgs.dunst}/bin/dunstify -a "battery" -u critical -t 15000 \
+            -h string:x-dunst-stack-tag:battery \
+            "󰁺  Niedriger Akkustand (''${capacity}%)" "Bitte Ladegerät anschließen."
+          warned="1"
+        fi
+      fi
+
+      [ "$status" != "Discharging" ] && warned=""
+      sleep 60
+    done
+  '';
 in
 {
   imports = [
@@ -56,13 +81,24 @@ in
     ./dunst.nix
   ];
 
-  # Packages
-  home.packages = [
+  options.hyprland = {
+    startupApps = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [];
+      description = "List of applications to start on login";
+      example = [ "bitwarden" "discord --start-minimized" ];
+    };
+  };
+
+  config = {
+    home.packages = [
     pkgs.brightnessctl
     pkgs.playerctl
     pkgs.hyprshot
+    pkgs.satty
     pkgs.wl-clipboard
     pkgs.cliphist
+    pkgs.trash-cli
   ];
 
   wayland.windowManager.hyprland = {
@@ -72,34 +108,29 @@ in
     systemd.enable = true;
 
     settings = {
-      # Monitor
-      monitor = ",preferred,auto,1.6";
+      monitor = ",preferred,auto,${toString theme.scale}";
 
       exec-once = [
         "uwsm-app -- ${config.awww.start}"
         "wl-paste --type text --watch cliphist store"
         "wl-paste --type image --watch cliphist store"
-      ];
+        "${batteryWarning}"
+      ] ++ cfg.startupApps;
 
-      # Environment variables
       env = [
         "XCURSOR_THEME,${theme.cursor.name}"
         "XCURSOR_SIZE,${toString theme.cursor.size}"
         "HYPRCURSOR_THEME,${theme.cursor.name}"
         "HYPRCURSOR_SIZE,${toString theme.cursor.size}"
-        # Qt Theme - MUSS qt6ct sein, nicht kvantum!
         "QT_QPA_PLATFORMTHEME,qt6ct"
-        # QT_STYLE_OVERRIDE NICHT setzen - das macht qt6ct
+        "GTK_THEME,catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-standard"
+        "HYPRSHOT_DIR,${config.home.homeDirectory}/Bilder"
       ];
 
-      # Cursor
-      cursor = {
-        no_hardware_cursors = true;
-      };
+      cursor.no_hardware_cursors = true;
 
-      # Input - Deutsches Tastaturlayout
       input = {
-        kb_layout = "de";
+        kb_layout = locale.keyboard;
         kb_variant = "";
         kb_model = "";
         kb_options = "";
@@ -108,29 +139,24 @@ in
         follow_mouse = 1;
         sensitivity = 0;
 
-        touchpad = {
-          natural_scroll = false;
-        };
+        touchpad.natural_scroll = false;
       };
 
-      # Gestures
       gesture = "3, horizontal, workspace";
 
-      # General
       general = {
-        gaps_in = 8;
-        gaps_out = 16;
-        border_size = 2;
+        gaps_in = theme.gaps.inner;
+        gaps_out = theme.gaps.outer;
+        border_size = theme.border.width;
         "col.active_border" = "$accent";
         "col.inactive_border" = "$surface0";
-        resize_on_border = false;
+        resize_on_border = true;
         allow_tearing = false;
         layout = "dwindle";
       };
 
-      # Decoration
       decoration = {
-        rounding = 16;
+        rounding = theme.radius.default;
         active_opacity = 1.0;
         inactive_opacity = 1.0;
 
@@ -149,7 +175,6 @@ in
         };
       };
 
-      # Animations
       animations = {
         enabled = true;
 
@@ -181,7 +206,6 @@ in
         ];
       };
 
-      # Layouts
       dwindle = {
         pseudotile = true;
         preserve_split = true;
@@ -191,17 +215,15 @@ in
         new_status = "master";
       };
 
-      # Misc
       misc = {
         force_default_wallpaper = 0;
         disable_hyprland_logo = true;
       };
 
-      # Keybindings
+
       "$mainMod" = "SUPER";
 
       bind = [
-        # Main binds
         "$mainMod, Return, exec, kitty"
         "$mainMod, Q, killactive,"
         "$mainMod, M, exit,"
@@ -213,15 +235,12 @@ in
         "$mainMod, P, pseudo,"
         "$mainMod, T, togglesplit,"
 
-        # Screenshots
-        ", Print, exec, hyprshot -m output"
-        "$mainMod, Print, exec, hyprshot -m region"
-        "$mainMod SHIFT, Print, exec, hyprshot -m window"
-
-        # Clipboard
+        ", Print, exec, hyprshot -m output --raw | satty -f - --output-filename ${config.home.homeDirectory}/Bilder/Screenshot_$(date +%Y%m%d_%H%M%S).png"
+        "$mainMod, Print, exec, hyprshot -m region --raw | satty -f - --output-filename ${config.home.homeDirectory}/Bilder/Screenshot_$(date +%Y%m%d_%H%M%S).png"
+        "$mainMod SHIFT, Print, exec, hyprshot -m window --raw | satty -f - --output-filename ${config.home.homeDirectory}/Bilder/Screenshot_$(date +%Y%m%d_%H%M%S).png"
         "$mainMod, C, exec, ${config.rofi.clipboard}"
+        "$mainMod, F1, exec, powerprofilesctl set $(echo -e 'balanced\\npower-saver\\nperformance' | rofi -dmenu -p 'Power Profil')"
 
-        # Move focus (vim + arrow keys)
         "$mainMod, H, movefocus, l"
         "$mainMod, L, movefocus, r"
         "$mainMod, K, movefocus, u"
@@ -231,7 +250,6 @@ in
         "$mainMod, up, movefocus, u"
         "$mainMod, down, movefocus, d"
 
-        # Move windows (vim + arrow keys)
         "$mainMod SHIFT, H, movewindow, l"
         "$mainMod SHIFT, L, movewindow, r"
         "$mainMod SHIFT, K, movewindow, u"
@@ -241,7 +259,6 @@ in
         "$mainMod SHIFT, up, movewindow, u"
         "$mainMod SHIFT, down, movewindow, d"
 
-        # Switch workspaces with mainMod + [0-9]
         "$mainMod, 1, workspace, 1"
         "$mainMod, 2, workspace, 2"
         "$mainMod, 3, workspace, 3"
@@ -253,7 +270,6 @@ in
         "$mainMod, 9, workspace, 9"
         "$mainMod, 0, workspace, 10"
 
-        # Move active window to a workspace with mainMod + SHIFT + [0-9]
         "$mainMod SHIFT, 1, movetoworkspace, 1"
         "$mainMod SHIFT, 2, movetoworkspace, 2"
         "$mainMod SHIFT, 3, movetoworkspace, 3"
@@ -265,16 +281,12 @@ in
         "$mainMod SHIFT, 9, movetoworkspace, 9"
         "$mainMod SHIFT, 0, movetoworkspace, 10"
 
-        # Special workspace (scratchpad)
         "$mainMod, S, togglespecialworkspace, magic"
         "$mainMod SHIFT, S, movetoworkspace, special:magic"
-
-        # Scroll through existing workspaces with mainMod + scroll
         "$mainMod, mouse_down, workspace, e+1"
         "$mainMod, mouse_up, workspace, e-1"
       ];
 
-      # Repeat binds for multimedia (mit Dunst Progress-Bar Notifications)
       bindel = [
         ", XF86AudioRaiseVolume, exec, wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+ && ${volumeNotify}"
         ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && ${volumeNotify}"
@@ -284,22 +296,21 @@ in
         ", XF86MonBrightnessDown, exec, brightnessctl -e4 -n2 set 5%- && ${brightnessNotify}"
       ];
 
-      # Lock binds for media control
       bindl = [
         ", XF86AudioNext, exec, playerctl next"
         ", XF86AudioPause, exec, playerctl play-pause"
         ", XF86AudioPlay, exec, playerctl play-pause"
         ", XF86AudioPrev, exec, playerctl previous"
+        ", XF86PowerOff, exec, ${config.rofi.power}"
       ];
 
-      # Mouse bindings
       bindm = [
         "$mainMod, mouse:272, movewindow"
         "$mainMod, mouse:273, resizewindow"
       ];
 
     };
-  };
 
-  services.hyprpolkitagent.enable = true;
+    services.hyprpolkitagent.enable = true;
+  };
 }
