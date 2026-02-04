@@ -1,8 +1,7 @@
-{ config, pkgs, fonts, ... }:
+{ config, pkgs, fonts, theme, locale, ... }:
 
 let
   accent = config.catppuccin.accent;
-
   rawStyle = builtins.readFile ./waybar-style.scss;
   style = builtins.replaceStrings
     [ "@blue" "system_font" ]
@@ -16,125 +15,98 @@ in
     enable = true;
     systemd.enable = true;
 
-    settings = {
-      mainBar = {
-        layer = "top";
-        position = "top";
-        height = 16;
-        spacing = 0;
-        margin-top = 12;
-        margin-left = 16;
-        margin-right = 16;
+    settings.mainBar = {
+      layer = "top";
+      position = "top";
+      height = theme.gaps.outer;
+      spacing = 0;
+      margin-top = theme.gaps.inner + 4;
+      margin-left = theme.gaps.outer;
+      margin-right = theme.gaps.outer;
 
-        # Layout
-        modules-left = [ "custom/launcher" "hyprland/workspaces" "hyprland/window" ];
-        modules-center = [ ];
-        modules-right = [ "tray" "network" "bluetooth" "pulseaudio" "battery" "clock" ];
+      modules-left = [ "custom/launcher" "hyprland/workspaces" "hyprland/window" ];
+      modules-center = [ ];
+      modules-right = [ "tray" "network" "bluetooth" "pulseaudio" "battery" "clock" ];
 
-        # Launcher (Nix Snowflake)
-        "custom/launcher" = {
-          format = "<span size='x-large' rise='-2000'>󱄅</span>";
-          on-click = "rofi -show drun";
-          tooltip = false;
+      "custom/launcher" = {
+        format = "<span size='x-large' rise='-2000'>󱄅</span>";
+        on-click = "rofi -show drun";
+        tooltip = false;
+      };
+
+      "hyprland/workspaces" = {
+        format = "";
+        persistent-workspaces = { "1" = [ ]; "2" = [ ]; "3" = [ ]; "4" = [ ]; };
+        on-click = "activate";
+      };
+
+      "hyprland/window" = {
+        format = "{title}";
+        max-length = 50;
+        separate-outputs = true;
+        icon = true;
+        icon-size = 16;
+        rewrite = {
+          "" = "Schreibtisch";
+          "(.*) - (.*)" = "$2";
+          "(.*) — (.*)" = "$2";
+          "(.*) – (.*)" = "$2";
         };
+      };
 
-        # Workspaces
-        "hyprland/workspaces" = {
-          format = "";
-          persistent-workspaces = {
-            "1" = [ ];
-            "2" = [ ];
-            "3" = [ ];
-            "4" = [ ];
-          };
-          on-click = "activate";
-        };
+      "tray".spacing = 10;
 
-        # Active window title
-        "hyprland/window" = {
-          format = "{title}";
-          max-length = 50;
-          separate-outputs = true;
-          icon = true;
-          icon-size = 16;
-          rewrite = {
-            "" = "Schreibtisch";
-            "(.*) - (.*)" = "$2";
-            "(.*) — (.*)" = "$2";
-            "(.*) – (.*)" = "$2";
-          };
-        };
+      "network" = {
+        format-wifi = "{icon}";
+        format-ethernet = "<span size='large'>󰈀</span>";
+        format-disconnected = "<span size='large'>󰤭</span>";
+        format-icons = [ "<span size='large'>󰤯</span>" "<span size='large'>󰤟</span>" "<span size='large'>󰤢</span>" "<span size='large'>󰤥</span>" "<span size='large'>󰤨</span>" ];
+        tooltip-format = "{ifname} via {gwaddr}";
+        tooltip-format-wifi = "{essid} ({signalStrength}%)";
+        on-click = "kitty --title nmtui -e nmtui";
+      };
 
-        # System tray
-        "tray" = {
-          spacing = 10;
-        };
+      "bluetooth" = {
+        format = "<span size='large'>󰂯</span>";
+        format-connected = "<span size='large'>󰂱</span>";
+        format-connected-battery = "<span size='large'>󰂱</span>";
+        format-off = "<span size='large'>󰂲</span>";
+        tooltip-format = "{controller_alias}\t{controller_address}";
+        tooltip-format-connected = "{controller_alias}\t{controller_address}\n\n{device_enumerate}";
+        tooltip-format-enumerate-connected = "{device_alias}\t{device_address}";
+        on-click = "kitty --title bluetuith -e bluetuith";
+      };
 
-        # Network
-        "network" = {
-          format-wifi = "{icon}  {essid}";
-          format-ethernet = "<span size='large'>󰈀</span>  {ifname}";
-          format-disconnected = "<span size='large'>󰤭</span>  Getrennt";
-          format-icons = [ "<span size='large'>󰤯</span>" "<span size='large'>󰤟</span>" "<span size='large'>󰤢</span>" "<span size='large'>󰤥</span>" "<span size='large'>󰤨</span>" ];
-          tooltip-format = "{ifname} via {gwaddr}";
-          tooltip-format-wifi = "{essid} ({signalStrength}%)";
+      "pulseaudio" = {
+        format = "{icon}  {volume}%";
+        format-muted = "<span size='large'>󰝟</span>  Stumm";
+        format-icons = {
+          default = [ "<span size='large'>󰕿</span>" "<span size='large'>󰖀</span>" "<span size='large'>󰕾</span>" ];
+          headphone = "<span size='large'>󰋋</span>";
+          headset = "<span size='large'>󰋎</span>";
         };
+        on-click = "kitty --title pulsemixer -e pulsemixer";
+        tooltip-format = "{desc}";
+      };
 
-        # Bluetooth
-        "bluetooth" = {
-          format = "<span size='large'>󰂯</span>  An";
-          format-connected = "<span size='large'>󰂱</span>  {num_connections} verbunden";
-          format-connected-battery = "<span size='large'>󰂱</span>  {num_connections} verbunden";
-          format-off = "<span size='large'>󰂲</span>  Aus";
-          tooltip-format = "{controller_alias}\t{controller_address}";
-          tooltip-format-connected = "{controller_alias}\t{controller_address}\n\n{device_enumerate}";
-          tooltip-format-enumerate-connected = "{device_alias}\t{device_address}";
-          on-click = "blueberry";
-        };
+      "battery" = {
+        states = { warning = 30; critical = 15; };
+        format = "{icon}  {capacity}%";
+        format-charging = "<span size='large'>󰂄</span>  {capacity}%";
+        format-plugged = "<span size='large'>󰚥</span>  {capacity}%";
+        format-icons = [
+          "<span size='large'>󰂎</span>" "<span size='large'>󰁺</span>" "<span size='large'>󰁻</span>"
+          "<span size='large'>󰁼</span>" "<span size='large'>󰁽</span>" "<span size='large'>󰁾</span>"
+          "<span size='large'>󰁿</span>" "<span size='large'>󰂀</span>" "<span size='large'>󰂁</span>"
+          "<span size='large'>󰂂</span>" "<span size='large'>󰁹</span>"
+        ];
+        on-click = "powerprofilesctl set $(echo -e 'balanced\\npower-saver\\nperformance' | rofi -dmenu -p 'Power Profil')";
+      };
 
-        # Audio
-        "pulseaudio" = {
-          format = "{icon}  {volume}%";
-          format-muted = "<span size='large'>󰝟</span>  Stumm";
-          format-icons = {
-            default = [ "<span size='large'>󰕿</span>" "<span size='large'>󰖀</span>" "<span size='large'>󰕾</span>" ];
-            headphone = "<span size='large'>󰋋</span>";
-            headset = "<span size='large'>󰋎</span>";
-          };
-          on-click = "pavucontrol";
-          tooltip-format = "{desc}";
-        };
-
-        # Battery
-        "battery" = {
-          states = {
-            warning = 30;
-            critical = 15;
-          };
-          format = "{icon}  {capacity}%";
-          format-charging = "<span size='large'>󰂄</span>  {capacity}%";
-          format-plugged = "<span size='large'>󰚥</span>  {capacity}%";
-          format-icons = [
-            "<span size='large'>󰂎</span>"
-            "<span size='large'>󰁺</span>"
-            "<span size='large'>󰁻</span>"
-            "<span size='large'>󰁼</span>"
-            "<span size='large'>󰁽</span>"
-            "<span size='large'>󰁾</span>"
-            "<span size='large'>󰁿</span>"
-            "<span size='large'>󰂀</span>"
-            "<span size='large'>󰂁</span>"
-            "<span size='large'>󰂂</span>"
-            "<span size='large'>󰁹</span>"
-          ];
-        };
-
-        # Clock
-        "clock" = {
-          format = "{:L%a. %e. %b %H:%M}";
-          locale = "de_DE.utf8";
-          tooltip = false;
-        };
+      "clock" = {
+        format = "{:L%a. %e. %b %H:%M}";
+        locale = locale.language;
+        tooltip = false;
       };
     };
 

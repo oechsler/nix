@@ -22,12 +22,9 @@
 
   config.fonts = {
     packages = with pkgs; [
-      # Nerd Fonts (mit Icons für Waybar, Terminal, etc.)
       nerd-fonts.jetbrains-mono
       nerd-fonts.fira-code
       nerd-fonts.symbols-only
-
-      # Standard System-Fonts
       noto-fonts
       noto-fonts-cjk-sans
       noto-fonts-color-emoji

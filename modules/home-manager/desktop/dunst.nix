@@ -1,46 +1,37 @@
-{ config, pkgs, lib, fonts, ... }:
+{ config, pkgs, lib, fonts, theme, ... }:
 
 let
-  # Palette dynamisch aus dem Catppuccin-Modul laden (alle Flavors + Accents)
   palette = (lib.importJSON "${config.catppuccin.sources.palette}/palette.json").${config.catppuccin.flavor}.colors;
   accent = palette.${config.catppuccin.accent}.hex;
 in
 {
-  # Basis-Farben kommen vom Catppuccin-Modul (catppuccin.dunst.enable = true)
-  # Accent-Override nötig weil das Modul immer Blue hardcodet
   services.dunst = {
     enable = true;
     settings = {
       global = {
-        # Aussehen - passend zu Hyprland
         width = 350;
         height = "(0, 300)";
-        offset = "16x16";
+        offset = "${toString theme.gaps.outer}x${toString theme.gaps.outer}";
         origin = "top-right";
-        corner_radius = 16;
-        frame_width = 2;
+        corner_radius = theme.radius.default;
+        frame_width = theme.border.width;
         frame_color = lib.mkForce accent;
         highlight = lib.mkForce accent;
         separator_color = "frame";
-        gap_size = 8;
+        gap_size = theme.gaps.inner;
 
-        # Schrift
         font = "${fonts.monospace} 10";
-
-        # Icons via Nerd Font Glyphs im Text
         icon_position = "off";
 
-        # Text
-        alignment = "center";
+        alignment = "left";
         vertical_alignment = "center";
         word_wrap = true;
         ellipsize = "end";
         markup = "full";
         format = "<b>%s</b>\\n%b";
-        padding = 12;
-        horizontal_padding = 16;
+        padding = theme.gaps.inner + 4;
+        horizontal_padding = theme.gaps.outer;
 
-        # Verhalten
         sort = true;
         idle_threshold = 120;
         show_age_threshold = 60;
@@ -48,15 +39,13 @@ in
         history_length = 20;
         show_indicators = false;
 
-        # Progress Bar
         progress_bar = true;
-        progress_bar_height = 12;
+        progress_bar_height = theme.gaps.inner + 4;
         progress_bar_frame_width = 0;
         progress_bar_min_width = 250;
         progress_bar_max_width = 300;
-        progress_bar_corner_radius = 6;
+        progress_bar_corner_radius = theme.radius.small;
 
-        # Maus-Aktionen
         mouse_left_click = "close_current";
         mouse_middle_click = "do_action, close_current";
         mouse_right_click = "close_all";

@@ -19,17 +19,51 @@ let
   toggleDrun = toggleRofi "drun";
   toggleWindow = toggleRofi "window";
 
+  powerMenu = pkgs.writeShellScript "rofi-power-menu" ''
+    if pgrep -x rofi > /dev/null && pgrep -fa "rofi -dmenu -p power" > /dev/null; then
+      pkill -x rofi
+      exit 0
+    fi
+    pgrep -x rofi > /dev/null && exit 0
+    choice=$(printf "󰌾  Sperren\n󰒲  Standby\n󰍃  Abmelden\n󰜉  Neustart\n󰐥  Herunterfahren" | rofi -dmenu -p "power" -i -no-custom)
+    case "$choice" in
+      "󰌾  Sperren")        hyprlock ;;
+      "󰒲  Standby")       systemctl suspend ;;
+      "󰍃  Abmelden")      hyprctl dispatch exit ;;
+      "󰜉  Neustart")       systemctl reboot ;;
+      "󰐥  Herunterfahren") systemctl poweroff ;;
+    esac
+  '';
+
   cliphistRofi = pkgs.writeShellScript "rofi-clipboard" ''
     if pgrep -x "rofi" > /dev/null; then
       if pgrep -fa "rofi.*-dmenu.*clipboard" > /dev/null; then
         pkill -x rofi
+        exit 0
       else
         pkill -x rofi
-        cliphist list | rofi -dmenu -p "clipboard" | cliphist decode | wl-copy
       fi
-    else
-      cliphist list | rofi -dmenu -p "clipboard" | cliphist decode | wl-copy
     fi
+
+    preview_dir="/tmp/cliphist-previews"
+    mkdir -p "$preview_dir"
+
+    cliphist list | while IFS= read -r line; do
+      id="''${line%%	*}"
+      if printf '%s' "$line" | ${pkgs.gnugrep}/bin/grep -q '\[\[.*binary.*image'; then
+        cache="$preview_dir/$id.png"
+        if [ ! -s "$cache" ]; then
+          printf '%s' "$line" | cliphist decode > "$cache" 2>/dev/null
+        fi
+        if [ -s "$cache" ]; then
+          printf '%s\0icon\x1f%s\n' "$line" "$cache"
+        else
+          printf '%s\n' "$line"
+        fi
+      else
+        printf '%s\n' "$line"
+      fi
+    done | rofi -dmenu -p "clipboard" -show-icons | cliphist decode | ${pkgs.wl-clipboard}/bin/wl-copy
   '';
 in
 {
@@ -52,6 +86,12 @@ in
       readOnly = true;
       description = "Script to show clipboard history in rofi";
     };
+    power = lib.mkOption {
+      type = lib.types.path;
+      default = powerMenu;
+      readOnly = true;
+      description = "Script to show power menu in rofi";
+    };
   };
 
   config = {
@@ -72,15 +112,27 @@ in
         accentColor = "@${config.catppuccin.accent}";
       in {
         "window" = {
-          border = mkLiteral "2px solid";
+          border = mkLiteral "${toString theme.border.width}px solid";
           border-color = mkLiteral accentColor;
-          border-radius = mkLiteral "16px";
+          border-radius = mkLiteral "${toString theme.radius.default}px";
         };
         "element" = {
-          border-radius = mkLiteral "4px";
+          border-radius = mkLiteral "${toString theme.radius.small}px";
+        };
+        "element selected.normal" = {
+          background-color = mkLiteral accentColor;
+          text-color = mkLiteral "@base";
+        };
+        "element selected.active" = {
+          background-color = mkLiteral accentColor;
+          text-color = mkLiteral "@base";
+        };
+        "element selected.urgent" = {
+          background-color = mkLiteral "@red";
+          text-color = mkLiteral "@base";
         };
         "inputbar" = {
-          border-radius = mkLiteral "4px";
+          border-radius = mkLiteral "${toString theme.radius.small}px";
         };
       };
     };
@@ -98,6 +150,48 @@ in
       Type=Application
       Name=Rofi Theme Selector
       Exec=rofi-theme-selector
+      Hidden=true
+    '';
+    home.file.".local/share/applications/gvim.desktop".text = ''
+      [Desktop Entry]
+      Type=Application
+      Name=GVim
+      Exec=gvim
+      Hidden=true
+    '';
+    home.file.".local/share/applications/uurecord.desktop".text = ''
+      [Desktop Entry]
+      Type=Application
+      Name=uurecord
+      Exec=uurecord
+      Hidden=true
+    '';
+    home.file.".local/share/applications/uuctl.desktop".text = ''
+      [Desktop Entry]
+      Type=Application
+      Name=uuctl
+      Exec=uuctl
+      Hidden=true
+    '';
+    home.file.".local/share/applications/qt5ct.desktop".text = ''
+      [Desktop Entry]
+      Type=Application
+      Name=Qt5 Settings
+      Exec=qt5ct
+      Hidden=true
+    '';
+    home.file.".local/share/applications/qt6ct.desktop".text = ''
+      [Desktop Entry]
+      Type=Application
+      Name=Qt6 Settings
+      Exec=qt6ct
+      Hidden=true
+    '';
+    home.file.".local/share/applications/kvantummanager.desktop".text = ''
+      [Desktop Entry]
+      Type=Application
+      Name=Kvantum Manager
+      Exec=kvantummanager
       Hidden=true
     '';
   };

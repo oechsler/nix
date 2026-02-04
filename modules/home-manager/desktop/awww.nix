@@ -1,14 +1,12 @@
-{ config, pkgs, inputs, lib, ... }:
+{ config, pkgs, inputs, lib, theme, ... }:
 
 let
   awwwPkg = inputs.awww.packages.${pkgs.stdenv.hostPlatform.system}.default;
 
-  wallpaper = ../../../backgrounds/Cloudsnight.jpg;
-
   startScript = pkgs.writeShellScript "awww-start" ''
     ${awwwPkg}/bin/awww-daemon &
     sleep 2
-    ${awwwPkg}/bin/awww img ${wallpaper} --transition-type fade --transition-duration 1
+    ${awwwPkg}/bin/awww img ${theme.wallpaper} --transition-type fade --transition-duration 1
   '';
 in
 {

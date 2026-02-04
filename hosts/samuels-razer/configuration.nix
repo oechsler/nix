@@ -2,7 +2,7 @@
 
 {
   imports = [
-    ./disko.nix
+    # ./disko.nix  # Uncomment when reinstalling with BTRFS
     ./hardware-configuration.nix
     inputs.home-manager.nixosModules.default
     inputs.catppuccin.nixosModules.catppuccin
@@ -34,12 +34,12 @@
     ../../modules/programs
   ];
 
-  networking.hostName = "samuels-pc";
+  networking.hostName = "samuels-razer";
 
   # ─── Host-specific overrides ─────────────────────────────────────────────────
-  # theme.scale = 1.5;
+  theme.scale = 1.6;
 
-  # Home Manager
+  # Home Manager - passes config to home-manager modules
   home-manager = {
     extraSpecialArgs = {
       inherit inputs;
@@ -52,6 +52,7 @@
       imports = [
         ./home.nix
         inputs.catppuccin.homeModules.catppuccin
+        inputs.sops-nix.homeManagerModules.sops
       ];
     };
     backupFileExtension = "bak";
