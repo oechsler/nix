@@ -34,8 +34,13 @@ in
       description = cfg.fullName;
       extraGroups = [ "networkmanager" "wheel" "docker" ];
       shell = pkgs.fish;
-      icon = cfg.icon;
     };
+
+    # User icon for AccountsService (SDDM, etc.)
+    system.activationScripts.userIcon = ''
+      mkdir -p /var/lib/AccountsService/icons
+      cp ${cfg.icon} /var/lib/AccountsService/icons/${cfg.name}
+    '';
 
     systemd.tmpfiles.rules = [
       "d ${user.home}/repos 0755 ${user.name} ${user.group} -"
