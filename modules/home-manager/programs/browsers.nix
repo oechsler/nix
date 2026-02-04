@@ -99,6 +99,10 @@
         "dom.security.https_only_mode" = true;
         "dom.security.https_only_mode_ever_enabled" = true;
 
+        # Disable translation
+        "browser.translations.automaticallyPopup" = false;
+        "browser.translations.enable" = false;
+
         # DNS over HTTPS
         "network.trr.mode" = 5;  # 5 = Off
       };

@@ -150,7 +150,9 @@ window#waybar {
 }
 
 #battery.critical:not(.charging) {
-  color: @red;
+  color: @base;
+  background-color: @red;
+  border-color: @red;
 }
 
 #network.disconnected {

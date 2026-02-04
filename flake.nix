@@ -11,6 +11,11 @@
 
     catppuccin.url = "github:catppuccin/nix";
 
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     awww.url = "git+https://codeberg.org/LGFae/awww";
 
     sops-nix = {
@@ -27,31 +32,42 @@
       url = "github:xddxdd/nix-cachyos-kernel";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    lanzaboote = {
+      url = "github:nix-community/lanzaboote/v0.4.2";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager, catppuccin, sops-nix, cachyos-kernel, ... }@inputs: 
+  outputs = { self, nixpkgs, home-manager, catppuccin, disko, sops-nix, cachyos-kernel, lanzaboote, ... }@inputs:
     let
       system = "x86_64-linux";
       pkgs = nixpkgs.legacyPackages.${system};
+
+      mkHost = hostName: extraModules: nixpkgs.lib.nixosSystem {
+        inherit system;
+        specialArgs = { inherit inputs; };
+        modules = [
+          ./hosts/${hostName}/configuration.nix
+          home-manager.nixosModules.default
+          sops-nix.nixosModules.sops
+          {
+            nixpkgs.overlays = [ cachyos-kernel.overlays.pinned ];
+          }
+        ] ++ extraModules;
+      };
     in
     {
       nixosConfigurations = {
-        samuels-pc = nixpkgs.lib.nixosSystem {
-	        inherit system;
+        samuels-razer = mkHost "samuels-razer" [
+          disko.nixosModules.disko
+        ];
 
-          specialArgs = { inherit inputs; };
+        samuels-pc = mkHost "samuels-pc" [
+          disko.nixosModules.disko
+        ];
 
-          modules = [
-            ./hosts/samuels-pc/configuration.nix
-            home-manager.nixosModules.default
-            sops-nix.nixosModules.sops
-            {
-              nixpkgs.overlays = [ cachyos-kernel.overlays.pinned ];
-            }
-          ];
-        };
-        
-        default = self.nixosConfigurations.samuels-pc;
+        default = self.nixosConfigurations.samuels-razer;
       };
     };
 }

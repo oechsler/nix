@@ -1,25 +1,22 @@
 { config, pkgs, ... }:
 
 {
-  # CachyOS Kernel - optimiert für Desktop/Gaming (BORE scheduler, etc.)
   boot.kernelPackages = pkgs.cachyosKernels.linuxPackages-cachyos-latest;
 
-  # systemd-boot Konfiguration
   boot.loader = {
     systemd-boot = {
       enable = true;
-      editor = false;           # Kernel-Parameter-Editor deaktivieren (Sicherheit)
-      configurationLimit = 10;  # Nur letzte 10 Generationen anzeigen
+      editor = false;
+      configurationLimit = 10;
     };
     efi.canTouchEfiVariables = true;
-    timeout = 0;                # Kein Menü, direkt booten
+    timeout = 0;
   };
 
-  # Plymouth boot splash
   boot.plymouth.enable = true;
   catppuccin.plymouth.enable = false;
 
-  # Sauberer Boot ohne Kernel-Messages
+  # Silent boot
   boot.consoleLogLevel = 0;
   boot.initrd.verbose = false;
   boot.kernelParams = [

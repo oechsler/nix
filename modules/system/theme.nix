@@ -55,10 +55,55 @@
         description = "Cursor size";
       };
     };
+
+    scale = lib.mkOption {
+      type = lib.types.float;
+      default = 1.0;
+      description = "DPI/Monitor scale factor";
+    };
+
+    radius = {
+      small = lib.mkOption {
+        type = lib.types.int;
+        default = 6;
+        description = "Small border radius (progress bars, small elements)";
+      };
+      default = lib.mkOption {
+        type = lib.types.int;
+        default = 16;
+        description = "Default border radius (windows, panels, notifications)";
+      };
+    };
+
+    gaps = {
+      inner = lib.mkOption {
+        type = lib.types.int;
+        default = 8;
+        description = "Inner gaps (between windows)";
+      };
+      outer = lib.mkOption {
+        type = lib.types.int;
+        default = 16;
+        description = "Outer gaps (screen edges)";
+      };
+    };
+
+    border = {
+      width = lib.mkOption {
+        type = lib.types.int;
+        default = 2;
+        description = "Border width";
+      };
+    };
+
+    wallpaper = lib.mkOption {
+      type = lib.types.path;
+      default = ../../backgrounds/Cloudsnight.jpg;
+      description = "Desktop wallpaper image";
+    };
   };
 
   config = {
-    # Catppuccin system-wide theming nutzt die zentralen Werte
     catppuccin = {
       enable = true;
       flavor = config.theme.catppuccin.flavor;
