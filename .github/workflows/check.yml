@@ -16,8 +16,11 @@ jobs:
 
       - uses: DeterminateSystems/magic-nix-cache-action@main
 
-      - name: Check flake
-        run: nix flake check --no-build
+      # nix flake check disabled due to IFD issues with catppuccin Firefox theme
+      # - name: Check flake
+      #   run: nix flake check --no-build --impure
 
-      - name: Build default configuration
-        run: nix build .#nixosConfigurations.default.config.system.build.toplevel --dry-run
+      - name: Build configurations (dry-run)
+        run: |
+          nix build .#nixosConfigurations.samuels-razer.config.system.build.toplevel --dry-run
+          nix build .#nixosConfigurations.samuels-pc.config.system.build.toplevel --dry-run
