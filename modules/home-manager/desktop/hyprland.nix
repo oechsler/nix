@@ -311,6 +311,8 @@ in
 
     };
 
-    services.hyprpolkitagent.enable = true;
+  };
+
+  services.hyprpolkitagent.enable = true;
   };
 }

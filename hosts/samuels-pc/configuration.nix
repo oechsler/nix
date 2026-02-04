@@ -52,6 +52,7 @@
       imports = [
         ./home.nix
         inputs.catppuccin.homeModules.catppuccin
+        inputs.sops-nix.homeManagerModules.sops
       ];
     };
     backupFileExtension = "bak";
