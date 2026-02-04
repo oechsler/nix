@@ -1,0 +1,199 @@
+# NixOS Installation Guide
+
+General installation guide for all hosts using disko with BTRFS subvolumes.
+
+## Quick Install
+
+```bash
+# 1. Boot NixOS ISO (minimal or graphical)
+
+# 2. Connect to network
+sudo systemctl start wpa_supplicant
+wpa_cli
+> add_network
+> set_network 0 ssid "YourSSID"
+> set_network 0 psk "YourPassword"
+> enable_network 0
+> quit
+
+# 3. Clone config
+nix-shell -p git
+git clone https://github.com/oechsler/nix.git /tmp/nix
+cd /tmp/nix
+
+# 4. Verify disk (WILL ERASE ALL DATA!)
+lsblk
+# Check device matches disko.nix (usually /dev/nvme0n1)
+
+# 5. Run disko (replace HOST with samuels-pc or samuels-razer)
+sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- \
+  --mode disko \
+  /tmp/nix/hosts/HOST/disko.nix
+
+# 6. Install
+sudo nixos-install --flake /tmp/nix#HOST --no-root-passwd
+
+# 7. Set user password
+sudo nixos-enter --root /mnt
+passwd samuel
+exit
+
+# 8. Reboot
+sudo reboot
+```
+
+## SOPS Secrets Setup (Important!)
+
+This config uses SOPS for secrets (WiFi, SMB, kubeconfig). The Age key is derived from your SSH key.
+
+### Option A: Restore SSH key from backup (recommended)
+
+```bash
+mkdir -p ~/.ssh
+cp /path/to/backup/id_ed25519 ~/.ssh/
+cp /path/to/backup/id_ed25519.pub ~/.ssh/
+chmod 600 ~/.ssh/id_ed25519
+
+cd ~/nix
+./sops/setup.sh
+./sops/decrypt.sh  # verify it works
+```
+
+### Option B: New SSH key (requires re-encrypting)
+
+```bash
+ssh-keygen -t ed25519 -C "your-email@example.com"
+cd ~/nix
+./sops/setup.sh
+
+# Edit sops/sops.decrypted.yaml with your secrets, then:
+./sops/encrypt.sh
+```
+
+### Option C: Boot without secrets first
+
+Comment out in `configuration.nix` for initial boot:
+```nix
+# ../../modules/system/networking.nix  # WiFi profiles
+# ../../modules/system/smb.nix         # SMB mounts
+```
+Then restore SSH key, run `setup.sh`, uncomment, rebuild.
+
+## Post-Install
+
+```bash
+# Clone to permanent location
+git clone https://github.com/oechsler/nix.git ~/nix
+cd ~/nix
+
+# Setup SOPS (see above)
+./sops/setup.sh
+
+# Future rebuilds
+sudo nixos-rebuild switch --flake .#HOST
+```
+
+## BTRFS Maintenance
+
+```bash
+# Snapshots
+sudo btrfs subvolume snapshot -r / /.snapshots/root-$(date +%Y%m%d)
+sudo btrfs subvolume snapshot -r /home /.snapshots/home-$(date +%Y%m%d)
+
+# Monthly scrub
+sudo btrfs scrub start /
+
+# Check compression
+sudo compsize /
+```
+
+## Troubleshooting
+
+### Boot fails
+```bash
+# Boot from USB, mount manually:
+mount -o subvol=@ /dev/nvme0n1p2 /mnt
+mount -o subvol=@nix /dev/nvme0n1p2 /mnt/nix
+mount /dev/nvme0n1p1 /mnt/boot
+nixos-enter --root /mnt
+```
+
+### Restore from snapshot
+```bash
+mount /dev/nvme0n1p2 /mnt
+btrfs subvolume delete /mnt/@
+btrfs subvolume snapshot /mnt/@snapshots/root-YYYYMMDD /mnt/@
+```
+
+## Backup Before Reinstall
+
+```bash
+cp -r ~/.ssh /path/to/backup/
+cp -r ~/.gnupg /path/to/backup/
+cp -r ~/.config/sops /path/to/backup/
+cp -r ~/Nextcloud /path/to/backup/  # if applicable
+```
+
+## BTRFS Disk Layout
+
+All hosts use the same subvolume structure:
+
+| Subvolume | Mount | Options |
+|-----------|-------|---------|
+| `@` | `/` | compress=zstd, noatime |
+| `@home` | `/home` | compress=zstd, noatime |
+| `@nix` | `/nix` | compress=zstd, noatime |
+| `@var` | `/var` | compress=zstd, noatime |
+| `@swap` | `/swap` | swapfile (RAM + 2GB) |
+| `@snapshots` | `/.snapshots` | for backups |
+
+## Generate Hardware Configuration
+
+For a new machine or to update hardware detection:
+
+```bash
+# During install (after disko, before nixos-install)
+nixos-generate-config --root /mnt --show-hardware-config
+
+# On running system
+nixos-generate-config --show-hardware-config
+```
+
+Review the output and update `hosts/HOST/hardware-configuration.nix`:
+- Kernel modules for your hardware
+- Filesystem UUIDs (if not using disko)
+- CPU type detection
+
+## Hardware Notes
+
+After install, check `hardware-configuration.nix`:
+
+```nix
+# CPU microcode (uncomment appropriate one)
+hardware.cpu.intel.updateMicrocode = true;
+# hardware.cpu.amd.updateMicrocode = true;
+
+# GPU drivers if needed
+# services.xserver.videoDrivers = [ "nvidia" ];
+```
+
+## Secure Boot (Optional)
+
+For dual-boot with Windows or if Secure Boot is required:
+
+1. Disable Secure Boot in UEFI (put in "Setup Mode")
+
+2. Add to `configuration.nix`:
+   ```nix
+   imports = [ ../../modules/system/secure-boot.nix ];
+   ```
+
+3. Generate and enroll keys:
+   ```bash
+   sudo sbctl create-keys
+   sudo nixos-rebuild switch --flake .#HOST
+   sudo sbctl verify  # all should show ✓ Signed
+   sudo sbctl enroll-keys --microsoft
+   ```
+
+4. Enable Secure Boot in UEFI, verify with `bootctl status`
