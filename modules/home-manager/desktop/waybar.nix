@@ -131,7 +131,7 @@ in
 
         # Clock
         "clock" = {
-          format = "{:L%a. %d. %b %H:%M}";
+          format = "{:L%a. %e. %b %H:%M}";
           locale = "de_DE.utf8";
           tooltip = false;
         };
