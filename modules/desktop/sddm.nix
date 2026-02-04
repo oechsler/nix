@@ -11,6 +11,7 @@ let
 
   cursorTheme = config.theme.cursor.name;
   cursorSize = builtins.floor (1.6 * config.theme.cursor.size);
+  monospaceFont = config.fonts.defaults.monospace;
 in
 {
   # Keyboard Layout
@@ -33,12 +34,18 @@ in
     };
   };
 
-  # Cursor-Paket systemweit verfügbar machen
-  environment.systemPackages = [ config.theme.cursor.package ];
-
   catppuccin.sddm = {
     enable = true;
+    font = monospaceFont;
+    fontSize = "12";
     background = blurredWallpaper;
     loginBackground = true;
+    userIcon = true;
+    clockEnabled = false;
   };
+
+  # Cursor-Paket systemweit verfügbar machen
+  environment.systemPackages = [
+    config.theme.cursor.package
+  ];
 }

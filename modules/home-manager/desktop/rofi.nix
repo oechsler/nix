@@ -18,6 +18,19 @@ let
 
   toggleDrun = toggleRofi "drun";
   toggleWindow = toggleRofi "window";
+
+  cliphistRofi = pkgs.writeShellScript "rofi-clipboard" ''
+    if pgrep -x "rofi" > /dev/null; then
+      if pgrep -fa "rofi.*-dmenu.*clipboard" > /dev/null; then
+        pkill -x rofi
+      else
+        pkill -x rofi
+        cliphist list | rofi -dmenu -p "clipboard" | cliphist decode | wl-copy
+      fi
+    else
+      cliphist list | rofi -dmenu -p "clipboard" | cliphist decode | wl-copy
+    fi
+  '';
 in
 {
   options.rofi = {
@@ -32,6 +45,12 @@ in
       default = toggleWindow;
       readOnly = true;
       description = "Script to toggle rofi window list";
+    };
+    clipboard = lib.mkOption {
+      type = lib.types.path;
+      default = cliphistRofi;
+      readOnly = true;
+      description = "Script to show clipboard history in rofi";
     };
   };
 

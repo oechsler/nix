@@ -1,17 +1,68 @@
-{ config, pkgs, inputs, theme, ... }:
+{ config, pkgs, inputs, theme, fonts, ... }:
 
+let
+  # Volume-Notification mit Progress Bar (Nerd Font Icons)
+  volumeNotify = pkgs.writeShellScript "volume-notify" ''
+    volume=$(${pkgs.wireplumber}/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ | ${pkgs.gawk}/bin/awk '{printf "%.0f", $2 * 100}')
+    muted=$(${pkgs.wireplumber}/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ | ${pkgs.gnugrep}/bin/grep -c MUTED)
+
+    if [ "$muted" -eq 1 ]; then
+      icon="󰝟"
+      text="$icon  Stummgeschaltet"
+      volume=0
+    elif [ "$volume" -ge 70 ]; then
+      icon="󰕾"
+      text="$icon  Lautstärke ''${volume}%"
+    elif [ "$volume" -ge 30 ]; then
+      icon="󰖀"
+      text="$icon  Lautstärke ''${volume}%"
+    else
+      icon="󰕿"
+      text="$icon  Lautstärke ''${volume}%"
+    fi
+
+    ${pkgs.dunst}/bin/dunstify -a "changeVolume" -u low \
+      -h string:x-dunst-stack-tag:volume \
+      -h int:value:"$volume" \
+      "$text"
+  '';
+
+  # Brightness-Notification mit Progress Bar (Nerd Font Icons)
+  brightnessNotify = pkgs.writeShellScript "brightness-notify" ''
+    brightness=$(${pkgs.brightnessctl}/bin/brightnessctl -m | ${pkgs.gawk}/bin/awk -F, '{print substr($4, 0, length($4)-1)}')
+
+    if [ "$brightness" -ge 70 ]; then
+      icon="󰃠"
+    elif [ "$brightness" -ge 30 ]; then
+      icon="󰃟"
+    else
+      icon="󰃞"
+    fi
+
+    ${pkgs.dunst}/bin/dunstify -a "changeBrightness" -u low \
+      -h string:x-dunst-stack-tag:brightness \
+      -h int:value:"$brightness" \
+      "$icon  Helligkeit ''${brightness}%"
+  '';
+in
 {
   imports = [
     ./waybar.nix
     ./rofi.nix
     ./awww.nix
     ./nautilus.nix
+    ./hyprlock.nix
+    ./hypridle.nix
+    ./dunst.nix
   ];
 
   # Packages
   home.packages = [
     pkgs.brightnessctl
     pkgs.playerctl
+    pkgs.hyprshot
+    pkgs.wl-clipboard
+    pkgs.cliphist
   ];
 
   wayland.windowManager.hyprland = {
@@ -26,6 +77,8 @@
 
       exec-once = [
         "uwsm-app -- ${config.awww.start}"
+        "wl-paste --type text --watch cliphist store"
+        "wl-paste --type image --watch cliphist store"
       ];
 
       # Environment variables
@@ -149,21 +202,44 @@
 
       bind = [
         # Main binds
-        "$mainMod, Q, exec, kitty"
-        "$mainMod, C, killactive,"
+        "$mainMod, Return, exec, kitty"
+        "$mainMod, Q, killactive,"
         "$mainMod, M, exit,"
+        "$mainMod SHIFT, Q, exec, hyprlock"
         "$mainMod, E, exec, nautilus"
         "$mainMod, V, togglefloating,"
         "$mainMod, R, exec, ${config.rofi.toggle}"
         "$mainMod, W, exec, ${config.rofi.windowList}"
         "$mainMod, P, pseudo,"
-        "$mainMod, J, togglesplit,"
+        "$mainMod, T, togglesplit,"
 
-        # Move focus with mainMod + arrow keys
+        # Screenshots
+        ", Print, exec, hyprshot -m output"
+        "$mainMod, Print, exec, hyprshot -m region"
+        "$mainMod SHIFT, Print, exec, hyprshot -m window"
+
+        # Clipboard
+        "$mainMod, C, exec, ${config.rofi.clipboard}"
+
+        # Move focus (vim + arrow keys)
+        "$mainMod, H, movefocus, l"
+        "$mainMod, L, movefocus, r"
+        "$mainMod, K, movefocus, u"
+        "$mainMod, J, movefocus, d"
         "$mainMod, left, movefocus, l"
         "$mainMod, right, movefocus, r"
         "$mainMod, up, movefocus, u"
         "$mainMod, down, movefocus, d"
+
+        # Move windows (vim + arrow keys)
+        "$mainMod SHIFT, H, movewindow, l"
+        "$mainMod SHIFT, L, movewindow, r"
+        "$mainMod SHIFT, K, movewindow, u"
+        "$mainMod SHIFT, J, movewindow, d"
+        "$mainMod SHIFT, left, movewindow, l"
+        "$mainMod SHIFT, right, movewindow, r"
+        "$mainMod SHIFT, up, movewindow, u"
+        "$mainMod SHIFT, down, movewindow, d"
 
         # Switch workspaces with mainMod + [0-9]
         "$mainMod, 1, workspace, 1"
@@ -198,14 +274,14 @@
         "$mainMod, mouse_up, workspace, e-1"
       ];
 
-      # Repeat binds for multimedia
+      # Repeat binds for multimedia (mit Dunst Progress-Bar Notifications)
       bindel = [
-        ", XF86AudioRaiseVolume, exec, wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+"
-        ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"
-        ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+        ", XF86AudioRaiseVolume, exec, wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+ && ${volumeNotify}"
+        ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && ${volumeNotify}"
+        ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && ${volumeNotify}"
         ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
-        ", XF86MonBrightnessUp, exec, brightnessctl -e4 -n2 set 5%+"
-        ", XF86MonBrightnessDown, exec, brightnessctl -e4 -n2 set 5%-"
+        ", XF86MonBrightnessUp, exec, brightnessctl -e4 -n2 set 5%+ && ${brightnessNotify}"
+        ", XF86MonBrightnessDown, exec, brightnessctl -e4 -n2 set 5%- && ${brightnessNotify}"
       ];
 
       # Lock binds for media control
@@ -224,10 +300,6 @@
 
     };
   };
-
-  services.dunst = {
-    enable = true;
-  };  
 
   services.hyprpolkitagent.enable = true;
 }
