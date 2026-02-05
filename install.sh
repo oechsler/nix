@@ -46,14 +46,13 @@ fi
 
 export NIX_CONFIG="experimental-features = nix-command flakes"
 
-if [[ "$YES" != true ]]; then
-  echo "This will erase all disks configured for '$HOST'."
-  read -rp "Continue? [y/N] " confirm
-  [[ "$confirm" == [yY] ]] || exit 1
+DISKO_ARGS=(--mode destroy,format,mount --flake "$REPO_DIR#$HOST")
+if [[ "$YES" == true ]]; then
+  DISKO_ARGS+=(--yes-wipe-all-disks)
 fi
 
 echo "==> Partitioning and formatting disks..."
-nix run github:nix-community/disko -- --mode destroy,format,mount --flake "$REPO_DIR#$HOST"
+nix run github:nix-community/disko -- "${DISKO_ARGS[@]}"
 
 echo "==> Generating hardware configuration..."
 nixos-generate-config --root /mnt --show-hardware-config > "$HOST_DIR/hardware-configuration.nix"
