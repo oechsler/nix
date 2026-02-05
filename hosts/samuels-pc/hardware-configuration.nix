@@ -1,28 +1,9 @@
-# Hardware configuration (kernel modules, CPU, GPU)
-# Filesystem mounts are handled by disko.nix
+# Wrapper that imports the generated config and strips fileSystems/swapDevices
+# (disko.nix handles mounts). Regenerate with:
+#   nixos-generate-config --root /mnt --show-hardware-config > hardware-configuration.generated.nix
 { config, lib, pkgs, modulesPath, ... }:
 
-{
-  imports = [
-    (modulesPath + "/installer/scan/not-detected.nix")
-  ];
-
-  # Kernel modules for NVMe and common hardware
-  boot.initrd.availableKernelModules = [
-    "nvme"
-    "xhci_pci"
-    "ahci"
-    "usbhid"
-    "sd_mod"
-  ];
-  boot.kernelModules = [ "kvm-intel" ];  # or kvm-amd for AMD CPUs
-
-  # CPU microcode (uncomment appropriate line after install)
-  # hardware.cpu.intel.updateMicrocode = true;
-  # hardware.cpu.amd.updateMicrocode = true;
-
-  # GPU (uncomment after identifying hardware)
-  # hardware.nvidia.open = true;
-  # services.xserver.videoDrivers = [ "nvidia" ];
-  # hardware.graphics.enable = true;
-}
+let
+  generated = import ./hardware-configuration.generated.nix { inherit config lib pkgs modulesPath; };
+in
+  builtins.removeAttrs generated [ "fileSystems" "swapDevices" ]
