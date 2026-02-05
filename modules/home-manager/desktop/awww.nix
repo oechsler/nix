@@ -21,5 +21,11 @@ in
 
   config = {
     home.packages = [ awwwPkg ];
+
+    home.activation.setWallpaper = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      if ${pkgs.procps}/bin/pgrep -x "awww-daemon" > /dev/null 2>&1; then
+        run ${awwwPkg}/bin/awww img ${theme.wallpaper} --transition-type fade --transition-duration 1
+      fi
+    '';
   };
 }

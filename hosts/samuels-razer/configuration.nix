@@ -38,6 +38,7 @@
 
   # ─── Host-specific overrides ─────────────────────────────────────────────────
   theme.scale = 1.6;
+  theme.wallpaper = ../../backgrounds/nix-black-4k.png;
 
   # Home Manager - passes config to home-manager modules
   home-manager = {
