@@ -13,15 +13,13 @@
   networking.hostName = "samuels-razer";
 
   # ─── Host-specific overrides ─────────────────────────────────────────────────
-  theme.wallpaper = ../../backgrounds/nix-black-4k.png;
-
   displays.monitors = [
     { name = "eDP-1"; width = 3200; height = 1800; refreshRate = 60; scale = 1.6; }
   ];
 
-  features.desktop.wm = "kde";
+  #features.desktop.wm = "kde";
 
-  fonts.defaults.terminalSize = 9;
+  #fonts.defaults.terminalSize = 10;
 
   # Home Manager - passes config to home-manager modules
   home-manager = {
@@ -40,6 +38,7 @@
         ./home.nix
         inputs.catppuccin.homeModules.catppuccin
         inputs.sops-nix.homeManagerModules.sops
+        inputs.plasma-manager.homeModules.plasma-manager
       ];
     };
     backupFileExtension = "bak";
