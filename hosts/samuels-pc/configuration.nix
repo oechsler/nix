@@ -46,6 +46,7 @@
         ./home.nix
         inputs.catppuccin.homeModules.catppuccin
         inputs.sops-nix.homeManagerModules.sops
+        inputs.plasma-manager.homeModules.plasma-manager
       ];
     };
     backupFileExtension = "bak";

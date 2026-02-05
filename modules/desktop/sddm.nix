@@ -53,8 +53,11 @@ in
       enable = true;
       wayland.enable = true;
       settings = {
-        General = lib.mkIf (!isKde) {
-          GreeterEnvironment = "QT_FONT_DPI=${toString scaledDpi}";
+        General = {
+          GreeterEnvironment =
+            if isKde
+            then "XCURSOR_THEME=${cursorTheme},XCURSOR_SIZE=${toString cursorSize}"
+            else "QT_FONT_DPI=${toString scaledDpi},XCURSOR_THEME=${cursorTheme},XCURSOR_SIZE=${toString scaledCursorSize}";
         };
         Theme = {
           CursorTheme = cursorTheme;
@@ -64,8 +67,7 @@ in
     };
 
     # SDDM uses kwin_wayland — place kscreen config so monitors are positioned correctly.
-    # Only for non-KDE: KDE syncs its own display config back to SDDM automatically.
-    systemd.tmpfiles.rules = lib.mkIf (!isKde && monitors != []) [
+    systemd.tmpfiles.rules = lib.mkIf (monitors != []) [
       "d /var/lib/sddm/.config 0755 sddm sddm -"
       "f+ /var/lib/sddm/.config/kwinoutputconfig.json 0644 sddm sddm - ${sddmDisplayConfig}"
     ];
