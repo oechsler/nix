@@ -1,34 +1,9 @@
-# Hardware configuration (kernel modules, CPU, filesystems)
-# When migrating to BTRFS: uncomment disko.nix import in configuration.nix
-# and remove the fileSystems/swapDevices sections below
+# Wrapper that imports the generated config and strips fileSystems/swapDevices
+# (disko.nix handles mounts). Regenerate with:
+#   nixos-generate-config --root /mnt --show-hardware-config > hardware-configuration.generated.nix
 { config, lib, pkgs, modulesPath, ... }:
 
-{
-  imports = [
-    (modulesPath + "/installer/scan/not-detected.nix")
-  ];
-
-  boot.initrd.availableKernelModules = [ "xhci_pci" "nvme" "usbhid" "uas" "sd_mod" ];
-  boot.initrd.kernelModules = [ ];
-  boot.kernelModules = [ "kvm-intel" ];
-  boot.extraModulePackages = [ ];
-
-  # Current ext4 layout - will be replaced by disko.nix after BTRFS migration
-  fileSystems."/" = {
-    device = "/dev/disk/by-uuid/a7261f62-c132-4537-8160-926682c5a962";
-    fsType = "ext4";
-  };
-
-  fileSystems."/boot" = {
-    device = "/dev/disk/by-uuid/BAA0-72B1";
-    fsType = "vfat";
-    options = [ "fmask=0077" "dmask=0077" ];
-  };
-
-  swapDevices = [
-    { device = "/dev/disk/by-uuid/16e247d7-20f2-4a3b-9add-39cc8937d4c9"; }
-  ];
-
-  nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
-  hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
-}
+let
+  generated = import ./hardware-configuration.generated.nix { inherit config lib pkgs modulesPath; };
+in
+  builtins.removeAttrs generated [ "fileSystems" "swapDevices" ]

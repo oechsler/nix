@@ -55,10 +55,7 @@ echo "==> Partitioning and formatting disks..."
 nix run github:nix-community/disko -- "${DISKO_ARGS[@]}"
 
 echo "==> Generating hardware configuration..."
-nixos-generate-config --root /mnt --show-hardware-config > "$HOST_DIR/hardware-configuration.nix"
-# Remove fileSystems and swapDevices (disko handles mounts)
-sed -i '/^\s*fileSystems\./,/};/d' "$HOST_DIR/hardware-configuration.nix"
-sed -i '/^\s*swapDevices\s*=/,/];/d' "$HOST_DIR/hardware-configuration.nix"
+nixos-generate-config --root /mnt --show-hardware-config > "$HOST_DIR/hardware-configuration.generated.nix"
 git -C "$REPO_DIR" add --all
 
 echo "==> Installing NixOS..."
