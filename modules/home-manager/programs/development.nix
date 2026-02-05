@@ -88,6 +88,7 @@
     distrobox
     dbeaver-bin
     jetbrains-toolbox
+    claude-code
 
     go
     rustup
