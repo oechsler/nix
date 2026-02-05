@@ -1,6 +1,6 @@
 # Wrapper that imports the generated config and strips fileSystems/swapDevices
 # (disko.nix handles mounts). Regenerate with:
-#   nixos-generate-config --root /mnt --show-hardware-config > hardware-configuration.generated.nix
+#   nixos-generate-config --show-hardware-config > hardware-configuration.generated.nix
 { config, lib, pkgs, modulesPath, ... }:
 
 let

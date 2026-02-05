@@ -67,6 +67,11 @@
       };
     in
     {
+      diskoConfigurations = {
+        samuels-pc = import ./hosts/samuels-pc/disko.nix;
+        samuels-razer = import ./hosts/samuels-razer/disko.nix;
+      };
+
       nixosConfigurations = {
         samuels-razer = mkHost "samuels-razer" [
           disko.nixosModules.disko
