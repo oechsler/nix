@@ -1,6 +1,11 @@
 { config, ... }:
 
 {
+  xdg.desktopEntries.cups = {
+    name = "CUPS";
+    noDisplay = true;
+  };
+
   xdg.userDirs = {
     enable = true;
     createDirectories = true;

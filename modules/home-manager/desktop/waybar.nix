@@ -2,10 +2,11 @@
 
 let
   accent = config.catppuccin.accent;
+  isLight = config.catppuccin.flavor == "latte";
   rawStyle = builtins.readFile ./waybar-style.scss;
   style = builtins.replaceStrings
-    [ "@blue" "system_font" ]
-    [ "@${accent}" fonts.monospace ]
+    [ "@blue" "system_font" "separator_alpha" ]
+    [ "@${accent}" fonts.monospace (if isLight then "0.15" else "0.5") ]
     rawStyle;
 in
 {

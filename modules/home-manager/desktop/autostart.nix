@@ -22,8 +22,11 @@ in
       [
         { name = "Bitwarden"; exec = "bitwarden"; }
         { name = "Nextcloud"; exec = "nextcloud --background"; }
-        { name = "Discord"; exec = "discord --start-minimized"; }
+        { name = "Discord"; exec = "discord --start-minimized --no-sandbox"; }
         { name = "CoolerControl"; exec = "coolercontrol"; }
+      ]
+      ++ lib.optionals features.apps.enable [
+        { name = "Pika Backup Monitor"; exec = "pika-backup-monitor"; }
       ]
       ++ lib.optionals features.development.enable [
         { name = "JetBrains Toolbox"; exec = "jetbrains-toolbox --minimize"; }
