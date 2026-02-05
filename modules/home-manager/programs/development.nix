@@ -17,7 +17,7 @@
     enable = true;
 
     signing = {
-      key = "~/.ssh/id_ed25519.pub";
+      key = "${config.home.homeDirectory}/.ssh/id_ed25519.pub";
       signByDefault = true;
       format = "ssh";
     };
@@ -63,16 +63,22 @@
     };
   };
 
-  # Bitwarden SSH Agent with fallback to standard ssh-agent
-  programs.ssh.enable = true;
-  programs.ssh.enableDefaultConfig = false;
-  services.ssh-agent.enable = true;
+  # Bitwarden SSH Agent
+  programs.ssh = {
+    enable = true;
+    enableDefaultConfig = false;
+    matchBlocks."*" = {
+      identityFile = "${config.home.homeDirectory}/.ssh/id_ed25519";
+      extraOptions = {
+        IdentityAgent = "${config.home.homeDirectory}/.bitwarden-ssh-agent.sock";
+      };
+    };
+  };
 
-  home.sessionVariablesExtra = ''
-    if [ -S "$HOME/.bitwarden-ssh-agent.sock" ]; then
-      export SSH_AUTH_SOCK="$HOME/.bitwarden-ssh-agent.sock"
-    fi
-  '';
+  # Set SSH_AUTH_SOCK to Bitwarden SSH Agent
+  home.sessionVariables = {
+    SSH_AUTH_SOCK = "${config.home.homeDirectory}/.bitwarden-ssh-agent.sock";
+  };
 
   home.packages = with pkgs; [
     kubectl
