@@ -1,6 +1,6 @@
-{ config, pkgs, inputs, ... }:
+{ config, pkgs, inputs, features, lib, ... }:
 
-{
+lib.mkIf features.desktop.enable {
   programs.firefox = {
     enable = true;
     profiles.default = {

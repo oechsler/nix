@@ -1,6 +1,8 @@
 { config, pkgs, lib, ... }:
 
 let
+  cfg = config.features.wifi;
+  tailscaleCfg = config.features.tailscale;
   wifiNetworks = [ "home" ];
 
   wifiProfiles = lib.listToAttrs (map (name: {
@@ -35,22 +37,44 @@ let
   ]) wifiNetworks));
 in
 {
-  networking.networkmanager = {
-    enable = true;
-
-    ensureProfiles = {
-      environmentFiles = [ config.sops.templates."wifi-env".path ];
-      profiles = wifiProfiles;
-    };
+  options.features = {
+    wifi.enable = (lib.mkEnableOption "WiFi with managed network profiles") // { default = true; };
+    tailscale.enable = (lib.mkEnableOption "Tailscale VPN") // { default = true; };
   };
 
-  sops = {
-    templates."wifi-env".content = wifiEnvContent;
-    secrets = wifiSecrets;
-  };
+  config = lib.mkMerge [
+    {
+      networking.networkmanager.enable = true;
+    }
 
-  # Tailscale VPN
-  services.tailscale.enable = true;
+    (lib.mkIf tailscaleCfg.enable {
+      services.tailscale.enable = true;
 
-  # networking.firewall.enable = false;
+      environment.systemPackages = [
+        (pkgs.writeShellScriptBin "tailscale-init" ''
+          set -e
+          echo "Starting Tailscale login..."
+          sudo tailscale up --accept-routes --accept-dns
+          echo "Setting operator to ${config.user.name}..."
+          sudo tailscale set --operator=${config.user.name}
+          echo "Done! Tailscale is ready."
+          tailscale status
+        '')
+      ] ++ lib.optionals config.features.desktop.enable [
+        pkgs.trayscale
+      ];
+    })
+
+    (lib.mkIf cfg.enable {
+      networking.networkmanager.ensureProfiles = {
+        environmentFiles = [ config.sops.templates."wifi-env".path ];
+        profiles = wifiProfiles;
+      };
+
+      sops = {
+        templates."wifi-env".content = wifiEnvContent;
+        secrets = wifiSecrets;
+      };
+    })
+  ];
 }

@@ -1,4 +1,4 @@
-{ config, pkgs, theme, fonts, ... }:
+{ config, pkgs, lib, theme, fonts, displays, ... }:
 
 {
   catppuccin.hyprlock.useDefaultConfig = false;
@@ -12,13 +12,16 @@
         grace = 3;
       };
 
-      background = [
-        {
-          path = "${theme.wallpaper}";
-          blur_passes = 3;
-          blur_size = 8;
-        }
-      ];
+      background =
+        if displays.monitors == [] then
+          [{ path = "${theme.wallpaper}"; blur_passes = 3; blur_size = 8; }]
+        else
+          map (m: {
+            monitor = m.name;
+            path = "${if m.wallpaper != null then m.wallpaper else theme.wallpaper}";
+            blur_passes = 3;
+            blur_size = 8;
+          }) displays.monitors;
 
       input-field = [
         {

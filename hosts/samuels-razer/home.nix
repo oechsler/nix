@@ -1,10 +1,8 @@
-{ user, ... }:
+{ user, features, lib, ... }:
 
 {
   imports = [
-    ../../modules/home-manager/desktop/hyprland.nix
-    ../../modules/home-manager/desktop/theme.nix
-    ../../modules/home-manager/programs
+    ../../modules/home-manager
   ];
 
   home.username = user.name;
@@ -13,20 +11,4 @@
 
   programs.home-manager.enable = true;
   nixpkgs.config.allowUnfree = true;
-
-  hyprland.startupApps = [
-    "bitwarden"
-    "nextcloud --background"
-    "discord --start-minimized"
-    "steam -silent"
-    "jetbrains-toolbox --minimize"
-    "sleep 3 && trayscale --hide-window"
-  ];
-
-  hypridle.timeouts = {
-    dimBattery = 120;
-    dimAcLockBattery = 300;
-    suspendBattery = 300;
-    lockSuspendAc = 1800;
-  };
 }

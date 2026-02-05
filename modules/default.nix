@@ -1,0 +1,9 @@
+{ ... }:
+
+{
+  imports = [
+    ./system
+    ./desktop
+    ./programs
+  ];
+}

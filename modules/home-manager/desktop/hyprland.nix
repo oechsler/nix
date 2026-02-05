@@ -1,7 +1,15 @@
-{ config, pkgs, inputs, lib, theme, fonts, locale, ... }:
+{ config, pkgs, inputs, lib, theme, fonts, locale, displays, input, ... }:
 
 let
-  cfg = config.hyprland;
+  hyprTransform = rot: { "normal" = "0"; "90" = "1"; "180" = "2"; "270" = "3"; }.${rot};
+  rotSuffix = m: if m.rotation == "normal" then "" else ", transform, ${hyprTransform m.rotation}";
+
+  monitorLines =
+    (map (m:
+      "${m.name}, ${toString m.width}x${toString m.height}@${toString m.refreshRate}, ${toString m.x}x${toString m.y}, ${toString m.scale}${rotSuffix m}"
+    ) displays.monitors)
+    ++ [ ", preferred, auto, ${toString theme.scale}" ];
+
   volumeNotify = pkgs.writeShellScript "volume-notify" ''
     volume=$(${pkgs.wireplumber}/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ | ${pkgs.gawk}/bin/awk '{printf "%.0f", $2 * 100}')
     muted=$(${pkgs.wireplumber}/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ | ${pkgs.gnugrep}/bin/grep -c MUTED)
@@ -81,15 +89,6 @@ in
     ./dunst.nix
   ];
 
-  options.hyprland = {
-    startupApps = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [];
-      description = "List of applications to start on login";
-      example = [ "bitwarden" "discord --start-minimized" ];
-    };
-  };
-
   config = {
     home.packages = [
     pkgs.brightnessctl
@@ -108,14 +107,14 @@ in
     systemd.enable = true;
 
     settings = {
-      monitor = ",preferred,auto,${toString theme.scale}";
+      monitor = monitorLines;
 
       exec-once = [
         "uwsm-app -- ${config.awww.start}"
         "wl-paste --type text --watch cliphist store"
         "wl-paste --type image --watch cliphist store"
         "${batteryWarning}"
-      ] ++ cfg.startupApps;
+      ] ++ (map (app: app.exec) config.autostart.apps);
 
       env = [
         "XCURSOR_THEME,${theme.cursor.name}"
@@ -124,7 +123,7 @@ in
         "HYPRCURSOR_SIZE,${toString theme.cursor.size}"
         "QT_QPA_PLATFORMTHEME,qt6ct"
         "GTK_THEME,catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-standard"
-        "HYPRSHOT_DIR,${config.home.homeDirectory}/Bilder"
+        "HYPRSHOT_DIR,${config.xdg.userDirs.pictures}"
       ];
 
       cursor.no_hardware_cursors = true;
@@ -138,10 +137,10 @@ in
 
         follow_mouse = 1;
         sensitivity = 0;
-        natural_scroll = true;
+        natural_scroll = input.mouse.naturalScroll;
 
         touchpad = {
-          natural_scroll = true;
+          natural_scroll = input.touchpad.naturalScroll;
         };
       };
 
@@ -238,9 +237,9 @@ in
         "$mainMod, P, pseudo,"
         "$mainMod, T, togglesplit,"
 
-        ", Print, exec, hyprshot -m output --raw | satty -f - --output-filename ${config.home.homeDirectory}/Bilder/Screenshot_$(date +%Y%m%d_%H%M%S).png"
-        "$mainMod, Print, exec, hyprshot -m region --raw | satty -f - --output-filename ${config.home.homeDirectory}/Bilder/Screenshot_$(date +%Y%m%d_%H%M%S).png"
-        "$mainMod SHIFT, Print, exec, hyprshot -m window --raw | satty -f - --output-filename ${config.home.homeDirectory}/Bilder/Screenshot_$(date +%Y%m%d_%H%M%S).png"
+        ", Print, exec, hyprshot -m output --raw | satty -f - --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
+        "$mainMod, Print, exec, hyprshot -m region --raw | satty -f - --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
+        "$mainMod SHIFT, Print, exec, hyprshot -m window --raw | satty -f - --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
         "$mainMod, C, exec, ${config.rofi.clipboard}"
         "$mainMod, F1, exec, powerprofilesctl set $(echo -e 'balanced\\npower-saver\\nperformance' | rofi -dmenu -p 'Power Profil')"
 
