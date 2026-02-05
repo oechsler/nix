@@ -4,6 +4,7 @@
   config = lib.mkIf (config.features.desktop.enable && config.features.desktop.wm == "hyprland") {
     environment.systemPackages = with pkgs; [
       dunst
+      gparted
       hyprpolkitagent
     ];
 

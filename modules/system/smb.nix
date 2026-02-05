@@ -20,11 +20,13 @@ let
       path = config.sops.placeholder."smb/${name}/path";
     in ''
       LABEL="${label}"
+      MOUNT_UID=$(id -u ${user.name})
+      MOUNT_GID=$(id -g ${user.name})
       mkdir -p "${user.home}/smb/$LABEL"
       chown ${user.name}:${user.group} "${user.home}/smb/$LABEL"
       for i in $(seq 1 5); do
         mount -t cifs "${path}" "${user.home}/smb/$LABEL" \
-          -o credentials=${creds},uid=${toString user.uid},gid=${toString config.users.groups.${user.group}.gid},file_mode=0644,dir_mode=0755 \
+          -o credentials=${creds},uid=$MOUNT_UID,gid=$MOUNT_GID,forceuid,forcegid,file_mode=0644,dir_mode=0755 \
           && break
         echo "Mount-Versuch $i/5 fehlgeschlagen: $LABEL"
         sleep 5

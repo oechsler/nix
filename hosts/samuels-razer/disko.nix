@@ -5,7 +5,7 @@
     disk = {
       main = {
         type = "disk";
-        device = "/dev/nvme0n1";
+        device = "/dev/disk/by-id/nvme-Samsung_SSD_980_1TB_S649NL0W348323A";
         content = {
           type = "gpt";
           partitions = {
@@ -40,10 +40,6 @@
                   "@var" = {
                     mountpoint = "/var";
                     mountOptions = [ "compress=zstd" "noatime" ];
-                  };
-                  "@swap" = {
-                    mountpoint = "/swap";
-                    swap.swapfile.size = "18G";  # 16GB RAM + buffer for hibernation
                   };
                   "@snapshots" = {
                     mountpoint = "/.snapshots";

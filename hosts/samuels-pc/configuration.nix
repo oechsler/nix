@@ -14,14 +14,9 @@
 
   # ─── Host-specific overrides ─────────────────────────────────────────────────
 
-  # Second NVMe SSD for games (not managed by disko - do not format)
-  fileSystems."/mnt/games" = {
-    device = "/dev/nvme1n1p1";
-    fsType = "btrfs";
-    options = [ "compress=zstd" "noatime" ];
-  };
+  # Ensure samuel owns /mnt/games (mounted by disko)
   systemd.tmpfiles.rules = [
-    "d /mnt/games 0755 samuel users -"
+    "Z /mnt/games 0755 samuel users -"
   ];
 
   displays.monitors = [
