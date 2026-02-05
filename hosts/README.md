@@ -7,39 +7,30 @@ General installation guide for all hosts using disko with BTRFS subvolumes.
 ```bash
 # 1. Boot NixOS ISO (minimal or graphical)
 
-# 2. Connect to network
-sudo systemctl start wpa_supplicant
-wpa_cli
-> add_network
-> set_network 0 ssid "YourSSID"
-> set_network 0 psk "YourPassword"
-> enable_network 0
-> quit
+# 2. Enable flakes
+export NIX_CONFIG="experimental-features = nix-command flakes"
 
 # 3. Clone config
-nix-shell -p git
-git clone https://github.com/oechsler/nix.git /tmp/nix
-cd /tmp/nix
+nix-env -iA nixos.git
+git clone <repo-url> /tmp/nix
 
-# 4. Verify disk (WILL ERASE ALL DATA!)
-lsblk
-# Check device matches disko.nix (usually /dev/nvme0n1)
+# 4. Verify disk IDs match disko.nix (WILL ERASE ALL DATA!)
+ls -l /dev/disk/by-id/nvme-*
 
 # 5. Run disko (replace HOST with samuels-pc or samuels-razer)
-sudo nix --experimental-features "nix-command flakes" run github:nix-community/disko -- \
-  --mode disko \
-  /tmp/nix/hosts/HOST/disko.nix
+nix run github:nix-community/disko -- --mode destroy,format,mount --flake /tmp/nix#HOST
 
-# 6. Install
-sudo nixos-install --flake /tmp/nix#HOST --no-root-passwd
+# 6. Generate hardware config (remove fileSystems + swapDevices, disko handles mounts)
+nixos-generate-config --root /mnt --show-hardware-config > /tmp/nix/hosts/HOST/hardware-configuration.nix
 
-# 7. Set user password
-sudo nixos-enter --root /mnt
-passwd samuel
-exit
+# 7. Install
+sudo nixos-install --flake /tmp/nix#HOST
 
-# 8. Reboot
-sudo reboot
+# 8. Set user password
+nixos-enter --root /mnt -c 'passwd samuel'
+
+# 9. Reboot
+reboot
 ```
 
 ## SOPS Secrets Setup (Important!)
