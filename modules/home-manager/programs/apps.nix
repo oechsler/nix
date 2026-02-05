@@ -14,10 +14,15 @@ lib.mkIf features.apps.enable (lib.mkMerge [
       libreoffice
       nextcloud-client
       obsidian
+      pika-backup
       prusa-slicer
       spotify
     ];
   }
+
+  # ── KDE — KDE-native utilities ────────────────────────────────────────────
+  (lib.mkIf isKde {
+  })
 
   # ── Tiling WMs (Hyprland etc.) — GNOME/GTK utilities ──────────────────────
   (lib.mkIf (!isKde) {
@@ -27,9 +32,7 @@ lib.mkIf features.apps.enable (lib.mkMerge [
     };
 
     home.packages = with pkgs; [
-      gnome-disk-utility
       loupe
-      pika-backup
     ];
   })
 ])

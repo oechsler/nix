@@ -12,6 +12,7 @@
 
   networking.hostName = "samuels-razer";
 
+
   # ─── Host-specific overrides ─────────────────────────────────────────────────
   displays.monitors = [
     { name = "eDP-1"; width = 3200; height = 1800; refreshRate = 60; scale = 1.6; }

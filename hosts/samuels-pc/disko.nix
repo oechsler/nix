@@ -5,7 +5,7 @@
     disk = {
       main = {
         type = "disk";
-        device = "/dev/nvme0n1";
+        device = "/dev/disk/by-id/nvme-Samsung_SSD_990_PRO_1TB_S6ZNU0X207245R";
         content = {
           type = "gpt";
           partitions = {
@@ -41,12 +41,30 @@
                     mountpoint = "/var";
                     mountOptions = [ "compress=zstd" "noatime" ];
                   };
-                  "@swap" = {
-                    mountpoint = "/swap";
-                    swap.swapfile.size = "34G";  # 32GB RAM + buffer for hibernation
-                  };
                   "@snapshots" = {
                     mountpoint = "/.snapshots";
+                    mountOptions = [ "compress=zstd" "noatime" ];
+                  };
+                };
+              };
+            };
+          };
+        };
+      };
+      games = {
+        type = "disk";
+        device = "/dev/disk/by-id/nvme-Samsung_SSD_990_PRO_1TB_S6Z1NU0X304314E";
+        content = {
+          type = "gpt";
+          partitions = {
+            games = {
+              size = "100%";
+              content = {
+                type = "btrfs";
+                extraArgs = [ "-f" "-L" "games" ];
+                subvolumes = {
+                  "@games" = {
+                    mountpoint = "/mnt/games";
                     mountOptions = [ "compress=zstd" "noatime" ];
                   };
                 };
