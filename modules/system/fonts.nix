@@ -18,6 +18,11 @@
       type = lib.types.int;
       default = 11;
     };
+    terminalSize = lib.mkOption {
+      type = lib.types.int;
+      default = config.fonts.defaults.size;
+      description = "Terminal (Kitty) font size – defaults to fonts.defaults.size";
+    };
   };
 
   config.fonts = {

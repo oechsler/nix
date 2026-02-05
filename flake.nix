@@ -37,6 +37,8 @@
       url = "github:nix-community/lanzaboote/v0.4.2";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    nix-flatpak.url = "github:gmodena/nix-flatpak";
   };
 
   outputs = { self, nixpkgs, home-manager, catppuccin, disko, sops-nix, cachyos-kernel, lanzaboote, ... }@inputs:
@@ -51,6 +53,7 @@
           ./hosts/${hostName}/configuration.nix
           home-manager.nixosModules.default
           sops-nix.nixosModules.sops
+          inputs.nix-flatpak.nixosModules.nix-flatpak
           {
             nixpkgs.overlays = [ cachyos-kernel.overlays.pinned ];
           }

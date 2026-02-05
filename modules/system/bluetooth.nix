@@ -1,8 +1,17 @@
-{ config, pkgs, ... }:
+{ lib, config, ... }:
 
+let
+  cfg = config.features.bluetooth;
+in
 {
-  hardware.bluetooth = {
-    enable = true;
-    powerOnBoot = true;
+  options.features.bluetooth = {
+    enable = (lib.mkEnableOption "bluetooth support") // { default = true; };
+  };
+
+  config = lib.mkIf cfg.enable {
+    hardware.bluetooth = {
+      enable = true;
+      powerOnBoot = true;
+    };
   };
 }

@@ -7,37 +7,27 @@
     inputs.home-manager.nixosModules.default
     inputs.catppuccin.nixosModules.catppuccin
 
-    # System modules
-    ../../modules/system/nix.nix
-    ../../modules/system/sops.nix
-    ../../modules/system/boot.nix
-    # ../../modules/system/secure-boot.nix  # Uncomment for Secure Boot (Windows dual-boot)
-    ../../modules/system/compat.nix
-    ../../modules/system/networking.nix
-    ../../modules/system/locale.nix
-    ../../modules/system/users.nix
-    ../../modules/system/audio.nix
-    ../../modules/system/bluetooth.nix
-    ../../modules/system/fonts.nix
-    ../../modules/system/theme.nix
-    ../../modules/system/hardware.nix
-    ../../modules/system/virtualisation.nix
-    ../../modules/system/power.nix
-    ../../modules/system/smb.nix
-    ../../modules/system/gaming.nix
-
-    # Desktop
-    ../../modules/desktop/sddm.nix
-    ../../modules/desktop/hyprland.nix
-
-    # Programs
-    ../../modules/programs
+    ../../modules
   ];
 
   networking.hostName = "samuels-pc";
 
   # ─── Host-specific overrides ─────────────────────────────────────────────────
-  # theme.scale = 1.5;
+
+  # Second NVMe SSD for games (not managed by disko - do not format)
+  fileSystems."/mnt/games" = {
+    device = "/dev/nvme1n1p1";
+    fsType = "btrfs";
+    options = [ "compress=zstd" "noatime" ];
+  };
+  systemd.tmpfiles.rules = [
+    "d /mnt/games 0755 samuel users -"
+  ];
+
+  displays.monitors = [
+    { name = "DP-1"; width = 2560; height = 1440; refreshRate = 165; x = 0; y = 0; }
+    { name = "DP-2"; width = 2560; height = 1440; refreshRate = 165; x = 2560; y = 0; }
+  ];
 
   # Home Manager
   home-manager = {
@@ -47,6 +37,9 @@
       theme = config.theme;
       locale = config.locale;
       user = config.user;
+      features = config.features;
+      displays = config.displays;
+      input = config.input;
     };
     users.${config.user.name} = {
       imports = [
