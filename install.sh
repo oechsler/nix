@@ -59,6 +59,7 @@ nixos-generate-config --root /mnt --show-hardware-config > "$HOST_DIR/hardware-c
 # Remove fileSystems and swapDevices (disko handles mounts)
 sed -i '/^\s*fileSystems\./,/};/d' "$HOST_DIR/hardware-configuration.nix"
 sed -i '/^\s*swapDevices\s*=/,/];/d' "$HOST_DIR/hardware-configuration.nix"
+git -C "$REPO_DIR" add --all
 
 echo "==> Installing NixOS..."
 nixos-install --flake "$REPO_DIR#$HOST"
