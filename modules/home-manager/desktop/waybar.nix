@@ -47,7 +47,7 @@ in
         icon = true;
         icon-size = 16;
         rewrite = {
-          "" = "Schreibtisch";
+          "" = builtins.baseNameOf config.xdg.userDirs.desktop;
           "(.*) - (.*)" = "$2";
           "(.*) — (.*)" = "$2";
           "(.*) – (.*)" = "$2";

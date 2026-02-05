@@ -1,4 +1,4 @@
-{ config, pkgs, lib, fonts, theme, ... }:
+{ config, pkgs, lib, fonts, theme, features, input, ... }:
 
 let
   flavor = theme.catppuccin.flavor;
@@ -15,79 +15,296 @@ let
     variant = flavor;
   };
   themeName = "catppuccin-${flavor}-${accent}-standard";
+
+  isKde = features.desktop.wm == "kde";
+
+  capitalize = s:
+    (lib.toUpper (builtins.substring 0 1 s)) +
+    (builtins.substring 1 (builtins.stringLength s) s);
+  colorSchemeName = "Catppuccin ${capitalize flavor} ${capitalize accent}";
+  colorSchemeId = "Catppuccin${capitalize flavor}${capitalize accent}";
+  lookAndFeelId = "Catppuccin-${capitalize flavor}-${capitalize accent}";
+  auroraeThemeId = "Catppuccin${capitalize flavor}-Modern";
+
+  catppuccinKde = pkgs.catppuccin-kde.override {
+    flavour = [ flavor ];
+    accents = [ accent ];
+  };
+
+  # Patch Aurorae theme to use tiny buttons (upstream hardcodes 37x37)
+  patchedAurorae = pkgs.runCommand "${auroraeThemeId}-tiny" {} ''
+    cp -r ${catppuccinKde}/share/aurorae/themes/${auroraeThemeId} $out
+    chmod +w $out $out/${auroraeThemeId}rc
+    sed -i 's/ButtonHeight=37/ButtonHeight=28/' $out/${auroraeThemeId}rc
+    sed -i 's/ButtonWidth=37/ButtonWidth=28/' $out/${auroraeThemeId}rc
+  '';
+
+  kwriteconfig = "${pkgs.kdePackages.kconfig}/bin/kwriteconfig6";
+
+  pinnedLaunchersStr = lib.concatStringsSep "," config.kde.pinnedLaunchers;
+
+  kickoffIcon = if isLight then "nix-snowflake" else "nix-snowflake-white";
+
+  # Generic script to set a key in a Plasma widget's [Configuration][General]
+  plasmaWidgetConfig = pkgs.writeTextFile {
+    name = "plasma-widget-config";
+    executable = true;
+    text = ''
+      #!${pkgs.python3}/bin/python3
+      """Set a config key for a Plasma widget by plugin name.
+
+      Usage: plasma-widget-config <config-file> <plugin> <key> <value>
+      Finds the widget with the given plugin name and sets key=value
+      in its [Configuration][General] section.
+      """
+      import sys, os
+
+      config_path, plugin, key, value = sys.argv[1:5]
+      if not os.path.isfile(config_path):
+          sys.exit(0)
+
+      with open(config_path) as f:
+          lines = f.readlines()
+
+      # Find the section header containing plugin=<plugin>
+      widget_section = None
+      current_section = ""
+      for line in lines:
+          s = line.strip()
+          if s.startswith("["):
+              current_section = s
+          elif s == f"plugin={plugin}":
+              widget_section = current_section
+              break
+
+      if not widget_section:
+          sys.exit(1)
+
+      target = widget_section[:-1] + "][Configuration][General]"
+      target_exists = any(line.strip() == target for line in lines)
+
+      if not target_exists:
+          # Section missing (fresh KDE install) — append it
+          with open(config_path, "a") as f:
+              f.write(f"\n{target}\n{key}={value}\n")
+          sys.exit(0)
+
+      in_target = False
+      found = False
+      result = []
+      for line in lines:
+          s = line.strip()
+          if s.startswith("["):
+              if in_target and not found:
+                  result.append(f"{key}={value}\n")
+                  found = True
+              in_target = (s == target)
+          if in_target and s.startswith(f"{key}="):
+              result.append(f"{key}={value}\n")
+              found = True
+              continue
+          result.append(line)
+
+      if in_target and not found:
+          result.append(f"{key}={value}\n")
+
+      with open(config_path, "w") as f:
+          f.writelines(result)
+    '';
+  };
 in
 {
-  catppuccin = {
-    enable = true;
-    flavor = lib.mkDefault flavor;
-    accent = lib.mkDefault accent;
+  options.kde.pinnedLaunchers = lib.mkOption {
+    type = lib.types.listOf lib.types.str;
+    default = [];
+    description = "Pinned taskbar launchers for KDE (in order)";
   };
 
-  home.pointerCursor = {
-    name = cursorName;
-    package = cursorPackage;
-    size = cursorSize;
-    gtk.enable = true;
-    x11.enable = true;
-  };
+  config = lib.mkMerge [
+    # ── Default pinned launchers (autostart-style, based on features) ──────────
+    {
+      kde.pinnedLaunchers =
+        [ "applications:firefox.desktop"
+          "applications:org.kde.dolphin.desktop"
+          "applications:kitty.desktop"
+        ]
+        ++ lib.optionals features.development.enable [
+          "applications:code.desktop"
+        ]
+        ++ lib.optionals features.apps.enable [
+          "applications:obsidian.desktop"
+        ]
+        ++ lib.optionals features.gaming.enable [
+          "applications:steam.desktop"
+        ]
+        ++ lib.optionals features.apps.enable [
+          "applications:discord.desktop"
+          "applications:spotify.desktop"
+        ];
+    }
 
-  gtk = {
-    enable = true;
-    theme = {
-      name = themeName;
-      package = catppuccinGtk;
-    };
-    iconTheme = {
-      name = lib.mkForce iconName;
-      package = lib.mkForce iconPackage;
-    };
-    # No window buttons in tiling WM
-    gtk3.extraConfig.gtk-decoration-layout = "";
-    gtk4.extraConfig.gtk-decoration-layout = "";
-  };
+    # ── Generic (all WMs) ───────────────────────────────────────────────────────
+    {
+      # Clean up stale .bak files before home-manager checks for conflicts
+      home.activation.cleanupBackups = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+        rm -f ~/.gtkrc-2.0.bak
+      '';
 
-  dconf.settings."org/gnome/desktop/interface".color-scheme =
-    if isLight then "prefer-light" else "prefer-dark";
-  dconf.settings."org/gnome/desktop/wm/preferences".button-layout = "";
+      catppuccin = {
+        enable = true;
+        flavor = lib.mkDefault flavor;
+        accent = lib.mkDefault accent;
+      };
 
-  qt = {
-    enable = true;
-    platformTheme.name = "qtct";
-    style.name = "kvantum";
-  };
+      home.pointerCursor = {
+        name = cursorName;
+        package = cursorPackage;
+        size = cursorSize;
+        gtk.enable = true;
+        x11.enable = true;
+      };
 
-  catppuccin.kvantum.enable = true;
+      gtk = {
+        enable = true;
+        theme = {
+          name = themeName;
+          package = catppuccinGtk;
+        };
+        iconTheme = {
+          name = lib.mkForce iconName;
+          package = lib.mkForce iconPackage;
+        };
+      };
 
-  home.sessionVariables.QT_QPA_PLATFORMTHEME = "qt5ct";
+      # Electron apps (Discord, VS Code, …) natively on Wayland
+      home.sessionVariables.NIXOS_OZONE_WL = "1";
 
-  home.packages = with pkgs; [
-    libsForQt5.qt5ct
-    kdePackages.qt6ct
-    libsForQt5.qtstyleplugin-kvantum
-    kdePackages.qtstyleplugin-kvantum
+      dconf.settings."org/gnome/desktop/interface".color-scheme =
+        if isLight then "prefer-light" else "prefer-dark";
+    }
+
+    # ── Tiling WMs (Hyprland etc.) — force Qt theming, hide window buttons ─────
+    (lib.mkIf (!isKde) {
+      gtk = {
+        gtk3.extraConfig.gtk-decoration-layout = "";
+        gtk4.extraConfig.gtk-decoration-layout = "";
+      };
+
+      dconf.settings."org/gnome/desktop/wm/preferences".button-layout = "";
+
+      qt = {
+        enable = true;
+        platformTheme.name = "qtct";
+        style.name = "kvantum";
+      };
+
+      catppuccin.kvantum.enable = true;
+
+      home.sessionVariables.QT_QPA_PLATFORMTHEME = "qt5ct";
+
+      home.packages = with pkgs; [
+        libsForQt5.qt5ct
+        kdePackages.qt6ct
+        libsForQt5.qtstyleplugin-kvantum
+        kdePackages.qtstyleplugin-kvantum
+      ];
+
+      xdg.configFile."qt5ct/qt5ct.conf".text = ''
+        [Appearance]
+        style=kvantum
+        icon_theme=${iconName}
+        color_scheme_path=
+        custom_palette=false
+
+        [Fonts]
+        fixed="${fonts.monospace},${toString fonts.size},-1,5,50,0,0,0,0,0"
+        general="${fonts.sansSerif},${toString fonts.size},-1,5,50,0,0,0,0,0"
+      '';
+
+      xdg.configFile."qt6ct/qt6ct.conf".text = ''
+        [Appearance]
+        style=kvantum
+        icon_theme=${iconName}
+        color_scheme_path=
+        custom_palette=false
+
+        [Fonts]
+        fixed="${fonts.monospace},${toString fonts.size},-1,5,50,0,0,0,0,0"
+        general="${fonts.sansSerif},${toString fonts.size},-1,5,50,0,0,0,0,0"
+      '';
+    })
+
+    # ── KDE Plasma — Catppuccin KDE theming + wallpaper ─────────────────────────
+    (lib.mkIf isKde {
+      # GTK CSD apps (Nautilus etc.): match Mac-style button layout
+      gtk = {
+        gtk3.extraConfig.gtk-decoration-layout = "close,minimize,maximize:";
+        gtk4.extraConfig.gtk-decoration-layout = "close,minimize,maximize:";
+      };
+      dconf.settings."org/gnome/desktop/wm/preferences".button-layout = "close,minimize,maximize:";
+
+      # Symlink theme files to ~/.local/share/ where KDE discovers them
+      xdg.dataFile = {
+        "color-schemes/${colorSchemeId}.colors".source =
+          "${catppuccinKde}/share/color-schemes/${colorSchemeId}.colors";
+        "plasma/look-and-feel/${lookAndFeelId}".source =
+          "${catppuccinKde}/share/plasma/look-and-feel/${lookAndFeelId}";
+        "aurorae/themes/${auroraeThemeId}".source = patchedAurorae;
+      };
+
+      home.activation.applyKdeTheme = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        # Apply full Catppuccin look-and-feel (color scheme, window decorations, splash)
+        run ${pkgs.kdePackages.plasma-workspace}/bin/plasma-apply-lookandfeel -a "${lookAndFeelId}" 2>/dev/null || true
+        # Fallback: apply color scheme + look-and-feel directly (plasma-apply-lookandfeel needs D-Bus)
+        run ${pkgs.kdePackages.plasma-workspace}/bin/plasma-apply-colorscheme "${colorSchemeId}" 2>/dev/null \
+          || run ${kwriteconfig} --file kdeglobals --group General --key ColorScheme "${colorSchemeId}"
+        run ${kwriteconfig} --file kdeglobals --group KDE --key LookAndFeelPackage "${lookAndFeelId}"
+        run ${pkgs.kdePackages.plasma-workspace}/bin/plasma-apply-wallpaperimage ${theme.wallpaper} 2>/dev/null || true
+
+        # Lock screen wallpaper
+        run ${kwriteconfig} --file kscreenlockerrc --group Greeter --group Wallpaper --key WallpaperPlugin "org.kde.image"
+        run ${kwriteconfig} --file kscreenlockerrc --group Greeter --group Wallpaper --group org.kde.image --group General --key Image "file://${theme.wallpaper}"
+        run ${kwriteconfig} --file kscreenlockerrc --group Greeter --group Wallpaper --group org.kde.image --group General --key PreviewImage "file://${theme.wallpaper}"
+
+        # Icon theme (not part of look-and-feel)
+        run ${kwriteconfig} --file kdeglobals --group Icons --key Theme "${iconName}"
+
+        # Cursor theme + size (ensures XWayland/Electron apps pick it up)
+        run ${kwriteconfig} --file kcminputrc --group Mouse --key cursorSize "${toString cursorSize}"
+        run ${kwriteconfig} --file kcminputrc --group Mouse --key cursorTheme "${cursorName}"
+
+        # Natural scroll — mouse (global)
+        run ${kwriteconfig} --file kcminputrc --group Mouse --key NaturalScroll "${lib.boolToString input.mouse.naturalScroll}"
+
+        # Natural scroll — touchpads (per-device, detected at runtime)
+        ${pkgs.gnugrep}/bin/grep -i 'Name=.*touchpad' /proc/bus/input/devices \
+          | ${pkgs.gnused}/bin/sed 's/.*Name="\(.*\)"/\1/' \
+          | while read -r dev; do
+              run ${kwriteconfig} --file kcminputrc \
+                --group "Libinput" --group "$dev" --group "Touchpad" \
+                --key NaturalScroll "${lib.boolToString input.touchpad.naturalScroll}"
+            done
+
+        # Window decoration: Breeze with Catppuccin colors + rounded corners
+        run ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key library org.kde.breeze
+        run ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key theme Breeze
+        run ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnLeft "XIA"
+        run ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight ""
+        run ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key ButtonSize "Tiny"
+        run ${kwriteconfig} --file breezerc --group Common --key CornerRadius "${toString theme.radius.default}"
+
+        # Tell running KWin to reload decoration settings
+        ${pkgs.kdePackages.qttools}/bin/qdbus org.kde.KWin /KWin reconfigure 2>/dev/null || true
+
+        # Configure taskbar launchers and kickoff icon
+        config="$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+        if [ -f "$config" ]; then
+          run ${plasmaWidgetConfig} "$config" "org.kde.plasma.icontasks" "launchers" "${pinnedLaunchersStr}" \
+            || run ${plasmaWidgetConfig} "$config" "org.kde.plasma.taskmanager" "launchers" "${pinnedLaunchersStr}" \
+            || true
+          run ${plasmaWidgetConfig} "$config" "org.kde.plasma.kickoff" "icon" "${kickoffIcon}" 2>/dev/null || true
+        fi
+      '';
+    })
   ];
-
-  xdg.configFile."qt5ct/qt5ct.conf".text = ''
-    [Appearance]
-    style=kvantum
-    icon_theme=${iconName}
-    color_scheme_path=
-    custom_palette=false
-
-    [Fonts]
-    fixed="${fonts.monospace},${toString fonts.size},-1,5,50,0,0,0,0,0"
-    general="${fonts.sansSerif},${toString fonts.size},-1,5,50,0,0,0,0,0"
-  '';
-
-  xdg.configFile."qt6ct/qt6ct.conf".text = ''
-    [Appearance]
-    style=kvantum
-    icon_theme=${iconName}
-    color_scheme_path=
-    custom_palette=false
-
-    [Fonts]
-    fixed="${fonts.monospace},${toString fonts.size},-1,5,50,0,0,0,0,0"
-    general="${fonts.sansSerif},${toString fonts.size},-1,5,50,0,0,0,0,0"
-  '';
 }

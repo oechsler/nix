@@ -11,19 +11,28 @@
 # 7. Reboot and verify: bootctl status
 { config, lib, pkgs, inputs, ... }:
 
+let
+  cfg = config.features.secureBoot;
+in
 {
   imports = [
     inputs.lanzaboote.nixosModules.lanzaboote
   ];
 
-  # Lanzaboote replaces systemd-boot
-  boot.loader.systemd-boot.enable = lib.mkForce false;
-
-  boot.lanzaboote = {
-    enable = true;
-    pkiBundle = "/var/lib/sbctl";
+  options.features.secureBoot = {
+    enable = lib.mkEnableOption "Secure Boot via lanzaboote";
   };
 
-  # sbctl for key management
-  environment.systemPackages = [ pkgs.sbctl ];
+  config = lib.mkIf cfg.enable {
+    # Lanzaboote replaces systemd-boot
+    boot.loader.systemd-boot.enable = lib.mkForce false;
+
+    boot.lanzaboote = {
+      enable = true;
+      pkiBundle = "/var/lib/sbctl";
+    };
+
+    # sbctl for key management
+    environment.systemPackages = [ pkgs.sbctl ];
+  };
 }

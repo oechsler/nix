@@ -26,13 +26,23 @@ in
       default = ../../pictures/sam-memoji.png;
       description = "User profile picture";
     };
+    github = lib.mkOption {
+      type = lib.types.str;
+      default = "oechsler";
+      description = "GitHub username (used for SSH key import)";
+    };
+    directories = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [];
+      description = "Extra directories to create in the user's home (relative to ~)";
+    };
   };
 
   config = {
     users.users.${cfg.name} = {
       isNormalUser = true;
       description = cfg.fullName;
-      extraGroups = [ "networkmanager" "wheel" "docker" ];
+      extraGroups = [ "networkmanager" "wheel" ];
       shell = pkgs.fish;
     };
 
@@ -42,10 +52,11 @@ in
       cp ${cfg.icon} /var/lib/AccountsService/icons/${cfg.name}
     '';
 
-    systemd.tmpfiles.rules = [
-      "d ${user.home}/repos 0755 ${user.name} ${user.group} -"
-      "d ${user.home}/Nextcloud 0755 ${user.name} ${user.group} -"
-    ];
+    user.directories = [ "repos" "Nextcloud" ];
+
+    systemd.tmpfiles.rules = map (dir:
+      "d ${user.home}/${dir} 0755 ${user.name} ${user.group} -"
+    ) cfg.directories;
 
     security.sudo.extraConfig = ''
       Defaults pwfeedback

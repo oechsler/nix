@@ -1,6 +1,8 @@
 { config, pkgs, lib, ... }:
 
 let
+  cfg = config.features.smb;
+
   smbShares = [ "personal-drive" ];
   user = config.users.users.samuel;
 
@@ -38,38 +40,44 @@ let
   ) smbShares;
 in
 {
-  environment.systemPackages = [ pkgs.cifs-utils ];
-
-  systemd.tmpfiles.rules = [
-    "d ${user.home}/smb 0755 ${user.name} ${user.group} -"
-  ];
-
-  sops = {
-    templates = lib.listToAttrs (map (name: {
-      name = "smb-credentials-${name}";
-      value.content = ''
-        username=${config.sops.placeholder."smb/${name}/username"}
-        password=${config.sops.placeholder."smb/${name}/password"}
-      '';
-    }) smbShares) // {
-      "smb-mount.sh".content = "#!/bin/bash\n" + mountContent;
-      "smb-umount.sh".content = "#!/bin/bash\n" + umountContent;
-    };
-    secrets = smbSecrets;
+  options.features.smb = {
+    enable = (lib.mkEnableOption "SMB network share mounts") // { default = true; };
   };
 
-  systemd.services.smb-mount = {
-    description = "Mount SMB Shares";
-    after = [ "network-online.target" "sops-nix.service" "systemd-resolved.service" ];
-    wants = [ "network-online.target" "systemd-resolved.service" ];
-    wantedBy = [ "multi-user.target" ];
-    path = [ pkgs.cifs-utils pkgs.util-linux ];
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-      ExecStart = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-mount.sh".path}";
-      ExecStop = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-umount.sh".path}";
-      TimeoutStartSec = "60s";
+  config = lib.mkIf cfg.enable {
+    environment.systemPackages = [ pkgs.cifs-utils ];
+
+    systemd.tmpfiles.rules = [
+      "d ${user.home}/smb 0755 ${user.name} ${user.group} -"
+    ];
+
+    sops = {
+      templates = lib.listToAttrs (map (name: {
+        name = "smb-credentials-${name}";
+        value.content = ''
+          username=${config.sops.placeholder."smb/${name}/username"}
+          password=${config.sops.placeholder."smb/${name}/password"}
+        '';
+      }) smbShares) // {
+        "smb-mount.sh".content = "#!/bin/bash\n" + mountContent;
+        "smb-umount.sh".content = "#!/bin/bash\n" + umountContent;
+      };
+      secrets = smbSecrets;
+    };
+
+    systemd.services.smb-mount = {
+      description = "Mount SMB Shares";
+      after = [ "network-online.target" "sops-nix.service" "systemd-resolved.service" ];
+      wants = [ "network-online.target" "systemd-resolved.service" ];
+      wantedBy = [ "multi-user.target" ];
+      path = [ pkgs.cifs-utils pkgs.util-linux ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStart = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-mount.sh".path}";
+        ExecStop = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-umount.sh".path}";
+        TimeoutStartSec = "60s";
+      };
     };
   };
 }
