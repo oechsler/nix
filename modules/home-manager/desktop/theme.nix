@@ -273,17 +273,33 @@ in
         run ${kwriteconfig} --file kcminputrc --group Mouse --key cursorSize "${toString cursorSize}"
         run ${kwriteconfig} --file kcminputrc --group Mouse --key cursorTheme "${cursorName}"
 
-        # Natural scroll — mouse (global)
-        run ${kwriteconfig} --file kcminputrc --group Mouse --key NaturalScroll "${lib.boolToString input.mouse.naturalScroll}"
-
-        # Natural scroll — touchpads (per-device, detected at runtime)
-        ${pkgs.gnugrep}/bin/grep -i 'Name=.*touchpad' /proc/bus/input/devices \
-          | ${pkgs.gnused}/bin/sed 's/.*Name="\(.*\)"/\1/' \
-          | while read -r dev; do
-              run ${kwriteconfig} --file kcminputrc \
-                --group "Libinput" --group "$dev" --group "Touchpad" \
-                --key NaturalScroll "${lib.boolToString input.touchpad.naturalScroll}"
-            done
+        # Natural scroll — per-device via Libinput groups (Plasma 6 Wayland format)
+        # KWin reads: [Libinput][vendor_decimal][product_decimal][device_name]
+        ${pkgs.gawk}/bin/awk '
+          /^I:/ { vendor=""; product=""
+            if (match($0, /Vendor=([0-9a-fA-F]+)/, m)) vendor=strtonum("0x" m[1])
+            if (match($0, /Product=([0-9a-fA-F]+)/, m)) product=strtonum("0x" m[1])
+          }
+          /^N:/ { gsub(/^N: Name="/, ""); gsub(/"$/, ""); name=$0 }
+          /^H:.*mouse|^H:.*event/ {
+            if (vendor != "" && product != "" && name != "") {
+              if (tolower(name) ~ /touchpad/) {
+                print vendor "\t" product "\t" name "\ttouchpad"
+              } else if (tolower(name) ~ /mouse|pointer|razer|logitech|steelseries/) {
+                print vendor "\t" product "\t" name "\tmouse"
+              }
+            }
+          }
+        ' /proc/bus/input/devices | while IFS=$'\t' read -r vid pid dname dtype; do
+          if [ "$dtype" = "touchpad" ]; then
+            scroll="${lib.boolToString input.touchpad.naturalScroll}"
+          else
+            scroll="${lib.boolToString input.mouse.naturalScroll}"
+          fi
+          run ${kwriteconfig} --file kcminputrc \
+            --group Libinput --group "$vid" --group "$pid" --group "$dname" \
+            --key NaturalScroll "$scroll"
+        done
 
         # Window decoration: Breeze with Catppuccin colors + rounded corners
         run ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key library org.kde.breeze

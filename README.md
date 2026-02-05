@@ -20,9 +20,10 @@ pictures/                       # User profile pictures
 
 ## Feature Toggles
 
-All features default to `true` (except Secure Boot and SSH). Override per host in `configuration.nix`:
+All features default to `true` (except Secure Boot, SSH, and server mode). Override per host in `configuration.nix`:
 
 ```nix
+features.server = true;          # Disables all desktop-related features at once
 features.gaming.enable = false;
 features.desktop.wm = "kde";
 features.ssh.enable = true;
@@ -30,6 +31,7 @@ features.ssh.enable = true;
 
 | Toggle | Default | Description |
 |--------|---------|-------------|
+| `features.server` | `false` | Server mode — disables desktop, apps, audio, bluetooth, gaming, flatpak, appimage, wifi |
 | `features.desktop.enable` | `true` | Desktop environment (SDDM, Firefox, theming) |
 | `features.desktop.wm` | `"hyprland"` | Window manager (`"hyprland"` / `"kde"`) |
 | `features.audio.enable` | `true` | PipeWire audio (ALSA, PulseAudio compat) |
