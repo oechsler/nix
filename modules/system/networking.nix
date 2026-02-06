@@ -45,6 +45,12 @@ in
   config = lib.mkMerge [
     {
       networking.networkmanager.enable = true;
+
+      services.resolved = {
+        enable = true;
+        dnssec = "allow-downgrade";
+        domains = [ "~." ];
+      };
     }
 
     (lib.mkIf tailscaleCfg.enable {
