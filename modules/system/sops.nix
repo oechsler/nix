@@ -3,6 +3,6 @@
 {
   sops = {
     defaultSopsFile = ../../sops/sops.encrypted.yaml;
-    age.keyFile = "${config.users.users.${config.user.name}.home}/.config/sops/age/keys.txt";
+    age.keyFile = "/var/lib/sops/age/keys.txt";
   };
 }
