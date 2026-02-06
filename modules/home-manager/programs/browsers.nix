@@ -79,10 +79,11 @@ lib.mkIf features.desktop.enable {
         "browser.startup.homepage" = "https://dash.at.oechsler.it";
         "browser.startup.page" = 3; # 3 = Restore previous session
 
-        # Vertical tabs
+        # Vertical tabs — collapsed, no extra tools
         "sidebar.verticalTabs" = true;
         "sidebar.revamp" = true;
-        "sidebar.main.tools.shown" = true;
+        "sidebar.visibility" = "hide-sidebar";
+        "sidebar.main.tools" = "";
 
         # DRM content (Netflix, Spotify, etc.)
         "media.eme.enabled" = true;
