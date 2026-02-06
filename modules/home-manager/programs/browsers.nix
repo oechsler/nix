@@ -45,11 +45,10 @@ lib.mkIf features.desktop.enable {
         # Bookmarks toolbar — always hidden
         "browser.toolbars.bookmarks.visibility" = "never";
 
-        # Toolbar layout: sidebar | back forward reload | spacer | urlbar | spacer | bitwarden downloads
+        # Toolbar layout: back forward reload | spacer | urlbar | spacer | bitwarden downloads
         "browser.uiCustomization.state" = builtins.toJSON {
           placements = {
             nav-bar = [
-              "sidebar-button"
               "back-button"
               "forward-button"
               "stop-reload-button"
