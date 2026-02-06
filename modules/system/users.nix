@@ -39,6 +39,9 @@ in
   };
 
   config = {
+    # Lock root account - only sudo access via user account
+    users.users.root.hashedPassword = "!";
+
     users.users.${cfg.name} = {
       isNormalUser = true;
       description = cfg.fullName;

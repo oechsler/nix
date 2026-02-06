@@ -252,26 +252,76 @@ in
         "aurorae/themes/${auroraeThemeId}".source = patchedAurorae;
       };
 
+      # Plasma-manager: declarative KDE Plasma configuration
+      programs.plasma = {
+        enable = true;
+
+        # Workspace settings
+        workspace = {
+          lookAndFeel = lookAndFeelId;
+          colorScheme = colorSchemeId;
+          iconTheme = iconName;
+          wallpaper = theme.wallpaper;
+          cursor = {
+            theme = cursorName;
+            size = cursorSize;
+          };
+        };
+
+        # Window decoration buttons (Mac-style: close, minimize, maximize on left)
+        kwin.titlebarButtons = {
+          left = [ "close" "minimize" "maximize" ];
+          right = [];
+        };
+
+        # Low-level config for things without high-level API
+        configFile = {
+          # Breeze corner radius
+          breezerc.Common.CornerRadius = theme.radius.default;
+        };
+      };
+
+      # Autostart script to configure taskbar launchers and kickoff icon
+      xdg.configFile."autostart/kde-launchers-setup.desktop".text = ''
+        [Desktop Entry]
+        Type=Application
+        Name=KDE Launchers Setup
+        Exec=${pkgs.writeShellScript "kde-launchers-setup" ''
+          # Wait for Plasma to be ready
+          timeout=30
+          while [ $timeout -gt 0 ]; do
+            if ${pkgs.kdePackages.qttools}/bin/qdbus org.kde.plasmashell /PlasmaShell >/dev/null 2>&1; then
+              break
+            fi
+            sleep 0.5
+            timeout=$((timeout - 1))
+          done
+
+          config="$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+          if [ -f "$config" ]; then
+            ${plasmaWidgetConfig} "$config" "org.kde.plasma.icontasks" "launchers" "${pinnedLaunchersStr}" \
+              || ${plasmaWidgetConfig} "$config" "org.kde.plasma.taskmanager" "launchers" "${pinnedLaunchersStr}" \
+              || true
+            ${plasmaWidgetConfig} "$config" "org.kde.plasma.kickoff" "icon" "${kickoffIcon}" 2>/dev/null || true
+          fi
+        ''}
+        X-KDE-autostart-phase=2
+        Hidden=false
+      '';
+
       home.activation.applyKdeTheme = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        # Apply full Catppuccin look-and-feel (color scheme, window decorations, splash)
-        run ${pkgs.kdePackages.plasma-workspace}/bin/plasma-apply-lookandfeel -a "${lookAndFeelId}" 2>/dev/null || true
-        # Fallback: apply color scheme + look-and-feel directly (plasma-apply-lookandfeel needs D-Bus)
-        run ${pkgs.kdePackages.plasma-workspace}/bin/plasma-apply-colorscheme "${colorSchemeId}" 2>/dev/null \
-          || run ${kwriteconfig} --file kdeglobals --group General --key ColorScheme "${colorSchemeId}"
-        run ${kwriteconfig} --file kdeglobals --group KDE --key LookAndFeelPackage "${lookAndFeelId}"
-        run ${pkgs.kdePackages.plasma-workspace}/bin/plasma-apply-wallpaperimage ${theme.wallpaper} 2>/dev/null || true
+        # Most settings are now managed by plasma-manager declaratively.
+        # This activation script only handles complex/dynamic settings.
 
         # Lock screen wallpaper
         run ${kwriteconfig} --file kscreenlockerrc --group Greeter --group Wallpaper --key WallpaperPlugin "org.kde.image"
         run ${kwriteconfig} --file kscreenlockerrc --group Greeter --group Wallpaper --group org.kde.image --group General --key Image "file://${theme.wallpaper}"
         run ${kwriteconfig} --file kscreenlockerrc --group Greeter --group Wallpaper --group org.kde.image --group General --key PreviewImage "file://${theme.wallpaper}"
 
-        # Icon theme (not part of look-and-feel)
-        run ${kwriteconfig} --file kdeglobals --group Icons --key Theme "${iconName}"
-
-        # Cursor theme + size (ensures XWayland/Electron apps pick it up)
-        run ${kwriteconfig} --file kcminputrc --group Mouse --key cursorSize "${toString cursorSize}"
-        run ${kwriteconfig} --file kcminputrc --group Mouse --key cursorTheme "${cursorName}"
+        # Window decoration: Breeze library and button size (buttons managed by plasma-manager)
+        run ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key library org.kde.breeze
+        run ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key theme Breeze
+        run ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key ButtonSize "Tiny"
 
         # Natural scroll — per-device via Libinput groups (Plasma 6 Wayland format)
         # KWin reads: [Libinput][vendor_decimal][product_decimal][device_name]
@@ -301,25 +351,8 @@ in
             --key NaturalScroll "$scroll"
         done
 
-        # Window decoration: Breeze with Catppuccin colors + rounded corners
-        run ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key library org.kde.breeze
-        run ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key theme Breeze
-        run ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnLeft "XIA"
-        run ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight ""
-        run ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key ButtonSize "Tiny"
-        run ${kwriteconfig} --file breezerc --group Common --key CornerRadius "${toString theme.radius.default}"
-
-        # Tell running KWin to reload decoration settings
+        # Tell running KWin to reload decoration settings (if KWin is running)
         ${pkgs.kdePackages.qttools}/bin/qdbus org.kde.KWin /KWin reconfigure 2>/dev/null || true
-
-        # Configure taskbar launchers and kickoff icon
-        config="$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
-        if [ -f "$config" ]; then
-          run ${plasmaWidgetConfig} "$config" "org.kde.plasma.icontasks" "launchers" "${pinnedLaunchersStr}" \
-            || run ${plasmaWidgetConfig} "$config" "org.kde.plasma.taskmanager" "launchers" "${pinnedLaunchersStr}" \
-            || true
-          run ${plasmaWidgetConfig} "$config" "org.kde.plasma.kickoff" "icon" "${kickoffIcon}" 2>/dev/null || true
-        fi
       '';
     })
   ];
