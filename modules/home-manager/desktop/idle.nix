@@ -31,9 +31,11 @@ in
     };
   };
 
-  # KDE — generate PowerDevil configuration
-  config.xdg.configFile."powerdevilrc" = lib.mkIf isKde {
-    text = ''
+  # KDE — write PowerDevil config as a mutable copy (not a read-only symlink)
+  # so that KDE can still modify it at runtime.  Overwritten on each rebuild.
+  config.home.activation.powerdevilrc = lib.mkIf isKde (
+    lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      cat > "${config.xdg.configHome}/powerdevilrc" <<'EOF'
       [AC][Display]
       DimDisplayIdleTimeoutSec=${ts cfg.timeouts.dimAcLockBattery}
       TurnOffDisplayIdleTimeoutSec=${ts cfg.timeouts.lockSuspendAc}
@@ -57,6 +59,7 @@ in
       [LowBattery][SuspendAndShutdown]
       AutoSuspendAction=1
       AutoSuspendIdleTimeoutSec=${ts (cfg.timeouts.suspendBattery / 2)}
-    '';
-  };
+      EOF
+    ''
+  );
 }
