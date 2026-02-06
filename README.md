@@ -168,21 +168,20 @@ Each entry is `{ name = "..."; path = "/absolute/path"; icon = "folder-..."; }`.
 
 Bookmarks are managed declaratively — on Nautilus via GTK bookmarks (force-overwritten to prevent Nextcloud pollution), on Dolphin via `user-places.xbel`.
 
-### KDE Pinned Launchers & Favorites (`home.nix`)
+### KDE Pinned Launchers (`home.nix`)
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `kde.pinnedLaunchers` | Firefox, Dolphin, Kitty (+ conditional) | Pinned taskbar launchers for KDE |
-| `kde.pinnedFavorites` | Firefox, Dolphin, Kitty (+ conditional, Settings, Discover) | Pinned Kickoff menu favorites for KDE |
 
-Both options share the same base defaults extended by feature toggles:
+Default launchers are extended based on feature toggles:
 - `features.development.enable` adds VS Code
 - `features.apps.enable` adds Obsidian, Discord, Spotify
 - `features.gaming.enable` adds Steam
 
-`pinnedFavorites` additionally appends System Settings and Discover at the end.
+Each entry is a string like `"applications:firefox.desktop"`.
 
-Each entry is a string like `"applications:firefox.desktop"`. Both lists can be overridden independently per host.
+> **Note:** Kickoff menu favorites cannot be set declaratively — Plasma 6 manages them via kactivitymanagerd's internal stats database. See [plasma-manager#376](https://github.com/nix-community/plasma-manager/issues/376).
 
 ### Idle / Power Management (`home.nix`)
 

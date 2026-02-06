@@ -42,7 +42,6 @@ let
   kwriteconfig = "${pkgs.kdePackages.kconfig}/bin/kwriteconfig6";
 
   pinnedLaunchersStr = lib.concatStringsSep "," config.kde.pinnedLaunchers;
-  pinnedFavoritesStr = lib.concatStringsSep "," config.kde.pinnedFavorites;
 
   kickoffIcon = if isLight then "nix-snowflake" else "nix-snowflake-white";
 
@@ -115,17 +114,13 @@ let
   };
 in
 {
-  options.kde = {
-    pinnedLaunchers = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [];
-      description = "Pinned taskbar launchers for KDE (in order)";
-    };
-    pinnedFavorites = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [];
-      description = "Pinned Kickoff menu favorites for KDE (in order)";
-    };
+  # NOTE: Kickoff menu favorites (pinnedFavorites) cannot be set declaratively —
+  # Plasma 6 manages them via kactivitymanagerd's internal stats database.
+  # See: https://github.com/nix-community/plasma-manager/issues/376
+  options.kde.pinnedLaunchers = lib.mkOption {
+    type = lib.types.listOf lib.types.str;
+    default = [];
+    description = "Pinned taskbar launchers for KDE (in order)";
   };
 
   config = lib.mkMerge [
@@ -150,28 +145,6 @@ in
           "applications:spotify.desktop"
         ];
 
-      kde.pinnedFavorites =
-        [ "applications:firefox.desktop"
-          "applications:org.kde.dolphin.desktop"
-          "applications:kitty.desktop"
-        ]
-        ++ lib.optionals features.development.enable [
-          "applications:code.desktop"
-        ]
-        ++ lib.optionals features.apps.enable [
-          "applications:obsidian.desktop"
-        ]
-        ++ lib.optionals features.gaming.enable [
-          "applications:steam.desktop"
-        ]
-        ++ lib.optionals features.apps.enable [
-          "applications:discord.desktop"
-          "applications:spotify.desktop"
-        ]
-        ++ [
-          "applications:systemsettings.desktop"
-          "applications:org.kde.discover.desktop"
-        ];
     }
 
     # ── Generic (all WMs) ───────────────────────────────────────────────────────
@@ -335,11 +308,6 @@ in
               || true
             ${plasmaWidgetConfig} "$config" "org.kde.plasma.kickoff" "icon" "${kickoffIcon}" 2>/dev/null || true
           fi
-
-          # Set Kickoff favorites via kactivitymanagerd-statsrc
-          ${kwriteconfig} --file kactivitymanagerd-statsrc \
-            --group Favorites-org.kde.plasma.kickoff \
-            --key ordering "${pinnedFavoritesStr}"
         ''}
         X-KDE-autostart-phase=2
         Hidden=false
