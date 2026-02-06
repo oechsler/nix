@@ -47,23 +47,24 @@
     nix-flatpak.url = "github:gmodena/nix-flatpak";
   };
 
-  outputs = { self, nixpkgs, home-manager, catppuccin, disko, sops-nix, cachyos-kernel, lanzaboote, ... }@inputs:
+  outputs = { self, nixpkgs, ... }@inputs:
     let
       system = "x86_64-linux";
-      pkgs = nixpkgs.legacyPackages.${system};
 
-      mkHost = hostName: extraModules: nixpkgs.lib.nixosSystem {
+      mkHost = hostName: nixpkgs.lib.nixosSystem {
         inherit system;
         specialArgs = { inherit inputs; };
         modules = [
           ./hosts/${hostName}/configuration.nix
-          home-manager.nixosModules.default
-          sops-nix.nixosModules.sops
+          inputs.home-manager.nixosModules.default
+          inputs.catppuccin.nixosModules.catppuccin
+          inputs.sops-nix.nixosModules.sops
           inputs.nix-flatpak.nixosModules.nix-flatpak
+          inputs.disko.nixosModules.disko
           {
-            nixpkgs.overlays = [ cachyos-kernel.overlays.pinned ];
+            nixpkgs.overlays = [ inputs.cachyos-kernel.overlays.pinned ];
           }
-        ] ++ extraModules;
+        ];
       };
     in
     {
@@ -73,14 +74,8 @@
       };
 
       nixosConfigurations = {
-        samuels-razer = mkHost "samuels-razer" [
-          disko.nixosModules.disko
-        ];
-
-        samuels-pc = mkHost "samuels-pc" [
-          disko.nixosModules.disko
-        ];
-
+        samuels-razer = mkHost "samuels-razer";
+        samuels-pc = mkHost "samuels-pc";
         default = self.nixosConfigurations.samuels-razer;
       };
     };
