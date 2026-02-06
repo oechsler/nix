@@ -20,8 +20,9 @@
   ];
 
   displays.monitors = [
-    { name = "DP-1"; width = 2560; height = 1440; refreshRate = 165; x = 0; y = 0; }
-    { name = "DP-2"; width = 2560; height = 1440; refreshRate = 165; x = 2560; y = 0; }
+    # TODO: update connector names after checking with `hyprctl monitors`
+    # { name = "DP-1"; width = 2560; height = 1440; refreshRate = 165; x = 0; y = 0; }
+    # { name = "DP-2"; width = 2560; height = 1440; refreshRate = 165; x = 2560; y = 0; }
   ];
 
   # Home Manager
