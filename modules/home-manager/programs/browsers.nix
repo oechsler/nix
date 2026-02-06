@@ -52,8 +52,8 @@ lib.mkIf features.desktop.enable {
               "customizableui-special-spring1"
               "urlbar-container"
               "customizableui-special-spring2"
-              "unified-extensions-button"
               "downloads-button"
+              "unified-extensions-button"
             ];
             toolbar-menubar = [ "menubar-items" ];
             TabsToolbar = [ "tabbrowser-tabs" "new-tab-button" "alltabs-button" ];
