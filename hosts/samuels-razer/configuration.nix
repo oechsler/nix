@@ -2,7 +2,7 @@
 
 {
   imports = [
-    # ./disko.nix  # Uncomment when reinstalling with BTRFS
+    ./disko.nix
     ./hardware-configuration.nix
     inputs.home-manager.nixosModules.default
     inputs.catppuccin.nixosModules.catppuccin
