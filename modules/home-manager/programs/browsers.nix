@@ -41,7 +41,7 @@ lib.mkIf features.desktop.enable {
         # Bookmarks toolbar — always hidden
         "browser.toolbars.bookmarks.visibility" = "never";
 
-        # Toolbar layout: sidebar | back forward reload | spacer | urlbar | spacer | extensions downloads
+        # Toolbar layout: sidebar | back forward reload | spacer | urlbar | spacer | bitwarden downloads extensions
         "browser.uiCustomization.state" = builtins.toJSON {
           placements = {
             nav-bar = [
@@ -52,6 +52,7 @@ lib.mkIf features.desktop.enable {
               "customizableui-special-spring1"
               "urlbar-container"
               "customizableui-special-spring2"
+              "_446900e4-71c2-419f-a6a7-df9c091e268b_-browser-action" # Bitwarden
               "downloads-button"
               "unified-extensions-button"
             ];
@@ -59,7 +60,10 @@ lib.mkIf features.desktop.enable {
             TabsToolbar = [ "tabbrowser-tabs" ];
             PersonalToolbar = [ "personal-bookmarks" ];
             widget-overflow-fixed-list = [];
-            unified-extensions-area = [];
+            unified-extensions-area = [
+              "uBlock0_raymondhill_net-browser-action"
+              "addon_nicothin_com-browser-action"
+            ];
           };
           seen = [ "developer-button" "profiler-button" ];
           dirtyAreaCache = [ "nav-bar" ];
