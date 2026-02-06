@@ -41,6 +41,32 @@ lib.mkIf features.desktop.enable {
         # Bookmarks toolbar — always hidden
         "browser.toolbars.bookmarks.visibility" = "never";
 
+        # Toolbar layout: sidebar | back forward reload | spacer | urlbar | spacer | extensions downloads
+        "browser.uiCustomization.state" = builtins.toJSON {
+          placements = {
+            nav-bar = [
+              "sidebar-button"
+              "back-button"
+              "forward-button"
+              "stop-reload-button"
+              "customizableui-special-spring1"
+              "urlbar-container"
+              "customizableui-special-spring2"
+              "unified-extensions-button"
+              "downloads-button"
+            ];
+            toolbar-menubar = [ "menubar-items" ];
+            TabsToolbar = [ "tabbrowser-tabs" "new-tab-button" "alltabs-button" ];
+            PersonalToolbar = [ "personal-bookmarks" ];
+            widget-overflow-fixed-list = [];
+            unified-extensions-area = [];
+          };
+          seen = [ "developer-button" "profiler-button" ];
+          dirtyAreaCache = [ "nav-bar" ];
+          currentVersion = 21;
+          newElementCount = 2;
+        };
+
         # Dark Mode
         "layout.css.prefers-color-scheme.content-override" = 0; # 0 = System
         "ui.systemUsesDarkTheme" = 1; # Force dark theme for UI
