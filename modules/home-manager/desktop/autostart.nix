@@ -21,7 +21,7 @@ in
     autostart.apps =
       [
         { name = "Bitwarden"; exec = "bitwarden"; }
-        { name = "Nextcloud"; exec = "nextcloud --background"; }
+        # Nextcloud manages its own autostart via com.nextcloud.desktopclient.nextcloud.desktop
         { name = "Discord"; exec = "discord --start-minimized --no-sandbox"; }
         { name = "CoolerControl"; exec = "coolercontrol"; }
       ]
