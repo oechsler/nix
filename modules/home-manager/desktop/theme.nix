@@ -326,6 +326,11 @@ in
               || ${plasmaWidgetConfig} "$config" "org.kde.plasma.taskmanager" "launchers" "${pinnedLaunchersStr}" \
               || true
             ${plasmaWidgetConfig} "$config" "org.kde.plasma.kickoff" "icon" "${kickoffIcon}" 2>/dev/null || true
+
+            # System tray: only show network, bluetooth, volume, battery permanently
+            ${plasmaWidgetConfig} "$config" "org.kde.plasma.private.systemtray" "shownItems" \
+              "org.kde.plasma.networkmanagement,org.kde.plasma.bluetooth,org.kde.plasma.volume,org.kde.plasma.battery" \
+              2>/dev/null || true
           fi
         ''}
         X-KDE-autostart-phase=2
