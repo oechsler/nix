@@ -3,6 +3,10 @@
 lib.mkIf features.desktop.enable {
   programs.firefox = {
     enable = true;
+    # Native messaging host for Plasma browser integration (media controls, downloads, tabs)
+    nativeMessagingHosts = lib.optionals (features.desktop.wm == "kde") [
+      pkgs.kdePackages.plasma-browser-integration
+    ];
     profiles.default = {
       isDefault = true;
       extensions.force = true;
