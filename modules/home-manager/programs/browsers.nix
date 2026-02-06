@@ -69,8 +69,14 @@ lib.mkIf features.desktop.enable {
               "addon_nicothin_com-browser-action"
             ];
           };
-          seen = [ "developer-button" "profiler-button" ];
-          dirtyAreaCache = [ "nav-bar" ];
+          seen = [
+            "developer-button"
+            "profiler-button"
+            "_446900e4-71c2-419f-a6a7-df9c091e268b_-browser-action" # Bitwarden
+            "uBlock0_raymondhill_net-browser-action"
+            "addon_nicothin_com-browser-action" # New Tab Override
+          ];
+          dirtyAreaCache = [ "nav-bar" "unified-extensions-area" ];
           currentVersion = 21;
           newElementCount = 2;
         };
