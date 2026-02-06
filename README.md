@@ -181,8 +181,6 @@ Default launchers are extended based on feature toggles:
 
 Each entry is a string like `"applications:firefox.desktop"`.
 
-> **Note:** Kickoff menu favorites cannot be set declaratively — Plasma 6 manages them via kactivitymanagerd's internal stats database. See [plasma-manager#376](https://github.com/nix-community/plasma-manager/issues/376).
-
 ### Idle / Power Management (`home.nix`)
 
 | Option | Default | Description |
