@@ -21,9 +21,12 @@ in
     autostart.apps =
       [
         { name = "Bitwarden"; exec = "bitwarden"; }
-        # Nextcloud manages its own autostart via com.nextcloud.desktopclient.nextcloud.desktop
         { name = "Discord"; exec = "discord --start-minimized --no-sandbox"; }
         { name = "CoolerControl"; exec = "coolercontrol"; }
+      ]
+      # Nextcloud manages its own XDG autostart under KDE; Hyprland needs exec-once
+      ++ lib.optionals (!isKde) [
+        { name = "Nextcloud"; exec = "nextcloud --background"; }
       ]
       ++ lib.optionals features.apps.enable [
         { name = "Pika Backup Monitor"; exec = "pika-backup-monitor"; }
