@@ -168,18 +168,21 @@ Each entry is `{ name = "..."; path = "/absolute/path"; icon = "folder-..."; }`.
 
 Bookmarks are managed declaratively — on Nautilus via GTK bookmarks (force-overwritten to prevent Nextcloud pollution), on Dolphin via `user-places.xbel`.
 
-### KDE Pinned Launchers (`home.nix`)
+### KDE Pinned Launchers & Favorites (`home.nix`)
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `kde.pinnedLaunchers` | Firefox, Dolphin, Kitty (+ conditional) | Pinned taskbar launchers for KDE |
+| `kde.pinnedFavorites` | Firefox, Dolphin, Kitty (+ conditional, Settings, Discover) | Pinned Kickoff menu favorites for KDE |
 
-Default launchers are extended based on feature toggles:
+Both options share the same base defaults extended by feature toggles:
 - `features.development.enable` adds VS Code
-- `features.apps.enable` adds Discord, Spotify
+- `features.apps.enable` adds Obsidian, Discord, Spotify
 - `features.gaming.enable` adds Steam
 
-Each entry is a string like `"applications:firefox.desktop"`.
+`pinnedFavorites` additionally appends System Settings and Discover at the end.
+
+Each entry is a string like `"applications:firefox.desktop"`. Both lists can be overridden independently per host.
 
 ### Idle / Power Management (`home.nix`)
 
@@ -190,7 +193,7 @@ Each entry is a string like `"applications:firefox.desktop"`.
 | `idle.timeouts.suspendBattery` | `300` | Seconds until suspend on battery |
 | `idle.timeouts.lockSuspendAc` | `1800` | Seconds until lock + suspend on AC |
 
-These timeouts work on both Hyprland (via hypridle) and KDE (via PowerDevil). The system auto-detects battery vs. AC power.
+These timeouts work on both Hyprland (via hypridle) and KDE (via plasma-manager's PowerDevil integration). The system auto-detects battery vs. AC power.
 
 ### Hyprland Dim Settings (`home.nix`)
 
