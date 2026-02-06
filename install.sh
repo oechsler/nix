@@ -99,8 +99,10 @@ if [[ ! -d "/mnt/home/$USERNAME/repos/nix" ]]; then
   echo "==> Copying config to ~/repos/nix..."
   mkdir -p "/mnt/home/$USERNAME/repos"
   cp -r "$REPO_DIR" "/mnt/home/$USERNAME/repos/nix"
-  nixos-enter --root /mnt -c "chown -R $USERNAME:users /home/$USERNAME/repos"
 fi
+
+echo "==> Fixing home directory ownership..."
+nixos-enter --root /mnt -c "chown -R $USERNAME:users /home/$USERNAME"
 
 if [[ -n "$PASSWORD" ]]; then
   echo "==> Setting password for '$USERNAME'..."
