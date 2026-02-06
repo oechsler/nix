@@ -13,6 +13,7 @@
   networking.hostName = "samuels-pc";
 
   # ─── Host-specific overrides ─────────────────────────────────────────────────
+  theme.wallpaper = ../../backgrounds/nix-black-4k.png;
 
   # Ensure samuel owns /mnt/games (mounted by disko)
   systemd.tmpfiles.rules = [
