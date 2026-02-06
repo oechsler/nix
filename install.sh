@@ -61,23 +61,33 @@ git -C "$REPO_DIR" add --all
 echo "==> Installing NixOS..."
 nixos-install --flake "$REPO_DIR#$HOST"
 
-echo "==> Setting up sops age key..."
+echo "==> Setting up SSH key and sops age key..."
 if [[ -n "$SSH_KEY" ]]; then
-  # Non-interactive: derive age key from provided SSH key
-  AGE_KEY="$(nix-shell -p ssh-to-age --run "ssh-to-age -private-key -i $SSH_KEY")"
+  SSH_KEY_FILE="$SSH_KEY"
+  AGE_KEY="$(nix-shell -p ssh-to-age --run "ssh-to-age -private-key -i $SSH_KEY_FILE")"
 else
-  # Interactive: paste the private SSH key
   echo "Paste your ed25519 private SSH key (end with Ctrl+D):"
-  SSH_TMP="$(mktemp)"
-  cat > "$SSH_TMP"
-  chmod 600 "$SSH_TMP"
-  AGE_KEY="$(nix-shell -p ssh-to-age --run "ssh-to-age -private-key -i $SSH_TMP")"
-  rm -f "$SSH_TMP"
+  SSH_KEY_FILE="$(mktemp)"
+  cat > "$SSH_KEY_FILE"
+  chmod 600 "$SSH_KEY_FILE"
+  AGE_KEY="$(nix-shell -p ssh-to-age --run "ssh-to-age -private-key -i $SSH_KEY_FILE")"
 fi
 
 if [[ -z "$USERNAME" ]]; then
   read -rp "Username to set password for: " USERNAME
 fi
+
+SSH_DIR="/mnt/home/$USERNAME/.ssh"
+mkdir -p "$SSH_DIR"
+cp "$SSH_KEY_FILE" "$SSH_DIR/id_ed25519"
+ssh-keygen -y -f "$SSH_KEY_FILE" > "$SSH_DIR/id_ed25519.pub"
+chmod 700 "$SSH_DIR"
+chmod 600 "$SSH_DIR/id_ed25519"
+chmod 644 "$SSH_DIR/id_ed25519.pub"
+echo "==> SSH key pair saved to $SSH_DIR/"
+
+# Clean up temp file if interactive
+[[ -z "$SSH_KEY" ]] && rm -f "$SSH_KEY_FILE"
 
 SOPS_DIR="/mnt/home/$USERNAME/.config/sops/age"
 mkdir -p "$SOPS_DIR"
