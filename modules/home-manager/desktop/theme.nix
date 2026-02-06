@@ -278,10 +278,29 @@ in
           right = [];
         };
 
+        # Disable hot corners
+        kwin.edgeBarrier = 0;
+        kwin.cornerBarrier = false;
+
+        # KRunner (search) on Super+Space
+        shortcuts."org.kde.krunner.desktop"._launch = "Meta+Space";
+        shortcuts.kwin.Overview = [];
+
         # Low-level config for things without high-level API
         configFile = {
           # Breeze corner radius
           breezerc.Common.CornerRadius = theme.radius.default;
+          # Disable screen edges (hot corners for desktop grid, etc.)
+          kwinrc.Effect-overview.BorderActivate = 9;
+          kwinrc.Effect-windowview.BorderActivate = 9;
+          kwinrc.ElectricBorders.TopLeft = "None";
+          kwinrc.ElectricBorders.TopRight = "None";
+          kwinrc.ElectricBorders.BottomLeft = "None";
+          kwinrc.ElectricBorders.BottomRight = "None";
+          kwinrc.ElectricBorders.Top = "None";
+          kwinrc.ElectricBorders.Bottom = "None";
+          kwinrc.ElectricBorders.Left = "None";
+          kwinrc.ElectricBorders.Right = "None";
         };
       };
 
