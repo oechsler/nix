@@ -76,7 +76,6 @@
       nixosConfigurations = {
         samuels-razer = mkHost "samuels-razer";
         samuels-pc = mkHost "samuels-pc";
-        default = self.nixosConfigurations.samuels-razer;
       };
     };
 }
