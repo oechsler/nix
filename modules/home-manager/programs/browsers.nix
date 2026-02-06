@@ -32,6 +32,13 @@ lib.mkIf features.desktop.enable {
       };
 
       settings = {
+        # Language
+        "intl.accept_languages" = "de-DE,de,en-US,en";
+        "intl.locale.requested" = "de";
+
+        # Bookmarks toolbar — always hidden
+        "browser.toolbars.bookmarks.visibility" = "never";
+
         # Dark Mode
         "layout.css.prefers-color-scheme.content-override" = 0; # 0 = System
         "ui.systemUsesDarkTheme" = 1; # Force dark theme for UI
