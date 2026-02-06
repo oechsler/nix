@@ -334,8 +334,12 @@ in
               || ${plasmaWidgetConfig} "$config" "org.kde.plasma.taskmanager" "launchers" "${pinnedLaunchersStr}" \
               || true
             ${plasmaWidgetConfig} "$config" "org.kde.plasma.kickoff" "icon" "${kickoffIcon}" 2>/dev/null || true
-            ${plasmaWidgetConfig} "$config" "org.kde.plasma.kickoff" "favorites" "${pinnedFavoritesStr}" 2>/dev/null || true
           fi
+
+          # Set Kickoff favorites via kactivitymanagerd-statsrc
+          ${kwriteconfig} --file kactivitymanagerd-statsrc \
+            --group Favorites-org.kde.plasma.kickoff \
+            --key ordering "${pinnedFavoritesStr}"
         ''}
         X-KDE-autostart-phase=2
         Hidden=false
