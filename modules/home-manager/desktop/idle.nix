@@ -3,7 +3,6 @@
 let
   cfg = config.idle;
   isKde = features.desktop.wm == "kde";
-  ts = toString;
 in
 {
   options.idle = {
@@ -31,32 +30,40 @@ in
     };
   };
 
-  # KDE — generate PowerDevil configuration
-  config.xdg.configFile."powerdevilrc" = lib.mkIf isKde {
-    text = ''
-      [AC][Display]
-      DimDisplayIdleTimeoutSec=${ts cfg.timeouts.dimAcLockBattery}
-      TurnOffDisplayIdleTimeoutSec=${ts cfg.timeouts.lockSuspendAc}
-
-      [AC][SuspendAndShutdown]
-      AutoSuspendAction=1
-      AutoSuspendIdleTimeoutSec=${ts cfg.timeouts.lockSuspendAc}
-
-      [Battery][Display]
-      DimDisplayIdleTimeoutSec=${ts cfg.timeouts.dimBattery}
-      TurnOffDisplayIdleTimeoutSec=${ts cfg.timeouts.dimAcLockBattery}
-
-      [Battery][SuspendAndShutdown]
-      AutoSuspendAction=1
-      AutoSuspendIdleTimeoutSec=${ts cfg.timeouts.suspendBattery}
-
-      [LowBattery][Display]
-      DimDisplayIdleTimeoutSec=${ts (cfg.timeouts.dimBattery / 2)}
-      TurnOffDisplayIdleTimeoutSec=${ts cfg.timeouts.dimBattery}
-
-      [LowBattery][SuspendAndShutdown]
-      AutoSuspendAction=1
-      AutoSuspendIdleTimeoutSec=${ts (cfg.timeouts.suspendBattery / 2)}
-    '';
+  # KDE — configure PowerDevil via plasma-manager
+  config.programs.plasma.powerdevil = lib.mkIf isKde {
+    AC = {
+      dimDisplay = {
+        enable = true;
+        idleTimeout = cfg.timeouts.dimAcLockBattery;
+      };
+      turnOffDisplay.idleTimeout = cfg.timeouts.lockSuspendAc;
+      autoSuspend = {
+        action = "sleep";
+        idleTimeout = cfg.timeouts.lockSuspendAc;
+      };
+    };
+    battery = {
+      dimDisplay = {
+        enable = true;
+        idleTimeout = cfg.timeouts.dimBattery;
+      };
+      turnOffDisplay.idleTimeout = cfg.timeouts.dimAcLockBattery;
+      autoSuspend = {
+        action = "sleep";
+        idleTimeout = cfg.timeouts.suspendBattery;
+      };
+    };
+    lowBattery = {
+      dimDisplay = {
+        enable = true;
+        idleTimeout = cfg.timeouts.dimBattery / 2;
+      };
+      turnOffDisplay.idleTimeout = cfg.timeouts.dimBattery;
+      autoSuspend = {
+        action = "sleep";
+        idleTimeout = cfg.timeouts.suspendBattery / 2;
+      };
+    };
   };
 }

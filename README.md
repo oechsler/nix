@@ -176,7 +176,7 @@ Bookmarks are managed declaratively — on Nautilus via GTK bookmarks (force-ove
 
 Default launchers are extended based on feature toggles:
 - `features.development.enable` adds VS Code
-- `features.apps.enable` adds Discord, Spotify
+- `features.apps.enable` adds Obsidian, Discord, Spotify
 - `features.gaming.enable` adds Steam
 
 Each entry is a string like `"applications:firefox.desktop"`.
@@ -190,7 +190,7 @@ Each entry is a string like `"applications:firefox.desktop"`.
 | `idle.timeouts.suspendBattery` | `300` | Seconds until suspend on battery |
 | `idle.timeouts.lockSuspendAc` | `1800` | Seconds until lock + suspend on AC |
 
-These timeouts work on both Hyprland (via hypridle) and KDE (via PowerDevil). The system auto-detects battery vs. AC power.
+These timeouts work on both Hyprland (via hypridle) and KDE (via plasma-manager's PowerDevil integration). The system auto-detects battery vs. AC power.
 
 ### Hyprland Dim Settings (`home.nix`)
 

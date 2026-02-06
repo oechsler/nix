@@ -24,5 +24,6 @@
     ./features.nix
     ./displays.nix
     ./input.nix
+    ./home-manager.nix
   ];
 }
