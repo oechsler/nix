@@ -4,14 +4,11 @@
   imports = [
     ./disko.nix
     ./hardware-configuration.nix
-    inputs.home-manager.nixosModules.default
-    inputs.catppuccin.nixosModules.catppuccin
 
     ../../modules
   ];
 
   networking.hostName = "samuels-razer";
-
 
   # ─── Host-specific overrides ─────────────────────────────────────────────────
   displays.monitors = [
@@ -21,29 +18,6 @@
   features.desktop.wm = "kde";
 
   fonts.defaults.terminalSize = 10;
-
-  # Home Manager - passes config to home-manager modules
-  home-manager = {
-    extraSpecialArgs = {
-      inherit inputs;
-      fonts = config.fonts.defaults;
-      theme = config.theme;
-      locale = config.locale;
-      user = config.user;
-      features = config.features;
-      displays = config.displays;
-      input = config.input;
-    };
-    users.${config.user.name} = {
-      imports = [
-        ./home.nix
-        inputs.catppuccin.homeModules.catppuccin
-        inputs.sops-nix.homeManagerModules.sops
-        inputs.plasma-manager.homeModules.plasma-manager
-      ];
-    };
-    backupFileExtension = "bak";
-  };
 
   system.stateVersion = "25.11";
 }
