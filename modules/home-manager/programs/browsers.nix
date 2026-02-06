@@ -56,7 +56,7 @@ lib.mkIf features.desktop.enable {
               "unified-extensions-button"
             ];
             toolbar-menubar = [ "menubar-items" ];
-            TabsToolbar = [ "tabbrowser-tabs" "new-tab-button" "alltabs-button" ];
+            TabsToolbar = [ "tabbrowser-tabs" ];
             PersonalToolbar = [ "personal-bookmarks" ];
             widget-overflow-fixed-list = [];
             unified-extensions-area = [];
