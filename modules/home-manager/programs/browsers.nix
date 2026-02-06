@@ -39,7 +39,10 @@ lib.mkIf features.desktop.enable {
 
       userChrome = ''
         /* Hide the unified extensions button (puzzle piece) */
-        #unified-extensions-button {
+        #unified-extensions-button,
+        /* Hide uBlock and New Tab Override toolbar buttons */
+        #uBlock0_raymondhill_net-browser-action,
+        #addon_nicothin_com-browser-action {
           display: none !important;
         }
       '';
