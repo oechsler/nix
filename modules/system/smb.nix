@@ -73,18 +73,24 @@ in
         ++ lib.optionals config.features.tailscale.enable [ "tailscaled.service" ];
       wants = [ "network-online.target" "systemd-resolved.service" ]
         ++ lib.optionals config.features.tailscale.enable [ "tailscaled.service" ];
-      wantedBy = [ "multi-user.target" ];
+      # No wantedBy — triggered by timer so it never blocks boot
       path = [ pkgs.cifs-utils pkgs.util-linux ]
         ++ lib.optionals config.features.tailscale.enable [ config.services.tailscale.package ];
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
-        ExecStartPre = lib.optionals config.features.tailscale.enable [
-          "${pkgs.bash}/bin/bash -c 'for i in $(seq 1 30); do tailscale status &>/dev/null && exit 0; echo \"Warte auf Tailscale... $i/30\"; sleep 2; done; echo \"Tailscale nicht verbunden, versuche Mount trotzdem...\"; exit 0'"
-        ];
         ExecStart = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-mount.sh".path}";
         ExecStop = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-umount.sh".path}";
-        TimeoutStartSec = "120s";
+        Restart = "on-failure";
+        RestartSec = "30s";
+      };
+    };
+
+    systemd.timers.smb-mount = {
+      description = "Mount SMB shares after boot";
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnBootSec = "15s";
       };
     };
   };
