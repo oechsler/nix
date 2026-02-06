@@ -328,8 +328,12 @@ in
             ${plasmaWidgetConfig} "$config" "org.kde.plasma.kickoff" "icon" "${kickoffIcon}" 2>/dev/null || true
 
             # System tray: only show network, bluetooth, volume, battery permanently
+            # Everything else goes into the popup
             ${plasmaWidgetConfig} "$config" "org.kde.plasma.private.systemtray" "shownItems" \
               "org.kde.plasma.networkmanagement,org.kde.plasma.bluetooth,org.kde.plasma.volume,org.kde.plasma.battery" \
+              2>/dev/null || true
+            ${plasmaWidgetConfig} "$config" "org.kde.plasma.private.systemtray" "hiddenItems" \
+              "org.kde.plasma.clipboard,org.kde.plasma.mediacontroller,org.kde.plasma.keyboardlayout,org.kde.plasma.keyboardindicator,org.kde.plasma.notifications,org.kde.plasma.devicenotifier,org.kde.plasma.manage-inputmethod,org.kde.plasma.cameraindicator,org.kde.kscreen,org.kde.plasma.printmanager,org.kde.plasma.vault,Accessibility" \
               2>/dev/null || true
           fi
         ''}
