@@ -104,17 +104,17 @@ in
     enable = true;
     xwayland.enable = true;
 
-    systemd.enable = true;
+    systemd.enable = false;  # UWSM handles session management
 
     settings = {
       monitor = monitorLines;
 
       exec-once = [
         "uwsm-app -- ${config.awww.start}"
-        "wl-paste --type text --watch cliphist store"
-        "wl-paste --type image --watch cliphist store"
-        "${batteryWarning}"
-      ] ++ (map (app: app.exec) config.autostart.apps);
+        "uwsm-app -- wl-paste --type text --watch cliphist store"
+        "uwsm-app -- wl-paste --type image --watch cliphist store"
+        "uwsm-app -- ${batteryWarning}"
+      ] ++ (map (app: "uwsm-app -- ${app.exec}") config.autostart.apps);
 
       env = [
         "XCURSOR_THEME,${theme.cursor.name}"
