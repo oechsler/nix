@@ -37,6 +37,13 @@ lib.mkIf features.desktop.enable {
         };
       };
 
+      userChrome = ''
+        /* Hide the unified extensions button (puzzle piece) */
+        #unified-extensions-button {
+          display: none !important;
+        }
+      '';
+
       settings = {
         # Language
         "intl.accept_languages" = "de-DE,de,en-US,en";
@@ -45,7 +52,10 @@ lib.mkIf features.desktop.enable {
         # Bookmarks toolbar — always hidden
         "browser.toolbars.bookmarks.visibility" = "never";
 
-        # Toolbar layout: sidebar | back forward reload | spacer | urlbar | spacer | bitwarden downloads extensions
+        # Allow userChrome.css customizations
+        "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
+
+        # Toolbar layout: sidebar | back forward reload | spacer | urlbar | spacer | bitwarden downloads
         "browser.uiCustomization.state" = builtins.toJSON {
           placements = {
             nav-bar = [
@@ -58,7 +68,6 @@ lib.mkIf features.desktop.enable {
               "customizableui-special-spring2"
               "_446900e4-71c2-419f-a6a7-df9c091e268b_-browser-action" # Bitwarden
               "downloads-button"
-              "unified-extensions-button"
             ];
             toolbar-menubar = [ "menubar-items" ];
             TabsToolbar = [ "tabbrowser-tabs" ];
