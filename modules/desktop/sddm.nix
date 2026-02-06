@@ -24,21 +24,36 @@ let
     "270"    = "Rotated270";
   }.${rot};
 
-  sddmDisplayConfig = builtins.toJSON [{
-    name = "";
-    data = lib.imap0 (i: m: {
-      connectorName = m.name;
-      enabled = true;
-      mode = {
-        size = { width = m.width; height = m.height; };
-        refreshRate = m.refreshRate * 1000;
-      };
-      position = { x = m.x; y = m.y; };
-      scale = m.scale;
-      transform = kdeTransform m.rotation;
-      priority = i;
-    }) monitors;
-  }];
+  sddmDisplayConfigFile = pkgs.writeText "kwinoutputconfig.json" (builtins.toJSON [
+    {
+      name = "outputs";
+      data = map (m: {
+        connectorName = m.name;
+        mode = {
+          width = m.width;
+          height = m.height;
+          refreshRate = m.refreshRate * 1000;
+        };
+        scale = m.scale;
+        transform = kdeTransform m.rotation;
+        overscan = 0;
+        rgbRange = "Automatic";
+        vrrPolicy = "Automatic";
+      }) monitors;
+    }
+    {
+      name = "setups";
+      data = [{
+        lidClosed = false;
+        outputs = lib.imap0 (i: m: {
+          enabled = true;
+          outputIndex = i;
+          position = { x = m.x; y = m.y; };
+          priority = i;
+        }) monitors;
+      }];
+    }
+  ]);
 
   isKde = config.features.desktop.wm == "kde";
 in
@@ -66,10 +81,10 @@ in
       };
     };
 
-    # SDDM uses kwin_wayland — place kscreen config so monitors are positioned correctly.
+    # SDDM uses kwin_wayland — copy kscreen config so monitors are positioned correctly.
     systemd.tmpfiles.rules = lib.mkIf (monitors != []) [
       "d /var/lib/sddm/.config 0755 sddm sddm -"
-      "f+ /var/lib/sddm/.config/kwinoutputconfig.json 0644 sddm sddm - ${sddmDisplayConfig}"
+      "C+ /var/lib/sddm/.config/kwinoutputconfig.json 0644 sddm sddm - ${sddmDisplayConfigFile}"
     ];
 
     catppuccin.sddm = {

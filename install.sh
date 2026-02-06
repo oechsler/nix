@@ -89,11 +89,13 @@ echo "==> SSH key pair saved to $SSH_DIR/"
 # Clean up temp file if interactive
 [[ -z "$SSH_KEY" ]] && rm -f "$SSH_KEY_FILE"
 
-SOPS_DIR="/mnt/home/$USERNAME/.config/sops/age"
-mkdir -p "$SOPS_DIR"
-echo "$AGE_KEY" > "$SOPS_DIR/keys.txt"
-chmod 600 "$SOPS_DIR/keys.txt"
-echo "==> Age key saved to $SOPS_DIR/keys.txt"
+SOPS_USER_DIR="/mnt/home/$USERNAME/.config/sops/age"
+SOPS_SYSTEM_DIR="/mnt/var/lib/sops/age"
+mkdir -p "$SOPS_USER_DIR" "$SOPS_SYSTEM_DIR"
+echo "$AGE_KEY" > "$SOPS_USER_DIR/keys.txt"
+echo "$AGE_KEY" > "$SOPS_SYSTEM_DIR/keys.txt"
+chmod 600 "$SOPS_USER_DIR/keys.txt" "$SOPS_SYSTEM_DIR/keys.txt"
+echo "==> Age key saved to $SOPS_USER_DIR/ and $SOPS_SYSTEM_DIR/"
 
 if [[ ! -d "/mnt/home/$USERNAME/repos/nix" ]]; then
   echo "==> Copying config to ~/repos/nix..."
