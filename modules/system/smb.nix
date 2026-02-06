@@ -24,20 +24,27 @@ let
       MOUNT_GID=$(id -g ${user.name})
       mkdir -p "${user.home}/smb/$LABEL"
       chown ${user.name}:${user.group} "${user.home}/smb/$LABEL"
+      MOUNTED=false
       for i in $(seq 1 5); do
-        mount -t cifs "${path}" "${user.home}/smb/$LABEL" \
-          -o credentials=${creds},uid=$MOUNT_UID,gid=$MOUNT_GID,forceuid,forcegid,file_mode=0644,dir_mode=0755 \
-          && break
+        if timeout 10 mount -t cifs "${path}" "${user.home}/smb/$LABEL" \
+          -o credentials=${creds},uid=$MOUNT_UID,gid=$MOUNT_GID,forceuid,forcegid,soft,file_mode=0644,dir_mode=0755; then
+          MOUNTED=true
+          break
+        fi
         echo "Mount-Versuch $i/5 fehlgeschlagen: $LABEL"
         sleep 5
       done
+      if [ "$MOUNTED" = false ]; then
+        echo "Mount fehlgeschlagen nach 5 Versuchen: $LABEL"
+        exit 1
+      fi
     ''
   ) smbShares;
 
   umountContent = lib.concatMapStringsSep "\n" (name:
     let label = config.sops.placeholder."smb/${name}/label";
     in ''
-      umount "${user.home}/smb/${label}" || true
+      umount -l "${user.home}/smb/${label}" || true
     ''
   ) smbShares;
 in
@@ -69,7 +76,7 @@ in
 
     systemd.services.smb-mount = {
       description = "Mount SMB Shares";
-      after = [ "network-online.target" "sops-nix.service" "systemd-resolved.service" ]
+      after = [ "network-online.target" "systemd-resolved.service" ]
         ++ lib.optionals config.features.tailscale.enable [ "tailscaled.service" ];
       wants = [ "network-online.target" "systemd-resolved.service" ]
         ++ lib.optionals config.features.tailscale.enable [ "tailscaled.service" ];
@@ -82,7 +89,9 @@ in
         ExecStart = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-mount.sh".path}";
         ExecStop = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-umount.sh".path}";
         Restart = "on-failure";
-        RestartSec = "30s";
+        RestartSec = "10s";
+        StartLimitIntervalSec = "120s";
+        StartLimitBurst = 5;
       };
     };
 
