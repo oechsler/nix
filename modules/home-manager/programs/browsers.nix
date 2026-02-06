@@ -83,7 +83,7 @@ lib.mkIf features.desktop.enable {
         # Vertical tabs — collapsed, no extra tools
         "sidebar.verticalTabs" = true;
         "sidebar.revamp" = true;
-        "sidebar.visibility" = "hide-sidebar";
+        "sidebar.visibility" = "always-show";
         "sidebar.main.tools" = "";
 
         # DRM content (Netflix, Spotify, etc.)
