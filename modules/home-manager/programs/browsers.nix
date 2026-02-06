@@ -11,6 +11,8 @@ lib.mkIf features.desktop.enable {
         ublock-origin
         bitwarden
         new-tab-override
+      ] ++ lib.optionals (features.desktop.wm == "kde") [
+        inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system}.plasma-integration
       ];
 
       search = {
