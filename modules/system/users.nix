@@ -52,7 +52,7 @@ in
       cp ${cfg.icon} /var/lib/AccountsService/icons/${cfg.name}
     '';
 
-    user.directories = [ "repos" "Nextcloud" ];
+    user.directories = [ "repos" ];
 
     systemd.tmpfiles.rules = map (dir:
       "d ${user.home}/${dir} 0755 ${user.name} ${user.group} -"
