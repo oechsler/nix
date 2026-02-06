@@ -3,6 +3,10 @@
 lib.mkIf features.desktop.enable {
   programs.firefox = {
     enable = true;
+    # Native messaging host for Plasma browser integration (media controls, downloads, tabs)
+    nativeMessagingHosts = lib.optionals (features.desktop.wm == "kde") [
+      pkgs.kdePackages.plasma-browser-integration
+    ];
     profiles.default = {
       isDefault = true;
       extensions.force = true;
@@ -11,6 +15,8 @@ lib.mkIf features.desktop.enable {
         ublock-origin
         bitwarden
         new-tab-override
+      ] ++ lib.optionals (features.desktop.wm == "kde") [
+        inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system}.plasma-integration
       ];
 
       search = {
@@ -32,6 +38,38 @@ lib.mkIf features.desktop.enable {
       };
 
       settings = {
+        # Language
+        "intl.accept_languages" = "de-DE,de,en-US,en";
+        "intl.locale.requested" = "de";
+
+        # Bookmarks toolbar — always hidden
+        "browser.toolbars.bookmarks.visibility" = "never";
+
+        # Toolbar layout: back forward reload | spacer | urlbar | spacer | bitwarden downloads
+        "browser.uiCustomization.state" = builtins.toJSON {
+          placements = {
+            nav-bar = [
+              "back-button"
+              "forward-button"
+              "stop-reload-button"
+              "customizableui-special-spring1"
+              "urlbar-container"
+              "customizableui-special-spring2"
+              "_446900e4-71c2-419f-a6a7-df9c091e268b_-browser-action" # Bitwarden
+              "downloads-button"
+            ];
+            toolbar-menubar = [ "menubar-items" ];
+            TabsToolbar = [ "tabbrowser-tabs" ];
+            PersonalToolbar = [ "personal-bookmarks" ];
+            widget-overflow-fixed-list = [];
+            unified-extensions-area = [];
+          };
+          seen = [ "developer-button" "profiler-button" ];
+          dirtyAreaCache = [ "nav-bar" ];
+          currentVersion = 21;
+          newElementCount = 2;
+        };
+
         # Dark Mode
         "layout.css.prefers-color-scheme.content-override" = 0; # 0 = System
         "ui.systemUsesDarkTheme" = 1; # Force dark theme for UI
@@ -40,10 +78,11 @@ lib.mkIf features.desktop.enable {
         "browser.startup.homepage" = "https://dash.at.oechsler.it";
         "browser.startup.page" = 3; # 3 = Restore previous session
 
-        # Vertical tabs
+        # Vertical tabs — collapsed, no extra tools
         "sidebar.verticalTabs" = true;
         "sidebar.revamp" = true;
-        "sidebar.main.tools.shown" = true;
+        "sidebar.visibility" = "always-show";
+        "sidebar.main.tools" = "";
 
         # DRM content (Netflix, Spotify, etc.)
         "media.eme.enabled" = true;
