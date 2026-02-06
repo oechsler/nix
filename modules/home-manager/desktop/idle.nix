@@ -35,6 +35,7 @@ in
   # so that KDE can still modify it at runtime.  Overwritten on each rebuild.
   config.home.activation.powerdevilrc = lib.mkIf isKde (
     lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      rm -f "${config.xdg.configHome}/powerdevilrc"
       cat > "${config.xdg.configHome}/powerdevilrc" <<'EOF'
       [AC][Display]
       DimDisplayIdleTimeoutSec=${ts cfg.timeouts.dimAcLockBattery}
