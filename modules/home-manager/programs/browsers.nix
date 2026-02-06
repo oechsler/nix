@@ -37,16 +37,6 @@ lib.mkIf features.desktop.enable {
         };
       };
 
-      userChrome = ''
-        /* Hide the unified extensions button (puzzle piece) */
-        #unified-extensions-button,
-        /* Hide uBlock and New Tab Override toolbar buttons */
-        #uBlock0_raymondhill_net-browser-action,
-        #addon_nicothin_com-browser-action {
-          display: none !important;
-        }
-      '';
-
       settings = {
         # Language
         "intl.accept_languages" = "de-DE,de,en-US,en";
@@ -54,9 +44,6 @@ lib.mkIf features.desktop.enable {
 
         # Bookmarks toolbar — always hidden
         "browser.toolbars.bookmarks.visibility" = "never";
-
-        # Allow userChrome.css customizations
-        "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
 
         # Toolbar layout: sidebar | back forward reload | spacer | urlbar | spacer | bitwarden downloads
         "browser.uiCustomization.state" = builtins.toJSON {
