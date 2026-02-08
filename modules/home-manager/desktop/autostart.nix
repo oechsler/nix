@@ -31,6 +31,9 @@ in
       ++ lib.optionals features.apps.enable [
         { name = "Pika Backup Monitor"; exec = "pika-backup-monitor"; }
       ]
+      ++ lib.optionals (features.apps.enable && !isKde) [
+        { name = "Spotify"; exec = "spotify"; }
+      ]
       ++ lib.optionals features.development.enable [
         { name = "JetBrains Toolbox"; exec = "jetbrains-toolbox --minimize"; }
       ]
