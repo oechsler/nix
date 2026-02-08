@@ -65,6 +65,21 @@ let
       fi
     done | rofi -dmenu -p "clipboard" -show-icons | cliphist decode | ${pkgs.wl-clipboard}/bin/wl-copy
   '';
+
+  powerProfileMenu = pkgs.writeShellScript "rofi-power-profile" ''
+    if pgrep -x rofi > /dev/null && pgrep -fa "rofi -dmenu -p.*[Pp]ower.*[Pp]rofil" > /dev/null; then
+      pkill -x rofi
+      exit 0
+    fi
+    pgrep -x rofi > /dev/null && exit 0
+
+    choice=$(printf "  Balanced\n󰾅  Power Saver\n󱐋  Performance" | rofi -dmenu -p "Power Profil" -i -no-custom)
+    case "$choice" in
+      "  Balanced")      ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set balanced ;;
+      "󰾅  Power Saver")  ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set power-saver ;;
+      "󱐋  Performance")  ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set performance ;;
+    esac
+  '';
 in
 {
   options.rofi = {
@@ -91,6 +106,12 @@ in
       default = powerMenu;
       readOnly = true;
       description = "Script to show power menu in rofi";
+    };
+    powerProfile = lib.mkOption {
+      type = lib.types.path;
+      default = powerProfileMenu;
+      readOnly = true;
+      description = "Script to show power profile selector in rofi";
     };
   };
 

@@ -10,6 +10,14 @@ let
     ) displays.monitors)
     ++ [ ", preferred, auto, ${toString theme.scale}" ];
 
+  workspaceBindings = lib.flatten (map (m:
+    map (ws: "${toString ws}, ${m.name}") m.workspaces
+  ) displays.monitors);
+
+  workspaceRules = lib.flatten (map (m:
+    map (ws: "${toString ws}, monitor:${m.name}") m.workspaces
+  ) displays.monitors);
+
   volumeNotify = pkgs.writeShellScript "volume-notify" ''
     volume=$(${pkgs.wireplumber}/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ | ${pkgs.gawk}/bin/awk '{printf "%.0f", $2 * 100}')
     muted=$(${pkgs.wireplumber}/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ | ${pkgs.gnugrep}/bin/grep -c MUTED)
@@ -108,8 +116,11 @@ in
 
     settings = {
       monitor = monitorLines;
+      workspace = workspaceRules;
+      wsbind = workspaceBindings;
 
       exec-once = [
+        "hyprctl dispatch workspace 1"
         "uwsm-app -- ${config.awww.start}"
         "uwsm-app -- wl-paste --type text --watch cliphist store"
         "uwsm-app -- wl-paste --type image --watch cliphist store"
@@ -222,13 +233,31 @@ in
         disable_hyprland_logo = true;
       };
 
+      windowrule = [
+        # System authentication
+        "match:class ^(org\\.freedesktop\\.impl\\.portal\\.desktop\\.hyprland)$, float on"
+
+        # File operations (Nautilus)
+        "match:title ^(File Operation Progress)$, float on"
+        "match:title ^(Confirm to replace files)$, float on"
+
+        # Picture-in-Picture
+        "match:title ^(Picture-in-Picture)$, float on"
+        "match:title ^(Picture-in-Picture)$, pin on"
+        "match:title ^(Picture-in-Picture)$, size 25% 25%"
+
+        # Satty (screenshot editor)
+        "match:class ^(com\\.gabm\\.satty)$, float on"
+        "match:class ^(com\\.gabm\\.satty)$, size 80% 80%"
+        "match:class ^(com\\.gabm\\.satty)$, center on"
+      ];
 
       "$mainMod" = "SUPER";
 
       bind = [
         "$mainMod, Return, exec, kitty"
         "$mainMod, Q, killactive,"
-        "$mainMod, M, exit,"
+        "$mainMod, M, exec, ${config.rofi.power}"
         "$mainMod SHIFT, Q, exec, hyprlock"
         "$mainMod, E, exec, nautilus"
         "$mainMod, V, togglefloating,"
@@ -238,10 +267,10 @@ in
         "$mainMod, T, togglesplit,"
 
         ", Print, exec, hyprshot -m output --raw | satty -f - --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
-        "$mainMod, Print, exec, hyprshot -m region --raw | satty -f - --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
+        "SHIFT, Print, exec, hyprshot -m region --raw | satty -f - --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
         "$mainMod SHIFT, Print, exec, hyprshot -m window --raw | satty -f - --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
         "$mainMod, C, exec, ${config.rofi.clipboard}"
-        "$mainMod, F1, exec, powerprofilesctl set $(echo -e 'balanced\\npower-saver\\nperformance' | rofi -dmenu -p 'Power Profil')"
+        "$mainMod, F1, exec, ${config.rofi.powerProfile}"
 
         "$mainMod, H, movefocus, l"
         "$mainMod, L, movefocus, r"
@@ -256,10 +285,9 @@ in
         "$mainMod SHIFT, L, movewindow, r"
         "$mainMod SHIFT, K, movewindow, u"
         "$mainMod SHIFT, J, movewindow, d"
-        "$mainMod SHIFT, left, movewindow, l"
-        "$mainMod SHIFT, right, movewindow, r"
-        "$mainMod SHIFT, up, movewindow, u"
-        "$mainMod SHIFT, down, movewindow, d"
+
+        "$mainMod CTRL, H, focusmonitor, l"
+        "$mainMod CTRL, L, focusmonitor, r"
 
         "$mainMod, 1, workspace, 1"
         "$mainMod, 2, workspace, 2"
@@ -269,8 +297,8 @@ in
         "$mainMod, 6, workspace, 6"
         "$mainMod, 7, workspace, 7"
         "$mainMod, 8, workspace, 8"
-        "$mainMod, 9, workspace, 9"
-        "$mainMod, 0, workspace, 10"
+        #"$mainMod, 9, workspace, 9"
+        #"$mainMod, 0, workspace, 10"
 
         "$mainMod SHIFT, 1, movetoworkspace, 1"
         "$mainMod SHIFT, 2, movetoworkspace, 2"
@@ -280,8 +308,8 @@ in
         "$mainMod SHIFT, 6, movetoworkspace, 6"
         "$mainMod SHIFT, 7, movetoworkspace, 7"
         "$mainMod SHIFT, 8, movetoworkspace, 8"
-        "$mainMod SHIFT, 9, movetoworkspace, 9"
-        "$mainMod SHIFT, 0, movetoworkspace, 10"
+        #"$mainMod SHIFT, 9, movetoworkspace, 9"
+        #"$mainMod SHIFT, 0, movetoworkspace, 10"
 
         "$mainMod, S, togglespecialworkspace, magic"
         "$mainMod SHIFT, S, movetoworkspace, special:magic"
