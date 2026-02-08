@@ -26,6 +26,13 @@ lib.mkMerge [
         merge.tool = "vimdiff";
         merge.conflictstyle = "diff3";
         mergetool.prompt = false;
+
+        # Git Credential Manager
+        credential.helper = "${pkgs.git-credential-manager}/bin/git-credential-manager";
+        credential.credentialStore = "secretservice";
+
+        # GitHub OAuth support
+        "credential.https://github.com".provider = "github";
       };
 
       ignores = [
