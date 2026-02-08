@@ -102,6 +102,7 @@ lib.mkMerge [
 
       secrets."kubernetes/kubeconfig" = {
         path = "${config.home.homeDirectory}/.kube/config";
+        mode = "0600";  # kubectl/kubectx need read+write permissions
       };
     };
 
