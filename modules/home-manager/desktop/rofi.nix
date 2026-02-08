@@ -25,7 +25,7 @@ let
       exit 0
     fi
     pgrep -x rofi > /dev/null && exit 0
-    choice=$(printf "󰌾  Sperren\n󰒲  Standby\n󰍃  Abmelden\n󰜉  Neustart\n󰐥  Herunterfahren" | rofi -dmenu -p "power" -i -no-custom)
+    choice=$(printf "󰌾  Sperren\n󰒲  Standby\n󰍃  Abmelden\n󰜉  Neustart\n󰐥  Herunterfahren" | rofi -dmenu -p "Energie" -i -no-custom)
     case "$choice" in
       "󰌾  Sperren")        hyprlock ;;
       "󰒲  Standby")       systemctl suspend ;;
@@ -63,7 +63,7 @@ let
       else
         printf '%s\n' "$line"
       fi
-    done | rofi -dmenu -p "clipboard" -show-icons | cliphist decode | ${pkgs.wl-clipboard}/bin/wl-copy
+    done | rofi -dmenu -p "Zwischenablage" -show-icons | cliphist decode | ${pkgs.wl-clipboard}/bin/wl-copy
   '';
 
   powerProfileMenu = pkgs.writeShellScript "rofi-power-profile" ''
@@ -73,11 +73,28 @@ let
     fi
     pgrep -x rofi > /dev/null && exit 0
 
-    choice=$(printf "  Balanced\n󰾅  Power Saver\n󱐋  Performance" | rofi -dmenu -p "Power Profil" -i -no-custom)
+    # Get current profile
+    current=$(${pkgs.power-profiles-daemon}/bin/powerprofilesctl get)
+
+    # Build menu with current profile first
+    profiles=""
+    case "$current" in
+      "balanced")
+        profiles="󰾆  Ausgewogen\n󰌪  Energiesparen\n󱐋  Leistung"
+        ;;
+      "power-saver")
+        profiles="󰌪  Energiesparen\n󰾆  Ausgewogen\n󱐋  Leistung"
+        ;;
+      "performance")
+        profiles="󱐋  Leistung\n󰾆  Ausgewogen\n󰌪  Energiesparen"
+        ;;
+    esac
+
+    choice=$(printf "$profiles" | rofi -dmenu -p "Energieprofil" -i -no-custom)
     case "$choice" in
-      "  Balanced")      ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set balanced ;;
-      "󰾅  Power Saver")  ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set power-saver ;;
-      "󱐋  Performance")  ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set performance ;;
+      "󰾆  Ausgewogen")     ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set balanced ;;
+      "󰌪  Energiesparen")  ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set power-saver ;;
+      "󱐋  Leistung")       ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set performance ;;
     esac
   '';
 in
@@ -127,12 +144,17 @@ in
         drun-match-fields = "name,exec";
         drun-display-format = "{name}";
         disable-history = false;
+        sorting-method = "fzf";
+        sort = true;
+        display-drun = "Apps";
+        display-window = "Fenster";
       };
       theme = let
         inherit (config.lib.formats.rasi) mkLiteral;
         accentColor = "@${config.catppuccin.accent}";
       in {
         "window" = {
+          width = mkLiteral "33%";
           border = mkLiteral "${toString theme.border.width}px solid";
           border-color = mkLiteral accentColor;
           border-radius = mkLiteral "${toString theme.radius.default}px";
