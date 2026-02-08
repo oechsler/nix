@@ -104,45 +104,38 @@ window#waybar {
   background-color: @base;
   padding: 0.35em 1.15em;
   margin: 0;
-  border-radius: 1.5rem;
+  border-radius: 0;
   border: 2px solid @blue;
+  border-left: none;
+  border-right: none;
   color: @text;
   font-weight: bold;
 }
 
+/* Floating separator between status widgets */
+#network,
+#bluetooth,
+#pulseaudio,
+#battery {
+  background-image: linear-gradient(alpha(@blue, separator_alpha), alpha(@blue, separator_alpha));
+  background-size: 2px 50%;
+  background-position: right center;
+  background-repeat: no-repeat;
+}
+
 #network {
   margin-left: 1rem;
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
-  border-right: 2px solid alpha(@blue, separator_alpha);
-}
-
-#bluetooth {
-  margin-left: 0;
-  border-radius: 0;
-  border-left: none;
-  border-right: 2px solid alpha(@blue, separator_alpha);
-}
-
-#pulseaudio {
-  margin-left: 0;
-  border-radius: 0;
-  border-left: none;
-  border-right: 2px solid alpha(@blue, separator_alpha);
-}
-
-#battery {
-  margin-left: 0;
-  border-radius: 0;
-  border-left: none;
-  border-right: 2px solid alpha(@blue, separator_alpha);
+  padding-left: 1.15em;
+  border-left: 2px solid @blue;
+  border-top-left-radius: 1.5rem;
+  border-bottom-left-radius: 1.5rem;
 }
 
 #clock {
-  margin-left: 0;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-  border-left: none;
+  padding-right: 1.15em;
+  border-right: 2px solid @blue;
+  border-top-right-radius: 1.5rem;
+  border-bottom-right-radius: 1.5rem;
 }
 
 #battery.charging {
