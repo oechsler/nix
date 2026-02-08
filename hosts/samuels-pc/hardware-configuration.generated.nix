@@ -13,6 +13,50 @@
   boot.kernelModules = [ "kvm-amd" ];
   boot.extraModulePackages = [ ];
 
+  fileSystems."/" =
+    { device = "/dev/disk/by-uuid/733881a7-b554-43f1-940d-708d9ef51634";
+      fsType = "btrfs";
+      options = [ "subvol=@" ];
+    };
+
+  fileSystems."/.snapshots" =
+    { device = "/dev/disk/by-uuid/733881a7-b554-43f1-940d-708d9ef51634";
+      fsType = "btrfs";
+      options = [ "subvol=@snapshots" ];
+    };
+
+  fileSystems."/boot" =
+    { device = "/dev/disk/by-uuid/A5CE-B596";
+      fsType = "vfat";
+      options = [ "fmask=0077" "dmask=0077" ];
+    };
+
+  fileSystems."/home" =
+    { device = "/dev/disk/by-uuid/733881a7-b554-43f1-940d-708d9ef51634";
+      fsType = "btrfs";
+      options = [ "subvol=@home" ];
+    };
+
+  fileSystems."/mnt/games" =
+    { device = "/dev/disk/by-uuid/a3e3daf0-97f8-45bb-a121-0ca8b0234d0e";
+      fsType = "btrfs";
+      options = [ "subvol=@games" ];
+    };
+
+  fileSystems."/nix" =
+    { device = "/dev/disk/by-uuid/733881a7-b554-43f1-940d-708d9ef51634";
+      fsType = "btrfs";
+      options = [ "subvol=@nix" ];
+    };
+
+  fileSystems."/var" =
+    { device = "/dev/disk/by-uuid/733881a7-b554-43f1-940d-708d9ef51634";
+      fsType = "btrfs";
+      options = [ "subvol=@var" ];
+    };
+
+  swapDevices = [ ];
+
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
 }

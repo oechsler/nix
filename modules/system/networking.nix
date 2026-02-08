@@ -55,6 +55,11 @@ in
       };
     }
 
+    (lib.mkIf (!cfg.enable) {
+      networking.networkmanager.wifi.powersave = false;
+      networking.networkmanager.unmanaged = [ "type:wifi" ];
+    })
+
     (lib.mkIf tailscaleCfg.enable {
       services.tailscale.enable = true;
 

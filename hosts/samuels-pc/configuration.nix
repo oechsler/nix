@@ -19,8 +19,24 @@
   ];
 
   displays.monitors = [
-    { name = "DP-1"; width = 2560; height = 1440; refreshRate = 165; x = 2560; y = 0; }
-    { name = "DP-2"; width = 2560; height = 1440; refreshRate = 165; x = 0; y = 0; }
+    {
+      name = "DP-1";
+      width = 2560;
+      height = 1440;
+      refreshRate = 165;
+      x = 2560;
+      y = 0;
+      workspaces = [ 1 2 3 4 ];
+    }
+    {
+      name = "DP-2";
+      width = 2560;
+      height = 1440;
+      refreshRate = 165;
+      x = 0;
+      y = 0;
+      workspaces = [ 5 6 7 8 ];
+    }
   ];
 
   system.stateVersion = "25.11";

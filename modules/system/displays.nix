@@ -49,6 +49,11 @@
             default = null;
             description = "Per-monitor wallpaper (null = use theme.wallpaper)";
           };
+          workspaces = lib.mkOption {
+            type = lib.types.listOf lib.types.int;
+            default = [];
+            description = "Workspace IDs to bind to this monitor (Hyprland only, e.g. [1 2 3 4 5])";
+          };
         };
       });
       default = [];
