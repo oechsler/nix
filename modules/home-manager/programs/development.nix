@@ -129,6 +129,17 @@ lib.mkMerge [
     programs.vscode = {
       enable = true;
       package = pkgs.vscode;
+
+      profiles.default = {
+        userSettings = {
+          "workbench.startupEditor" = "none";
+        };
+
+        extensions = with pkgs.vscode-extensions; [
+          jnoortheen.nix-ide
+          vscodevim.vim
+        ];
+      };
     };
   })
 ]

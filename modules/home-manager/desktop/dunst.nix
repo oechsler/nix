@@ -1,14 +1,16 @@
-{ config, pkgs, lib, fonts, theme, ... }:
+{ config, pkgs, lib, fonts, theme, displays, ... }:
 
 let
   palette = (lib.importJSON "${config.catppuccin.sources.palette}/palette.json").${config.catppuccin.flavor}.colors;
   accent = palette.${config.catppuccin.accent}.hex;
+  primaryMonitor = lib.head displays.monitors;
 in
 {
   services.dunst = {
     enable = true;
     settings = {
       global = {
+        monitor = primaryMonitor.name;
         width = 350;
         height = "(0, 300)";
         offset = "${toString theme.gaps.outer}x${toString theme.gaps.outer}";

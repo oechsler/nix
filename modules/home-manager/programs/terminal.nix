@@ -74,7 +74,7 @@
   programs.fastfetch.enable = true;
 
   home.packages = with pkgs; [
-    bluetuith
+    bluetui
     pulsemixer
   ];
 
