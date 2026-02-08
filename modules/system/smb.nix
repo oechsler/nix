@@ -6,6 +6,25 @@ let
   smbShares = [ "personal-drive" ];
   user = config.users.users.samuel;
 
+  # Wait for network and DNS to be ready
+  waitForNetwork = pkgs.writeShellScript "wait-for-network" ''
+    echo "Waiting for network and DNS..."
+    for i in $(seq 1 30); do
+      # Check if we have a default route
+      if ${pkgs.iproute2}/bin/ip route | ${pkgs.gnugrep}/bin/grep -q '^default'; then
+        # Check if DNS is working
+        if ${pkgs.systemd}/bin/resolvectl query google.com >/dev/null 2>&1; then
+          echo "Network and DNS ready"
+          exit 0
+        fi
+      fi
+      echo "Waiting for network... Attempt $i/30"
+      sleep 2
+    done
+    echo "Warning: Network not ready after 60 seconds, continuing anyway..."
+    exit 0
+  '';
+
   smbSecrets = lib.listToAttrs (lib.flatten (map (name: [
     { name = "smb/${name}/label"; value = {}; }
     { name = "smb/${name}/path"; value = {}; }
@@ -31,11 +50,19 @@ let
           MOUNTED=true
           break
         fi
-        echo "Mount-Versuch $i/5 fehlgeschlagen: $LABEL"
+        echo "Mount attempt $i/5 failed: $LABEL"
         sleep 5
       done
-      if [ "$MOUNTED" = false ]; then
-        echo "Mount fehlgeschlagen nach 5 Versuchen: $LABEL"
+      if [ "$MOUNTED" = true ]; then
+        echo "SMB mount successful: $LABEL"
+        # Send success notification to user session
+        sudo -u ${user.name} DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$MOUNT_UID/bus \
+          ${pkgs.libnotify}/bin/notify-send -a "SMB Mount" -i network-server "SMB-Mount erfolgreich" "$LABEL wurde verbunden"
+      else
+        echo "Mount failed after 5 attempts: $LABEL"
+        # Send error notification to user session
+        sudo -u ${user.name} DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$MOUNT_UID/bus \
+          ${pkgs.libnotify}/bin/notify-send -a "SMB Mount" -u critical -i dialog-error "SMB-Mount fehlgeschlagen" "$LABEL konnte nicht verbunden werden"
         exit 1
       fi
     ''
@@ -76,30 +103,19 @@ in
 
     systemd.services.smb-mount = {
       description = "Mount SMB Shares";
-      after = [ "network-online.target" "systemd-resolved.service" ]
+      after = [ "network-online.target" "systemd-resolved.service" "graphical.target" ]
         ++ lib.optionals config.features.tailscale.enable [ "tailscaled.service" ];
       wants = [ "network-online.target" "systemd-resolved.service" ]
         ++ lib.optionals config.features.tailscale.enable [ "tailscaled.service" ];
-      # No wantedBy — triggered by timer so it never blocks boot
-      path = [ pkgs.cifs-utils pkgs.util-linux ]
+      wantedBy = [ "graphical.target" ];
+      path = [ pkgs.cifs-utils pkgs.util-linux pkgs.sudo pkgs.libnotify pkgs.iproute2 pkgs.systemd ]
         ++ lib.optionals config.features.tailscale.enable [ config.services.tailscale.package ];
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
+        ExecStartPre = "${waitForNetwork}";
         ExecStart = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-mount.sh".path}";
         ExecStop = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-umount.sh".path}";
-        Restart = "on-failure";
-        RestartSec = "10s";
-        StartLimitIntervalSec = "120s";
-        StartLimitBurst = 5;
-      };
-    };
-
-    systemd.timers.smb-mount = {
-      description = "Mount SMB shares after boot";
-      wantedBy = [ "timers.target" ];
-      timerConfig = {
-        OnBootSec = "15s";
       };
     };
   };
