@@ -89,8 +89,8 @@ in
       };
 
       "pulseaudio" = {
-        format = "{icon}  {volume}%";
-        format-muted = "<span size='large'>󰝟</span>  Stumm";
+        format = "{icon}  <span rise='1500'>{volume}%</span>";
+        format-muted = "<span size='large'>󰝟</span>  <span rise='1500'>Stumm</span>";
         format-icons = {
           default = [ "<span size='large'>󰕿</span>" "<span size='large'>󰖀</span>" "<span size='large'>󰕾</span>" ];
           headphone = "<span size='large'>󰋋</span>";
@@ -115,7 +115,7 @@ in
       };
 
       "clock" = {
-        format = "{:L%a. %e. %b %H:%M}";
+        format = "{:L%a. %H:%M}";
         locale = locale.language;
         tooltip = false;
       };
