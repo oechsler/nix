@@ -21,7 +21,7 @@ in
     autostart.apps =
       [
         { name = "Bitwarden"; exec = "bitwarden"; }
-        { name = "Discord"; exec = "discord --start-minimized --no-sandbox"; }
+        { name = "Vesktop"; exec = "vesktop --start-minimized"; }
         { name = "CoolerControl"; exec = "coolercontrol"; }
       ]
       # Nextcloud manages its own XDG autostart under KDE; Hyprland needs exec-once
@@ -39,6 +39,9 @@ in
       ]
       ++ lib.optionals features.gaming.enable [
         { name = "Steam"; exec = "steam -silent"; }
+      ]
+      ++ [
+        { name = "Beeper"; exec = "bash -c 'f=$(ls ~/Applications/Beeper-*.AppImage 2>/dev/null | head -1) && [ -n \"$f\" ] && exec \"$f\"'"; }
       ];
 
     # KDE — generate XDG autostart .desktop entries
