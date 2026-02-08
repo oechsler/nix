@@ -1,4 +1,4 @@
-{ config, pkgs, inputs, features, lib, ... }:
+{ config, pkgs, inputs, features, fonts, lib, ... }:
 
 lib.mkIf features.desktop.enable {
   programs.firefox = {
@@ -142,9 +142,35 @@ lib.mkIf features.desktop.enable {
         "browser.translations.automaticallyPopup" = false;
         "browser.translations.enable" = false;
 
+        # Fonts — always use real font families for web content, regardless of uiStyle
+        "font.default.x-western" = "sans-serif";
+        "font.default.x-unicode" = "sans-serif";
+        "font.name.sans-serif.x-western" = fonts.sansSerif;
+        "font.name.sans-serif.x-unicode" = fonts.sansSerif;
+        "font.name.serif.x-western" = fonts.serif;
+        "font.name.serif.x-unicode" = fonts.serif;
+        "font.name.monospace.x-western" = fonts.monospace;
+        "font.name.monospace.x-unicode" = fonts.monospace;
+
         # DNS over HTTPS
         "network.trr.mode" = 5;  # 5 = Off
+
+        # Enable userContent.css for font overrides
+        "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
       };
+
+      # Override system-ui / inherited fonts so web content stays sans-serif
+      # even when the desktop uiStyle is set to monospace.
+      userContent = ''
+        @-moz-document url-prefix("http://"), url-prefix("https://") {
+          :root, body {
+            font-family: "${fonts.sansSerif}", sans-serif !important;
+          }
+          code, pre, kbd, samp, tt {
+            font-family: "${fonts.monospace}", monospace !important;
+          }
+        }
+      '';
     };
   };
 
