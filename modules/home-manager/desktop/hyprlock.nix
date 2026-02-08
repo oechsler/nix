@@ -44,7 +44,7 @@
           capslock_color = "$peach";
           placeholder_text = "Passwort";
           fail_text = "$FAIL ($ATTEMPTS)";
-          font_family = "${fonts.monospace}";
+          font_family = "${fonts.ui}";
         }
       ];
 
@@ -53,7 +53,7 @@
           text = "$TIME";
           color = "$text";
           font_size = 120;
-          font_family = "${fonts.monospace}";
+          font_family = "${fonts.ui}";
           font_style = "Bold";
           position = "0, 40";
           halign = "center";
@@ -63,7 +63,7 @@
           text = "cmd[update:60000] date +'%A, %-d. %B'";
           color = "$subtext0";
           font_size = 22;
-          font_family = "${fonts.monospace}";
+          font_family = "${fonts.ui}";
           position = "0, -80";
           halign = "center";
           valign = "center";
