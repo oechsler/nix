@@ -98,6 +98,53 @@ in
   ];
 
   config = {
+    # Battery warning as systemd service instead of exec-once
+    systemd.user.services.battery-warning = {
+      Unit = {
+        Description = "Battery warning notifications";
+        PartOf = [ "graphical-session.target" ];
+      };
+      Service = {
+        ExecStart = "${batteryWarning}";
+        Restart = "on-failure";
+        TimeoutStopSec = 5;
+      };
+      Install.WantedBy = [ "graphical-session.target" ];
+    };
+
+    # Clipboard history services
+    systemd.user.services.cliphist-text = {
+      Unit = {
+        Description = "Clipboard history - text";
+        PartOf = [ "graphical-session.target" ];
+      };
+      Service = {
+        ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --type text --watch ${pkgs.cliphist}/bin/cliphist store";
+        Restart = "on-failure";
+        TimeoutStopSec = 2;
+      };
+      Install.WantedBy = [ "graphical-session.target" ];
+    };
+
+    systemd.user.services.cliphist-image = {
+      Unit = {
+        Description = "Clipboard history - images";
+        PartOf = [ "graphical-session.target" ];
+      };
+      Service = {
+        ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --type image --watch ${pkgs.cliphist}/bin/cliphist store";
+        Restart = "on-failure";
+        TimeoutStopSec = 2;
+      };
+      Install.WantedBy = [ "graphical-session.target" ];
+    };
+
+    # Reduce default stop timeout for user session
+    xdg.configFile."systemd/user.conf".text = ''
+      [Manager]
+      DefaultTimeoutStopSec=10s
+    '';
+
     home.packages = [
     pkgs.brightnessctl
     pkgs.playerctl
@@ -122,9 +169,7 @@ in
       exec-once = [
         "hyprctl dispatch workspace 1"
         "uwsm-app -- ${config.awww.start}"
-        "uwsm-app -- wl-paste --type text --watch cliphist store"
-        "uwsm-app -- wl-paste --type image --watch cliphist store"
-        "uwsm-app -- ${batteryWarning}"
+        # Battery warning and clipboard now handled by systemd services
       ] ++ (map (app: "uwsm-app -- ${app.exec}") config.autostart.apps);
 
       env = [
