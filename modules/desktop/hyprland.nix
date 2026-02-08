@@ -4,7 +4,12 @@
   config = lib.mkIf (config.features.desktop.enable && config.features.desktop.wm == "hyprland") {
     environment.systemPackages = with pkgs; [
       dunst
-      gparted
+      (gparted.overrideAttrs (old: {
+        postFixup = (old.postFixup or "") + ''
+          wrapProgram $out/libexec/gpartedbin \
+            --set GTK_THEME "${if config.theme.catppuccin.flavor == "latte" then "Adwaita" else "Adwaita:dark"}"
+        '';
+      }))
       hyprpolkitagent
     ];
 

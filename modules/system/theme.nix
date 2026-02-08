@@ -109,5 +109,51 @@
       flavor = config.theme.catppuccin.flavor;
       accent = config.theme.catppuccin.accent;
     };
+
+    # Global dark preference for root apps (gparted, etc.)
+    # /etc/gtk-*.0/ files are fallbacks; dconf system db provides defaults;
+    # root's ~/.config/gtk-*.0/ is the most reliable since pkexec sets HOME=/root.
+    environment.etc."gtk-2.0/gtkrc".text = lib.mkIf (config.theme.catppuccin.flavor != "latte") ''
+      gtk-application-prefer-dark-theme=1
+    '';
+    environment.etc."gtk-3.0/settings.ini".text = lib.mkIf (config.theme.catppuccin.flavor != "latte") ''
+      [Settings]
+      gtk-application-prefer-dark-theme=1
+    '';
+    environment.etc."gtk-4.0/settings.ini".text = lib.mkIf (config.theme.catppuccin.flavor != "latte") ''
+      [Settings]
+      gtk-application-prefer-dark-theme=1
+    '';
+
+    programs.dconf = {
+      enable = true;
+      profiles.user.databases = [{
+        settings."org/gnome/desktop/interface" = {
+          color-scheme = if config.theme.catppuccin.flavor == "latte" then "prefer-light" else "prefer-dark";
+        };
+      }];
+    };
+
+    # Write dark theme settings directly into root's home (for pkexec apps)
+    system.activationScripts.rootGtkDark.text = let
+      isDark = config.theme.catppuccin.flavor != "latte";
+      settingsIni = pkgs.writeText "gtk-dark-settings" ''
+        [Settings]
+        gtk-application-prefer-dark-theme=1
+      '';
+    in if isDark then ''
+      mkdir -p /root/.config/gtk-3.0 /root/.config/gtk-4.0
+      cp ${settingsIni} /root/.config/gtk-3.0/settings.ini
+      cp ${settingsIni} /root/.config/gtk-4.0/settings.ini
+    '' else ''
+      rm -f /root/.config/gtk-3.0/settings.ini /root/.config/gtk-4.0/settings.ini
+    '';
+
+    # Global Qt dark preference (root apps; user sessions override via qt6ct/KDE)
+    qt = {
+      enable = true;
+      platformTheme = "gnome";
+      style = if config.theme.catppuccin.flavor == "latte" then "adwaita" else "adwaita-dark";
+    };
   };
 }
