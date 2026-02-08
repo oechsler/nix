@@ -41,7 +41,7 @@ let
 
   kwriteconfig = "${pkgs.kdePackages.kconfig}/bin/kwriteconfig6";
 
-  pinnedLaunchersStr = lib.concatStringsSep "," config.kde.pinnedLaunchers;
+  pinnedLaunchersStr = lib.concatStringsSep "," (map (app: "applications:${app}.desktop") config.desktop.pinnedApps);
 
   kickoffIcon = if isLight then "nix-snowflake" else "nix-snowflake-white";
 
@@ -117,38 +117,48 @@ in
   # NOTE: Kickoff menu favorites (pinnedFavorites) cannot be set declaratively —
   # Plasma 6 manages them via kactivitymanagerd's internal stats database.
   # See: https://github.com/nix-community/plasma-manager/issues/376
-  options.kde.pinnedLaunchers = lib.mkOption {
+  options.desktop.pinnedApps = lib.mkOption {
     type = lib.types.listOf lib.types.str;
     default = [];
-    description = "Pinned taskbar launchers for KDE (in order)";
+    description = "Pinned dock/taskbar apps as desktop file names (without .desktop suffix)";
   };
 
   config = lib.mkMerge [
-    # ── Default pinned launchers (autostart-style, based on features) ──────────
+    # ── Default pinned apps (shared across all WMs) ──────────────────────────
     {
-      kde.pinnedLaunchers =
-        [ "applications:firefox.desktop"
-          "applications:org.kde.dolphin.desktop"
-          "applications:kitty.desktop"
+      desktop.pinnedApps =
+        [ "firefox"
+          (if isKde then "org.kde.dolphin" else "org.gnome.Nautilus")
+          "kitty"
         ]
         ++ lib.optionals features.development.enable [
-          "applications:code.desktop"
+          "code"
         ]
         ++ lib.optionals features.apps.enable [
-          "applications:obsidian.desktop"
+          "obsidian"
         ]
         ++ lib.optionals features.gaming.enable [
-          "applications:steam.desktop"
+          "steam"
         ]
         ++ lib.optionals features.apps.enable [
-          "applications:discord.desktop"
-          "applications:spotify.desktop"
+          "vesktop"
+          "spotify"
         ];
 
     }
 
     # ── Generic (all WMs) ───────────────────────────────────────────────────────
     {
+      # Override vesktop desktop entry to show Discord branding
+      xdg.desktopEntries.vesktop = lib.mkIf features.apps.enable {
+        name = "Discord";
+        exec = "vesktop %U";
+        icon = "discord";
+        categories = [ "Network" "InstantMessaging" "Chat" ];
+        genericName = "Internet Messenger";
+        settings.StartupWMClass = "Vesktop";
+      };
+
       # Clean up stale .bak files before home-manager checks for conflicts
       home.activation.cleanupBackups = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
         rm -f ~/.gtkrc-2.0.bak

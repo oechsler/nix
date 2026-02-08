@@ -10,7 +10,6 @@
   home.stateVersion = "25.11";
 
   programs.home-manager.enable = true;
-  nixpkgs.config.allowUnfree = true;
 
   # Longer idle timeouts for desktop PC
   idle.timeouts = {
