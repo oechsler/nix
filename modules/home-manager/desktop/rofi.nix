@@ -1,4 +1,4 @@
-{ config, pkgs, lib, theme, ... }:
+{ config, pkgs, lib, fonts, theme, ... }:
 
 let
   toggleRofi = mode: pkgs.writeShellScript "rofi-${mode}" ''
@@ -138,6 +138,7 @@ in
 
     programs.rofi = {
       enable = true;
+      font = "${fonts.ui} ${toString fonts.size}";
       extraConfig = {
         show-icons = true;
         icon-theme = theme.icons.name;
@@ -145,7 +146,6 @@ in
         drun-display-format = "{name}";
         disable-history = false;
         sorting-method = "fzf";
-        sort = true;
         display-drun = "Apps";
         display-window = "Fenster";
       };

@@ -9,7 +9,7 @@ lib.mkIf features.apps.enable (lib.mkMerge [
     home.packages = with pkgs; [
       alsa-scarlett-gui
       bitwarden-desktop
-      discord
+      vesktop
       freecad
       libreoffice
       nextcloud-client

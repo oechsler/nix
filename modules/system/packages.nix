@@ -55,6 +55,13 @@
 
             chmod +x "$appimage"
 
+            # Skip if the app already registered its own desktop entry
+            local existing
+            existing=$(grep -rl "$appimage" "$DESKTOP_DIR"/ 2>/dev/null | grep -v "^$DESKTOP_DIR/appimage-" | head -1)
+            if [ -n "$existing" ]; then
+              return
+            fi
+
             # Extract metadata using unsquashfs (doesn't execute the AppImage)
             local tmpdir
             tmpdir=$(mktemp -d)

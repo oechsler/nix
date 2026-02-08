@@ -62,7 +62,10 @@ in
         };
       };
 
-      "tray".spacing = 10;
+      "tray" = {
+        spacing = 10;
+        icon-size = 16;
+      };
 
       "network" = {
         format-wifi = "{icon}";

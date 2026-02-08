@@ -79,7 +79,7 @@ window#waybar {
   border: 2px solid @blue;
 }
 
-/* Tray - separate pill */
+/* Tray - separate pill, monochrome icons */
 #tray {
   background-color: @base;
   padding: 0.35em 1.15em;
@@ -89,6 +89,10 @@ window#waybar {
   border: 2px solid @blue;
   color: @text;
   font-weight: bold;
+}
+
+#tray image {
+  -gtk-icon-style: symbolic;
 }
 
 /* System status group - connected pill */

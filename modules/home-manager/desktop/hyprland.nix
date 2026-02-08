@@ -85,6 +85,7 @@ let
       sleep 60
     done
   '';
+
 in
 {
   imports = [
@@ -305,7 +306,8 @@ in
         "$mainMod, M, exec, ${config.rofi.power}"
         "$mainMod SHIFT, Q, exec, hyprlock"
         "$mainMod, E, exec, nautilus"
-        "$mainMod, V, togglefloating,"
+        # Toggle floating — resize to 60 % of monitor (keeps 16:9 ratio) and center
+        "$mainMod, V, exec, hyprctl --batch 'dispatch togglefloating ; dispatch resizeactive exact 60% 60% ; dispatch centerwindow'"
         "$mainMod, R, exec, ${config.rofi.toggle}"
         "$mainMod, W, exec, ${config.rofi.windowList}"
         "$mainMod, P, pseudo,"

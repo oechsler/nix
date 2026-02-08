@@ -195,6 +195,7 @@ in
     (lib.mkIf (!isKde) {
       gtk = {
         gtk3.extraConfig.gtk-decoration-layout = "";
+        gtk3.extraCss = "* { -gtk-icon-style: symbolic; }";
         gtk4.extraConfig.gtk-decoration-layout = "";
       };
 
@@ -247,6 +248,7 @@ in
       # GTK CSD apps (Nautilus etc.): match Mac-style button layout
       gtk = {
         gtk3.extraConfig.gtk-decoration-layout = "close,minimize,maximize:";
+        gtk3.extraCss = "* { -gtk-icon-style: symbolic; }";
         gtk4.extraConfig.gtk-decoration-layout = "close,minimize,maximize:";
       };
       dconf.settings."org/gnome/desktop/wm/preferences".button-layout = "close,minimize,maximize:";
