@@ -12,6 +12,7 @@
     ]
     ++ lib.optionals (features.desktop.wm == "hyprland") [
       ./hyprland.nix
+      ./hypr-dock.nix
     ]
     ++ lib.optionals (features.desktop.wm == "kde") [
       ./dolphin.nix
