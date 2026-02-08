@@ -12,6 +12,9 @@
         default = "hyprland";
         description = "Window manager / desktop environment";
       };
+      dock = {
+        enable = (lib.mkEnableOption "hypr-dock (application dock for Hyprland)") // { default = true; };
+      };
     };
     development = {
       enable = (lib.mkEnableOption "development tools (IDEs, languages, K8s)") // { default = true; };
@@ -30,5 +33,6 @@
     features.flatpak.enable = lib.mkDefault false;
     features.appimage.enable = lib.mkDefault false;
     features.wifi.enable = lib.mkDefault false;
+    features.desktop.dock.enable = lib.mkDefault false;
   };
 }

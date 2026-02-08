@@ -57,8 +57,21 @@ in
         settings.Resolve = {
           DNSSEC = "allow-downgrade";
           Domains = [ "~." ];
+          MulticastDNS = false;
         };
       };
+
+      services.avahi = {
+        enable = true;
+        nssmdns4 = true;
+        openFirewall = true;
+        publish = {
+          enable = true;
+          addresses = true;
+        };
+      };
+
+      environment.systemPackages = with pkgs; [ avahi ];
     }
 
     # Automatic WiFi management for Hyprland only

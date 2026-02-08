@@ -34,6 +34,7 @@ features.ssh.enable = true;
 | `features.server` | `false` | Server mode — disables desktop, apps, audio, bluetooth, gaming, flatpak, appimage, wifi |
 | `features.desktop.enable` | `true` | Desktop environment (SDDM, Firefox, theming) |
 | `features.desktop.wm` | `"hyprland"` | Window manager (`"hyprland"` / `"kde"`) |
+| `features.desktop.dock.enable` | `true` | Application dock for Hyprland (hypr-dock) |
 | `features.audio.enable` | `true` | PipeWire audio (ALSA, PulseAudio compat) |
 | `features.bluetooth.enable` | `true` | Bluetooth support (power on boot) |
 | `features.gaming.enable` | `true` | Steam, GameMode, Gamescope |

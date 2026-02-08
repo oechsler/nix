@@ -62,7 +62,12 @@
           inputs.nix-flatpak.nixosModules.nix-flatpak
           inputs.disko.nixosModules.disko
           {
-            nixpkgs.overlays = [ inputs.cachyos-kernel.overlays.pinned ];
+            nixpkgs.overlays = [
+              inputs.cachyos-kernel.overlays.pinned
+              (final: prev: {
+                hypr-dock = final.callPackage ./packages/hypr-dock.nix { };
+              })
+            ];
           }
         ];
       };
