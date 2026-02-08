@@ -46,6 +46,13 @@ fi
 
 export NIX_CONFIG="experimental-features = nix-command flakes"
 
+echo "==> Detecting NixOS version for stateVersion..."
+NIXOS_VERSION="$(nixos-version | cut -d. -f1,2)"
+echo "    Detected version: $NIXOS_VERSION"
+sed -i "s|system\.stateVersion = \"[^\"]*\"|system.stateVersion = \"$NIXOS_VERSION\"|" "$HOST_DIR/configuration.nix"
+sed -i "s|home\.stateVersion = \"[^\"]*\"|home.stateVersion = \"$NIXOS_VERSION\"|" "$HOST_DIR/home.nix"
+git -C "$REPO_DIR" add "$HOST_DIR/configuration.nix" "$HOST_DIR/home.nix"
+
 DISKO_ARGS=(--mode destroy,format,mount --flake "$REPO_DIR#$HOST")
 if [[ "$YES" == true ]]; then
   DISKO_ARGS+=(--yes-wipe-all-disks)

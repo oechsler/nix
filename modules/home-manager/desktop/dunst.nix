@@ -22,7 +22,7 @@ in
         separator_color = "frame";
         gap_size = theme.gaps.inner;
 
-        font = "${fonts.monospace} 10";
+        font = "${fonts.ui} 10";
         icon_position = "off";
 
         alignment = "left";

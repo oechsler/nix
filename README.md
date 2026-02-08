@@ -87,10 +87,13 @@ features.ssh.enable = true;
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `fonts.defaults.monospace` | `"JetBrainsMono Nerd Font"` | Monospace font |
-| `fonts.defaults.sansSerif` | `"Noto Sans"` | Sans-serif font |
-| `fonts.defaults.serif` | `"Noto Serif"` | Serif font |
-| `fonts.defaults.size` | `11` | Default font size |
+| `fonts.defaults.monospace` | `"JetBrainsMono Nerd Font"` | Monospace font (terminal, code editors, UI when `uiStyle = "monospace"`) |
+| `fonts.defaults.sansSerif` | `"Noto Sans"` | Sans-serif font (UI when `uiStyle = "sans-serif"`) |
+| `fonts.defaults.serif` | `"Noto Serif"` | Serif font (fontconfig default) |
+| `fonts.defaults.uiStyle` | `"monospace"` | Font style for UI elements: `"monospace"` or `"sans-serif"` |
+| `fonts.defaults.ui` | *(read-only)* | Resolved font name based on `uiStyle` — used by waybar, dunst, rofi, hyprlock, SDDM, GTK, Qt |
+| `fonts.defaults.size` | `11` | Default font size for UI elements |
+| `fonts.defaults.terminalSize` | `fonts.defaults.size` | Terminal (kitty) font size |
 
 ### Locale (`configuration.nix`)
 

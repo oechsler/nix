@@ -170,6 +170,10 @@ in
 
       gtk = {
         enable = true;
+        font = {
+          name = fonts.ui;
+          size = fonts.size;
+        };
         theme = {
           name = themeName;
           package = catppuccinGtk;
@@ -222,7 +226,7 @@ in
 
         [Fonts]
         fixed="${fonts.monospace},${toString fonts.size},-1,5,50,0,0,0,0,0"
-        general="${fonts.sansSerif},${toString fonts.size},-1,5,50,0,0,0,0,0"
+        general="${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0"
       '';
 
       xdg.configFile."qt6ct/qt6ct.conf".text = ''
@@ -234,7 +238,7 @@ in
 
         [Fonts]
         fixed="${fonts.monospace},${toString fonts.size},-1,5,50,0,0,0,0,0"
-        general="${fonts.sansSerif},${toString fonts.size},-1,5,50,0,0,0,0,0"
+        general="${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0"
       '';
     })
 

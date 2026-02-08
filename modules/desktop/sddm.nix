@@ -11,7 +11,7 @@ let
 
   cursorTheme = config.theme.cursor.name;
   cursorSize = config.theme.cursor.size;
-  monospaceFont = config.fonts.defaults.monospace;
+  uiFont = config.fonts.defaults.ui;
 
   primaryScale = if monitors != [] then (builtins.head monitors).scale else config.theme.scale;
   scaledDpi = builtins.floor (96 * primaryScale);
@@ -89,7 +89,7 @@ in
 
     catppuccin.sddm = {
       enable = true;
-      font = monospaceFont;
+      font = uiFont;
       fontSize = "12";
       background = blurredWallpaper;
       loginBackground = true;

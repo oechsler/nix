@@ -6,7 +6,7 @@ let
   rawStyle = builtins.readFile ./waybar-style.scss;
   style = builtins.replaceStrings
     [ "@blue" "system_font" "separator_alpha" ]
-    [ "@${accent}" fonts.monospace (if isLight then "0.15" else "0.5") ]
+    [ "@${accent}" fonts.ui (if isLight then "0.15" else "0.5") ]
     rawStyle;
 
   # Generate persistent-workspaces per monitor
