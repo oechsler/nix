@@ -1,4 +1,4 @@
-{ config, pkgs, fonts, theme, locale, ... }:
+{ config, pkgs, fonts, theme, locale, displays, lib, ... }:
 
 let
   accent = config.catppuccin.accent;
@@ -8,6 +8,12 @@ let
     [ "@blue" "system_font" "separator_alpha" ]
     [ "@${accent}" fonts.monospace (if isLight then "0.15" else "0.5") ]
     rawStyle;
+
+  # Generate persistent-workspaces per monitor
+  persistentWorkspaces = lib.listToAttrs (map (m: {
+    name = m.name;
+    value = m.workspaces;
+  }) displays.monitors);
 in
 {
   catppuccin.waybar.mode = "createLink";
@@ -37,7 +43,8 @@ in
 
       "hyprland/workspaces" = {
         format = "";
-        persistent-workspaces = { "1" = [ ]; "2" = [ ]; "3" = [ ]; "4" = [ ]; };
+        all-outputs = false;
+        persistent-workspaces = persistentWorkspaces;
         on-click = "activate";
       };
 
