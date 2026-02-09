@@ -19,14 +19,19 @@
     allowReboot = false;
   };
 
+  environment.etc.gitconfig.text = ''
+    [safe]
+      directory = ${config.users.users.${config.user.name}.home}/repos/nix
+  '';
+
   systemd.services.nixos-upgrade = let
-    uid = toString config.users.users.${config.user.name}.uid;
     notify = pkgs.writeShellScript "nixos-upgrade-notify" ''
-      ${pkgs.sudo}/bin/sudo -u ${config.user.name} \
-        DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${uid}/bus" \
-        ${pkgs.libnotify}/bin/notify-send "$1" "$2"
+      ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
+        --user --pipe --quiet --collect \
+        ${pkgs.libnotify}/bin/notify-send "$@"
     '';
   in {
+    path = [ pkgs.git ];
     serviceConfig.ExecStartPost =
       "${notify} 'NixOS Upgrade' 'System erfolgreich aktualisiert'";
     unitConfig.OnFailure = [ "nixos-upgrade-notify-failure.service" ];
@@ -36,13 +41,12 @@
     description = "Notify on NixOS upgrade failure";
     serviceConfig = {
       Type = "oneshot";
-      ExecStart = let uid = toString config.users.users.${config.user.name}.uid; in
-        "${pkgs.writeShellScript "nixos-upgrade-notify-failure" ''
-          ${pkgs.sudo}/bin/sudo -u ${config.user.name} \
-            DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${uid}/bus" \
-            ${pkgs.libnotify}/bin/notify-send -u critical \
-              "NixOS Upgrade" "Upgrade fehlgeschlagen!"
-        ''}";
+      ExecStart = "${pkgs.writeShellScript "nixos-upgrade-notify-failure" ''
+        ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
+          --user --pipe --quiet --collect \
+          ${pkgs.libnotify}/bin/notify-send -u critical \
+            "NixOS Upgrade" "Aktualisierung fehlgeschlagen"
+      ''}";
     };
   };
 }
