@@ -40,8 +40,6 @@ features.ssh.enable = true;
 | `features.audio.enable` | `true` | PipeWire audio (ALSA, PulseAudio compat) |
 | `features.bluetooth.enable` | `true` | Bluetooth support (power on boot) |
 | `features.gaming.enable` | `true` | Steam, GameMode, Gamescope |
-| `features.gaming.gamescope.session.enable` | `false` | Gamescope session (Steam Deck mode for SDDM) |
-| `features.gaming.gamescope.session.autoLogin` | `false` | Auto-login into Gamescope session |
 | `features.virtualisation.enable` | `true` | Docker daemon + user group |
 | `features.smb.enable` | `true` | SMB network share mounts (auto-mount with retry) |
 | `features.flatpak.enable` | `true` | Flatpak + Flathub (Flatseal, Flatsweep) |
