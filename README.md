@@ -65,14 +65,14 @@ features.ssh.enable = true;
 | `user.email` | `"samuel@oechsler.it"` | Email address |
 | `user.github` | `"oechsler"` | GitHub username (for SSH key import) |
 | `user.icon` | `pictures/sam-memoji.png` | Profile picture (SDDM) |
-| `user.directories` | `[ "repos" "Nextcloud" ]` | Extra directories to create in `~` |
+| `user.directories` | `[]` | Extra directories to create in `~` |
 
 ### Theme (`configuration.nix`)
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `theme.catppuccin.flavor` | `"mocha"` | `"latte"` / `"frappe"` / `"macchiato"` / `"mocha"` |
-| `theme.catppuccin.accent` | `"lavender"` | Accent color (14 options: blue, flamingo, green, lavender, maroon, mauve, peach, pink, red, rosewater, sapphire, sky, teal, yellow) |
+| `theme.catppuccin.accent` | `"mauve"` | Accent color (14 options: blue, flamingo, green, lavender, maroon, mauve, peach, pink, red, rosewater, sapphire, sky, teal, yellow) |
 | `theme.scale` | `1.0` | DPI / monitor scale factor |
 | `theme.wallpaper` | `backgrounds/Cloudsnight.jpg` | Desktop wallpaper path |
 | `theme.radius.small` | `6` | Border radius for small elements (progress bars) |
@@ -139,6 +139,7 @@ displays.monitors = [
 | `monitors.*.scale` | `theme.scale` | Scale factor (defaults to `theme.scale`) |
 | `monitors.*.rotation` | `"normal"` | Rotation (`"normal"` / `"90"` / `"180"` / `"270"`) |
 | `monitors.*.wallpaper` | `null` | Per-monitor wallpaper (`null` = use `theme.wallpaper`) |
+| `monitors.*.workspaces` | `[]` | Workspace IDs to bind to this monitor (Hyprland only, e.g. `[1 2 3 4 5]`) |
 
 On Hyprland, a catch-all fallback rule (`preferred, auto, theme.scale`) is always added for hotplugged/unlisted monitors. On KDE, the config generates `kwinoutputconfig.json`.
 
@@ -155,9 +156,11 @@ Applied to both Hyprland and KDE. On KDE, touchpad settings are detected and con
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `autostart.apps` | Bitwarden, Nextcloud, Discord, CoolerControl | Apps to start on login (works on Hyprland + KDE) |
+| `autostart.apps` | Bitwarden, Vesktop, CoolerControl, Beeper (+ conditional) | Apps to start on login (works on Hyprland + KDE) |
 
 Default autostart apps are extended based on feature toggles:
+- Nextcloud is added on Hyprland (KDE manages its own autostart)
+- `features.apps.enable` adds Pika Backup Monitor, Spotify (Hyprland only)
 - `features.development.enable` adds JetBrains Toolbox
 - `features.tailscale.enable` adds Trayscale
 - `features.gaming.enable` adds Steam
@@ -174,18 +177,18 @@ Each entry is `{ name = "..."; path = "/absolute/path"; icon = "folder-..."; }`.
 
 Bookmarks are managed declaratively — on Nautilus via GTK bookmarks (force-overwritten to prevent Nextcloud pollution), on Dolphin via `user-places.xbel`.
 
-### KDE Pinned Launchers (`home.nix`)
+### Pinned Dock/Taskbar Apps (`home.nix`)
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `kde.pinnedLaunchers` | Firefox, Dolphin, Kitty (+ conditional) | Pinned taskbar launchers for KDE |
+| `desktop.pinnedApps` | Firefox, Dolphin/Nautilus, Kitty (+ conditional) | Pinned dock/taskbar apps (works on Hyprland + KDE) |
 
-Default launchers are extended based on feature toggles:
+Default pinned apps are extended based on feature toggles:
 - `features.development.enable` adds VS Code
-- `features.apps.enable` adds Obsidian, Discord, Spotify
+- `features.apps.enable` adds Obsidian, Vesktop, Spotify
 - `features.gaming.enable` adds Steam
 
-Each entry is a string like `"applications:firefox.desktop"`.
+Each entry is a desktop file name without `.desktop` suffix (e.g. `"firefox"`).
 
 ### Idle / Power Management (`home.nix`)
 
