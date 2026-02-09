@@ -2,6 +2,8 @@
 
 My personal NixOS configurations using Flakes and Home-Manager.
 
+![Preview](.github/assets/preview.png)
+
 ## Structure
 
 ```
