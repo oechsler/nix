@@ -43,27 +43,29 @@ let
       MOUNT_GID=$(id -g ${user.name})
       mkdir -p "${user.home}/smb/$LABEL"
       chown ${user.name}:${user.group} "${user.home}/smb/$LABEL"
-      MOUNTED=false
-      for i in $(seq 1 5); do
-        if timeout 10 mount -t cifs "${path}" "${user.home}/smb/$LABEL" \
-          -o credentials=${creds},uid=$MOUNT_UID,gid=$MOUNT_GID,forceuid,forcegid,soft,file_mode=0644,dir_mode=0755; then
-          MOUNTED=true
-          break
-        fi
-        echo "Mount attempt $i/5 failed: $LABEL"
-        sleep 5
-      done
-      if [ "$MOUNTED" = true ]; then
-        echo "SMB mount successful: $LABEL"
-        # Send success notification to user session
-        sudo -u ${user.name} DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$MOUNT_UID/bus \
-          ${pkgs.libnotify}/bin/notify-send -a "SMB Mount" -i network-server "SMB-Mount erfolgreich" "$LABEL wurde verbunden"
+      if mountpoint -q "${user.home}/smb/$LABEL"; then
+        echo "SMB already mounted: $LABEL"
       else
-        echo "Mount failed after 5 attempts: $LABEL"
-        # Send error notification to user session
-        sudo -u ${user.name} DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$MOUNT_UID/bus \
-          ${pkgs.libnotify}/bin/notify-send -a "SMB Mount" -u critical -i dialog-error "SMB-Mount fehlgeschlagen" "$LABEL konnte nicht verbunden werden"
-        exit 1
+        MOUNTED=false
+        for i in $(seq 1 5); do
+          if timeout 10 mount -t cifs "${path}" "${user.home}/smb/$LABEL" \
+            -o credentials=${creds},uid=$MOUNT_UID,gid=$MOUNT_GID,forceuid,forcegid,soft,file_mode=0644,dir_mode=0755; then
+            MOUNTED=true
+            break
+          fi
+          echo "Mount attempt $i/5 failed: $LABEL"
+          sleep 5
+        done
+        if [ "$MOUNTED" = true ]; then
+          echo "SMB mount successful: $LABEL"
+          sudo -u ${user.name} DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$MOUNT_UID/bus \
+            ${pkgs.libnotify}/bin/notify-send -a "SMB Mount" -i network-server "SMB-Mount erfolgreich" "$LABEL wurde verbunden"
+        else
+          echo "Mount failed after 5 attempts: $LABEL"
+          sudo -u ${user.name} DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$MOUNT_UID/bus \
+            ${pkgs.libnotify}/bin/notify-send -a "SMB Mount" -u critical -i dialog-error "SMB-Mount fehlgeschlagen" "$LABEL konnte nicht verbunden werden"
+          exit 1
+        fi
       fi
     ''
   ) smbShares;
