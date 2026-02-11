@@ -25,7 +25,7 @@
 
       input-field = [
         {
-          size = "320, 55";
+          size = "250, 42";
           position = "0, 10%";
           halign = "center";
           valign = "bottom";
