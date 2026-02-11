@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ config, lib, pkgs, ... }:
 
 {
   nix.settings.experimental-features = [ "nix-command" "flakes" ];
@@ -23,7 +23,7 @@
     timerConfig = {
       OnBootSec = "30min";
       OnUnitActiveSec = "24h";
-      Persistent = false;
+      Persistent = lib.mkForce false;
     };
   };
 
