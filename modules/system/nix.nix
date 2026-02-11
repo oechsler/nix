@@ -15,8 +15,16 @@
   system.autoUpgrade = {
     enable = true;
     flake = "${config.users.users.${config.user.name}.home}/repos/nix#${config.networking.hostName}";
-    dates = "daily";
+    operation = "boot";
     allowReboot = false;
+  };
+
+  systemd.timers.nixos-upgrade = {
+    timerConfig = {
+      OnBootSec = "30min";
+      OnUnitActiveSec = "24h";
+      Persistent = false;
+    };
   };
 
   environment.etc.gitconfig.text = ''
