@@ -23,7 +23,9 @@ in
         gap_size = theme.gaps.inner;
 
         font = "${fonts.ui} 10";
-        icon_position = "off";
+        icon_position = "left";
+        min_icon_size = 32;
+        max_icon_size = 64;
 
         alignment = "left";
         vertical_alignment = "center";
