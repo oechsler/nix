@@ -14,6 +14,8 @@ lib.mkIf features.development.enable {
 
   home.file.".kube/.keep".text = "";
 
+  catppuccin.k9s.transparent = true;
+
   programs.k9s = {
     enable = true;
     settings.k9s.ui = {
