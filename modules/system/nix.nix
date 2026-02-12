@@ -17,6 +17,7 @@
     flake = "${config.users.users.${config.user.name}.home}/repos/nix#${config.networking.hostName}";
     operation = "boot";
     allowReboot = false;
+    flags = [ "--refresh" ];
   };
 
   systemd.timers.nixos-upgrade = {
