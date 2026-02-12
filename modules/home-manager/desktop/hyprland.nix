@@ -311,13 +311,15 @@ in
         "$mainMod, R, exec, ${config.rofi.toggle}"
         "$mainMod, W, exec, ${config.rofi.windowList}"
         "$mainMod, P, pseudo,"
-        "$mainMod, T, togglesplit,"
+        "$mainMod, Space, togglesplit,"
+        "$mainMod, F, fullscreen,"
 
         ", Print, exec, hyprshot -m output --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
         "SHIFT, Print, exec, hyprshot -m region --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
         "$mainMod SHIFT, Print, exec, hyprshot -m window --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
         "$mainMod, C, exec, ${config.rofi.clipboard}"
         "$mainMod, F1, exec, ${config.rofi.powerProfile}"
+        "$mainMod SHIFT, R, exec, ${config.waybar.reload}"
 
         "$mainMod, H, movefocus, l"
         "$mainMod, L, movefocus, r"
