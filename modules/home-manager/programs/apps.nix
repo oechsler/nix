@@ -23,7 +23,7 @@ lib.mkIf features.apps.enable (lib.mkMerge [
   # ── KDE — KDE-native utilities ────────────────────────────────────────────
   (lib.mkIf isKde {
     home.packages = with pkgs; [
-      filelight
+      kdePackages.filelight
     ];
   })
 
