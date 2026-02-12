@@ -14,11 +14,23 @@ let
     name = m.name;
     value = m.workspaces;
   }) displays.monitors);
+
+  reload = pkgs.writeShellScript "waybar-reload" ''
+    pkill waybar
+    uwsm-app -- waybar &
+  '';
 in
 {
-  catppuccin.waybar.mode = "createLink";
+  options.waybar.reload = lib.mkOption {
+    type = lib.types.path;
+    default = reload;
+    readOnly = true;
+  };
 
-  programs.waybar = {
+  config = {
+    catppuccin.waybar.mode = "createLink";
+
+    programs.waybar = {
     enable = true;
     systemd.enable = true;
 
@@ -37,7 +49,7 @@ in
 
       "custom/launcher" = {
         format = "<span size='x-large' rise='-2000'>󱄅</span>";
-        on-click = "rofi -show drun";
+        on-click = "${config.rofi.toggle}";
         tooltip = false;
       };
 
@@ -74,7 +86,7 @@ in
         format-icons = [ "<span size='large'>󰤯</span>" "<span size='large'>󰤟</span>" "<span size='large'>󰤢</span>" "<span size='large'>󰤥</span>" "<span size='large'>󰤨</span>" ];
         tooltip-format = "{ifname} via {gwaddr}";
         tooltip-format-wifi = "{essid} ({signalStrength}%)";
-        on-click = "kitty --title nmtui -e nmtui";
+        on-click = "${config.terminal.exec} nmtui -e nmtui";
       };
 
       "bluetooth" = {
@@ -85,7 +97,7 @@ in
         tooltip-format = "{controller_alias}\t{controller_address}";
         tooltip-format-connected = "{controller_alias}\t{controller_address}\n\n{device_enumerate}";
         tooltip-format-enumerate-connected = "{device_alias}\t{device_address}";
-        on-click = "kitty --title bluetui -e bluetui";
+        on-click = "${config.terminal.exec} bluetui -e bluetui";
       };
 
       "pulseaudio" = {
@@ -96,7 +108,7 @@ in
           headphone = "<span size='large'>󰋋</span>";
           headset = "<span size='large'>󰋎</span>";
         };
-        on-click = "kitty --title pulsemixer -e pulsemixer";
+        on-click = "${config.terminal.exec} pulsemixer -e pulsemixer";
         tooltip-format = "{desc}";
       };
 
@@ -111,7 +123,7 @@ in
           "<span size='large'>󰁿</span>" "<span size='large'>󰂀</span>" "<span size='large'>󰂁</span>"
           "<span size='large'>󰂂</span>" "<span size='large'>󰁹</span>"
         ];
-        on-click = "powerprofilesctl set $(echo -e 'balanced\\npower-saver\\nperformance' | rofi -dmenu -p 'Power Profil')";
+        on-click = "${config.rofi.powerProfile}";
       };
 
       "clock" = {
@@ -121,6 +133,7 @@ in
       };
     };
 
-    style = style;
+      style = style;
+    };
   };
 }

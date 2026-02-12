@@ -22,6 +22,9 @@ lib.mkIf features.apps.enable (lib.mkMerge [
 
   # ── KDE — KDE-native utilities ────────────────────────────────────────────
   (lib.mkIf isKde {
+    home.packages = with pkgs; [
+      filelight
+    ];
   })
 
   # ── Tiling WMs (Hyprland etc.) — GNOME/GTK utilities ──────────────────────
@@ -32,6 +35,7 @@ lib.mkIf features.apps.enable (lib.mkMerge [
     };
 
     home.packages = with pkgs; [
+      baobab
       loupe
     ];
   })
