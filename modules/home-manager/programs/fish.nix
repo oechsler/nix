@@ -1,6 +1,8 @@
 { pkgs, ... }:
 
 {
+  home.packages = [ pkgs.trash-cli ];
+
   programs.fish = {
     enable = true;
     interactiveShellInit = ''
