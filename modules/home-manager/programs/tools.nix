@@ -9,5 +9,4 @@
     settings.git_protocol = "ssh";
   };
 
-  programs.yazi.enable = true;
 }
