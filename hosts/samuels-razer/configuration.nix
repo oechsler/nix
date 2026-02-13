@@ -23,8 +23,9 @@
   ];
 
   features.desktop.wm = "kde";
-
   fonts.defaults.terminalSize = 10;
+
+  features.gaming.enable = false;
 
   system.stateVersion = "25.11";
 }
