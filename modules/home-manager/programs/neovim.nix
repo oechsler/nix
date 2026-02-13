@@ -166,6 +166,11 @@
         callback = function() vim.hl.on_yank() end,
       })
 
+      vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
+        pattern = "term://*",
+        callback = function() vim.cmd("startinsert") end,
+      })
+
       require("mini.pairs").setup()
 
       require("gitsigns").setup({
