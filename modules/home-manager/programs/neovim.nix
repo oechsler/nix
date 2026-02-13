@@ -1,4 +1,4 @@
-{ config, pkgs, ... }:
+{ pkgs, ... }:
 
 {
   programs.neovim = {
@@ -9,7 +9,6 @@
 
     plugins = with pkgs.vimPlugins; [
       # UI
-      catppuccin-nvim
       lualine-nvim
       bufferline-nvim
       indent-blankline-nvim
@@ -69,12 +68,7 @@
       google-java-format
     ];
 
-    initLua =
-      let
-        flavor = config.catppuccin.flavor;
-        accent = config.catppuccin.accent;
-      in
-      ''
+    initLua = ''
         vim.g.mapleader = " "
         vim.g.maplocalleader = " "
 
@@ -112,22 +106,6 @@
         --------------------------------------------------------
         -- UI
         --------------------------------------------------------
-        require("catppuccin").setup({
-          flavour = "${flavor}",
-          integrations = {
-            bufferline = true,
-            gitsigns = true,
-            which_key = true,
-            nvimtree = true,
-            flash = true,
-            indent_blankline = { enabled = true, scope_color = "${accent}" },
-            noice = true,
-            notify = true,
-            mini = { enabled = true },
-          },
-        })
-        vim.cmd.colorscheme("catppuccin")
-
         require("lualine").setup({ options = { theme = "catppuccin" } })
 
         require("bufferline").setup({

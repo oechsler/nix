@@ -150,7 +150,8 @@
     '';
 
     # Global Qt dark preference (root apps; user sessions override via qt6ct/KDE)
-    qt = {
+    # Skip under KDE — Plasma manages Qt theming itself
+    qt = lib.mkIf (config.features.desktop.wm != "kde") {
       enable = true;
       platformTheme = "gnome";
       style = if config.theme.catppuccin.flavor == "latte" then "adwaita" else "adwaita-dark";

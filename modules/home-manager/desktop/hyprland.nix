@@ -153,7 +153,6 @@ in
     pkgs.satty
     pkgs.wl-clipboard
     pkgs.cliphist
-    pkgs.trash-cli
   ];
 
   wayland.windowManager.hyprland = {
