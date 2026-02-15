@@ -13,25 +13,10 @@ images locally, they're stored in an encrypted archive.
 3. At boot, a systemd service decrypts and extracts the archive
 4. `theme.wallpaper` in host configs is just the filename inside the archive
 
-## Runtime paths
-
-- `/var/lib/backgrounds/` - extracted wallpapers
-- `/var/lib/backgrounds/current.jpg` - selected wallpaper (converted to jpg)
-- `/var/lib/backgrounds/current-blurred.jpg` - blurred version for SDDM
-
-## Adding wallpapers
+## Adding/editing wallpapers
 
 ```bash
-# Decrypt, add, re-encrypt
-openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:PASSWORD < blob.tar.gz.enc | tar xzf -
-tar czf - *.png *.jpg | openssl enc -aes-256-cbc -pbkdf2 -pass pass:PASSWORD > blob.tar.gz.enc
-rm *.png *.jpg
-```
-
-## Fallback
-
-Hosts without `backgrounds.enable = true` can still use regular paths:
-
-```nix
-theme.wallpaper = ../../backgrounds/some-free-image.png;
+./decrypt.sh      # extracts to ./files/
+# edit files in ./files/
+./encrypt.sh      # re-encrypts to blob.tar.gz.enc
 ```

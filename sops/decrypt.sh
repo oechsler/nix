@@ -1,18 +1,14 @@
-#!/usr/bin/env bash
+#!/usr/bin/env nix-shell
+#!nix-shell -i bash -p sops
+
 set -e
+cd "$(dirname "$0")"
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENCRYPTED_FILE="$SCRIPT_DIR/sops.encrypted.yaml"
-DECRYPTED_FILE="$SCRIPT_DIR/sops.decrypted.yaml"
-
-if [ ! -f "$ENCRYPTED_FILE" ]; then
-    echo "❌ ERROR: Encrypted file not found: $ENCRYPTED_FILE"
+if [ ! -f sops.encrypted.yaml ]; then
+    echo "ERROR: sops.encrypted.yaml not found"
     exit 1
 fi
 
-echo "Decrypting $ENCRYPTED_FILE → $DECRYPTED_FILE"
-nix-shell -p sops --run "sops -d $ENCRYPTED_FILE > $DECRYPTED_FILE"
-echo "✓ Decryption complete!"
-echo ""
-echo "Edit the file: $DECRYPTED_FILE"
-echo "Then run: ./encrypt.sh"
+echo "Decrypting sops.encrypted.yaml → sops.decrypted.yaml"
+sops -d sops.encrypted.yaml > sops.decrypted.yaml
+echo "Done! Edit sops.decrypted.yaml, then run ./encrypt.sh"

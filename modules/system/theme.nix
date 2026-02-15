@@ -97,21 +97,21 @@
     };
 
     wallpaper = lib.mkOption {
-      type = lib.types.str;
+      type = lib.types.either lib.types.path lib.types.str;
       default = "nix-black-4k.png";
-      description = "Wallpaper filename inside the encrypted backgrounds archive";
+      description = "Wallpaper: filename in encrypted archive (if backgrounds.enable) or direct path";
     };
 
     wallpaperPath = lib.mkOption {
-      type = lib.types.str;
-      default = "${config.backgrounds.outputDir}/${config.backgrounds.currentFile}";
-      description = "Runtime path to the current wallpaper (extracted at boot)";
+      type = lib.types.either lib.types.path lib.types.str;
+      default = config.theme.wallpaper;
+      description = "Runtime path to the current wallpaper";
     };
 
     blurredWallpaperPath = lib.mkOption {
-      type = lib.types.str;
-      default = "${config.backgrounds.outputDir}/${config.backgrounds.blurredFile}";
-      description = "Runtime path to blurred wallpaper for SDDM (extracted at boot)";
+      type = lib.types.nullOr (lib.types.either lib.types.path lib.types.str);
+      default = null;
+      description = "Runtime path to blurred wallpaper for SDDM";
     };
   };
 
