@@ -18,11 +18,14 @@ let
 
     mkdir -p "$OUTPUT_DIR"
 
-    # Extract all wallpapers from encrypted tar.gz
-    ${pkgs.openssl}/bin/openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:"$PASSWORD" < "${archiveFile}" | ${pkgs.gzip}/bin/gzip -d | ${pkgs.gnutar}/bin/tar xf - -C "$OUTPUT_DIR"
+    # Extract only the selected wallpaper from encrypted tar.gz
+    ${pkgs.openssl}/bin/openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:"$PASSWORD" < "${archiveFile}" | ${pkgs.gzip}/bin/gzip -d | ${pkgs.gnutar}/bin/tar xf - -C "$OUTPUT_DIR" "./$WALLPAPER_NAME"
 
-    # Convert selected wallpaper to jpg and create current.jpg
+    # Convert to jpg and create current.jpg
     ${pkgs.imagemagick}/bin/magick "$OUTPUT_DIR/$WALLPAPER_NAME" "$CURRENT"
+
+    # Remove extracted original
+    rm "$OUTPUT_DIR/$WALLPAPER_NAME"
 
     # Create blurred version for SDDM
     ${pkgs.imagemagick}/bin/magick "$CURRENT" -blur 0x30 "$BLURRED"
@@ -58,28 +61,52 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    # Secret for the ZIP password
-    sops.secrets."backgrounds/password" = {
-      sopsFile = ../../sops/sops.encrypted.yaml;
-    };
+  config = lib.mkMerge [
+    # Always use consistent paths
+    {
+      theme.wallpaperPath = "${cfg.outputDir}/${cfg.currentFile}";
+      theme.blurredWallpaperPath = "${cfg.outputDir}/${cfg.blurredFile}";
+    }
 
-    # Systemd service to extract wallpapers at boot
-    systemd.services.extract-backgrounds = {
-      description = "Extract encrypted wallpapers";
-      wantedBy = [ "multi-user.target" ];
-      before = [ "display-manager.service" ];
-      after = [ "sops-nix.service" ];
-
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = extractScript;
-        RemainAfterExit = true;
+    # Encrypted archive mode
+    (lib.mkIf cfg.enable {
+      sops.secrets."backgrounds/password" = {
+        sopsFile = ../../sops/sops.encrypted.yaml;
       };
-    };
 
-    # Export paths for other modules
-    theme.wallpaperPath = "${cfg.outputDir}/${cfg.currentFile}";
-    theme.blurredWallpaperPath = "${cfg.outputDir}/${cfg.blurredFile}";
-  };
+      systemd.services.extract-backgrounds = {
+        description = "Extract encrypted wallpapers";
+        wantedBy = [ "multi-user.target" ];
+        before = [ "display-manager.service" ];
+        after = [ "sops-nix.service" ];
+
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = extractScript;
+          RemainAfterExit = true;
+        };
+      };
+    })
+
+    # Fallback: link from store
+    (lib.mkIf (!cfg.enable) {
+      systemd.services.prepare-backgrounds = {
+        description = "Prepare wallpapers from store";
+        wantedBy = [ "multi-user.target" ];
+        before = [ "display-manager.service" ];
+
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+
+        script = ''
+          mkdir -p "${cfg.outputDir}"
+          ${pkgs.imagemagick}/bin/magick "${config.theme.wallpaper}" "${cfg.outputDir}/${cfg.currentFile}"
+          ${pkgs.imagemagick}/bin/magick "${cfg.outputDir}/${cfg.currentFile}" -blur 0x30 "${cfg.outputDir}/${cfg.blurredFile}"
+          chmod 644 "${cfg.outputDir}/${cfg.currentFile}" "${cfg.outputDir}/${cfg.blurredFile}"
+        '';
+      };
+    })
+  ];
 }
