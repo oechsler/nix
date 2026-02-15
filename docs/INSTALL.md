@@ -5,18 +5,22 @@
 ```bash
 # 1. Boot NixOS ISO
 
-# 2. Set LUKS password
-echo "your-secure-password" > /tmp/luks-password
-
-# 3. Clone and run installer
+# 2. Clone and run installer
 nix-env -iA nixos.git
 git clone https://github.com/oechsler/nix.git /tmp/nix
 cd /tmp/nix
-./install.sh -h samuels-razer -s /path/to/ssh-key -y
+./install.sh -h samuels-razer
 
-# 4. Reboot
+# 3. Reboot
 reboot
 ```
+
+The installer prompts interactively for:
+- LUKS disk encryption password
+- SSH private key (paste it)
+- Username for SSH/sops setup
+
+Use `-y` to skip disk wipe confirmation, `-s /path/to/key` to provide SSH key as file.
 
 ## Manual Install
 
