@@ -165,6 +165,19 @@ mount -t btrfs -o subvol=@persist,compress=zstd,noatime "$DISK" /mnt/persist
 mount -t btrfs -o subvol=@snapshots,compress=zstd,noatime "$DISK" /mnt/.snapshots
 mount "$ESP" /mnt/boot
 
+# Copy sops age key from persist to where sops-nix expects it during install
+if [[ -f "/mnt/persist/var/lib/sops/age/keys.txt" ]]; then
+  echo ""
+  echo "==> Setting up sops age key..."
+  mkdir -p /mnt/var/lib/sops/age
+  cp /mnt/persist/var/lib/sops/age/keys.txt /mnt/var/lib/sops/age/
+  chmod 600 /mnt/var/lib/sops/age/keys.txt
+else
+  echo ""
+  echo "WARNING: No sops age key found at /mnt/persist/var/lib/sops/age/keys.txt"
+  echo "         sops secrets may fail to decrypt during installation."
+fi
+
 echo ""
 echo "==> Installing NixOS..."
 nixos-install --flake "$FLAKE_DIR#$HOST" --no-root-passwd
