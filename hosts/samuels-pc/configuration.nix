@@ -16,6 +16,11 @@
   networking.hostName = "samuels-pc";
 
   # ─── Host-specific overrides ─────────────────────────────────────────────────
+
+  # Disable Secure Boot / lanzaboote so the system boots with plain systemd-boot.
+  # Re-enable only after: sbctl create-keys → rebuild → sbctl verify → enroll keys → BIOS on.
+  features.secureBoot.enable = false;
+
   theme.catppuccin.accent = "lavender";
   theme.wallpaper = "Lake 4.png";
 
