@@ -119,32 +119,62 @@
             rm -f "$ICON_DIR/$icon_name".*
           }
 
+          # Remove our appimage-* entries when the app has registered its own
+          cleanup_duplicates() {
+            for desktop_file in "$DESKTOP_DIR"/appimage-*.desktop; do
+              [ -f "$desktop_file" ] || continue
+              local exec_path
+              exec_path=$(sed -n 's/^Exec=//p' "$desktop_file" | head -1)
+              [ -z "$exec_path" ] && continue
+              local other
+              other=$(grep -rl "$exec_path" "$DESKTOP_DIR"/ 2>/dev/null | grep -v "^$DESKTOP_DIR/appimage-" | head -1)
+              if [ -n "$other" ]; then
+                local bname
+                bname=$(basename "$desktop_file" .desktop | sed 's/^appimage-//')
+                rm -f "$desktop_file"
+                local icon_name
+                icon_name=$(echo "$bname" | sed 's/\.AppImage$//; s/\.appimage$//')
+                rm -f "$ICON_DIR/$icon_name".*
+              fi
+            done
+          }
+
           # Generate entries for existing AppImages
           find "$DIR" -maxdepth 1 -iname '*.appimage' -type f | while read -r f; do
             generate_entry "$f"
           done
 
-          # Clean up stale entries
+          # Clean up stale entries and duplicates
           for desktop_file in "$DESKTOP_DIR"/appimage-*.desktop; do
             [ -f "$desktop_file" ] || continue
             appimage_name=$(basename "$desktop_file" .desktop | sed 's/^appimage-//')
             [ -f "$DIR/$appimage_name" ] || rm -f "$desktop_file"
           done
+          cleanup_duplicates
 
-          # Watch for additions and deletions
-          inotifywait -m -e create -e moved_to -e delete -e moved_from "$DIR" --format '%e %f' | while read -r event filename; do
-            case "$filename" in
-              *.AppImage|*.appimage)
-                case "$event" in
-                  *DELETE*|*MOVED_FROM*)
-                    remove_entry "$filename"
-                    ;;
-                  *)
-                    generate_entry "$DIR/$filename"
-                    ;;
-                esac
-                ;;
-            esac
+          # Watch both ~/Applications and ~/.local/share/applications
+          inotifywait -m -e create -e moved_to -e delete -e moved_from \
+            "$DIR" "$DESKTOP_DIR" --format '%w|%e|%f' | while IFS='|' read -r watched_dir event filename; do
+            if [ "$watched_dir" = "$DIR/" ]; then
+              case "$filename" in
+                *.AppImage|*.appimage)
+                  case "$event" in
+                    *DELETE*|*MOVED_FROM*)
+                      remove_entry "$filename"
+                      ;;
+                    *)
+                      generate_entry "$DIR/$filename"
+                      ;;
+                  esac
+                  ;;
+              esac
+            elif [ "$watched_dir" = "$DESKTOP_DIR/" ]; then
+              # App registered its own desktop entry — remove our duplicate
+              case "$filename" in
+                appimage-*) ;;
+                *.desktop) cleanup_duplicates ;;
+              esac
+            fi
           done
         '';
         serviceConfig = {
