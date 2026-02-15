@@ -1,13 +1,9 @@
 { config, lib, ... }:
 
 let
-  # Derive partition path from disko naming scheme: disk-<diskName>-<partName>
-  diskName = "main";
-  partName = "root";
-  partLabel = "disk-${diskName}-${partName}";
-  rootPartition = "/dev/disk/by-partlabel/${partLabel}";
-  # Systemd escapes "-" as "\x2d" in device unit names
-  systemdDevice = "dev-disk-by\\x2dpartlabel-${builtins.replaceStrings ["-"] ["\\x2d"] partLabel}.device";
+  # Use btrfs label "nixos" - works regardless of how system was installed
+  rootPartition = "/dev/disk/by-label/nixos";
+  systemdDevice = "dev-disk-by\\x2dlabel-nixos.device";
 in
 {
   config = {
