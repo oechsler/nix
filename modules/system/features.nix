@@ -34,5 +34,6 @@
     features.appimage.enable = lib.mkDefault false;
     features.wifi.enable = lib.mkDefault false;
     features.desktop.dock.enable = lib.mkDefault false;
+    features.snapshots.gui = lib.mkDefault false;
   };
 }
