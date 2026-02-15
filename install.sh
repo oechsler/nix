@@ -3,7 +3,6 @@ set -euo pipefail
 
 HOST=""
 USERNAME=""
-PASSWORD=""
 SSH_KEY=""
 YES=false
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -19,11 +18,10 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     -h|--host) HOST="$2"; shift 2 ;;
     -u|--user) USERNAME="$2"; shift 2 ;;
-    -p|--password) PASSWORD="$2"; shift 2 ;;
     -s|--ssh-key) SSH_KEY="$2"; shift 2 ;;
     -y|--yes) YES=true; shift ;;
     *)
-      echo "Usage: $0 -h <hostname> [-u <username>] [-p <password>] [-s <ssh-key>] [-y]"
+      echo "Usage: $0 -h <hostname> [-u <username>] [-s <ssh-key>] [-y]"
       list_hosts
       exit 1
       ;;
@@ -31,7 +29,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 if [[ -z "$HOST" ]]; then
-  echo "Usage: $0 -h <hostname> [-u <username>] [-p <password>] [-s <ssh-key>] [-y]"
+  echo "Usage: $0 -h <hostname> [-u <username>] [-s <ssh-key>] [-y]"
   list_hosts
   exit 1
 fi
@@ -66,7 +64,7 @@ nixos-generate-config --root /mnt --show-hardware-config > "$HOST_DIR/hardware-c
 git -C "$REPO_DIR" add --all
 
 echo "==> Installing NixOS..."
-nixos-install --flake "$REPO_DIR#$HOST"
+nixos-install --flake "$REPO_DIR#$HOST" --no-root-password
 
 echo "==> Setting up SSH key and sops age key..."
 if [[ -n "$SSH_KEY" ]]; then
@@ -81,7 +79,7 @@ else
 fi
 
 if [[ -z "$USERNAME" ]]; then
-  read -rp "Username to set password for: " USERNAME
+  read -rp "Username for SSH/sops setup: " USERNAME
 fi
 
 SSH_DIR="/mnt/home/$USERNAME/.ssh"
@@ -113,12 +111,5 @@ fi
 echo "==> Fixing home directory ownership..."
 nixos-enter --root /mnt -c "chown -R $USERNAME:users /home/$USERNAME"
 
-if [[ -n "$PASSWORD" ]]; then
-  echo "==> Setting password for '$USERNAME'..."
-  nixos-enter --root /mnt -c "echo '$USERNAME:$PASSWORD' | chpasswd"
-else
-  echo "==> Setting password for '$USERNAME'..."
-  nixos-enter --root /mnt -c "passwd $USERNAME"
-fi
-
 echo "==> Installation complete. You can reboot now."
+echo "    Password is set declaratively in the NixOS config."
