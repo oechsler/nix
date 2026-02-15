@@ -64,7 +64,7 @@
     '';
   in {
     path = [ pkgs.git ];
-    serviceConfig.ExecStartPre = "${updateFlake}";
+    serviceConfig.ExecStartPre = lib.mkBefore [ "${updateFlake}" ];
     serviceConfig.ExecStartPost = "${successScript}";
     unitConfig.OnFailure = [ "nixos-upgrade-notify-failure.service" ];
   };
