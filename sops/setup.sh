@@ -57,9 +57,19 @@ AGE_PUBLIC_KEY=$(nix-shell -p ssh-to-age --run "ssh-to-age < $SSH_PUB_KEY")
 echo "✓ Age public key: $AGE_PUBLIC_KEY"
 
 # Convert private key
-nix-shell -p ssh-to-age --run "ssh-to-age -private-key -i $SSH_KEY > ~/.config/sops/age/keys.txt"
+AGE_PRIVATE_KEY=$(nix-shell -p ssh-to-age --run "ssh-to-age -private-key -i $SSH_KEY")
+echo "$AGE_PRIVATE_KEY" > ~/.config/sops/age/keys.txt
 chmod 600 ~/.config/sops/age/keys.txt
 echo "✓ Age private key saved to ~/.config/sops/age/keys.txt"
+
+# Also update system key (for sops-nix service)
+SYSTEM_KEY_DIR="/persist/var/lib/sops/age"
+if [ -d "/persist" ]; then
+    sudo mkdir -p "$SYSTEM_KEY_DIR"
+    echo "$AGE_PRIVATE_KEY" | sudo tee "$SYSTEM_KEY_DIR/keys.txt" > /dev/null
+    sudo chmod 600 "$SYSTEM_KEY_DIR/keys.txt"
+    echo "✓ Age private key saved to $SYSTEM_KEY_DIR/keys.txt"
+fi
 
 # 4. Update .sops.yaml
 echo ""
@@ -86,4 +96,8 @@ echo "Helper scripts:"
 echo "  cd sops/"
 echo "  ./decrypt.sh  - Decrypt secrets for editing"
 echo "  ./encrypt.sh  - Encrypt secrets after editing"
+echo ""
+echo "If you changed your SSH key, re-encrypt secrets:"
+echo "  cd sops/"
+echo "  sops updatekeys sops.encrypted.yaml"
 echo ""
