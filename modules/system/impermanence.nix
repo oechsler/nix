@@ -1,5 +1,14 @@
 { config, lib, ... }:
 
+let
+  # Derive partition path from disko naming scheme: disk-<diskName>-<partName>
+  diskName = "main";
+  partName = "root";
+  partLabel = "disk-${diskName}-${partName}";
+  rootPartition = "/dev/disk/by-partlabel/${partLabel}";
+  # Systemd escapes "-" as "\x2d" in device unit names
+  systemdDevice = "dev-disk-by\\x2dpartlabel-${builtins.replaceStrings ["-"] ["\\x2d"] partLabel}.device";
+in
 {
   config = {
     # Persistent directories
@@ -42,14 +51,13 @@
     boot.initrd.systemd.services.rollback = {
       description = "Rollback btrfs root to empty snapshot";
       wantedBy = [ "initrd.target" ];
-      # Use partlabel instead of filesystem label - more reliable in initrd
-      after = [ "dev-disk-by\\x2dpartlabel-disk\\x2dmain\\x2droot.device" ];
+      after = [ systemdDevice ];
       before = [ "sysroot.mount" ];
       unitConfig.DefaultDependencies = "no";
       serviceConfig.Type = "oneshot";
       script = ''
         mkdir -p /mnt
-        mount -t btrfs -o subvol=/ /dev/disk/by-partlabel/disk-main-root /mnt
+        mount -t btrfs -o subvol=/ ${rootPartition} /mnt
 
         # Delete all subvolumes under @
         btrfs subvolume list -o /mnt/@ | cut -f9 -d' ' | while read subvol; do
