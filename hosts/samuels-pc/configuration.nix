@@ -16,7 +16,8 @@
   networking.hostName = "samuels-pc";
 
   # ─── Host-specific overrides ─────────────────────────────────────────────────
-  theme.wallpaper = "Lake 4.png";  # Filename in encrypted backgrounds archive
+  theme.catppuccin.accent = "lavender";
+  theme.wallpaper = "Lake 4.png";
 
   # Ensure samuel owns /mnt/games (mounted by disko)
   systemd.tmpfiles.rules = [
