@@ -36,6 +36,11 @@
   '';
 
   systemd.services.nixos-upgrade = let
+    flakeDir = "${config.users.users.${config.user.name}.home}/repos/nix";
+    updateFlake = pkgs.writeShellScript "nixos-upgrade-update-flake" ''
+      cd ${flakeDir}
+      ${pkgs.nix}/bin/nix flake update
+    '';
     notify = pkgs.writeShellScript "nixos-upgrade-notify" ''
       ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
         --user --pipe --quiet --collect \
@@ -57,6 +62,7 @@
     '';
   in {
     path = [ pkgs.git ];
+    serviceConfig.ExecStartPre = "${updateFlake}";
     serviceConfig.ExecStartPost = "${successScript}";
     unitConfig.OnFailure = [ "nixos-upgrade-notify-failure.service" ];
   };
