@@ -78,7 +78,7 @@ in
         description = "Extract encrypted wallpapers";
         wantedBy = [ "multi-user.target" ];
         before = [ "display-manager.service" ];
-        after = [ "sops-nix.service" ];
+        after = [ "sops-install-secrets.service" ];
 
         # Skip gracefully if SOPS key doesn't exist (fresh install)
         unitConfig.ConditionPathExists = config.sops.age.keyFile;

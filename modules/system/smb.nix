@@ -105,7 +105,7 @@ in
 
     systemd.services.smb-mount = {
       description = "Mount SMB Shares";
-      after = [ "network-online.target" "systemd-resolved.service" "graphical.target" "sops-nix.service" ]
+      after = [ "network-online.target" "systemd-resolved.service" "graphical.target" "sops-install-secrets.service" ]
         ++ lib.optionals config.features.tailscale.enable [ "tailscaled.service" ];
       wants = [ "network-online.target" "systemd-resolved.service" ]
         ++ lib.optionals config.features.tailscale.enable [ "tailscaled.service" ];
