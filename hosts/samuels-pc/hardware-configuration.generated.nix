@@ -8,51 +8,55 @@
     [ (modulesPath + "/installer/scan/not-detected.nix")
     ];
 
-  boot.initrd.availableKernelModules = [ "nvme" "xhci_pci" "ahci" "uas" "usbhid" "sd_mod" ];
+  boot.initrd.availableKernelModules = [ "nvme" "xhci_pci" "ahci" "usbhid" "uas" "sd_mod" ];
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-amd" ];
   boot.extraModulePackages = [ ];
 
   fileSystems."/" =
-    { device = "/dev/disk/by-uuid/733881a7-b554-43f1-940d-708d9ef51634";
+    { device = "/dev/mapper/cryptroot";
       fsType = "btrfs";
       options = [ "subvol=@" ];
     };
 
+  boot.initrd.luks.devices."cryptroot".device = "/dev/disk/by-uuid/5707ad88-cccb-4483-971b-bca30c984a2e";
+
   fileSystems."/.snapshots" =
-    { device = "/dev/disk/by-uuid/733881a7-b554-43f1-940d-708d9ef51634";
+    { device = "/dev/mapper/cryptroot";
       fsType = "btrfs";
       options = [ "subvol=@snapshots" ];
     };
 
   fileSystems."/boot" =
-    { device = "/dev/disk/by-uuid/A5CE-B596";
+    { device = "/dev/disk/by-uuid/181C-C6DE";
       fsType = "vfat";
       options = [ "fmask=0077" "dmask=0077" ];
     };
 
   fileSystems."/home" =
-    { device = "/dev/disk/by-uuid/733881a7-b554-43f1-940d-708d9ef51634";
+    { device = "/dev/mapper/cryptroot";
       fsType = "btrfs";
       options = [ "subvol=@home" ];
     };
 
   fileSystems."/mnt/games" =
-    { device = "/dev/disk/by-uuid/a3e3daf0-97f8-45bb-a121-0ca8b0234d0e";
+    { device = "/dev/mapper/cryptgames";
       fsType = "btrfs";
       options = [ "subvol=@games" ];
     };
 
+  boot.initrd.luks.devices."cryptgames".device = "/dev/disk/by-uuid/16084f9b-02ea-47c1-81b0-347a15ef3e72";
+
   fileSystems."/nix" =
-    { device = "/dev/disk/by-uuid/733881a7-b554-43f1-940d-708d9ef51634";
+    { device = "/dev/mapper/cryptroot";
       fsType = "btrfs";
       options = [ "subvol=@nix" ];
     };
 
-  fileSystems."/var" =
-    { device = "/dev/disk/by-uuid/733881a7-b554-43f1-940d-708d9ef51634";
+  fileSystems."/persist" =
+    { device = "/dev/mapper/cryptroot";
       fsType = "btrfs";
-      options = [ "subvol=@var" ];
+      options = [ "subvol=@persist" ];
     };
 
   swapDevices = [ ];

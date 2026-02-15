@@ -80,6 +80,9 @@ in
         before = [ "display-manager.service" ];
         after = [ "sops-nix.service" ];
 
+        # Skip gracefully if SOPS key doesn't exist (fresh install)
+        unitConfig.ConditionPathExists = config.sops.age.keyFile;
+
         serviceConfig = {
           Type = "oneshot";
           ExecStart = extractScript;
