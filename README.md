@@ -72,7 +72,8 @@ features.ssh.enable = true;
 | `theme.catppuccin.flavor` | `"mocha"` | `"latte"` / `"frappe"` / `"macchiato"` / `"mocha"` |
 | `theme.catppuccin.accent` | `"mauve"` | Accent color (14 options: blue, flamingo, green, lavender, maroon, mauve, peach, pink, red, rosewater, sapphire, sky, teal, yellow) |
 | `theme.scale` | `1.0` | DPI / monitor scale factor |
-| `theme.wallpaper` | `backgrounds/Cloudsnight.jpg` | Desktop wallpaper path |
+| `theme.wallpaper` | `"nix-black-4k.png"` | Wallpaper filename in archive, or path if `backgrounds.enable = false` |
+| `backgrounds.enable` | `true` | Extract wallpapers from encrypted archive at boot |
 | `theme.radius.small` | `6` | Border radius for small elements (progress bars) |
 | `theme.radius.default` | `16` | Border radius for windows/panels/notifications |
 | `theme.gaps.inner` | `8` | Gaps between windows |

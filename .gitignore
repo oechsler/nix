@@ -4,6 +4,9 @@
 # Decrypted sops files
 sops/sops.decrypted.yaml
 
+# Decrypted wallpapers
+backgrounds/files/
+
 # NixOS build results
 result
 result-*

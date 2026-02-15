@@ -3,8 +3,15 @@
 let
   monitors = config.displays.monitors;
 
-  # Blurred wallpaper is extracted at boot by the backgrounds service
-  blurredWallpaper = config.theme.blurredWallpaperPath;
+  # Use runtime blurred wallpaper if available, otherwise blur at build time
+  blurredWallpaper =
+    if config.theme.blurredWallpaperPath != null
+    then config.theme.blurredWallpaperPath
+    else pkgs.runCommand "blurred-wallpaper.jpg" {
+      buildInputs = [ pkgs.imagemagick ];
+    } ''
+      convert "${config.theme.wallpaper}" -blur 0x30 "$out"
+    '';
 
   cursorTheme = config.theme.cursor.name;
   cursorSize = config.theme.cursor.size;
