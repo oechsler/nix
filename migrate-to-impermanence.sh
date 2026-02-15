@@ -83,64 +83,66 @@ mkdir -p "$MNT"
 mount -t btrfs -o subvol=/ "$DISK" "$MNT"
 
 # Check subvolumes exist
-if [[ ! -d "$MNT/@var" ]]; then
-  echo "ERROR: @var subvolume not found. Already migrated?"
-  umount "$MNT"
-  exit 1
-fi
-
 if [[ ! -d "$MNT/@persist" ]]; then
   echo "ERROR: @persist subvolume not found."
   umount "$MNT"
   exit 1
 fi
 
-# Copy persistent directories from @var
-echo ""
-echo "==> Copying persistent directories to @persist..."
-for dir in "${PERSIST_DIRS[@]}"; do
-  src="$MNT/@var/$dir"
-  dest="$MNT/@persist/$dir"
-
-  if [[ -d "$src" ]]; then
-    echo "  Copying $dir..."
-    mkdir -p "$(dirname "$dest")"
-    cp -a "$src" "$dest"
-  else
-    echo "  Skipping $dir (not found)"
-  fi
-done
-
-# Copy /etc files from @
-echo ""
-echo "==> Copying /etc files to @persist..."
-mkdir -p "$MNT/@persist/etc/ssh"
-
-if [[ -f "$MNT/@/etc/machine-id" ]]; then
-  echo "  Copying etc/machine-id..."
-  cp -a "$MNT/@/etc/machine-id" "$MNT/@persist/etc/"
+ALREADY_MIGRATED=false
+if [[ ! -d "$MNT/@var" ]]; then
+  echo "INFO: @var subvolume not found. Already migrated, skipping data copy."
+  ALREADY_MIGRATED=true
 fi
 
-for key in ssh_host_ed25519_key ssh_host_ed25519_key.pub ssh_host_rsa_key ssh_host_rsa_key.pub; do
-  if [[ -f "$MNT/@/etc/ssh/$key" ]]; then
-    echo "  Copying etc/ssh/$key..."
-    cp -a "$MNT/@/etc/ssh/$key" "$MNT/@persist/etc/ssh/"
+if [[ "$ALREADY_MIGRATED" == false ]]; then
+  # Copy persistent directories from @var
+  echo ""
+  echo "==> Copying persistent directories to @persist..."
+  for dir in "${PERSIST_DIRS[@]}"; do
+    src="$MNT/@var/$dir"
+    dest="$MNT/@persist/$dir"
+
+    if [[ -d "$src" ]]; then
+      echo "  Copying $dir..."
+      mkdir -p "$(dirname "$dest")"
+      cp -a "$src" "$dest"
+    else
+      echo "  Skipping $dir (not found)"
+    fi
+  done
+
+  # Copy /etc files from @
+  echo ""
+  echo "==> Copying /etc files to @persist..."
+  mkdir -p "$MNT/@persist/etc/ssh"
+
+  if [[ -f "$MNT/@/etc/machine-id" ]]; then
+    echo "  Copying etc/machine-id..."
+    cp -a "$MNT/@/etc/machine-id" "$MNT/@persist/etc/"
   fi
-done
 
-# Delete @var subvolume
-echo ""
-echo "==> Deleting @var subvolume..."
+  for key in ssh_host_ed25519_key ssh_host_ed25519_key.pub ssh_host_rsa_key ssh_host_rsa_key.pub; do
+    if [[ -f "$MNT/@/etc/ssh/$key" ]]; then
+      echo "  Copying etc/ssh/$key..."
+      cp -a "$MNT/@/etc/ssh/$key" "$MNT/@persist/etc/ssh/"
+    fi
+  done
 
-# First delete any nested subvolumes
-btrfs subvolume list -o "$MNT/@var" 2>/dev/null | cut -f9 -d' ' | while read subvol; do
-  if [[ -n "$subvol" ]]; then
-    echo "  Deleting nested subvolume: $subvol"
-    btrfs subvolume delete "$MNT/$subvol"
-  fi
-done
+  # Delete @var subvolume
+  echo ""
+  echo "==> Deleting @var subvolume..."
 
-btrfs subvolume delete "$MNT/@var"
+  # First delete any nested subvolumes
+  btrfs subvolume list -o "$MNT/@var" 2>/dev/null | cut -f9 -d' ' | while read subvol; do
+    if [[ -n "$subvol" ]]; then
+      echo "  Deleting nested subvolume: $subvol"
+      btrfs subvolume delete "$MNT/$subvol"
+    fi
+  done
+
+  btrfs subvolume delete "$MNT/@var"
+fi
 
 # Show result
 echo ""
