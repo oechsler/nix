@@ -4,7 +4,6 @@
 
 set -euo pipefail
 
-DISK="/dev/disk/by-partlabel/disk-main-root"
 MNT="/mnt/btrfs-root"
 FLAKE_DIR="$(cd "$(dirname "$0")" && pwd)"
 HOST="${1:-}"
@@ -13,6 +12,33 @@ if [[ -z "$HOST" ]]; then
   echo "Usage: $0 <hostname>"
   echo "  e.g. $0 samuels-pc"
   exit 1
+fi
+
+# Try to find the root disk by label first, fallback to common locations
+if [[ -e "/dev/disk/by-partlabel/disk-main-root" ]]; then
+  DISK="/dev/disk/by-partlabel/disk-main-root"
+elif [[ -e "/dev/disk/by-label/nixos" ]]; then
+  DISK="/dev/disk/by-label/nixos"
+else
+  echo "ERROR: Could not find root partition."
+  echo "       Expected /dev/disk/by-partlabel/disk-main-root or /dev/disk/by-label/nixos"
+  exit 1
+fi
+
+# Try to find ESP partition
+if [[ -e "/dev/disk/by-partlabel/disk-main-ESP" ]]; then
+  ESP="/dev/disk/by-partlabel/disk-main-ESP"
+elif [[ -e "/dev/disk/by-label/boot" ]]; then
+  ESP="/dev/disk/by-label/boot"
+else
+  # Fallback: assume first partition on same disk as root
+  ROOT_DISK="$(lsblk -no PKNAME "$DISK" | head -1)"
+  ESP="/dev/${ROOT_DISK}p1"
+  if [[ ! -e "$ESP" ]]; then
+    ESP="/dev/${ROOT_DISK}1"
+  fi
+  echo "WARNING: Using guessed ESP path: $ESP"
+  echo "         If this is wrong, mount /mnt/boot manually before continuing."
 fi
 
 # Directories to persist (must match impermanence.nix)
@@ -33,7 +59,8 @@ PERSIST_DIRS=(
 echo "=== Impermanence Migration Script ==="
 echo ""
 echo "Host: $HOST"
-echo "Disk: $DISK"
+echo "Root: $DISK"
+echo "ESP:  $ESP"
 echo "Flake: $FLAKE_DIR"
 echo ""
 echo "This script will:"
@@ -134,7 +161,7 @@ mount -t btrfs -o subvol=@home,compress=zstd,noatime "$DISK" /mnt/home
 mount -t btrfs -o subvol=@nix,compress=zstd,noatime "$DISK" /mnt/nix
 mount -t btrfs -o subvol=@persist,compress=zstd,noatime "$DISK" /mnt/persist
 mount -t btrfs -o subvol=@snapshots,compress=zstd,noatime "$DISK" /mnt/.snapshots
-mount /dev/disk/by-partlabel/disk-main-ESP /mnt/boot
+mount "$ESP" /mnt/boot
 
 echo ""
 echo "==> Installing NixOS..."
