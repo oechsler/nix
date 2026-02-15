@@ -114,7 +114,7 @@ echo "==> SSH key pair saved to $SSH_DIR/"
 [[ -z "$SSH_KEY" ]] && rm -f "$SSH_KEY_FILE"
 
 SOPS_USER_DIR="/mnt/home/$USERNAME/.config/sops/age"
-SOPS_SYSTEM_DIR="/mnt/var/lib/sops/age"
+SOPS_SYSTEM_DIR="/mnt/persist/var/lib/sops/age"
 mkdir -p "$SOPS_USER_DIR" "$SOPS_SYSTEM_DIR"
 echo "$AGE_KEY" > "$SOPS_USER_DIR/keys.txt"
 echo "$AGE_KEY" > "$SOPS_SYSTEM_DIR/keys.txt"

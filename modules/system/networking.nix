@@ -141,6 +141,12 @@ in
         profiles = wifiProfiles;
       };
 
+      # Skip gracefully if SOPS key doesn't exist (fresh install)
+      systemd.services.NetworkManager-ensure-profiles = {
+        after = [ "sops-nix.service" ];
+        unitConfig.ConditionPathExists = config.sops.age.keyFile;
+      };
+
       sops = {
         templates."wifi-env".content = wifiEnvContent;
         secrets = wifiSecrets;
