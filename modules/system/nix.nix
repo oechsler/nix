@@ -46,7 +46,7 @@
 
     updateFlake = pkgs.writeShellScript "nixos-upgrade-update-flake" ''
       cd ${flakeDir}
-      ${pkgs.nix}/bin/nix flake update
+      ${pkgs.sudo}/bin/sudo -u ${config.user.name} ${pkgs.nix}/bin/nix flake update
     '';
 
     successScript = pkgs.writeShellScript "nixos-upgrade-success" ''
