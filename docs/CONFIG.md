@@ -30,6 +30,8 @@ features.ssh.enable = true;
 | `features.apps.enable` | `true` | Desktop apps (Discord, Spotify, Obsidian, LibreOffice, ...) |
 | `features.secureBoot.enable` | `false` | UEFI Secure Boot via lanzaboote |
 | `features.ssh.enable` | `false` | OpenSSH server + GitHub key sync (every 15 min) |
+| `features.snapshots.enable` | `true` | Automatic btrfs snapshots (hourly, see retention below) |
+| `features.snapshots.gui` | `true` | btrfs-assistant GUI for snapshot management |
 | `features.kernel` | `"cachyos"` | Kernel variant (`"cachyos"` / `"cachyos-lts"` / `"cachyos-server"` / `"default"`) |
 
 ## User Options
@@ -205,3 +207,36 @@ Set in `home.nix`. Works on both Hyprland (via hypridle) and KDE (via PowerDevil
 ## Impermanence
 
 Root filesystem (`/`) is wiped on every boot. Only explicitly declared paths in `/persist` survive. See [INSTALL.md](INSTALL.md#impermanence) for details.
+
+## Snapshots
+
+Automatic btrfs snapshots via btrbk. Enabled by default.
+
+**Snapshoted subvolumes:**
+- `@home` → `/home`
+- `@persist` → `/persist`
+
+**Retention policy (hourly snapshots):**
+| Keep | Duration |
+|------|----------|
+| 24 | Hourly (last 24 hours) |
+| 7 | Daily (last 7 days) |
+| 2 | Weekly (last 2 weeks) |
+| 6 | Monthly (last 6 months) |
+
+**Management:**
+- GUI: `btrfs-assistant` (installed by default)
+- CLI: `sudo btrbk list` / `sudo btrbk run`
+
+**Restore a snapshot:**
+```bash
+# List snapshots
+sudo btrbk list snapshots
+
+# Mount btrfs root and browse
+sudo mount -o subvol=/ /dev/mapper/cryptroot /mnt
+ls /mnt/@snapshots/
+
+# Copy files from snapshot
+cp /mnt/@snapshots/@home.20240115T1200/@home/user/file ~/file
+```
