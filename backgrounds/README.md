@@ -17,6 +17,6 @@ images locally, they're stored in an encrypted archive.
 
 ```bash
 ./decrypt.sh      # extracts to ./files/
-# edit files in ./files/
+                  # edit files in ./files/
 ./encrypt.sh      # re-encrypts to blob.tar.gz.enc
 ```
