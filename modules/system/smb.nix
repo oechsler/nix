@@ -105,11 +105,15 @@ in
 
     systemd.services.smb-mount = {
       description = "Mount SMB Shares";
-      after = [ "network-online.target" "systemd-resolved.service" "graphical.target" ]
+      after = [ "network-online.target" "systemd-resolved.service" "graphical.target" "sops-nix.service" ]
         ++ lib.optionals config.features.tailscale.enable [ "tailscaled.service" ];
       wants = [ "network-online.target" "systemd-resolved.service" ]
         ++ lib.optionals config.features.tailscale.enable [ "tailscaled.service" ];
       wantedBy = [ "graphical.target" ];
+
+      # Skip gracefully if SOPS key doesn't exist (fresh install)
+      unitConfig.ConditionPathExists = config.sops.age.keyFile;
+
       path = [ pkgs.cifs-utils pkgs.util-linux pkgs.sudo pkgs.libnotify pkgs.iproute2 pkgs.systemd ]
         ++ lib.optionals config.features.tailscale.enable [ config.services.tailscale.package ];
       serviceConfig = {
