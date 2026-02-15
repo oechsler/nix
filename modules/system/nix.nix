@@ -3,9 +3,6 @@
 {
   nix.settings = {
     experimental-features = [ "nix-command" "flakes" ];
-    # CachyOS kernel cache (xddxdd/nix-cachyos-kernel)
-    extra-substituters = [ "https://xddxdd.cachix.org" ];
-    extra-trusted-public-keys = [ "xddxdd.cachix.org-1:ay1HJyNDYmlSwj5NXQG065C8LfoqqKaTNCyzeixGjls=" ];
   };
   nixpkgs.config.allowUnfree = true;
 
