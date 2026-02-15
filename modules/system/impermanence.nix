@@ -22,7 +22,6 @@
 
       files = [
         "/etc/machine-id"
-        "/var/lib/systemd/random-seed"
       ];
     };
 
@@ -43,12 +42,14 @@
     boot.initrd.systemd.services.rollback = {
       description = "Rollback btrfs root to empty snapshot";
       wantedBy = [ "initrd.target" ];
+      # Use partlabel instead of filesystem label - more reliable in initrd
+      after = [ "dev-disk-by\\x2dpartlabel-disk\\x2dmain\\x2droot.device" ];
       before = [ "sysroot.mount" ];
       unitConfig.DefaultDependencies = "no";
       serviceConfig.Type = "oneshot";
       script = ''
         mkdir -p /mnt
-        mount -t btrfs -o subvol=/ /dev/disk/by-label/nixos /mnt
+        mount -t btrfs -o subvol=/ /dev/disk/by-partlabel/disk-main-root /mnt
 
         # Delete all subvolumes under @
         btrfs subvolume list -o /mnt/@ | cut -f9 -d' ' | while read subvol; do
