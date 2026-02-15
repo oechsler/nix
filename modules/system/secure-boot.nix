@@ -2,7 +2,7 @@
 #
 # Setup instructions:
 # 1. First boot WITHOUT secure boot enabled (in UEFI setup mode)
-# 2. Generate keys: sudo sbctl create-keys
+# 2. Generate keys: nix-shell -p sbctl --run "sudo sbctl create-keys"
 # 3. Rebuild: sudo nixos-rebuild switch --flake .#hostname
 # 4. Verify: sudo sbctl verify (all files should be signed)
 # 5. Enroll keys: sudo sbctl enroll-keys --microsoft
