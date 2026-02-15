@@ -168,3 +168,17 @@ sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-games-games
 ```
 
 This binds LUKS keys to your TPM - disks auto-unlock in your PC but are useless if stolen.
+
+### Remove TPM Enrollment
+
+To remove TPM auto-unlock and go back to password-only:
+
+```bash
+# Remove TPM slot from root disk
+sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-root --wipe-slot=tpm2
+
+# Remove TPM slot from games disk (samuels-pc only)
+sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-games-games --wipe-slot=tpm2
+```
+
+The password slot remains intact.
