@@ -103,15 +103,15 @@ sudo compsize /
 ### Boot fails
 ```bash
 # Boot from USB, mount manually:
-mount -o subvol=@ /dev/nvme0n1p2 /mnt
-mount -o subvol=@nix /dev/nvme0n1p2 /mnt/nix
-mount /dev/nvme0n1p1 /mnt/boot
+mount -o subvol=@ /dev/disk/by-label/nixos /mnt
+mount -o subvol=@nix /dev/disk/by-label/nixos /mnt/nix
+mount /dev/disk/by-label/BOOT /mnt/boot
 nixos-enter --root /mnt
 ```
 
 ### Restore from snapshot
 ```bash
-mount /dev/nvme0n1p2 /mnt
+mount /dev/disk/by-label/nixos /mnt
 btrfs subvolume delete /mnt/@
 btrfs subvolume snapshot /mnt/@snapshots/root-YYYYMMDD /mnt/@
 ```
