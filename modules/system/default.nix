@@ -14,6 +14,7 @@
     ./bluetooth.nix
     ./fonts.nix
     ./theme.nix
+    ./backgrounds.nix
     ./hardware.nix
     ./virtualisation.nix
     ./power.nix
