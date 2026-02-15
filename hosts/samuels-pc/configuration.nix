@@ -1,4 +1,9 @@
-{ config, pkgs, inputs, ... }:
+{
+  config,
+  pkgs,
+  inputs,
+  ...
+}:
 
 {
   imports = [
@@ -11,7 +16,7 @@
   networking.hostName = "samuels-pc";
 
   # ─── Host-specific overrides ─────────────────────────────────────────────────
-  theme.wallpaper = ../../backgrounds/nix-black-4k.png;
+  theme.wallpaper = "Lake 4.png";  # Filename in encrypted backgrounds archive
 
   # Ensure samuel owns /mnt/games (mounted by disko)
   systemd.tmpfiles.rules = [
@@ -26,7 +31,12 @@
       refreshRate = 165;
       x = 2560;
       y = 0;
-      workspaces = [ 1 2 3 4 ];
+      workspaces = [
+        1
+        2
+        3
+        4
+      ];
     }
     {
       name = "DP-2";
@@ -35,7 +45,12 @@
       refreshRate = 165;
       x = 0;
       y = 0;
-      workspaces = [ 5 6 7 8 ];
+      workspaces = [
+        5
+        6
+        7
+        8
+      ];
     }
   ];
 
