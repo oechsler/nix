@@ -103,15 +103,13 @@
     };
 
     wallpaperPath = lib.mkOption {
-      type = lib.types.either lib.types.path lib.types.str;
-      default = config.theme.wallpaper;
-      description = "Runtime path to the current wallpaper";
+      type = lib.types.str;
+      description = "Runtime path to the current wallpaper (set by backgrounds module)";
     };
 
     blurredWallpaperPath = lib.mkOption {
-      type = lib.types.nullOr (lib.types.either lib.types.path lib.types.str);
-      default = null;
-      description = "Runtime path to blurred wallpaper for SDDM";
+      type = lib.types.str;
+      description = "Runtime path to blurred wallpaper for SDDM (set by backgrounds module)";
     };
   };
 

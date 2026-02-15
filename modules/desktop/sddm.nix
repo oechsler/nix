@@ -3,15 +3,7 @@
 let
   monitors = config.displays.monitors;
 
-  # Use runtime blurred wallpaper if available, otherwise blur at build time
-  blurredWallpaper =
-    if config.theme.blurredWallpaperPath != null
-    then config.theme.blurredWallpaperPath
-    else pkgs.runCommand "blurred-wallpaper.jpg" {
-      buildInputs = [ pkgs.imagemagick ];
-    } ''
-      convert "${config.theme.wallpaper}" -blur 0x30 "$out"
-    '';
+  blurredWallpaper = config.theme.blurredWallpaperPath;
 
   cursorTheme = config.theme.cursor.name;
   cursorSize = config.theme.cursor.size;
