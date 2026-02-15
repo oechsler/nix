@@ -1,9 +1,9 @@
 { config, lib, ... }:
 
 let
-  # Use btrfs label "nixos" - works regardless of how system was installed
-  rootPartition = "/dev/disk/by-label/nixos";
-  systemdDevice = "dev-disk-by\\x2dlabel-nixos.device";
+  # LUKS-encrypted btrfs - use mapper device after unlock
+  rootPartition = "/dev/mapper/cryptroot";
+  systemdDevice = "dev-mapper-cryptroot.device";
 in
 {
   config = {

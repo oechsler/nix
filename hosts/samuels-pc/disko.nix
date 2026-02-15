@@ -23,28 +23,34 @@
             root = {
               size = "100%";
               content = {
-                type = "btrfs";
-                extraArgs = [ "-f" "-L" "nixos" ];
-                subvolumes = {
-                  "@" = {
-                    mountpoint = "/";
-                    mountOptions = [ "compress=zstd" "noatime" ];
-                  };
-                  "@home" = {
-                    mountpoint = "/home";
-                    mountOptions = [ "compress=zstd" "noatime" ];
-                  };
-                  "@nix" = {
-                    mountpoint = "/nix";
-                    mountOptions = [ "compress=zstd" "noatime" ];
-                  };
-                  "@persist" = {
-                    mountpoint = "/persist";
-                    mountOptions = [ "compress=zstd" "noatime" ];
-                  };
-                  "@snapshots" = {
-                    mountpoint = "/.snapshots";
-                    mountOptions = [ "compress=zstd" "noatime" ];
+                type = "luks";
+                name = "cryptroot";
+                settings.allowDiscards = true;
+                passwordFile = "/tmp/luks-password";
+                content = {
+                  type = "btrfs";
+                  extraArgs = [ "-f" "-L" "nixos" ];
+                  subvolumes = {
+                    "@" = {
+                      mountpoint = "/";
+                      mountOptions = [ "compress=zstd" "noatime" ];
+                    };
+                    "@home" = {
+                      mountpoint = "/home";
+                      mountOptions = [ "compress=zstd" "noatime" ];
+                    };
+                    "@nix" = {
+                      mountpoint = "/nix";
+                      mountOptions = [ "compress=zstd" "noatime" ];
+                    };
+                    "@persist" = {
+                      mountpoint = "/persist";
+                      mountOptions = [ "compress=zstd" "noatime" ];
+                    };
+                    "@snapshots" = {
+                      mountpoint = "/.snapshots";
+                      mountOptions = [ "compress=zstd" "noatime" ];
+                    };
                   };
                 };
               };
@@ -61,12 +67,18 @@
             games = {
               size = "100%";
               content = {
-                type = "btrfs";
-                extraArgs = [ "-f" "-L" "games" ];
-                subvolumes = {
-                  "@games" = {
-                    mountpoint = "/mnt/games";
-                    mountOptions = [ "compress=zstd" "noatime" ];
+                type = "luks";
+                name = "cryptgames";
+                settings.allowDiscards = true;
+                passwordFile = "/tmp/luks-password";
+                content = {
+                  type = "btrfs";
+                  extraArgs = [ "-f" "-L" "games" ];
+                  subvolumes = {
+                    "@games" = {
+                      mountpoint = "/mnt/games";
+                      mountOptions = [ "compress=zstd" "noatime" ];
+                    };
                   };
                 };
               };

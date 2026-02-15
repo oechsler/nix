@@ -44,6 +44,25 @@ fi
 
 export NIX_CONFIG="experimental-features = nix-command flakes"
 
+# LUKS password setup
+if [[ ! -f /tmp/luks-password ]]; then
+  echo ""
+  echo "==> Setting up LUKS disk encryption..."
+  read -rsp "Enter LUKS password: " LUKS_PASS
+  echo
+  read -rsp "Confirm LUKS password: " LUKS_PASS_CONFIRM
+  echo
+  if [[ "$LUKS_PASS" != "$LUKS_PASS_CONFIRM" ]]; then
+    echo "Error: Passwords do not match"
+    exit 1
+  fi
+  echo "$LUKS_PASS" > /tmp/luks-password
+  chmod 600 /tmp/luks-password
+  echo "    LUKS password saved to /tmp/luks-password"
+else
+  echo "==> Using existing /tmp/luks-password"
+fi
+
 echo "==> Detecting NixOS version for stateVersion..."
 NIXOS_VERSION="$(nixos-version | cut -d. -f1,2)"
 echo "    Detected version: $NIXOS_VERSION"
@@ -111,5 +130,12 @@ fi
 echo "==> Fixing home directory ownership..."
 nixos-enter --root /mnt -c "chown -R $USERNAME:users /home/$USERNAME"
 
-echo "==> Installation complete. You can reboot now."
-echo "    Password is set declaratively in the NixOS config."
+# Cleanup
+rm -f /tmp/luks-password
+
+echo ""
+echo "==> Installation complete!"
+echo "    - LUKS: Enter disk encryption password at boot"
+echo "    - Login: Password is set declaratively in NixOS config"
+echo ""
+echo "You can reboot now."
