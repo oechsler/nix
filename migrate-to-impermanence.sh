@@ -186,8 +186,12 @@ rm -f /mnt/etc/resolv.conf
 cp -L /etc/resolv.conf /mnt/etc/resolv.conf
 
 echo ""
-echo "==> Installing NixOS..."
-nixos-install --flake "$FLAKE_DIR#$HOST" --no-root-passwd
+echo "==> Installing NixOS (without bootloader)..."
+nixos-install --flake "$FLAKE_DIR#$HOST" --no-root-passwd --no-bootloader
+
+echo ""
+echo "==> Installing bootloader manually..."
+nixos-enter --root /mnt -c "bootctl install --esp-path=/boot"
 
 echo ""
 echo "==> Unmounting..."
