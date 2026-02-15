@@ -151,7 +151,12 @@
         --------------------------------------------------------
         -- Navigation
         --------------------------------------------------------
-        require("nvim-tree").setup({})
+        require("nvim-tree").setup({
+          filesystem_watchers = { enable = true },
+          sync_root_with_cwd = true,
+          reload_on_bufenter = true,
+          view = { adaptive_size = false },
+        })
 
         require("telescope").setup({ extensions = { fzf = {} } })
         pcall(require("telescope").load_extension, "fzf")
@@ -169,10 +174,6 @@
           callback = function() vim.hl.on_yank() end,
         })
 
-        vim.api.nvim_create_autocmd({ "BufEnter", "WinEnter" }, {
-          pattern = "term://*",
-          callback = function() vim.cmd("startinsert") end,
-        })
 
         require("mini.pairs").setup()
 
@@ -270,6 +271,10 @@
         --------------------------------------------------------
         require("claudecode").setup({
           terminal = { split_side = "right", split_width_percentage = 0.33 },
+          diff_opts = {
+            auto_close_on_accept = true,
+            open_in_current_tab = true,
+          },
         })
 
         --------------------------------------------------------

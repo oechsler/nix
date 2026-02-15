@@ -281,7 +281,7 @@ in
           lookAndFeel = lookAndFeelId;
           colorScheme = colorSchemeId;
           iconTheme = iconName;
-          wallpaper = theme.wallpaper;
+          wallpaper = theme.wallpaperPath;
           cursor = {
             theme = cursorName;
             size = cursorSize;
@@ -354,8 +354,8 @@ in
 
         # Lock screen wallpaper
         run ${kwriteconfig} --file kscreenlockerrc --group Greeter --group Wallpaper --key WallpaperPlugin "org.kde.image"
-        run ${kwriteconfig} --file kscreenlockerrc --group Greeter --group Wallpaper --group org.kde.image --group General --key Image "file://${theme.wallpaper}"
-        run ${kwriteconfig} --file kscreenlockerrc --group Greeter --group Wallpaper --group org.kde.image --group General --key PreviewImage "file://${theme.wallpaper}"
+        run ${kwriteconfig} --file kscreenlockerrc --group Greeter --group Wallpaper --group org.kde.image --group General --key Image "file://${theme.wallpaperPath}"
+        run ${kwriteconfig} --file kscreenlockerrc --group Greeter --group Wallpaper --group org.kde.image --group General --key PreviewImage "file://${theme.wallpaperPath}"
 
         # Window decoration: Breeze library and button size (buttons managed by plasma-manager)
         run ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key library org.kde.breeze

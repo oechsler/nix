@@ -14,11 +14,11 @@
 
       background =
         if displays.monitors == [] then
-          [{ path = "${theme.wallpaper}"; blur_passes = 3; blur_size = 8; }]
+          [{ path = "${theme.wallpaperPath}"; blur_passes = 3; blur_size = 8; }]
         else
           map (m: {
             monitor = m.name;
-            path = "${if m.wallpaper != null then m.wallpaper else theme.wallpaper}";
+            path = "${if m.wallpaper != null then m.wallpaper else theme.wallpaperPath}";
             blur_passes = 3;
             blur_size = 8;
           }) displays.monitors;

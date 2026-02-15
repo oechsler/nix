@@ -97,9 +97,21 @@
     };
 
     wallpaper = lib.mkOption {
-      type = lib.types.path;
-      default = ../../backgrounds/Cloudsnight.jpg;
-      description = "Desktop wallpaper image";
+      type = lib.types.str;
+      default = "nix-black-4k.png";
+      description = "Wallpaper filename inside the encrypted backgrounds archive";
+    };
+
+    wallpaperPath = lib.mkOption {
+      type = lib.types.str;
+      default = "${config.backgrounds.outputDir}/${config.backgrounds.currentFile}";
+      description = "Runtime path to the current wallpaper (extracted at boot)";
+    };
+
+    blurredWallpaperPath = lib.mkOption {
+      type = lib.types.str;
+      default = "${config.backgrounds.outputDir}/${config.backgrounds.blurredFile}";
+      description = "Runtime path to blurred wallpaper for SDDM (extracted at boot)";
     };
   };
 

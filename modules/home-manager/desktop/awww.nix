@@ -5,10 +5,10 @@ let
 
   wallpaperCommands =
     if displays.monitors == [] then
-      "${awwwPkg}/bin/awww img ${theme.wallpaper} --transition-type fade --transition-duration 1"
+      "${awwwPkg}/bin/awww img ${theme.wallpaperPath} --transition-type fade --transition-duration 1"
     else
       lib.concatStringsSep "\n" (map (m:
-        let wp = if m.wallpaper != null then m.wallpaper else theme.wallpaper;
+        let wp = if m.wallpaper != null then m.wallpaper else theme.wallpaperPath;
         in "${awwwPkg}/bin/awww img ${wp} --outputs ${m.name} --transition-type fade --transition-duration 1"
       ) displays.monitors);
 
