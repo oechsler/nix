@@ -178,6 +178,12 @@ else
   echo "         sops secrets may fail to decrypt during installation."
 fi
 
+# Copy resolv.conf for DNS during install
+echo ""
+echo "==> Setting up DNS for installation..."
+mkdir -p /mnt/etc
+cp -L /etc/resolv.conf /mnt/etc/resolv.conf
+
 echo ""
 echo "==> Installing NixOS..."
 nixos-install --flake "$FLAKE_DIR#$HOST" --no-root-passwd
