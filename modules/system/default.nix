@@ -15,6 +15,7 @@
     ./fonts.nix
     ./theme.nix
     ./backgrounds.nix
+    ./impermanence.nix
     ./hardware.nix
     ./virtualisation.nix
     ./power.nix

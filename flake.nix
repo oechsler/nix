@@ -45,6 +45,8 @@
     };
 
     nix-flatpak.url = "github:gmodena/nix-flatpak";
+
+    impermanence.url = "github:nix-community/impermanence";
   };
 
   outputs = { self, nixpkgs, ... }@inputs:
@@ -61,6 +63,7 @@
           inputs.sops-nix.nixosModules.sops
           inputs.nix-flatpak.nixosModules.nix-flatpak
           inputs.disko.nixosModules.disko
+          inputs.impermanence.nixosModules.impermanence
           {
             nixpkgs.overlays = [
               inputs.cachyos-kernel.overlays.pinned

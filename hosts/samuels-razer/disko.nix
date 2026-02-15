@@ -41,6 +41,10 @@
                     mountpoint = "/var";
                     mountOptions = [ "compress=zstd" "noatime" ];
                   };
+                  "@persist" = {
+                    mountpoint = "/persist";
+                    mountOptions = [ "compress=zstd" "noatime" ];
+                  };
                   "@snapshots" = {
                     mountpoint = "/.snapshots";
                     mountOptions = [ "compress=zstd" "noatime" ];
