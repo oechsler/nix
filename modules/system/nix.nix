@@ -44,9 +44,13 @@
         ${pkgs.libnotify}/bin/notify-send "$@"
     '';
 
+    user = config.user.name;
+
     updateFlake = pkgs.writeShellScript "nixos-upgrade-update-flake" ''
       cd ${flakeDir}
-      ${pkgs.sudo}/bin/sudo -u ${config.user.name} ${pkgs.nix}/bin/nix flake update
+      ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git checkout flake.lock
+      ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git pull --ff-only
+      ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.nix}/bin/nix flake update
     '';
 
     successScript = pkgs.writeShellScript "nixos-upgrade-success" ''
