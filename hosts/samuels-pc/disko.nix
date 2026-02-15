@@ -17,7 +17,7 @@
                 format = "vfat";
                 mountpoint = "/boot";
                 mountOptions = [ "umask=0077" ];
-                extraArgs = [ "-n" "boot" ];
+                extraArgs = [ "-n" "EFI" ];
               };
             };
             root = {
