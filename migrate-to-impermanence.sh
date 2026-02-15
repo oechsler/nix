@@ -182,6 +182,7 @@ fi
 echo ""
 echo "==> Setting up DNS for installation..."
 mkdir -p /mnt/etc
+rm -f /mnt/etc/resolv.conf
 cp -L /etc/resolv.conf /mnt/etc/resolv.conf
 
 echo ""
