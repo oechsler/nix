@@ -77,6 +77,5 @@ in
 
     # Required for impermanence
     fileSystems."/persist".neededForBoot = true;
-    fileSystems."/var".neededForBoot = true;
   };
 }
