@@ -23,6 +23,7 @@
     ./gaming.nix
     ./packages.nix
     ./ssh.nix
+    ./snapshots.nix
     ./features.nix
     ./displays.nix
     ./input.nix
