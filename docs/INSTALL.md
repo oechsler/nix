@@ -134,13 +134,37 @@ Should show "Secure Boot: enabled".
 
 ## TPM Unlock (Optional)
 
-After setting up Secure Boot with lanzaboote, you can add TPM-based auto-unlock:
+After setting up Secure Boot with lanzaboote, you can add TPM-based auto-unlock.
+
+### Single Disk (samuels-razer)
 
 ```bash
-# Enroll TPM (keeps password as fallback)
+# Enroll TPM for root disk (keeps password as fallback)
 sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-root --tpm2-device=auto --tpm2-pcrs=0+7
-
-# Test: reboot should auto-unlock
 ```
 
-This binds the LUKS key to your TPM - disk auto-unlocks in your PC but is useless if stolen.
+### Multiple Disks (samuels-pc)
+
+Each LUKS-encrypted disk needs its own TPM enrollment:
+
+```bash
+# Enroll root disk
+sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-root --tpm2-device=auto --tpm2-pcrs=0+7
+
+# Enroll games disk
+sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-games-games --tpm2-device=auto --tpm2-pcrs=0+7
+```
+
+Both disks will auto-unlock on boot. The password stays as fallback for each disk.
+
+### Verify and Test
+
+```bash
+# List enrolled key slots for each disk
+sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-root
+sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-games-games
+
+# Reboot to test auto-unlock
+```
+
+This binds LUKS keys to your TPM - disks auto-unlock in your PC but are useless if stolen.
