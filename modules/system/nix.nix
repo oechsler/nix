@@ -37,23 +37,25 @@
 
   systemd.services.nixos-upgrade = let
     flakeDir = "${config.users.users.${config.user.name}.home}/repos/nix";
-    updateFlake = pkgs.writeShellScript "nixos-upgrade-update-flake" ''
-      cd ${flakeDir}
-      ${pkgs.nix}/bin/nix flake update
-    '';
+
     notify = pkgs.writeShellScript "nixos-upgrade-notify" ''
       ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
         --user --pipe --quiet --collect \
         ${pkgs.libnotify}/bin/notify-send "$@"
     '';
+
+    updateFlake = pkgs.writeShellScript "nixos-upgrade-update-flake" ''
+      cd ${flakeDir}
+      ${pkgs.nix}/bin/nix flake update
+    '';
+
     successScript = pkgs.writeShellScript "nixos-upgrade-success" ''
       current=$(readlink /run/current-system)
       booted=$(readlink /run/booted-system)
-      version=$(cat /run/current-system/nixos-version 2>/dev/null || echo "unbekannt")
       if [ "$current" != "$booted" ]; then
         ${notify} -u normal \
           "Systemaktualisierung abgeschlossen" \
-          "Ein Neustart wird empfohlen, um alle Änderungen zu übernehmen."
+          "Ein Neustart wird empfohlen."
       else
         ${notify} -u low \
           "Systemaktualisierung" \
