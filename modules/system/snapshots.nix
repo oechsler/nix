@@ -10,7 +10,6 @@ in
 {
   options.features.snapshots = {
     enable = (lib.mkEnableOption "automatic btrfs snapshots") // { default = true; };
-    gui = (lib.mkEnableOption "btrfs-assistant GUI for snapshot management") // { default = true; };
   };
 
   config = lib.mkIf cfg.enable {
@@ -44,7 +43,20 @@ in
       options = [ "subvol=/" "compress=zstd" "noatime" ];
     };
 
-    environment.systemPackages = [ pkgs.btrbk ]
-      ++ lib.optionals cfg.gui [ pkgs.btrfs-assistant ];
+    environment.systemPackages = [ pkgs.btrbk ];
+
+    # Symlink so `btrbk run` works without -c flag
+    environment.etc."btrbk/btrbk.conf".text = ''
+      timestamp_format long
+      snapshot_preserve_min 2h
+      snapshot_preserve 24h 7d 2w 6m
+
+      volume /mnt/btrfs-root
+        snapshot_dir @snapshots
+        subvolume @home
+          snapshot_create always
+        subvolume @persist
+          snapshot_create always
+    '';
   };
 }
