@@ -17,6 +17,7 @@ in
         "/var/lib/flatpak"
         "/var/lib/NetworkManager"
         "/var/lib/nixos"
+        "/var/lib/sbctl"
         "/var/lib/sddm"
         "/var/lib/sops"
         "/var/lib/tailscale"

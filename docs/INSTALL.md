@@ -85,7 +85,54 @@ nixos-enter --root /mnt
 ### Forgot LUKS password
 You need to reinstall. Keep backups in `/persist` or external storage.
 
-## TPM Unlock (Optional, Future)
+## Secure Boot Setup
+
+Secure Boot is disabled by default. To enable it:
+
+### 1. Enable in config
+
+In your host's `configuration.nix`:
+```nix
+features.secureBoot.enable = true;
+```
+
+### 2. Prepare UEFI
+
+Boot into UEFI/BIOS and:
+- Disable Secure Boot
+- Enable "Setup Mode" (or clear existing keys)
+
+### 3. Generate and enroll keys
+
+```bash
+# Rebuild with lanzaboote enabled
+sudo nixos-rebuild switch --flake .#hostname
+
+# Create signing keys
+sudo sbctl create-keys
+
+# Rebuild again to sign boot files
+sudo nixos-rebuild switch --flake .#hostname
+
+# Verify all files are signed
+sudo sbctl verify
+
+# Enroll keys (--microsoft keeps Windows/firmware compatibility)
+sudo sbctl enroll-keys --microsoft
+```
+
+### 4. Enable Secure Boot
+
+Reboot into UEFI/BIOS, enable Secure Boot, then boot normally.
+
+```bash
+# Verify it's working
+bootctl status
+```
+
+Should show "Secure Boot: enabled".
+
+## TPM Unlock (Optional)
 
 After setting up Secure Boot with lanzaboote, you can add TPM-based auto-unlock:
 
