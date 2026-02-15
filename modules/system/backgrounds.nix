@@ -6,17 +6,31 @@ let
   # The encrypted tar.gz file in the repo
   archiveFile = ../../backgrounds/blob.tar.gz.enc;
 
+  # Neutral dark gray fallback (temporary until SOPS key is set up)
+  fallbackColor = "#181818";
+
   # Script to extract and prepare wallpapers
   extractScript = pkgs.writeShellScript "extract-backgrounds" ''
     set -euo pipefail
 
-    PASSWORD="$(cat ${config.sops.secrets."backgrounds/password".path})"
+    SECRET_FILE="${config.sops.secrets."backgrounds/password".path}"
     OUTPUT_DIR="${cfg.outputDir}"
     WALLPAPER_NAME="${config.theme.wallpaper}"
     CURRENT="${cfg.outputDir}/${cfg.currentFile}"
     BLURRED="${cfg.outputDir}/${cfg.blurredFile}"
 
     mkdir -p "$OUTPUT_DIR"
+
+    # Check if SOPS secret is available
+    if [[ ! -f "$SECRET_FILE" ]]; then
+      echo "SOPS secret not available, creating fallback wallpaper"
+      ${pkgs.imagemagick}/bin/magick -size 3840x2160 xc:"${fallbackColor}" "$CURRENT"
+      cp "$CURRENT" "$BLURRED"
+      chmod 644 "$CURRENT" "$BLURRED"
+      exit 0
+    fi
+
+    PASSWORD="$(cat "$SECRET_FILE")"
 
     # Extract only the selected wallpaper from encrypted tar.gz
     ${pkgs.openssl}/bin/openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:"$PASSWORD" < "${archiveFile}" | ${pkgs.gzip}/bin/gzip -d | ${pkgs.gnutar}/bin/tar xf - -C "$OUTPUT_DIR" "./$WALLPAPER_NAME"
