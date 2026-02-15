@@ -159,12 +159,64 @@
       rm -f /root/.config/gtk-3.0/settings.ini /root/.config/gtk-4.0/settings.ini
     '';
 
+    # Qt theming for root (elevated apps like gparted, partition manager)
+    # Only on Hyprland — KDE manages Qt theming itself
+    system.activationScripts.rootQtDark = lib.mkIf (config.features.desktop.wm != "kde") {
+      deps = [ ];
+      text = let
+        flavor = config.theme.catppuccin.flavor;
+        isDark = flavor != "latte";
+        iconName = config.theme.icons.name;
+        kvantumTheme = "catppuccin-${flavor}-${config.theme.catppuccin.accent}";
+
+        qt5ctConf = pkgs.writeText "qt5ct.conf" ''
+          [Appearance]
+          style=kvantum
+          icon_theme=${iconName}
+          color_scheme_path=
+          custom_palette=false
+        '';
+        qt6ctConf = pkgs.writeText "qt6ct.conf" ''
+          [Appearance]
+          style=kvantum
+          icon_theme=${iconName}
+          color_scheme_path=
+          custom_palette=false
+        '';
+        kvantumConf = pkgs.writeText "kvantum.kvconfig" ''
+          [General]
+          theme=${kvantumTheme}
+        '';
+
+        catppuccinKvantum = pkgs.catppuccin-kvantum.override {
+          accent = config.theme.catppuccin.accent;
+          variant = flavor;
+        };
+      in ''
+        mkdir -p /root/.config/qt5ct /root/.config/qt6ct /root/.config/Kvantum
+        cp ${qt5ctConf} /root/.config/qt5ct/qt5ct.conf
+        cp ${qt6ctConf} /root/.config/qt6ct/qt6ct.conf
+        cp ${kvantumConf} /root/.config/Kvantum/kvantum.kvconfig
+
+        # Link Kvantum theme
+        ln -sfn ${catppuccinKvantum}/share/Kvantum/${kvantumTheme} /root/.config/Kvantum/${kvantumTheme}
+      '';
+    };
+
     # Global Qt dark preference (root apps; user sessions override via qt6ct/KDE)
     # Skip under KDE — Plasma manages Qt theming itself
     qt = lib.mkIf (config.features.desktop.wm != "kde") {
       enable = true;
-      platformTheme = "gnome";
-      style = if config.theme.catppuccin.flavor == "latte" then "adwaita" else "adwaita-dark";
+      platformTheme = "qt5ct";
+      style = "kvantum";
     };
+
+    # Qt theming packages for root (elevated apps)
+    environment.systemPackages = lib.mkIf (config.features.desktop.wm != "kde") (with pkgs; [
+      libsForQt5.qt5ct
+      kdePackages.qt6ct
+      libsForQt5.qtstyleplugin-kvantum
+      kdePackages.qtstyleplugin-kvantum
+    ]);
   };
 }
