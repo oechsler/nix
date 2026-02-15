@@ -2,6 +2,7 @@
   description = "Samuel's NixOS configuration";
 
   inputs = {
+    # ─── Core ──────────────────────────────────────────────────────────────────
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
     home-manager = {
@@ -9,29 +10,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    catppuccin.url = "github:catppuccin/nix";
-
+    # ─── Nix Community Tools ───────────────────────────────────────────────────
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    awww.url = "git+https://codeberg.org/LGFae/awww";
-
-    sops-nix = {
-      url = "github:Mic92/sops-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    firefox-addons = {
-      url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    cachyos-kernel = {
-      url = "github:xddxdd/nix-cachyos-kernel";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    impermanence.url = "github:nix-community/impermanence";
 
     lanzaboote = {
       url = "github:nix-community/lanzaboote/v0.4.2";
@@ -44,9 +29,28 @@
       inputs.home-manager.follows = "home-manager";
     };
 
-    nix-flatpak.url = "github:gmodena/nix-flatpak";
+    sops-nix = {
+      url = "github:Mic92/sops-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
-    impermanence.url = "github:nix-community/impermanence";
+    # ─── Theming ───────────────────────────────────────────────────────────────
+    catppuccin.url = "github:catppuccin/nix";
+
+    # ─── External Packages ─────────────────────────────────────────────────────
+    awww.url = "git+https://codeberg.org/LGFae/awww";
+
+    cachyos-kernel = {
+      url = "github:xddxdd/nix-cachyos-kernel";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    firefox-addons = {
+      url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    nix-flatpak.url = "github:gmodena/nix-flatpak";
   };
 
   outputs = { self, nixpkgs, ... }@inputs:
