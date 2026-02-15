@@ -36,17 +36,26 @@ in
       default = [];
       description = "Extra directories to create in the user's home (relative to ~)";
     };
+    hashedPassword = lib.mkOption {
+      type = lib.types.str;
+      default = "$6$KGdmWN5KyLLzqxo9$/8Zy.CZ3DBNVr/wWwAO4JmDFzKBsE90roS.w9ryPqSCxwcJiDwLtURWL1oxcFBlfvxBosnCC/Nr2ipk07EZIR.";
+      description = "Hashed password for the user (generate with: mkpasswd -m sha-512)";
+    };
   };
 
   config = {
     # Lock root account - only sudo access via user account
     users.users.root.hashedPassword = "!";
 
+    # Mutable users must be disabled for declarative passwords
+    users.mutableUsers = false;
+
     users.users.${cfg.name} = {
       isNormalUser = true;
       description = cfg.fullName;
       extraGroups = [ "networkmanager" "wheel" ];
       shell = pkgs.fish;
+      hashedPassword = cfg.hashedPassword;
     };
 
     # User icon for AccountsService (SDDM, etc.)
