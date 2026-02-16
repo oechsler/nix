@@ -40,7 +40,7 @@ in
     fileSystems."/mnt/btrfs-root" = {
       device = "/dev/mapper/cryptroot";
       fsType = "btrfs";
-      options = [ "subvol=/" "compress=zstd" "noatime" ];
+      options = [ "subvol=/" "compress=zstd" "noatime" "x-gvfs-hide" ];
     };
 
     environment.systemPackages = [ pkgs.btrbk ];
