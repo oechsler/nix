@@ -149,6 +149,29 @@ in
         unitConfig.ConditionPathExists = config.sops.age.keyFile;
       };
 
+      # Write iwd profile files (<SSID>.psk) so known networks appear in impala
+      systemd.services.iwd-profiles = {
+        wantedBy = [ "network-pre.target" ];
+        after = [ "sops-install-secrets.service" ];
+        before = [ "iwd.service" ];
+        unitConfig.ConditionPathExists = config.sops.age.keyFile;
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+        script = lib.concatMapStringsSep "\n" (name:
+          let
+            ssidPath = config.sops.secrets."wifi/${name}/ssid".path;
+            pskPath  = config.sops.secrets."wifi/${name}/psk".path;
+          in ''
+            ssid=$(cat ${ssidPath})
+            mkdir -p /var/lib/iwd
+            printf '[Security]\nPassphrase=%s\n' "$(cat ${pskPath})" \
+              > "/var/lib/iwd/$ssid.psk"
+            chmod 0600 "/var/lib/iwd/$ssid.psk"
+          '') wifiNetworks;
+      };
+
       sops = {
         templates."wifi-env".content = wifiEnvContent;
         secrets = wifiSecrets;
