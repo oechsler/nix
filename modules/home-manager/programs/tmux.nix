@@ -37,16 +37,13 @@
       bind -n M-K swap-pane -d -t '{up-of}'
       bind -n M-L swap-pane -d -t '{right-of}'
 
-      # Splits / close pane
       bind -n M-Enter split-window -h -c '#{pane_current_path}'
       bind -n M-- split-window -v -c '#{pane_current_path}'
       bind -n M-q kill-pane
 
-      # Layout toggle / fullscreen
       bind -n M-Space if-shell -F "#{==:#{pane_width},#{window_width}}" "select-layout even-horizontal" "select-layout even-vertical"
       bind -n M-f resize-pane -Z
 
-      # Resize
       bind -n M-r switch-client -T resize
       bind -T resize h resize-pane -L 5 \; switch-client -T resize
       bind -T resize j resize-pane -D 5 \; switch-client -T resize
@@ -65,11 +62,9 @@
       bind -n M-9 run-shell "tmux select-window -t 9 || tmux new-window -t 9"
       bind -n M-0 run-shell "tmux select-window -t 10 || tmux new-window -t 10"
 
-      # Tab management
       bind -n M-t new-window -c '#{pane_current_path}'
       bind -n M-w kill-window
 
-      # Session management
       bind -n M-s choose-tree -s
       bind -n M-S new-session
       bind -n M-W kill-session
@@ -87,7 +82,6 @@
       bind -T move 9 join-pane -t :9
       bind -T move 0 join-pane -t :10
 
-      # Mouse support
       set -g mouse on
 
       # Status (after catppuccin plugin)

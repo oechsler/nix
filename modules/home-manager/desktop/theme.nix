@@ -272,7 +272,6 @@ in
         "aurorae/themes/${auroraeThemeId}".source = patchedAurorae;
       };
 
-      # Plasma-manager: declarative KDE Plasma configuration
       programs.plasma = {
         enable = true;
 
