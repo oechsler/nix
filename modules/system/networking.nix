@@ -89,27 +89,42 @@ in
           interface="$1"
           status="$2"
 
+          ethernet_up() {
+            ${pkgs.networkmanager}/bin/nmcli -t -f TYPE,STATE device \
+              | ${pkgs.gnugrep}/bin/grep -q '^ethernet:connected'
+          }
+
+          disable_wifi() {
+            for conn in $(${pkgs.networkmanager}/bin/nmcli -t -f NAME,TYPE connection show --active \
+                | ${pkgs.gnugrep}/bin/grep ':802-11-wireless$' \
+                | ${pkgs.coreutils}/bin/cut -d: -f1); do
+              logger "NetworkManager: disabling WiFi connection $conn"
+              ${pkgs.networkmanager}/bin/nmcli connection down "$conn" 2>/dev/null || true
+            done
+          }
+
           case "$interface" in
             en*|eth*)
               if [ "$status" = "up" ]; then
-                # Ethernet connected - disable all WiFi connections
                 logger "NetworkManager: Ethernet $interface up, disabling WiFi"
-                for conn in $(${pkgs.networkmanager}/bin/nmcli -t -f NAME,TYPE connection show | ${pkgs.gnugrep}/bin/grep ':802-11-wireless$' | ${pkgs.coreutils}/bin/cut -d: -f1); do
-                  ${pkgs.networkmanager}/bin/nmcli connection down "$conn" 2>/dev/null || true
-                done
+                disable_wifi
               elif [ "$status" = "down" ]; then
-                # Ethernet disconnected - enable WiFi and reconnect
                 logger "NetworkManager: Ethernet $interface down, enabling WiFi"
                 ${pkgs.networkmanager}/bin/nmcli radio wifi on 2>/dev/null || true
-
-                # Give WiFi radio a moment to come up
                 ${pkgs.coreutils}/bin/sleep 1
-
-                # Reconnect to WiFi networks with autoconnect enabled
-                for conn in $(${pkgs.networkmanager}/bin/nmcli -t -f NAME,TYPE,AUTOCONNECT connection show | ${pkgs.gnugrep}/bin/grep ':802-11-wireless:yes$' | ${pkgs.coreutils}/bin/cut -d: -f1); do
-                  logger "NetworkManager: Reconnecting to WiFi network: $conn"
+                for conn in $(${pkgs.networkmanager}/bin/nmcli -t -f NAME,TYPE,AUTOCONNECT connection show \
+                    | ${pkgs.gnugrep}/bin/grep ':802-11-wireless:yes$' \
+                    | ${pkgs.coreutils}/bin/cut -d: -f1); do
+                  logger "NetworkManager: reconnecting WiFi $conn"
                   ${pkgs.networkmanager}/bin/nmcli connection up "$conn" 2>/dev/null || true
                 done
+              fi
+              ;;
+            wl*)
+              # WiFi came up while ethernet is already active — disconnect it
+              if [ "$status" = "up" ] && ethernet_up; then
+                logger "NetworkManager: WiFi $interface up but ethernet active, disabling"
+                disable_wifi
               fi
               ;;
           esac
