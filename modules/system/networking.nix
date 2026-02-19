@@ -3,7 +3,6 @@
 let
   cfg = config.features.wifi;
   tailscaleCfg = config.features.tailscale;
-  wifiNetworks = [ "home" ];
 
   wifiProfiles = lib.listToAttrs (map (name: {
     name = "wifi-${name}";
@@ -31,20 +30,25 @@ let
         route-metric = 600;
       };
     };
-  }) wifiNetworks);
+  }) cfg.networks);
 
   wifiEnvContent = lib.concatMapStringsSep "\n" (name: ''
     WIFI_${lib.toUpper name}_SSID=${config.sops.placeholder."wifi/${name}/ssid"}
-    WIFI_${lib.toUpper name}_PSK=${config.sops.placeholder."wifi/${name}/psk"}'') wifiNetworks;
+    WIFI_${lib.toUpper name}_PSK=${config.sops.placeholder."wifi/${name}/psk"}'') cfg.networks;
 
   wifiSecrets = lib.listToAttrs (lib.flatten (map (name: [
     { name = "wifi/${name}/ssid"; value = {}; }
     { name = "wifi/${name}/psk"; value = {}; }
-  ]) wifiNetworks));
+  ]) cfg.networks));
 in
 {
   options.features = {
     wifi.enable = (lib.mkEnableOption "WiFi with managed network profiles") // { default = true; };
+    wifi.networks = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ "home" ];
+      description = "WiFi network names to manage — each needs wifi/<name>/ssid and wifi/<name>/psk SOPS secrets";
+    };
     tailscale.enable = (lib.mkEnableOption "Tailscale VPN") // { default = true; };
   };
 
@@ -149,7 +153,8 @@ in
         unitConfig.ConditionPathExists = config.sops.age.keyFile;
       };
 
-      # Write iwd profile files (<SSID>.psk) so known networks appear in impala
+      # Write iwd profile files so known networks appear in impala.
+      # iwd requires hex-encoded filenames (=<hex>.psk) for SSIDs with non-alphanumeric chars.
       systemd.services.iwd-profiles = {
         wantedBy = [ "network-pre.target" ];
         after = [ "sops-install-secrets.service" ];
@@ -165,11 +170,14 @@ in
             pskPath  = config.sops.secrets."wifi/${name}/psk".path;
           in ''
             ssid=$(cat ${ssidPath})
+            ssid_hex=$(printf '%s' "$ssid" | od -An -tx1 | tr -d ' \n')
             mkdir -p /var/lib/iwd
+            # Remove any old non-hex-encoded file for this SSID
+            rm -f "/var/lib/iwd/$ssid.psk"
             printf '[Security]\nPassphrase=%s\n' "$(cat ${pskPath})" \
-              > "/var/lib/iwd/$ssid.psk"
-            chmod 0600 "/var/lib/iwd/$ssid.psk"
-          '') wifiNetworks;
+              > "/var/lib/iwd/=$ssid_hex.psk"
+            chmod 0600 "/var/lib/iwd/=$ssid_hex.psk"
+          '') cfg.networks;
       };
 
       sops = {
