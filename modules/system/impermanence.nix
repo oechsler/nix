@@ -15,6 +15,7 @@ in
         "/var/lib/bluetooth"
         "/var/lib/docker"
         "/var/lib/flatpak"
+        "/var/lib/iwd"
         "/var/lib/NetworkManager"
         "/var/lib/nixos"
         "/var/lib/sbctl"
