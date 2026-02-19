@@ -46,7 +46,9 @@
     };
 
     firefox-addons = {
-      url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
+      # Pinned: rev d886ec7 (2026-02-19) broke the build — flake.nix passes { fetchurl, lib, stdenv }
+      # but default.nix expects buildMozillaXpiAddon. Upstream bug, remove pin when fixed.
+      url = "gitlab:rycee/nur-expressions/fb51502bcbd21fc84a1aae6a75564a968e6b0c25?dir=pkgs/firefox-addons";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
