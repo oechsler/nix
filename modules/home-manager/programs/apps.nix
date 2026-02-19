@@ -1,4 +1,4 @@
-{ config, pkgs, features, lib, ... }:
+{ pkgs, features, lib, ... }:
 
 let
   isKde = features.desktop.wm == "kde";

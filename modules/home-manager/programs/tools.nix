@@ -1,8 +1,6 @@
-{ config, pkgs, ... }:
+{ ... }:
 
 {
-  programs.htop.enable = true;
-
   programs.gh = {
     enable = true;
     gitCredentialHelper.enable = false;

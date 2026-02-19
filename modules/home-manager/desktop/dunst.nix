@@ -1,4 +1,4 @@
-{ config, pkgs, lib, fonts, theme, displays, ... }:
+{ config, lib, fonts, theme, displays, ... }:
 
 let
   palette = (lib.importJSON "${config.catppuccin.sources.palette}/palette.json").${config.catppuccin.flavor}.colors;

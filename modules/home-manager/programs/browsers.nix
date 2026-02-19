@@ -1,4 +1,4 @@
-{ config, pkgs, inputs, features, fonts, lib, ... }:
+{ pkgs, inputs, features, fonts, lib, ... }:
 
 lib.mkIf features.desktop.enable {
   programs.firefox = {
@@ -38,14 +38,12 @@ lib.mkIf features.desktop.enable {
       };
 
       settings = {
-        # Language
         "intl.accept_languages" = "de-DE,de,en-US,en";
         "intl.locale.requested" = "de";
 
-        # Bookmarks toolbar — always hidden
         "browser.toolbars.bookmarks.visibility" = "never";
 
-        # Toolbar layout: back forward reload | spacer | urlbar | spacer | bitwarden downloads
+        # Toolbar layout: back forward reload | spacer | urlbar | spacer | downloads bitwarden
         "browser.uiCustomization.state" = builtins.toJSON {
           placements = {
             nav-bar = [
@@ -55,8 +53,8 @@ lib.mkIf features.desktop.enable {
               "customizableui-special-spring1"
               "urlbar-container"
               "customizableui-special-spring2"
-              "_446900e4-71c2-419f-a6a7-df9c091e268b_-browser-action" # Bitwarden
               "downloads-button"
+              "_446900e4-71c2-419f-a6a7-df9c091e268b_-browser-action" # Bitwarden
             ];
             toolbar-menubar = [ "menubar-items" ];
             TabsToolbar = [ "tabbrowser-tabs" ];
@@ -70,11 +68,9 @@ lib.mkIf features.desktop.enable {
           newElementCount = 2;
         };
 
-        # Dark Mode
         "layout.css.prefers-color-scheme.content-override" = 0; # 0 = System
         "ui.systemUsesDarkTheme" = 1; # Force dark theme for UI
 
-        # Startup - restore previous session
         "browser.startup.homepage" = "https://dash.at.oechsler.it";
         "browser.startup.page" = 3; # 3 = Restore previous session
 
@@ -88,7 +84,6 @@ lib.mkIf features.desktop.enable {
         "media.eme.enabled" = true;
         "media.gmp-widevinecdm.enabled" = true;
 
-        # Protection strict
         "browser.contentblocking.category" = "strict";
         "privacy.trackingprotection.enabled" = true;
         "privacy.trackingprotection.socialtracking.enabled" = true;
@@ -97,7 +92,6 @@ lib.mkIf features.desktop.enable {
         "privacy.antitracking.enableWebcompat" = false;
         "privacy.globalprivacycontrol.enabled" = true;
 
-        # Disable search suggestions and sponsored content
         "browser.urlbar.suggest.searches" = false;
         "browser.urlbar.suggest.quicksuggest.sponsored" = false;
         "browser.urlbar.suggest.quicksuggest.nonsponsored" = false;
@@ -106,13 +100,11 @@ lib.mkIf features.desktop.enable {
         "browser.urlbar.quicksuggest.dataCollection.enabled" = false;
         "browser.search.suggest.enabled" = false;
 
-        # No remember (password, addresses, ...)
         "signon.rememberSignons" = false;
         "signon.autofillForms" = false;
         "extensions.formautofill.creditCards.enabled" = false;
         "extensions.formautofill.addresses.enabled" = false;
 
-        # New tab minimal
         "browser.newtabpage.enabled" = false;
         "browser.newtabpage.activity-stream.showSponsored" = false;
         "browser.newtabpage.activity-stream.showSponsoredTopSites" = false;
@@ -125,7 +117,6 @@ lib.mkIf features.desktop.enable {
         "browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features" = false;
         "browser.newtabpage.activity-stream.asrouter.userprefs.cfr.addons" = false;
 
-        # Telemetry
         "datareporting.healthreport.uploadEnabled" = false;
         "datareporting.policy.dataSubmissionEnabled" = false;
         "toolkit.telemetry.enabled" = false;
@@ -134,11 +125,9 @@ lib.mkIf features.desktop.enable {
         "browser.ping-centre.telemetry" = false;
         "app.shield.optoutstudies.enabled" = false;
 
-        # HTTPS only
         "dom.security.https_only_mode" = true;
         "dom.security.https_only_mode_ever_enabled" = true;
 
-        # Disable translation
         "browser.translations.automaticallyPopup" = false;
         "browser.translations.enable" = false;
 

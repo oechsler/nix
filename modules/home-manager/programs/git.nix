@@ -27,7 +27,6 @@
       merge.conflictstyle = "diff3";
       mergetool.prompt = false;
 
-      # Git Credential Manager
       credential.helper = "${pkgs.git-credential-manager}/bin/git-credential-manager";
       credential.credentialStore = "secretservice";
 
@@ -62,7 +61,6 @@
     };
   };
 
-  # Set SSH_AUTH_SOCK to Bitwarden SSH Agent
   home.sessionVariables = {
     SSH_AUTH_SOCK = "${config.home.homeDirectory}/.bitwarden-ssh-agent.sock";
   };

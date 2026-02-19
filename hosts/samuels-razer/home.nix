@@ -1,4 +1,4 @@
-{ user, features, lib, ... }:
+{ user, ... }:
 
 {
   imports = [
