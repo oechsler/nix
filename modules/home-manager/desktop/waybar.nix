@@ -86,7 +86,7 @@ in
         format-icons = [ "<span size='large'>󰤯</span>" "<span size='large'>󰤟</span>" "<span size='large'>󰤢</span>" "<span size='large'>󰤥</span>" "<span size='large'>󰤨</span>" ];
         tooltip-format = "{ifname} via {gwaddr}";
         tooltip-format-wifi = "{essid} ({signalStrength}%)";
-        on-click = "${config.terminal.exec} nmtui -e nmtui";
+        on-click = "${config.terminal.exec} impala -e impala";
       };
 
       "bluetooth" = {
@@ -108,7 +108,7 @@ in
           headphone = "<span size='large'>󰋋</span>";
           headset = "<span size='large'>󰋎</span>";
         };
-        on-click = "${config.terminal.exec} pulsemixer -e pulsemixer";
+        on-click = "${config.terminal.exec} wiremix -e wiremix";
         tooltip-format = "{desc}";
       };
 

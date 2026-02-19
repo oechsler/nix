@@ -60,9 +60,10 @@
     home.packages = with pkgs; [
       bluetui
       fd
+      impala
       jq
-      pulsemixer
       ripgrep
+      wiremix
     ];
 
     programs.zoxide = {
