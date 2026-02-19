@@ -1,4 +1,4 @@
-{ config, pkgs, lib, theme, fonts, displays, ... }:
+{ theme, fonts, displays, ... }:
 
 {
   catppuccin.hyprlock.useDefaultConfig = false;

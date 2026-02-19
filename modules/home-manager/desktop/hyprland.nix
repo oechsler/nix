@@ -1,4 +1,4 @@
-{ config, pkgs, inputs, lib, theme, fonts, locale, displays, input, ... }:
+{ config, pkgs, lib, theme, fonts, locale, displays, input, ... }:
 
 let
   hyprTransform = rot: { "normal" = "0"; "90" = "1"; "180" = "2"; "270" = "3"; }.${rot};
@@ -169,7 +169,6 @@ in
       exec-once = [
         "hyprctl dispatch workspace 1"
         "uwsm-app -- ${config.awww.start}"
-        # Battery warning and clipboard now handled by systemd services
       ] ++ (map (app: "uwsm-app -- ${app.exec}") config.autostart.apps);
 
       env = [

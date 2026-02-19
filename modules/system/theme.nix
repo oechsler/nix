@@ -211,7 +211,6 @@
       style = "kvantum";
     };
 
-    # Qt theming packages for root (elevated apps)
     environment.systemPackages = lib.mkIf (config.features.desktop.wm != "kde") (with pkgs; [
       libsForQt5.qt5ct
       kdePackages.qt6ct

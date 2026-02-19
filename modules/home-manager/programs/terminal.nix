@@ -1,4 +1,4 @@
-{ config, pkgs, lib, fonts, theme, features, ... }:
+{ pkgs, lib, fonts, theme, features, ... }:
 
 {
   options.terminal.exec = lib.mkOption {
