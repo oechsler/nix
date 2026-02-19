@@ -127,7 +127,7 @@ displays.monitors = [
 | `monitors.*.wallpaper` | `null` | Per-monitor wallpaper (`null` = use `theme.wallpaper`) |
 | `monitors.*.workspaces` | `[]` | Workspace IDs to bind to this monitor (Hyprland only, e.g. `[1 2 3 4 5]`) |
 
-On Hyprland, a catch-all fallback rule (`preferred, auto, theme.scale`) is always added for hotplugged/unlisted monitors. On KDE, the config generates `kwinoutputconfig.json`.
+On Hyprland, a catch-all fallback rule (`preferred, auto, theme.scale`) is always added for hotplugged/unlisted monitors. On KDE, `kscreen-doctor` is run at login via an XDG autostart entry to apply the monitor layout.
 
 ## Input Options
 
