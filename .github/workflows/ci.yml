@@ -1,0 +1,85 @@
+# NixOS Configuration CI/CD Pipeline
+#
+# Comprehensive quality checks and build validation.
+#
+# Runs on:
+# - Push to main
+# - Pull requests against main
+#
+# Jobs:
+# 1. Lint: Code quality checks (conventions, anti-patterns, dead code)
+# 2. Build: Validate both host configurations build successfully
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  #===========================================================================
+  # Job 1: Code Quality Checks
+  #===========================================================================
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Run custom convention linter
+        run: nix build .#checks.x86_64-linux.lint --show-trace
+
+      - name: Show statix suggestions (informational)
+        run: |
+          echo "=== Statix Suggestions ==="
+          nix build .#checks.x86_64-linux.statix
+          cat result || true
+        continue-on-error: true
+
+      - name: Show deadnix suggestions (informational)
+        run: |
+          echo "=== Deadnix Suggestions ==="
+          nix build .#checks.x86_64-linux.deadnix
+          cat result || true
+        continue-on-error: true
+
+  #===========================================================================
+  # Job 2: Build Validation
+  #===========================================================================
+  build:
+    name: Build ${{ matrix.host }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        host:
+          - samuels-pc
+          - samuels-razer
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: Build ${{ matrix.host }} configuration
+        run: |
+          nix build \
+            .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel \
+            --dry-run \
+            --show-trace
+

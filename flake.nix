@@ -1,8 +1,39 @@
+# NixOS Flake Configuration
+#
+# This flake defines the complete NixOS system configuration.
+#
+# Structure:
+# - inputs: External dependencies (nixpkgs, home-manager, etc.)
+# - outputs: NixOS configurations and disko configurations
+#
+# Hosts:
+# - samuels-pc: Desktop workstation (2x 1440p, Secure Boot, dual-boot)
+# - samuels-razer: Laptop (gaming laptop, portable workstation)
+#
+# Key inputs:
+# - nixpkgs: NixOS packages (unstable channel)
+# - home-manager: User-level configuration
+# - disko: Declarative disk partitioning
+# - impermanence: Root filesystem rollback on reboot
+# - lanzaboote: Secure Boot support
+# - sops-nix: Encrypted secrets management
+# - catppuccin: Catppuccin theming
+# - plasma-manager: KDE Plasma declarative config
+#
+# Custom packages:
+# - hypr-dock: Application dock for Hyprland (local package)
+# - cachyos-kernel: Optimized Linux kernel
+#
+# Usage:
+#   nixos-rebuild switch --flake .#samuels-pc
+#   nixos-rebuild switch --flake .#samuels-razer
 {
   description = "Samuel's NixOS configuration";
 
   inputs = {
-    # ─── Core ──────────────────────────────────────────────────────────────────
+    #===========================
+    # Core
+    #===========================
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
     home-manager = {
@@ -10,7 +41,9 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # ─── Nix Community Tools ───────────────────────────────────────────────────
+    #===========================
+    # Nix Community Tools
+    #===========================
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -34,10 +67,14 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # ─── Theming ───────────────────────────────────────────────────────────────
+    #===========================
+    # Theming
+    #===========================
     catppuccin.url = "github:catppuccin/nix";
 
-    # ─── External Packages ─────────────────────────────────────────────────────
+    #===========================
+    # External Packages
+    #===========================
     awww.url = "git+https://codeberg.org/LGFae/awww";
 
     cachyos-kernel = {
@@ -80,6 +117,7 @@
           }
         ];
       };
+      pkgs = import nixpkgs { inherit system; };
     in
     {
       diskoConfigurations = {
@@ -90,6 +128,34 @@
       nixosConfigurations = {
         samuels-razer = mkHost "samuels-razer";
         samuels-pc = mkHost "samuels-pc";
+      };
+
+      #===========================
+      # CI/CD Checks
+      #===========================
+      checks.${system} = {
+        # Custom convention linter (self-documenting)
+        # Enforces: NIX_CODE_STYLE.md, NIX_DOCS_STYLE.md
+        lint = import ./lint.nix { inherit pkgs; lib = pkgs.lib; };
+
+        # statix: Anti-patterns and best practices (informational)
+        # https://github.com/oppiliappan/statix
+        # Note: Does not fail build, only reports suggestions
+        statix = pkgs.runCommand "statix-check" { } ''
+          ${pkgs.statix}/bin/statix check ${./.} \
+            --ignore=hosts/*/hardware-configuration.generated.nix \
+            --format=stderr \
+            2>&1 | tee $out || true
+          # Don't fail build on warnings - statix is informational
+        '';
+
+        # deadnix: Dead code detection (informational)
+        # https://github.com/astro/deadnix
+        # Note: Does not fail build, only reports suggestions
+        deadnix = pkgs.runCommand "deadnix-check" { } ''
+          ${pkgs.deadnix}/bin/deadnix ${./.} 2>&1 | tee $out || true
+          # Don't fail build on warnings - deadnix is informational
+        '';
       };
     };
 }
