@@ -1,43 +1,97 @@
+# Automated Flake Updates
+#
+# Automatically updates flake.lock to get latest package versions and
+# validates that configurations still build after the update.
+#
+# Schedule:
+# - Runs every 3 days at 06:00 UTC
+# - Can be manually triggered via workflow_dispatch
+#
+# Safety:
+# - Validates both host configurations before committing
+# - Only commits if flake.lock actually changed
+# - Auto-commits and pushes to main branch
+#
+# Why:
+# - Keeps dependencies up-to-date automatically
+# - Reduces manual maintenance burden
+# - Ensures updates don't break builds before committing
+
 name: Update Flake
 
 on:
+  # Automatic: Every 3 days at 06:00 UTC
   schedule:
     - cron: "0 6 */3 * *"
+
+  # Manual: Via GitHub Actions UI
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: write  # Required for git push
 
 jobs:
+  #===========================================================================
+  # Job: Update and Validate
+  #===========================================================================
   update:
+    name: Update flake.lock
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
-          persist-credentials: true
+          persist-credentials: true  # Required for git push
 
-      - uses: DeterminateSystems/nix-installer-action@main
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
 
-      - uses: DeterminateSystems/magic-nix-cache-action@main
+      - name: Setup Nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
 
+      #-----------------------------------------------------------------------
+      # Update flake.lock
+      #-----------------------------------------------------------------------
       - name: Update flake.lock
         run: nix flake update
 
+      #-----------------------------------------------------------------------
+      # Check if flake.lock changed
+      #-----------------------------------------------------------------------
+      # Sets output: changed=true|false
+      # If no changes, skip validation and commit steps
       - name: Check for changes
         id: check
         run: |
           if git diff --exit-code flake.lock; then
+            echo "No changes in flake.lock, skipping validation"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
+            echo "flake.lock updated, validating builds"
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build configurations (dry-run)
+      #-----------------------------------------------------------------------
+      # Validate configurations build with updated dependencies
+      #-----------------------------------------------------------------------
+      # Only runs if flake.lock changed
+      # Dry-run is sufficient - we just need to know it evaluates correctly
+      - name: Validate configurations (dry-run)
         if: steps.check.outputs.changed == 'true'
         run: |
+          echo "Validating samuels-razer..."
           nix build .#nixosConfigurations.samuels-razer.config.system.build.toplevel --dry-run
+
+          echo "Validating samuels-pc..."
           nix build .#nixosConfigurations.samuels-pc.config.system.build.toplevel --dry-run
 
+      #-----------------------------------------------------------------------
+      # Commit and push updated flake.lock
+      #-----------------------------------------------------------------------
+      # Only runs if:
+      # 1. flake.lock changed
+      # 2. Both configurations validated successfully
       - name: Commit and push
         if: steps.check.outputs.changed == 'true'
         run: |
@@ -46,3 +100,4 @@ jobs:
           git add flake.lock
           git commit -m "chore: update flake.lock"
           git push
+
