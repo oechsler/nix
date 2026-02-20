@@ -1,6 +1,29 @@
+# Display Configuration
+#
+# This module defines monitor configuration options.
+# Used by: Hyprland, SDDM, and other display managers.
+#
+# Configuration example:
+#   displays.monitors = [
+#     {
+#       name = "DP-1";
+#       width = 2560;
+#       height = 1440;
+#       refreshRate = 144;
+#       x = 0;
+#       y = 0;
+#       scale = 1.0;
+#       workspaces = [ 1 2 3 4 5 ];  # Hyprland: bind workspaces to this monitor
+#     }
+#   ];
+
 { lib, config, ... }:
 
 {
+  #===========================
+  # Options
+  #===========================
+
   options.displays = {
     monitors = lib.mkOption {
       type = lib.types.listOf (lib.types.submodule {

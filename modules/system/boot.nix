@@ -1,3 +1,20 @@
+# Boot Configuration
+#
+# This module configures the boot process and kernel:
+# - Kernel selection (CachyOS optimized or default NixOS kernel)
+# - systemd-boot bootloader with EFI support
+# - Plymouth boot splash (when desktop is enabled)
+# - Silent boot (minimal boot messages)
+#
+# Configuration:
+#   features.kernel = "cachyos";        # Options: cachyos, cachyos-lts, cachyos-server, default
+#
+# Boot behavior:
+# - Configuration limit: Keep last 10 boot entries
+# - Boot timeout: 0 seconds (instant boot to default)
+# - Desktop mode: Silent boot with Plymouth splash screen
+# - No bootloader editor access (security)
+
 { config, pkgs, lib, ... }:
 
 let

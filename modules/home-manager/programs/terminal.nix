@@ -1,6 +1,28 @@
+# Terminal Configuration (Kitty)
+#
+# This module configures Kitty as the terminal emulator.
+#
+# Features:
+# - Catppuccin theme (via catppuccin.kitty)
+# - Monospace font from theme
+# - Window padding matching theme gaps
+# - No close confirmation
+# - Fixed window size for non-Hyprland WMs (96x22 characters)
+#
+# Keybindings:
+#   Alt+Shift+Enter - Send escape sequence (for tmux/vim)
+#
+# Exposed option:
+#   terminal.exec - Command prefix to launch TUI apps
+#   Usage: terminal.exec "title" -e "command"
+
 { pkgs, lib, fonts, theme, features, ... }:
 
 {
+  #===========================
+  # Options
+  #===========================
+
   options.terminal.exec = lib.mkOption {
     type = lib.types.str;
     default = "kitty --title";

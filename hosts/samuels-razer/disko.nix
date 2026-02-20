@@ -1,3 +1,28 @@
+# Disk Configuration (samuels-razer)
+#
+# Declarative disk partitioning with disko for laptop.
+#
+# Layout:
+# - BOOT: 512MB EFI partition (FAT32, /boot)
+# - root: LUKS encrypted Btrfs partition
+#   - @ subvolume: / (root, ephemeral - rolled back on boot)
+#   - @home subvolume: /home (persistent)
+#   - @nix subvolume: /nix (persistent)
+#   - @persist subvolume: /persist (persistent)
+#   - @snapshots subvolume: /.snapshots (persistent)
+#
+# Differences from samuels-pc:
+# - No separate games partition (laptop, limited storage)
+# - Single 1TB NVMe drive
+#
+# Encryption:
+# - LUKS with TPM2 auto-unlock (via luks.nix)
+# - Password file at /tmp/luks-password during installation
+#
+# Impermanence:
+# - Root (/) is ephemeral, rolled back to blank snapshot on reboot
+# - Only /home, /nix, /persist survive reboots
+
 { ... }:
 
 {

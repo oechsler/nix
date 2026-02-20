@@ -1,12 +1,42 @@
+# Neovim Configuration
+#
+# This module configures Neovim as the default terminal editor.
+#
+# Features:
+# - LazyVim-based configuration (loaded from ~/.config/nvim)
+# - Comprehensive plugin suite (UI, navigation, editing, LSP)
+# - Treesitter syntax highlighting (Nix, Go, Rust, JS/TS, Java, Lua, Bash, etc.)
+# - LSP servers (nil, gopls, rust-analyzer, typescript, lua-language-server)
+# - Formatters (nixfmt, gofumpt, rustfmt, prettier, stylua)
+# - Clipboard integration (wl-clipboard for Wayland)
+#
+# Plugin categories:
+# - UI: lualine, bufferline, indent-blankline, noice, notify
+# - Navigation: nvim-tree, telescope, flash
+# - Editing: treesitter, mini.nvim, gitsigns, todo-comments, which-key
+# - LSP: blink-cmp (completion), conform (formatting)
+# - Tools: claudecode, grug-far (search/replace)
+#
+# Aliases:
+#   vi, vim → nvim
+#   EDITOR → nvim
+
 { pkgs, ... }:
 
 {
+  #===========================
+  # Configuration
+  #===========================
+
   programs.neovim = {
     enable = true;
-    defaultEditor = true;
-    viAlias = true;
-    vimAlias = true;
+    defaultEditor = true;  # Set as $EDITOR
+    viAlias = true;        # vi → nvim
+    vimAlias = true;       # vim → nvim
 
+    #---------------------------
+    # Plugins
+    #---------------------------
     plugins = with pkgs.vimPlugins; [
       # UI
       lualine-nvim
@@ -54,6 +84,10 @@
       grug-far-nvim
     ];
 
+    #---------------------------
+    # Extra Packages
+    #---------------------------
+    # LSP servers, formatters, and other tools used by plugins
     extraPackages = with pkgs; [
       # LSP servers
       nil
@@ -68,6 +102,11 @@
       google-java-format
     ];
 
+    #---------------------------
+    # Lua Configuration
+    #---------------------------
+    # Inline Lua config (executed before LazyVim)
+    # Full config loaded from ~/.config/nvim (LazyVim)
     initLua = ''
         vim.g.mapleader = " "
         vim.g.maplocalleader = " "

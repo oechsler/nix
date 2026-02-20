@@ -1,3 +1,23 @@
+# Git Configuration
+#
+# This module configures Git version control.
+#
+# Features:
+# - SSH commit signing (with ~/.ssh/id_ed25519.pub)
+# - Git Credential Manager for authentication
+# - Neovim as diff/merge tool
+# - Pull with rebase and auto-stash
+# - Main as default branch
+# - Global gitignore for common files
+#
+# Diff/Merge:
+#   Tool: nvimdiff
+#   Conflict style: diff3 (shows base, ours, theirs)
+#
+# User info:
+#   Name: From user.fullName
+#   Email: From user.email
+
 { config, pkgs, user, ... }:
 
 {
@@ -37,6 +57,8 @@
     ignores = [
       "*~"
       ".DS_Store"
+      "CLAUDE.md"
+      ".github/copilot-instructions.md"
     ];
   };
 

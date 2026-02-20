@@ -1,3 +1,22 @@
+# samuels-razer Host Configuration
+#
+# Razer Blade gaming laptop configuration.
+#
+# Hardware:
+# - 14" QHD+ display (3200x1800 @ 60Hz, 1.6x scaling)
+# - eDP-1 internal display
+#
+# Features:
+# - KDE Plasma desktop (better for laptop/battery management)
+# - Gaming disabled (not primary gaming machine)
+# - Smaller terminal font (10pt for high DPI screen)
+#
+# Differences from samuels-pc:
+# - Single internal display vs dual external
+# - KDE instead of Hyprland
+# - No gaming support
+# - Default idle timeouts (shorter, battery-aware)
+
 { ... }:
 
 {
@@ -11,7 +30,9 @@
 
   networking.hostName = "samuels-razer";
 
-  # ─── Host-specific overrides ─────────────────────────────────────────────────
+  #===========================
+  # Host-specific Overrides
+  #===========================
   displays.monitors = [
     {
       name = "eDP-1";

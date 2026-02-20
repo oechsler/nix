@@ -1,3 +1,25 @@
+# SSH Server Configuration
+#
+# This module configures OpenSSH server with automatic GitHub key import.
+#
+# Configuration:
+#   features.ssh.enable = false;  # Enable SSH server (default: false)
+#
+# Features:
+# - OpenSSH server with password authentication disabled
+# - Automatic import of SSH public keys from GitHub
+# - Periodic key refresh (every 15 minutes)
+#
+# How it works:
+# 1. Fetches keys from https://github.com/{user.github}.keys
+# 2. Writes to ~/.ssh/authorized_keys
+# 3. Runs on boot (after 30s) and every 15 minutes
+#
+# Security:
+# - Only public key authentication allowed
+# - Keys automatically updated if changed on GitHub
+# - Proper file permissions (700 for .ssh, 600 for authorized_keys)
+
 { config, lib, pkgs, ... }:
 
 let

@@ -1,15 +1,58 @@
+# Browser Configuration (Firefox)
+#
+# This module configures Firefox as the default web browser.
+#
+# Features:
+# - Catppuccin color scheme (via firefox-color extension)
+# - Privacy-focused extensions (uBlock Origin, Bitwarden)
+# - KDE Plasma integration (media controls, downloads, tabs)
+# - Custom toolbar layout
+# - DuckDuckGo as default search engine
+# - German language preference
+# - New tab override
+#
+# Extensions:
+# - firefox-color - Catppuccin theme
+# - ublock-origin - Ad blocker
+# - bitwarden - Password manager
+# - new-tab-override - Custom new tab page
+# - plasma-integration (KDE only) - Desktop integration
+#
+# Search:
+# - Default: DuckDuckGo
+# - Hidden: Google, Bing, Amazon, eBay, Wikipedia, LEO, Ecosia, Perplexity
+#
+# Toolbar layout:
+#   Back | Forward | Reload | Spacer | URL bar | Spacer | Downloads | Bitwarden
+
 { pkgs, inputs, features, fonts, lib, ... }:
 
-lib.mkIf features.desktop.enable {
-  programs.firefox = {
+{
+  #===========================
+  # Configuration
+  #===========================
+
+  config = lib.mkIf features.desktop.enable {
+    #---------------------------
+    # Firefox Configuration
+    #---------------------------
+
+    programs.firefox = {
     enable = true;
-    # Native messaging host for Plasma browser integration (media controls, downloads, tabs)
+
+    # KDE Plasma integration (media controls, downloads, tabs)
     nativeMessagingHosts = lib.optionals (features.desktop.wm == "kde") [
       pkgs.kdePackages.plasma-browser-integration
     ];
+
+    #---------------------------
+    # Default Profile
+    #---------------------------
     profiles.default = {
       isDefault = true;
-      extensions.force = true;
+
+      # Extensions
+      extensions.force = true;  # Prevent Firefox from disabling extensions
       extensions.packages = with inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system}; [
         firefox-color # catppuccin.firefox
         ublock-origin
@@ -19,9 +62,10 @@ lib.mkIf features.desktop.enable {
         inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system}.plasma-integration
       ];
 
+      # Search configuration
       search = {
-        default = "ddg"; # DuckDuckGo
-        force = true;
+        default = "ddg";  # DuckDuckGo
+        force = true;     # Prevent Firefox from changing search engine
         engines = {
           "google".metaData.hidden = true;
           "bing".metaData.hidden = true;
@@ -163,8 +207,9 @@ lib.mkIf features.desktop.enable {
     };
   };
 
-  catppuccin.firefox = {
-    enable = true;
-    force = true;
+    catppuccin.firefox = {
+      enable = true;
+      force = true;
+    };
   };
 }

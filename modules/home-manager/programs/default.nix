@@ -1,3 +1,16 @@
+# User Programs Configuration
+#
+# This module imports all user-level program configurations:
+# - apps.nix - Desktop applications (Discord, Spotify, etc.)
+# - browsers.nix - Firefox configuration
+# - development.nix - Development tools and languages
+# - fish.nix - Fish shell configuration
+# - git.nix - Git and SSH configuration
+# - neovim.nix - Neovim editor
+# - terminal.nix - Kitty terminal emulator
+# - tmux.nix - Tmux terminal multiplexer
+# - tools.nix - GitHub CLI
+
 { ... }:
 
 {

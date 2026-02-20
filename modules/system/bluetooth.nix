@@ -1,3 +1,15 @@
+# Bluetooth Configuration
+#
+# This module enables Bluetooth hardware support.
+#
+# Configuration:
+#   features.bluetooth.enable = true;  # Enable Bluetooth (default: true)
+#
+# Behavior:
+# - Powers on Bluetooth adapter at boot
+# - Integrates with PipeWire for audio (see audio.nix)
+# - Desktop environments provide GUI for pairing (GNOME Settings, KDE Settings)
+
 { lib, config, ... }:
 
 let
