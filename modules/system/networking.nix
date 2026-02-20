@@ -140,13 +140,15 @@ in
     }
 
     #---------------------------
-    # 2. Dual-Interface Setup (Hyprland only)
+    # 2. WiFi Auto-Disconnect (Hyprland only)
     #---------------------------
     # KDE Plasma handles network priority via plasma-nm, so we only configure this for Hyprland
+    #
+    # Strategy: When Ethernet comes up, disconnect WiFi immediately
+    # This avoids dual-interface routing complexity and ensures consistent network behavior
     (lib.mkIf (config.features.desktop.enable && config.features.desktop.wm == "hyprland") {
 
-      # Ethernet connection profile
-      # This ensures Ethernet gets metric 100 (higher priority than WiFi's 600)
+      # Ethernet connection profile with basic priority settings
       networking.networkmanager.ensureProfiles.profiles.ethernet-default = {
         connection = {
           id = "Ethernet";
@@ -164,141 +166,45 @@ in
         };
       };
 
-      #---------------------------
-      # Policy-Based Routing Service
-      #---------------------------
-      # Why: When Ethernet and WiFi are in the same subnet (e.g., both in 172.22.0.0/24),
-      # route metrics alone don't ensure packets use the correct interface.
-      #
-      # Problem: Packets might be sent with WiFi's source IP via Ethernet interface,
-      # causing the router to drop them (anti-spoofing / asymmetric routing).
-      #
-      # Solution: Create separate routing tables for each interface, then use policy rules
-      # to ensure packets from each source IP use the correct interface.
-      #
-      # How it works:
-      # - Main routing table: Uses metrics to prefer Ethernet (normal behavior)
-      # - Table 100: Ethernet-only routes (172.22.0.163 → Ethernet gateway)
-      # - Table 200: WiFi-only routes (172.22.0.167 → WiFi gateway)
-      # - Policy rules: "Packets FROM 172.22.0.163 use table 100"
-      #                 "Packets FROM 172.22.0.167 use table 200"
-      #
-      # Result: Each source IP always uses its own interface → no asymmetric routing
-      #
-      # Note: Safe to run with only Ethernet, only WiFi, or neither.
-      #       Gracefully skips missing/unconfigured interfaces.
+      # NetworkManager dispatcher script: Disconnect WiFi when Ethernet comes up
+      # Dispatcher scripts run on interface state changes (up, down, connectivity-change, etc.)
+      # This ensures instant response and works correctly after suspend/resume
+      networking.networkmanager.dispatcherScripts = [
+        {
+          source = pkgs.writeShellScript "wifi-auto-disconnect" ''
+            # Arguments from NetworkManager dispatcher:
+            # $1 = interface name (e.g., "enp5s0")
+            # $2 = action (up, down, connectivity-change, etc.)
 
-      systemd.services.policy-routing = {
-        description = "Setup policy-based routing for dual network interfaces";
-        after = [ "network-online.target" ];
-        wants = [ "network-online.target" ];
-        wantedBy = [ "multi-user.target" ];
+            INTERFACE=$1
+            ACTION=$2
 
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          ExecStart = pkgs.writeShellScript "setup-policy-routing" ''
-            set -e
+            # Only act on Ethernet interfaces
+            if [[ "$INTERFACE" != enp* && "$INTERFACE" != eth* && "$INTERFACE" != en* ]]; then
+              exit 0
+            fi
 
-            # Give NetworkManager time to configure interfaces
-            ${pkgs.coreutils}/bin/sleep 3
+            # When Ethernet comes up, disconnect all active WiFi connections
+            if [ "$ACTION" = "up" ]; then
+              logger "NetworkManager dispatcher: Ethernet $INTERFACE is up, disconnecting WiFi"
 
-            # Function: Setup policy routing for one interface
-            #
-            # Args:
-            #   $1 = interface name (e.g., "enp5s0")
-            #   $2 = routing table number (100 for Ethernet, 200 for WiFi)
-            #
-            # Steps:
-            #   1. Extract IP, gateway, and subnet from interface
-            #   2. Add subnet route to table (for local network access)
-            #   3. Add default route to table (for internet access)
-            #   4. Add policy rule: "packets FROM this IP → use this table"
-            setup_interface() {
-              local iface=$1
-              local table=$2
+              # Get all active WiFi connections (type is "802-11-wireless")
+              WIFI_CONNECTIONS=$(${pkgs.networkmanager}/bin/nmcli -t -f NAME,TYPE,DEVICE connection show --active | grep ':802-11-wireless:' | cut -d: -f1)
 
-              # Skip if interface doesn't exist
-              if ! ${pkgs.iproute2}/bin/ip link show "$iface" &>/dev/null; then
-                echo "Interface $iface not found, skipping"
-                return
-              fi
-
-              # Extract network configuration from interface
-              # - ip: The interface's IP address (e.g., "172.22.0.163")
-              # - gateway: The router's IP (e.g., "172.22.0.1")
-              # - subnet: The network subnet (e.g., "172.22.0.0/24")
-              local ip=$(${pkgs.iproute2}/bin/ip -4 addr show "$iface" 2>/dev/null \
-                | ${pkgs.gnugrep}/bin/grep -oP '(?<=inet\s)\d+(\.\d+){3}' | head -1)
-
-              local gateway=$(${pkgs.iproute2}/bin/ip -4 route show dev "$iface" 2>/dev/null \
-                | ${pkgs.gnugrep}/bin/grep -oP '(?<=via\s)\d+(\.\d+){3}' | head -1)
-
-              # Get subnet from existing kernel route (must be network address, not host)
-              # Example: "172.22.0.0/24" (correct) vs "172.22.0.163/24" (wrong)
-              local subnet=$(${pkgs.iproute2}/bin/ip -4 route show dev "$iface" proto kernel scope link 2>/dev/null \
-                | ${pkgs.gnugrep}/bin/grep -oP '^\d+(\.\d+){3}/\d+' | head -1)
-
-              # Skip if interface has no IP or gateway (not configured yet)
-              if [ -z "$ip" ] || [ -z "$gateway" ]; then
-                echo "No IP or gateway for $iface, skipping"
-                return
-              fi
-
-              echo "Setting up policy routing for $iface"
-              echo "  IP: $ip, Gateway: $gateway, Subnet: $subnet, Table: $table"
-
-              # Clean up: Remove any existing policy rules for this IP
-              # (Prevents duplicates when service restarts)
-              while ${pkgs.iproute2}/bin/ip rule del from "$ip" 2>/dev/null; do :; done
-
-              # Step 1: Add subnet route to routing table
-              # This allows accessing other devices in the local network (e.g., 172.22.0.1-254)
-              if ${pkgs.iproute2}/bin/ip route add "$subnet" dev "$iface" scope link table $table 2>&1; then
-                echo "  ✓ Added subnet route: $subnet dev $iface table $table"
+              # Disconnect each WiFi connection
+              if [ -n "$WIFI_CONNECTIONS" ]; then
+                while IFS= read -r conn; do
+                  logger "NetworkManager dispatcher: Disconnecting WiFi connection '$conn'"
+                  ${pkgs.networkmanager}/bin/nmcli connection down "$conn" || true
+                done <<< "$WIFI_CONNECTIONS"
               else
-                echo "  ⚠ Subnet route already exists (harmless)"
+                logger "NetworkManager dispatcher: No active WiFi connections found"
               fi
-
-              # Step 2: Add default route to routing table
-              # This routes all internet traffic via this interface's gateway
-              if ${pkgs.iproute2}/bin/ip route add default via "$gateway" dev "$iface" table $table 2>&1; then
-                echo "  ✓ Added default route: default via $gateway dev $iface table $table"
-              else
-                echo "  ⚠ Default route already exists (harmless)"
-              fi
-
-              # Step 3: Add policy rule
-              # "Packets FROM this IP must use this routing table"
-              # This is the key: ensures source IP and interface always match
-              ${pkgs.iproute2}/bin/ip rule add from "$ip" table $table priority 100
-              echo "  ✓ Added policy rule: from $ip lookup table $table"
-
-              echo "✓ Policy routing complete for $iface"
-            }
-
-            # Setup Ethernet (table 100)
-            # Try common Ethernet interface names
-            for iface in enp5s0 eth0 en*; do
-              if ${pkgs.iproute2}/bin/ip link show "$iface" &>/dev/null; then
-                setup_interface "$iface" 100
-                break
-              fi
-            done
-
-            # Setup WiFi (table 200)
-            # Try common WiFi interface names
-            for iface in wlan0 wlp*; do
-              if ${pkgs.iproute2}/bin/ip link show "$iface" &>/dev/null; then
-                setup_interface "$iface" 200
-                break
-              fi
-            done
-
-            echo "✓ Policy-based routing setup complete"
+            fi
           '';
-        };
-      };
+          type = "basic";
+        }
+      ];
     })
 
     #---------------------------
