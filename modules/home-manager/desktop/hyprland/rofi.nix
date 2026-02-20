@@ -1,6 +1,41 @@
+# Rofi Configuration (Hyprland Launcher)
+#
+# This module configures rofi as application launcher and provides several rofi-based menus:
+# 1. Application launcher (drun mode)
+# 2. Window switcher (window mode)
+# 3. Power menu (lock, suspend, logout, reboot, shutdown)
+# 4. Clipboard manager (with image preview support)
+# 5. Power profile switcher (performance, balanced, power-saver)
+#
+# Features:
+# - Toggle behavior: Press same key again to close
+# - Smart mode switching: Automatically closes old mode when opening new one
+# - Catppuccin theme integration
+# - Icon support
+# - Image previews in clipboard history
+#
+# Scripts exposed as config.rofi.*:
+#   config.rofi.toggle          - Application launcher
+#   config.rofi.windowList      - Window switcher
+#   config.rofi.power           - Power menu
+#   config.rofi.clipboard       - Clipboard manager
+#   config.rofi.powerProfile    - Power profile menu
+
 { config, pkgs, lib, fonts, theme, ... }:
 
 let
+  # ============================================================================
+  # TOGGLE ROFI SCRIPT
+  # ============================================================================
+  # Generic rofi toggle script with mode support
+  #
+  # Behavior:
+  # - If rofi is running with same mode: Close it
+  # - If rofi is running with different mode: Switch to new mode
+  # - If rofi is not running: Open with specified mode
+  #
+  # Args:
+  #   mode = rofi mode (e.g., "drun", "window")
   toggleRofi = mode: pkgs.writeShellScript "rofi-${mode}" ''
     if pgrep -x "rofi" > /dev/null; then
       # Check if rofi is running with the same mode
@@ -16,9 +51,23 @@ let
     fi
   '';
 
+  # Application launcher (drun = desktop run)
   toggleDrun = toggleRofi "drun";
+
+  # Window switcher
   toggleWindow = toggleRofi "window";
 
+  # ============================================================================
+  # POWER MENU SCRIPT
+  # ============================================================================
+  # Rofi-based power menu with icons
+  #
+  # Options:
+  # - 󰌾 Sperren (Lock) - Lock screen with hyprlock
+  # - 󰒲 Standby (Suspend) - Lock then suspend
+  # - 󰍃 Abmelden (Logout) - Exit Hyprland
+  # - 󰜉 Neustart (Reboot) - Reboot system
+  # - 󰐥 Herunterfahren (Shutdown) - Power off system
   powerMenu = pkgs.writeShellScript "rofi-power-menu" ''
     if pgrep -x rofi > /dev/null && pgrep -fa "rofi -dmenu -p power" > /dev/null; then
       pkill -x rofi
@@ -35,6 +84,22 @@ let
     esac
   '';
 
+  # ============================================================================
+  # CLIPBOARD HISTORY SCRIPT
+  # ============================================================================
+  # Rofi-based clipboard manager with image preview support
+  #
+  # Features:
+  # - Shows clipboard history from cliphist
+  # - Image previews for copied images (PNG thumbnails in /tmp/cliphist-previews/)
+  # - Text entries shown as-is
+  # - Select entry to copy to clipboard
+  #
+  # How it works:
+  # 1. List clipboard history with cliphist
+  # 2. For images: Generate PNG preview and show as icon
+  # 3. For text: Show text directly
+  # 4. User selects entry → decode and copy to clipboard
   cliphistRofi = pkgs.writeShellScript "rofi-clipboard" ''
     if pgrep -x "rofi" > /dev/null; then
       if pgrep -fa "rofi.*-dmenu.*clipboard" > /dev/null; then
@@ -66,6 +131,17 @@ let
     done | rofi -dmenu -p "Zwischenablage" -show-icons | cliphist decode | ${pkgs.wl-clipboard}/bin/wl-copy
   '';
 
+  # ============================================================================
+  # POWER PROFILE MENU SCRIPT
+  # ============================================================================
+  # Rofi-based power profile switcher
+  #
+  # Profiles:
+  # - Performance - Maximum performance, higher power consumption
+  # - Balanced - Balance between performance and power saving
+  # - Power Saver - Maximum battery life, reduced performance
+  #
+  # Shows current profile first in the list
   powerProfileMenu = pkgs.writeShellScript "rofi-power-profile" ''
     if pgrep -x rofi > /dev/null && pgrep -fa "rofi -dmenu -p.*[Pp]ower.*[Pp]rofil" > /dev/null; then
       pkill -x rofi
@@ -99,6 +175,11 @@ let
   '';
 in
 {
+  #===========================
+  # Options
+  #===========================
+  # Expose rofi scripts as options for use in keybindings
+
   options.rofi = {
     toggle = lib.mkOption {
       type = lib.types.path;
@@ -132,8 +213,12 @@ in
     };
   };
 
+  #===========================
+  # Configuration
+  #===========================
+
   config = {
-    # Let catppuccin module handle colors
+    # Catppuccin theme integration
     catppuccin.rofi.enable = true;
 
     programs.rofi = {

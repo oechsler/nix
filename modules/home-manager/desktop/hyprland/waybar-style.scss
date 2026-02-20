@@ -18,7 +18,7 @@ window#waybar {
 
 /* Launcher button */
 #custom-launcher {
-  background-color: @base;
+  background-color: alpha(@base, 0.85);
   color: @text;
   padding: 0.35em 2em 0.35em 1.6em;
   margin: 0;
@@ -41,7 +41,7 @@ window#waybar {
 
 /* Workspaces container */
 #workspaces {
-  background-color: @base;
+  background-color: alpha(@base, 0.85);
   border-radius: 1.5rem;
   border: 2px solid @blue;
   margin: 0;
@@ -70,7 +70,7 @@ window#waybar {
 
 /* Window title */
 #window {
-  background-color: @base;
+  background-color: alpha(@base, 0.85);
   color: @text;
   font-weight: bold;
   padding: 0.35em 1.5em;
@@ -81,7 +81,7 @@ window#waybar {
 
 /* Tray - separate pill, monochrome icons */
 #tray {
-  background-color: @base;
+  background-color: alpha(@base, 0.85);
   padding: 0.35em 1.15em;
   margin: 0;
   margin-left: 1rem;
@@ -101,7 +101,7 @@ window#waybar {
 #pulseaudio,
 #battery,
 #clock {
-  background-color: @base;
+  background-color: alpha(@base, 0.85);
   padding: 0.35em 1.15em;
   margin: 0;
   border-radius: 0;

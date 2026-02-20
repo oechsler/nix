@@ -1,3 +1,30 @@
+# SDDM Display Manager Configuration
+#
+# This module configures SDDM (Simple Desktop Display Manager) as the login screen.
+#
+# Features:
+# - Wayland session support
+# - Catppuccin theming (matches desktop theme)
+# - Multi-monitor configuration (via kwinoutputconfig.json)
+# - DPI scaling for Hyprland (calculated from primary monitor)
+# - Cursor theme and size (scaled for HiDPI)
+#
+# Why SDDM:
+# - Native Wayland support
+# - Works with both Hyprland and KDE Plasma
+# - Themeable with Catppuccin
+#
+# Multi-monitor setup:
+# - Reads displays.monitors configuration
+# - Generates kwinoutputconfig.json for KWin (SDDM uses kwin_wayland)
+# - Ensures login screen shows on correct monitor with correct resolution
+#
+# HiDPI handling:
+# - KDE: Uses cursor size as-is
+# - Hyprland: Scales cursor and DPI based on primary monitor scale
+#
+# Active when: features.desktop.enable = true
+
 { config, pkgs, lib, ... }:
 
 let
@@ -26,11 +53,10 @@ let
       data = map (m: {
         connectorName = m.name;
         mode = {
-          width = m.width;
-          height = m.height;
+          inherit (m) width height;
           refreshRate = m.refreshRate * 1000;
         };
-        scale = m.scale;
+        inherit (m) scale;
         transform = kdeTransform m.rotation;
         overscan = 0;
         rgbRange = "Automatic";
@@ -44,7 +70,7 @@ let
         outputs = lib.imap0 (i: m: {
           enabled = true;
           outputIndex = i;
-          position = { x = m.x; y = m.y; };
+          position = { inherit (m) x y; };
           priority = i;
         }) monitors;
       }];
