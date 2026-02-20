@@ -1,6 +1,28 @@
+# Hypr Dock Configuration (Hyprland Application Dock)
+#
+# This module configures hypr-dock as the application dock for Hyprland.
+#
+# Features:
+# - Pinned applications (from desktop.pinnedApps)
+# - Catppuccin theme integration
+# - Transparent background (alpha 0.85)
+# - Auto-start with graphical session
+# - Window previews (disabled by default)
+#
+# Configuration:
+# - Position: Bottom center
+# - Icon size: 36px
+# - Margin: theme.gaps.outer (matches waybar)
+# - Border radius: theme.radius.default
+# - Border: 2px accent color
+#
+# Toggle:
+#   features.desktop.dock.enable = true;  (default: true)
+
 { config, pkgs, lib, theme, features, ... }:
 
 let
+  # Extract Catppuccin palette colors for theme
   palette = (lib.importJSON "${config.catppuccin.sources.palette}/palette.json").${config.catppuccin.flavor}.colors;
   accentHex = palette.${config.catppuccin.accent}.hex;
   baseHex = palette.base.hex;
@@ -8,9 +30,21 @@ let
   textHex = palette.text.hex;
 in
 {
+  #===========================
+  # Configuration
+  #===========================
+
   config = lib.mkIf features.desktop.dock.enable {
+
+    #---------------------------
+    # 1. Package
+    #---------------------------
     home.packages = [ pkgs.hypr-dock ];
 
+    #---------------------------
+    # 2. Systemd Service
+    #---------------------------
+    # Auto-start hypr-dock with graphical session
     systemd.user.services.hypr-dock = {
       Unit = {
         Description = "Hypr Dock";
@@ -24,7 +58,10 @@ in
       Install.WantedBy = [ "graphical-session.target" ];
     };
 
-    # hypr-dock config
+    #---------------------------
+    # 3. Dock Configuration
+    #---------------------------
+    # Main dock settings (position, size, margins)
     xdg.configFile."hypr-dock/config.jsonc".text = builtins.toJSON {
       CurrentTheme = "catppuccin";
       IconSize = 36;
@@ -33,13 +70,21 @@ in
       SystemGapUsed = "true";
       Margin = theme.gaps.outer;
       ContextPos = 5;
-      Preview = "none";
+      Preview = "none";  # Disable window previews
     };
+
+    #---------------------------
+    # 4. Pinned Applications
+    #---------------------------
+    # Apps shown in dock (from desktop.pinnedApps)
     xdg.configFile."hypr-dock/pinned.json".text = builtins.toJSON {
       Pinned = config.desktop.pinnedApps;
     };
 
-    # hypr-dock catppuccin theme (generated from theme colors)
+    #---------------------------
+    # 5. Catppuccin Theme
+    #---------------------------
+    # Theme configuration (generated from Catppuccin palette)
     xdg.configFile."hypr-dock/themes/catppuccin/catppuccin.jsonc".text = builtins.toJSON {
       Blur = "true";
       Spacing = 5;

@@ -1,3 +1,24 @@
+# Hyprland Desktop Environment (System-level)
+#
+# This module enables Hyprland window manager at the system level.
+# User-level Hyprland configuration is in home-manager/desktop/hyprland/
+#
+# Installed:
+# - Hyprland with UWSM (Universal Wayland Session Manager)
+# - XDG Desktop Portals (Hyprland + GTK for file dialogs, screenshots)
+# - Dunst notification daemon
+# - GParted partition manager (themed)
+# - Hyprpolkitagent for authentication dialogs
+#
+# Services:
+# - GNOME Keyring for secret storage (passwords, SSH keys)
+# - GVFS for virtual filesystems (trash, network shares)
+# - udisks2 for automatic disk mounting
+#
+# Active when:
+#   features.desktop.enable = true
+#   features.desktop.wm = "hyprland"
+
 { config, pkgs, lib, ... }:
 
 {

@@ -1,9 +1,30 @@
+# File Manager Bookmarks Configuration
+#
+# This module defines file manager sidebar bookmarks.
+# Used by both Nautilus (GTK) and Dolphin (KDE).
+#
+# Default bookmarks:
+# - Downloads
+# - Desktop (Schreibtisch)
+# - Repos (~/repos)
+# - Documents (Dokumente)
+# - Pictures (Bilder)
+#
+# Configuration:
+#   fileManager.bookmarks = [
+#     { name = "My Folder"; path = "/path/to/folder"; icon = "folder"; }
+#   ];
+
 { config, lib, ... }:
 
 let
   home = config.home.homeDirectory;
 in
 {
+  #===========================
+  # Options
+  #===========================
+
   options.fileManager.bookmarks = lib.mkOption {
     type = lib.types.listOf (lib.types.submodule {
       options = {
@@ -15,6 +36,10 @@ in
     default = [];
     description = "File manager sidebar bookmarks (used by Nautilus and Dolphin)";
   };
+
+  #===========================
+  # Configuration
+  #===========================
 
   config.fileManager.bookmarks = let
     dirs = config.xdg.userDirs;

@@ -1,6 +1,16 @@
+# XDG Configuration
+#
+# This module configures XDG user directories and desktop entries.
+#
+# Features:
+# - German directory names (Schreibtisch, Dokumente, Downloads, etc.)
+# - Hide CUPS desktop entry (not needed in launcher)
+# - Auto-create XDG directories
+
 { config, ... }:
 
 {
+  # Hide CUPS from application launchers
   xdg.desktopEntries.cups = {
     name = "CUPS";
     noDisplay = true;
