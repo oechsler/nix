@@ -1,14 +1,49 @@
+# Dunst Configuration (Notification Daemon)
+#
+# This module configures dunst as the notification daemon for Hyprland.
+#
+# Features:
+# - Catppuccin color scheme integration
+# - Theme-aware styling (corner radius, gaps, borders)
+# - Multi-monitor support (shows on primary monitor)
+# - Progress bars (volume, brightness notifications)
+# - Icon support (32-64px)
+# - Urgency levels (low, normal, critical)
+#
+# Notification urgency levels:
+# - Low: 5s timeout, accent color border
+# - Normal: 10s timeout, accent color border
+# - Critical: No timeout (manual close), red border
+#
+# Mouse actions:
+# - Left click: Close notification
+# - Middle click: Perform action + close
+# - Right click: Close all notifications
+#
+# Position: Top-right corner with theme.gaps.outer margin
+
 { config, lib, fonts, theme, displays, ... }:
 
 let
+  # Extract Catppuccin palette colors
   palette = (lib.importJSON "${config.catppuccin.sources.palette}/palette.json").${config.catppuccin.flavor}.colors;
   accent = palette.${config.catppuccin.accent}.hex;
+
+  # Show notifications on primary monitor
   primaryMonitor = lib.head displays.monitors;
 in
 {
+  #===========================
+  # Configuration
+  #===========================
+
   services.dunst = {
     enable = true;
     settings = {
+
+      #---------------------------
+      # Global Settings
+      #---------------------------
       global = {
         monitor = primaryMonitor.name;
         width = 350;
@@ -55,6 +90,11 @@ in
         mouse_right_click = "close_all";
       };
 
+      #---------------------------
+      # Urgency Levels
+      #---------------------------
+
+      # Low urgency (e.g., system info)
       urgency_low = {
         frame_color = lib.mkForce accent;
         highlight = lib.mkForce accent;

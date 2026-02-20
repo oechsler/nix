@@ -1,3 +1,23 @@
+# Dolphin Configuration (KDE File Manager)
+#
+# This module configures Dolphin's sidebar bookmarks (Places panel).
+#
+# Features:
+# - Declarative sidebar bookmarks from fileManager.bookmarks
+# - Automatic hiding of unwanted XDG directories
+# - Always shows: Home, configured bookmarks, Trash
+# - Hides XDG directories not in fileManager.bookmarks
+#
+# How it works:
+# 1. Generate user-places.xbel (KDE's bookmark format)
+# 2. Add home directory and configured bookmarks
+# 3. Mark unwanted XDG directories as hidden
+# 4. Add trash at the bottom
+#
+# XDG directories checked:
+# - Desktop, Documents, Downloads, Music, Pictures, Public, Templates, Videos
+# - Only shown if explicitly added to fileManager.bookmarks
+
 { config, lib, ... }:
 
 let
@@ -5,8 +25,8 @@ let
   bookmarks = config.fileManager.bookmarks;
   bookmarkedPaths = map (b: b.path) bookmarks;
 
-  # XDG directories that Dolphin auto-adds to the sidebar.
-  # Any not present in fileManager.bookmarks are hidden automatically.
+  # XDG directories that Dolphin auto-discovers
+  # We hide any that aren't explicitly bookmarked
   dirs = config.xdg.userDirs;
   xdgPlaces = [
     { path = dirs.desktop;     icon = "folder-desktop"; }
@@ -19,8 +39,10 @@ let
     { path = dirs.videos;      icon = "folder-videos"; }
   ];
 
+  # XDG directories not in fileManager.bookmarks (to be hidden)
   hiddenPlaces = builtins.filter (d: !(builtins.elem d.path bookmarkedPaths)) xdgPlaces;
 
+  # Generate visible bookmark entry (XBEL format)
   entry = b: ''
     <bookmark href="file://${b.path}">
      <title>${b.name}</title>
@@ -29,6 +51,7 @@ let
      </metadata></info>
     </bookmark>'';
 
+  # Generate hidden bookmark entry (XBEL format with IsHidden flag)
   hiddenEntry = d: ''
     <bookmark href="file://${d.path}">
      <title>${builtins.baseNameOf d.path}</title>
@@ -41,7 +64,12 @@ let
     </bookmark>'';
 in
 {
-  # Sidebar bookmarks (generated from fileManager.bookmarks)
+  #===========================
+  # Configuration
+  #===========================
+
+  # Generate Dolphin sidebar bookmarks (user-places.xbel)
+  # Format: XBEL (XML Bookmark Exchange Language)
   xdg.dataFile."user-places.xbel".force = true;
   xdg.dataFile."user-places.xbel".text = ''
     <?xml version="1.0" encoding="UTF-8"?>

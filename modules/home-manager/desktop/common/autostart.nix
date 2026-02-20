@@ -1,11 +1,41 @@
+# Autostart Configuration (Common)
+#
+# This module defines applications that start automatically on login.
+#
+# Features:
+# - Cross-WM support (Hyprland and KDE)
+# - Feature-flag aware (only starts apps if features enabled)
+#
+# WM-specific implementation:
+# - Hyprland: Uses exec-once in hyprland/default.nix
+# - KDE: See kde/autostart.nix for XDG .desktop generation
+#
+# Default autostart apps:
+# - Bitwarden - Password manager
+# - Vesktop - Discord client (minimized)
+# - CoolerControl - Fan control
+# - Nextcloud - Cloud sync (Hyprland only, KDE uses XDG autostart)
+# - Pika Backup Monitor (if features.apps.enable)
+# - Spotify (if features.apps.enable, Hyprland only)
+# - JetBrains Toolbox (if features.development.enable)
+# - Trayscale - Tailscale tray (if features.tailscale.enable)
+# - Steam (if features.gaming.enable)
+# - Beeper - Messaging app (AppImage)
+#
+# Configuration:
+#   autostart.apps = [ { name = "App"; exec = "command"; } ];
+
 { config, lib, features, ... }:
 
 let
   cfg = config.autostart;
   isKde = features.desktop.wm == "kde";
-  slug = app: builtins.replaceStrings [ " " ] [ "-" ] (lib.toLower app.name);
 in
 {
+  #===========================
+  # Options
+  #===========================
+
   options.autostart.apps = lib.mkOption {
     type = lib.types.listOf (lib.types.submodule {
       options = {
@@ -17,8 +47,17 @@ in
     description = "Applications to start on login (works on both Hyprland and KDE)";
   };
 
+  #===========================
+  # Configuration
+  #===========================
+
   config = {
+
+    #---------------------------
+    # Default Autostart Apps
+    #---------------------------
     autostart.apps =
+      # Core apps (always started)
       [
         { name = "Bitwarden"; exec = "bitwarden"; }
         { name = "Vesktop"; exec = "vesktop --start-minimized"; }
@@ -47,15 +86,5 @@ in
         { name = "Beeper"; exec = "bash -c 'f=$(ls ~/Applications/Beeper-*.AppImage 2>/dev/null | head -1) && [ -n \"$f\" ] && exec \"$f\"'"; }
       ];
 
-    # KDE — generate XDG autostart .desktop entries
-    xdg.configFile = lib.mkIf isKde (builtins.listToAttrs (map (app: {
-      name = "autostart/${slug app}.desktop";
-      value.text = ''
-        [Desktop Entry]
-        Type=Application
-        Name=${app.name}
-        Exec=${app.exec}
-      '';
-    }) cfg.apps));
   };
 }

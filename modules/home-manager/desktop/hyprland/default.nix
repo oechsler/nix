@@ -1,23 +1,76 @@
+# Hyprland Configuration (Home Manager)
+#
+# This module configures Hyprland window manager and imports all Hyprland-specific modules:
+# - theme.nix - Qt/Kvantum theming, hidden window buttons
+# - waybar.nix - Status bar
+# - rofi.nix - Application launcher, power menu, window switcher
+# - awww.nix - Wayland-specific tools (wallpaper, clipboard, screenshots)
+# - nautilus.nix - File manager (GNOME Files)
+# - hyprlock.nix - Screen locker
+# - hypridle.nix - Idle management (auto-lock, screen timeout)
+# - dunst.nix - Notification daemon
+# - hypr-dock.nix - Application dock
+#
+# Key features:
+# - Multi-monitor support with per-monitor workspaces
+# - Keybindings (Super key based)
+# - Volume/brightness notifications
+# - Battery warnings
+# - Window rules and workspace rules
+# - Animations and visual effects
+#
+# Keybindings overview:
+#   Super+Q          - Close window
+#   Super+M          - Exit Hyprland
+#   Super+V          - Toggle floating
+#   Super+Space      - Application launcher (rofi)
+#   Super+Tab        - Window list
+#   Super+[1-9]      - Switch workspace
+#   Super+Shift+[1-9] - Move window to workspace
+#   Super+F          - Toggle fullscreen
+#   Super+C          - Clipboard manager
+#   Super+R          - Rofi toggle
+#   Super+W          - Window list
+
 { config, pkgs, lib, theme, fonts, locale, displays, input, ... }:
 
 let
+  # ============================================================================
+  # MONITOR CONFIGURATION
+  # ============================================================================
+  # Convert rotation enum to Hyprland transform number
   hyprTransform = rot: { "normal" = "0"; "90" = "1"; "180" = "2"; "270" = "3"; }.${rot};
   rotSuffix = m: if m.rotation == "normal" then "" else ", transform, ${hyprTransform m.rotation}";
 
+  # Generate monitor configuration lines
+  # Format: "name, widthxheight@refreshRate, xPos x yPos, scale"
+  # Example: "DP-1, 2560x1440@144, 0x0, 1.0"
   monitorLines =
     (map (m:
       "${m.name}, ${toString m.width}x${toString m.height}@${toString m.refreshRate}, ${toString m.x}x${toString m.y}, ${toString m.scale}${rotSuffix m}"
     ) displays.monitors)
-    ++ [ ", preferred, auto, ${toString theme.scale}" ];
+    ++ [ ", preferred, auto, ${toString theme.scale}" ];  # Fallback for unknown monitors
 
+  # Workspace bindings: Bind specific workspaces to specific monitors
+  # Example: If monitor DP-1 has workspaces [1,2,3], generate:
+  # "1, DP-1"
+  # "2, DP-1"
+  # "3, DP-1"
   workspaceBindings = lib.flatten (map (m:
     map (ws: "${toString ws}, ${m.name}") m.workspaces
   ) displays.monitors);
 
+  # Workspace rules: Assign workspaces to monitors
+  # Example: "1, monitor:DP-1"
   workspaceRules = lib.flatten (map (m:
     map (ws: "${toString ws}, monitor:${m.name}") m.workspaces
   ) displays.monitors);
 
+  # ============================================================================
+  # VOLUME NOTIFICATION SCRIPT
+  # ============================================================================
+  # Show volume level and mute status with dunst notification
+  # Used by: Media keys (XF86AudioRaiseVolume, XF86AudioLowerVolume, XF86AudioMute)
   volumeNotify = pkgs.writeShellScript "volume-notify" ''
     volume=$(${pkgs.wireplumber}/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ | ${pkgs.gawk}/bin/awk '{printf "%.0f", $2 * 100}')
     muted=$(${pkgs.wireplumber}/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ | ${pkgs.gnugrep}/bin/grep -c MUTED)
@@ -43,6 +96,11 @@ let
       "$text"
   '';
 
+  # ============================================================================
+  # BRIGHTNESS NOTIFICATION SCRIPT
+  # ============================================================================
+  # Show brightness level with dunst notification
+  # Used by: Media keys (XF86MonBrightnessUp, XF86MonBrightnessDown)
   brightnessNotify = pkgs.writeShellScript "brightness-notify" ''
     brightness=$(${pkgs.brightnessctl}/bin/brightnessctl -m | ${pkgs.gawk}/bin/awk -F, '{print substr($4, 0, length($4)-1)}')
 
@@ -60,6 +118,17 @@ let
       "$icon  Helligkeit ''${brightness}%"
   '';
 
+  # ============================================================================
+  # BATTERY WARNING SCRIPT
+  # ============================================================================
+  # Monitor battery level and show warnings/auto-suspend
+  #
+  # Behavior:
+  # - ≤5%: Show critical warning, auto-suspend after 5 seconds
+  # - ≤10%: Show warning (once per discharge cycle)
+  # - >10% or charging: Reset warning flag
+  #
+  # Runs as systemd user service, checking every 60 seconds
   batteryWarning = pkgs.writeShellScript "battery-warning" ''
     warned=""
     while true; do
@@ -88,15 +157,25 @@ let
 
 in
 {
+  #===========================
+  # Imports
+  #===========================
+  # Hyprland-specific modules
   imports = [
-    ./waybar.nix
-    ./rofi.nix
-    ./awww.nix
-    ./nautilus.nix
-    ./hyprlock.nix
-    ./hypridle.nix
-    ./dunst.nix
+    ./theme.nix      # Qt/Kvantum theming, hidden window buttons
+    ./waybar.nix     # Status bar
+    ./rofi.nix       # Application launcher, power menu, window switcher
+    ./awww.nix       # Wayland-specific tools (clipboard, screenshots)
+    ./nautilus.nix   # File manager (GNOME Files)
+    ./hyprlock.nix   # Screen locker
+    ./hypridle.nix   # Idle management (auto-lock, screen timeout)
+    ./dunst.nix      # Notification daemon
+    ./hypr-dock.nix  # Application dock
   ];
+
+  #===========================
+  # Configuration
+  #===========================
 
   config = {
     # Battery warning as systemd service instead of exec-once

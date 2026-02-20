@@ -1,6 +1,25 @@
+# Nautilus Configuration (GNOME Files)
+#
+# This module configures Nautilus as the file manager for Hyprland.
+#
+# Features:
+# - Declarative GTK bookmarks from fileManager.bookmarks
+# - Prevents Nextcloud from adding bookmarks (force = true)
+# - Auto-update XDG user directories (German names)
+#
+# Packages:
+# - nautilus - File manager
+# - file-roller - Archive manager (for extracting archives in Nautilus)
+# - xdg-user-dirs-gtk - Updates ~/.config/user-dirs.dirs
+
 { config, pkgs, lib, ... }:
 
 {
+  #===========================
+  # Configuration
+  #===========================
+
+  # Packages
   home.packages = with pkgs; [
     nautilus
     file-roller

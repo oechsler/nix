@@ -1,31 +1,67 @@
+# Waybar Configuration (Hyprland Status Bar)
+#
+# This module configures waybar as the status bar for Hyprland.
+#
+# Modules (left to right):
+# - Left: Launcher icon, workspaces, active window title
+# - Center: (empty)
+# - Right: System tray, network, bluetooth, volume, battery, clock
+#
+# Features:
+# - Per-monitor workspace support
+# - Catppuccin theme integration
+# - Custom SCSS styling with theme variables
+# - Transparent background (alpha 0.85)
+# - Icons from Nerd Fonts
+#
+# Styling:
+# - Uses waybar-style.scss with template variables
+# - @blue → @${accent} (theme accent color)
+# - system_font → fonts.ui (UI font name)
+# - separator_alpha → 0.5 for dark, 0.15 for light themes
+
 { config, pkgs, fonts, theme, locale, displays, lib, ... }:
 
 let
-  accent = config.catppuccin.accent;
+  # Theme variables
+  inherit (config.catppuccin) accent;
   isLight = config.catppuccin.flavor == "latte";
+
+  # Load and customize SCSS styling
   rawStyle = builtins.readFile ./waybar-style.scss;
   style = builtins.replaceStrings
     [ "@blue" "system_font" "separator_alpha" ]
     [ "@${accent}" fonts.ui (if isLight then "0.15" else "0.5") ]
     rawStyle;
 
-  # Generate persistent-workspaces per monitor
+  # Generate persistent-workspaces configuration per monitor
+  # Example: { "DP-1" = [1 2 3]; "HDMI-A-1" = [4 5 6]; }
   persistentWorkspaces = lib.listToAttrs (map (m: {
-    name = m.name;
+    inherit (m) name;
     value = m.workspaces;
   }) displays.monitors);
 
+  # Reload script (used by Super+Shift+R keybinding)
   reload = pkgs.writeShellScript "waybar-reload" ''
     pkill waybar
     uwsm-app -- waybar &
   '';
 in
 {
+  #===========================
+  # Options
+  #===========================
+
   options.waybar.reload = lib.mkOption {
     type = lib.types.path;
     default = reload;
     readOnly = true;
+    description = "Script to reload waybar (pkill + restart)";
   };
+
+  #===========================
+  # Configuration
+  #===========================
 
   config = {
     catppuccin.waybar.mode = "createLink";
