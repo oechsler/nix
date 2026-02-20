@@ -1,3 +1,24 @@
+# samuels-pc Host Configuration
+#
+# Desktop workstation configuration.
+#
+# Hardware:
+# - Dual 1440p 165Hz monitors (DP-1, DP-2)
+# - Dedicated /mnt/games partition (1TB for Steam library)
+#
+# Features:
+# - Secure Boot enabled
+# - Dual-boot setup (Windows on separate disk)
+# - Hyprland desktop (can switch to KDE in flake)
+#
+# Theme:
+# - Catppuccin Lavender accent
+# - Lake 4.png wallpaper
+#
+# Monitor layout:
+# - DP-1 (right): Workspaces 1-4
+# - DP-2 (left): Workspaces 5-8
+
 { ... }:
 
 {
@@ -11,7 +32,9 @@
 
   networking.hostName = "samuels-pc";
 
-  # ─── Host-specific overrides ─────────────────────────────────────────────────
+  #===========================
+  # Host-specific Overrides
+  #===========================
   theme.catppuccin.accent = "lavender";
   theme.wallpaper = "Lake 4.png";
 

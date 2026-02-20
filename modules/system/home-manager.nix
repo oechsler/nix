@@ -1,3 +1,26 @@
+# Home Manager Integration
+#
+# This module integrates Home Manager for user-level configuration.
+#
+# How it works:
+# - Uses flake's home-manager NixOS module
+# - Imports host-specific home.nix from hosts/{hostname}/home.nix
+# - Passes system config to home-manager (fonts, theme, features, etc.)
+#
+# Passed to Home Manager modules:
+# - fonts: config.fonts.defaults (UI/monospace fonts, sizes)
+# - theme: config.theme (Catppuccin, wallpaper, gaps, borders)
+# - locale: config.locale (timezone, language, keyboard)
+# - user: config.user (name, fullName, email, github)
+# - features: config.features (desktop, development, apps, etc.)
+# - displays: config.displays (monitor configuration)
+# - input: config.input (mouse/touchpad natural scroll)
+#
+# Integrations:
+# - Catppuccin theming (catppuccin.homeModules.catppuccin)
+# - SOPS secrets (sops-nix.homeManagerModules.sops)
+# - KDE Plasma config (plasma-manager.homeModules.plasma-manager)
+
 { config, inputs, ... }:
 
 {

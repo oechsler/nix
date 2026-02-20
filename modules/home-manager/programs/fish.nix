@@ -1,3 +1,30 @@
+# Fish Shell Configuration
+#
+# This module configures Fish as the interactive shell.
+#
+# Features:
+# - Auto-attach to tmux on startup (SSH or Kitty)
+# - fzf integration (Ctrl+O for directories, Ctrl+R for history)
+# - Zoxide integration (smart cd)
+# - Catppuccin theme (via catppuccin.fish)
+# - Trash-cli for safe file deletion
+#
+# Aliases:
+#   cat → bat (syntax highlighting)
+#   ll → eza --long (better ls)
+#   lt → eza --tree --level 1 (tree view)
+#   rm → trash-put (move to trash)
+#   trash → trash-list (list trash)
+#   unrm → trash-restore (restore from trash)
+#
+# Functions:
+#   cd → z (zoxide + auto-tree)
+#   cf → zi (interactive zoxide)
+#
+# Tmux behavior:
+# - SSH: Auto-attach to "ssh" session
+# - Kitty: Auto-attach to first non-SSH session or create new
+
 { pkgs, ... }:
 
 {

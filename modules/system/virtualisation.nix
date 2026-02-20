@@ -1,3 +1,18 @@
+# Virtualisation Configuration
+#
+# This module enables Docker container support.
+#
+# Configuration:
+#   features.virtualisation.enable = true;  # Enable Docker (default: true)
+#
+# Features:
+# - Docker daemon starts on boot
+# - User added to docker group (run containers without sudo)
+#
+# Usage:
+#   docker run hello-world
+#   docker-compose up
+
 { lib, config, ... }:
 
 let
