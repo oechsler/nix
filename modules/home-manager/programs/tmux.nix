@@ -1,3 +1,22 @@
+# Tmux Configuration
+#
+# This module configures tmux as the terminal multiplexer.
+#
+# Features:
+# - Catppuccin theme
+# - Fish shell integration
+# - Vi key mode
+# - Alt-based keybindings (matching Hyprland)
+# - No prefix key (uses Alt directly)
+# - Window/pane navigation with Alt+H/J/K/L
+# - Window creation/closing with Alt+Enter/Q
+#
+# Keybindings:
+#   Alt+H/J/K/L - Navigate between panes
+#   Alt+Enter - New window
+#   Alt+Q - Kill pane
+#   Alt+1-9 - Switch to window 1-9
+
 { config, pkgs, ... }:
 
 {

@@ -1,3 +1,15 @@
+# System Configuration Modules
+#
+# This module imports all system-level configuration modules.
+#
+# Categories:
+# - Core: nix, boot, networking, locale, users
+# - Security: sops, secure-boot, compat
+# - Hardware: audio, bluetooth, fonts, theme, displays, input
+# - Storage: impermanence, snapshots, smb, backgrounds
+# - Services: power, virtualisation, gaming, ssh
+# - Integration: packages, features, home-manager
+
 { ... }:
 
 {

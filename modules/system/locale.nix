@@ -1,3 +1,18 @@
+# Locale Configuration
+#
+# This module configures system locale, timezone, and keyboard layout.
+#
+# Configuration:
+#   locale.timezone = "Europe/Berlin";  # System timezone
+#   locale.language = "de_DE.UTF-8";    # System locale for UI/formats
+#   locale.keyboard = "de";             # Console keyboard layout
+#
+# Applied to:
+# - System time (timezone)
+# - All locale categories (address, measurement, monetary, etc.)
+# - Console keyboard layout
+# - Desktop keyboard layout (consumed by Hyprland, KDE)
+
 { config, pkgs, lib, ... }:
 
 let

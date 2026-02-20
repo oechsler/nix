@@ -11,7 +11,10 @@ hosts/                          # Host-specific configurations
 modules/
   desktop/                      # Desktop environments (Hyprland, KDE, SDDM)
   home-manager/
-    desktop/                    # Hyprland, KDE (Dolphin), theming, bookmarks, idle, autostart
+    desktop/
+      common/                   # Cross-WM (GTK, bookmarks, autostart, idle)
+      hyprland/                 # Hyprland-specific (waybar, rofi, hyprlock, etc.)
+      kde/                      # KDE-specific (Plasma, Dolphin, displays)
     programs/                   # Terminal, browsers, dev tools, apps
   programs/                     # System-level program configs
   system/                       # System modules (audio, networking, boot, ...)
