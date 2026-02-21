@@ -3,30 +3,31 @@
 # This module defines global feature toggles consumed by multiple modules.
 #
 # Server Mode:
-#   features.server = true;  # Disables desktop, audio, bluetooth, gaming, GUI apps
+#   features.server = true;  # Minimal server setup (see details below)
 #
 # Desktop:
-#   features.desktop.enable = true;         # Enable desktop environment (default: true)
+#   features.desktop.enable = true;         # Desktop environment (default: true)
 #   features.desktop.wm = "hyprland";       # Window manager: hyprland or kde
-#   features.desktop.dock.enable = true;    # Enable hypr-dock (default: true)
+#   features.desktop.dock.enable = true;    # hypr-dock (default: true, Hyprland only)
 #
 # Development:
-#   features.development.enable = true;     # CLI dev tools (default: true)
+#   features.development.enable = true;     # Dev tools & languages (default: true)
 #   features.development.gui.enable = true; # GUI dev tools (default: true)
 #
 # Apps:
 #   features.apps.enable = true;            # Desktop apps (Discord, Spotify, etc.)
 #
 # Server mode disables:
-# - Desktop (Hyprland/KDE, SDDM, Firefox, hypr-dock)
+# - Desktop environment (Hyprland/KDE, SDDM, Firefox, hypr-dock)
 # - Audio, Bluetooth, WiFi
 # - Gaming (Steam)
-# - GUI apps (Discord, Spotify, VS Code, JetBrains)
+# - GUI apps (Discord, Spotify, etc.)
+# - Development tools (languages, kubectl, VS Code, JetBrains, etc.)
 # - Flatpak, AppImage
 #
 # Server mode keeps:
 # - Networking (Ethernet, Tailscale)
-# - Development CLI tools
+# - Basic CLI tools (git, htop, etc.)
 # - SSH
 
 { config, lib, ... }:
@@ -42,10 +43,9 @@ let
   #
   serverModeDisables = {
     # Desktop & GUI
-    desktop.enable = false;                # No Hyprland/KDE, SDDM, Firefox
-    desktop.dock.enable = false;           # No hypr-dock
+    desktop.enable = false;                # No Hyprland/KDE, SDDM, Firefox, hypr-dock
     apps.enable = false;                   # No Discord, Spotify, etc.
-    development.gui.enable = false;        # No VS Code, JetBrains, DBeaver
+    development.enable = false;            # No dev tools (languages, kubectl, VS Code, etc.)
 
     # Hardware
     audio.enable = false;                  # No sound
@@ -60,7 +60,7 @@ let
     # What STAYS active in server mode:
     # - Networking (Ethernet, DNS, mDNS)
     # - Tailscale VPN
-    # - Development CLI tools (languages, kubectl, git)
+    # - Basic CLI tools (git, htop, etc.)
     # - SSH
   };
 
