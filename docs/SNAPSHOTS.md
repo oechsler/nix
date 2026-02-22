@@ -4,13 +4,14 @@ Automatic hourly snapshots via btrbk. Enabled by default.
 
 ## What Gets Snapshotted
 
-| Subvolume | Mountpoint | Purpose |
-|-----------|------------|---------|
-| `@home` | `/home` | User data, dotfiles |
-| `@persist` | `/persist` | System state (bluetooth, docker, NetworkManager, etc.) |
+| Subvolume | Mountpoint | Purpose | Condition |
+|-----------|------------|---------|-----------|
+| `@` | `/` | Root filesystem | Only if `features.impermanence.enable = false` |
+| `@home` | `/home` | User data, dotfiles | Always |
+| `@persist` | `/persist` | System state (bluetooth, docker, NetworkManager, etc.) | Always |
 
 Not snapshotted:
-- `@` (root) — wiped on every boot anyway (impermanence)
+- `@` (root) — when impermanence is enabled (wiped on boot anyway)
 - `@nix` — immutable, managed by Nix
 
 ## Retention Policy
@@ -58,7 +59,12 @@ ls /.snapshots/
 Or mount the btrfs root to see all subvolumes:
 
 ```bash
+# With LUKS encryption:
 sudo mount -o subvol=/ /dev/mapper/cryptroot /mnt/btrfs-root
+
+# Without encryption (use your device):
+sudo mount -o subvol=/ /dev/nvme0n1p2 /mnt/btrfs-root
+
 ls /mnt/btrfs-root/
 # @  @home  @nix  @persist  @snapshots
 ls /mnt/btrfs-root/@snapshots/
@@ -88,7 +94,7 @@ cp -r /.snapshots/@home.20250215T1400/samuel/Projects/myproject ~/Projects/
 For a complete rollback (e.g., after a broken config change):
 
 ```bash
-# Mount btrfs root
+# Mount btrfs root (adjust device path: /dev/mapper/cryptroot or /dev/nvme0n1p2)
 sudo mount -o subvol=/ /dev/mapper/cryptroot /mnt/btrfs-root
 cd /mnt/btrfs-root
 
