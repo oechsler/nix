@@ -38,6 +38,7 @@ in
       inherit inputs;
       inherit (config) locale user features displays input;
       inherit (config) theme;
+      inherit (config.sops) secretsFile;
       fonts = config.fonts.defaults;
     };
     users.${config.user.name} = {

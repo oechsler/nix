@@ -60,21 +60,27 @@ nix build .#nixosConfigurations.my-host.config.system.build.toplevel
 
 **Desktop mode:** Everything from server + Hyprland/KDE, Firefox, Audio, Development tools
 
-## SOPS Secrets (WiFi/SMB)
+## SOPS Secrets (WiFi/SMB/Kubernetes)
 
-WiFi and SMB require encrypted secrets. Either set up SOPS or disable the features:
+WiFi, SMB, and Kubernetes require encrypted secrets via SOPS.
+
+```nix
+# Point to your SOPS file:
+sops.secretsFile = ./sops/sops.encrypted.yaml;
+```
 
 ```bash
-# Setup: See base repo's sops/ directory for examples
+# Setup:
 age-keygen -o sops/age.key
 # Create sops/sops.encrypted.yaml with your credentials
 sudo mkdir -p /var/lib/sops/age && sudo cp sops/age.key /var/lib/sops/age/keys.txt
 ```
 
 ```nix
-# Or disable:
+# Or disable features:
 features.wifi.enable = false;
-features.smb.enable = false;
+features.smb.shares = [];
+features.development.kubernetes.enable = false;
 ```
 
 ## Next Steps
