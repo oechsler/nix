@@ -170,10 +170,8 @@ in
     #---------------------------
     # Extract wallpaper from encrypted archive before display manager starts
     (lib.mkIf cfg.enable {
-      # SOPS secret for archive decryption password
-      sops.secrets."backgrounds/password" = {
-        sopsFile = ../../sops/sops.encrypted.yaml;
-      };
+      # SOPS secret for archive decryption password (uses system defaultSopsFile)
+      sops.secrets."backgrounds/password" = { };
 
       systemd.services.extract-backgrounds = {
         description = "Extract encrypted wallpapers";
