@@ -37,6 +37,7 @@ mkdir -p hosts/my-host
     fullName = "Your Name";
     email = "your@email.com";
     github = "your-github";
+    hashedPassword = "your-hashed-password";  # Generate: mkpasswd -m sha-512
   };
 }
 ```
