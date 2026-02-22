@@ -29,7 +29,9 @@ features.ssh.enable = true;
 | `features.tailscale.enable` | `true` | Tailscale VPN (+ trayscale tray icon on desktop) |
 | `features.wifi.enable` | `true` | WiFi profiles via SOPS secrets |
 | `features.wifi.networks` | `["home"]` | WiFi network names to manage — each needs `wifi/<name>/ssid` + `wifi/<name>/psk` SOPS secrets |
-| `features.development.enable` | `true` | IDEs, languages (Go, Rust, Node, Java), K8s tools |
+| `features.development.enable` | `true` | IDEs, languages (Go, Rust, Node, Java) |
+| `features.development.gui.enable` | `true` | GUI dev tools (VS Code, JetBrains, DBeaver) |
+| `features.development.kubernetes.enable` | `true` | Kubernetes tools (kubectl, k9s) with kubeconfig via SOPS |
 | `features.apps.enable` | `true` | Desktop apps (Discord, Spotify, Obsidian, LibreOffice, ...) |
 | `features.apps.winboat.enable` | `false` | WinBoat Windows VM (seamless integration) |
 | `features.secureBoot.enable` | `false` | UEFI Secure Boot via lanzaboote |

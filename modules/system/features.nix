@@ -91,8 +91,9 @@ in
       };
     };
     development = {
-      enable = (lib.mkEnableOption "development tools (languages, CLI tools, K8s)") // { default = true; };
+      enable = (lib.mkEnableOption "development tools (languages, CLI tools)") // { default = true; };
       gui.enable = (lib.mkEnableOption "GUI development tools (VS Code, JetBrains, DBeaver)") // { default = true; };
+      kubernetes.enable = (lib.mkEnableOption "Kubernetes tools (kubectl, k9s) with kubeconfig via SOPS") // { default = true; };
     };
     apps = {
       enable = (lib.mkEnableOption "desktop applications (Discord, Spotify, etc.)") // { default = true; };
