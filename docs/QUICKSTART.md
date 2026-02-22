@@ -60,6 +60,53 @@ nix build .#nixosConfigurations.my-host.config.system.build.toplevel
 
 **Desktop mode:** Everything from server + Hyprland/KDE, Firefox, Audio, Development tools
 
+## SOPS Secrets Setup
+
+WiFi and SMB features require SOPS for storing credentials securely.
+
+### Quick Setup
+
+```bash
+# 1. Generate age key
+mkdir -p sops
+age-keygen -o sops/age.key
+
+# 2. Create secrets file
+cat > sops/sops.yaml <<EOF
+# WiFi credentials (if using features.wifi.enable)
+wifi:
+  home:
+    ssid: "YourSSID"
+    psk: "YourPassword"
+
+# SMB credentials (if using features.smb.enable)
+smb:
+  myshare:
+    label: "MyShare"
+    path: "//server/share"
+    username: "user"
+    password: "pass"
+EOF
+
+# 3. Encrypt with age
+nix run nixpkgs#sops -- \
+  --age $(age-keygen -y sops/age.key) \
+  --encrypt sops/sops.yaml > sops/sops.encrypted.yaml
+
+# 4. Install key on target system
+sudo mkdir -p /var/lib/sops/age
+sudo cp sops/age.key /var/lib/sops/age/keys.txt
+```
+
+### Skip SOPS (Disable Features)
+
+```nix
+features = {
+  wifi.enable = false;
+  smb.enable = false;
+};
+```
+
 ## Next Steps
 
 - [CONFIG.md](CONFIG.md) - All available options
