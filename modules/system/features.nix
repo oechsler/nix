@@ -82,6 +82,12 @@ in
 
     impermanence = {
       enable = (lib.mkEnableOption "impermanent root with rollback on boot") // { default = true; };
+      extraPaths = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "Additional paths to persist (beyond feature-based defaults)";
+        example = [ "/var/lib/custom-app" "/etc/custom-config" ];
+      };
     };
 
     encryption = {

@@ -15,6 +15,7 @@ features.ssh.enable = true;
 |--------|---------|-------------|
 | `features.server` | `false` | Server mode — disables desktop, apps, audio, bluetooth, gaming, flatpak, appimage, wifi, development, virtualisation; enables cachyos-server kernel |
 | `features.impermanence.enable` | `true` | Impermanent root with btrfs rollback on boot — see [System Requirements](#system-requirements) |
+| `features.impermanence.extraPaths` | `[]` | Additional paths to persist (beyond feature-based defaults) |
 | `features.encryption.enable` | `true` | LUKS full disk encryption |
 | `features.desktop.enable` | `true` | Desktop environment (SDDM, Firefox, theming) |
 | `features.desktop.wm` | `"hyprland"` | Window manager (`"hyprland"` / `"kde"`) |

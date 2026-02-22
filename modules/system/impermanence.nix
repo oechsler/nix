@@ -1,6 +1,7 @@
 # Impermanence Configuration
 #
 # Feature toggle: features.impermanence.enable (default: true)
+# Extra paths:    features.impermanence.extraPaths = [ "/var/lib/custom" ];
 #
 # This module configures:
 # 1. Impermanent root filesystem (wiped on every boot)
@@ -28,6 +29,7 @@
 # - NetworkManager WiFi passwords
 # - Bluetooth pairings
 # - Docker containers/images
+# - Waydroid Android images (if enabled)
 # - Flatpak apps
 # - SSH host keys
 # - SOPS secrets
@@ -85,6 +87,9 @@ in
       ++ lib.optionals config.features.virtualisation.enable [
         "/var/lib/docker"             # Docker containers/images
       ]
+      ++ lib.optionals config.features.virtualisation.waydroid.enable [
+        "/var/lib/waydroid"           # Waydroid Android images
+      ]
       ++ lib.optionals config.features.flatpak.enable [
         "/var/lib/flatpak"            # Flatpak apps
       ]
@@ -93,7 +98,8 @@ in
       ]
       ++ lib.optionals config.features.secureBoot.enable [
         "/var/lib/sbctl"              # Secure Boot keys
-      ];
+      ]
+      ++ config.features.impermanence.extraPaths;
 
       files = [
         "/etc/machine-id"  # Unique machine identifier
