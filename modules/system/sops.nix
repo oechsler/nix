@@ -2,6 +2,9 @@
 #
 # This module configures sops-nix for encrypted secrets management.
 #
+# Configuration:
+#   sops.secretsFile = ./path/to/sops.encrypted.yaml;  # Override SOPS file path
+#
 # Setup:
 # - Secrets file: sops/sops.encrypted.yaml (encrypted with age)
 # - Decryption key: /var/lib/sops/age/keys.txt (machine-specific)
@@ -15,11 +18,17 @@
 #
 # See: sops/README.md for secret management workflow
 
-{ config, ... }:
+{ config, lib, ... }:
 
 {
-  sops = {
-    defaultSopsFile = ../../sops/sops.encrypted.yaml;
+  options.sops.secretsFile = lib.mkOption {
+    type = lib.types.path;
+    default = ../../sops/sops.encrypted.yaml;
+    description = "Path to encrypted SOPS secrets file (override for external repos)";
+  };
+
+  config.sops = {
+    defaultSopsFile = config.sops.secretsFile;
     age.keyFile = "/var/lib/sops/age/keys.txt";
 
     # Use systemd service instead of activation scripts
