@@ -57,6 +57,7 @@ let
     flatpak.enable = false;                # No Flatpak
     appimage.enable = false;               # No AppImage
     gaming.enable = false;                 # No Steam, etc.
+    virtualisation.enable = false;         # No Docker/containers
 
     # Kernel
     kernel = "cachyos-server";             # Server-optimized kernel
@@ -66,7 +67,6 @@ let
     # - Tailscale VPN
     # - Basic CLI tools (git, htop, etc.)
     # - SSH
-    # - Docker (virtualisation.enable stays true)
     # - CachyOS server kernel
   };
 
