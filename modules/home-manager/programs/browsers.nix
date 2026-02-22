@@ -14,7 +14,7 @@
 # Extensions:
 # - firefox-color - Catppuccin theme
 # - ublock-origin - Ad blocker
-# - bitwarden - Password manager
+# - proton-pass - Password manager
 # - new-tab-override - Custom new tab page
 # - plasma-integration (KDE only) - Desktop integration
 #
@@ -23,7 +23,7 @@
 # - Hidden: Google, Bing, Amazon, eBay, Wikipedia, LEO, Ecosia, Perplexity
 #
 # Toolbar layout:
-#   Back | Forward | Reload | Spacer | URL bar | Spacer | Downloads | Bitwarden
+#   Back | Forward | Reload | Spacer | URL bar | Spacer | Downloads | Proton Pass
 
 { pkgs, inputs, features, fonts, lib, ... }:
 
@@ -56,7 +56,7 @@
       extensions.packages = with inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system}; [
         firefox-color # catppuccin.firefox
         ublock-origin
-        bitwarden
+        proton-pass
         new-tab-override
       ] ++ lib.optionals (features.desktop.wm == "kde") [
         inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system}.plasma-integration
@@ -87,7 +87,9 @@
 
         "browser.toolbars.bookmarks.visibility" = "never";
 
-        # Toolbar layout: back forward reload | spacer | urlbar | spacer | downloads bitwarden
+        # Toolbar layout: back forward reload | spacer | urlbar | spacer | downloads proton-pass
+        # Note: Extension ID will be auto-detected on first Firefox start
+        # To customize toolbar: Right-click toolbar → Customize Toolbar
         "browser.uiCustomization.state" = builtins.toJSON {
           placements = {
             nav-bar = [
@@ -98,7 +100,7 @@
               "urlbar-container"
               "customizableui-special-spring2"
               "downloads-button"
-              "_446900e4-71c2-419f-a6a7-df9c091e268b_-browser-action" # Bitwarden
+              # Proton Pass extension will appear here after first start
             ];
             toolbar-menubar = [ "menubar-items" ];
             TabsToolbar = [ "tabbrowser-tabs" ];

@@ -11,7 +11,7 @@
 # - KDE: See kde/autostart.nix for XDG .desktop generation
 #
 # Default autostart apps:
-# - Bitwarden - Password manager
+# - Proton Pass - Password manager
 # - Vesktop - Discord client (minimized)
 # - CoolerControl - Fan control
 # - Nextcloud - Cloud sync (Hyprland only, KDE uses XDG autostart)
@@ -59,7 +59,7 @@ in
     autostart.apps =
       # Core apps (always started)
       [
-        { name = "Bitwarden"; exec = "bitwarden"; }
+        { name = "Proton Pass"; exec = "proton-pass"; }
         { name = "Vesktop"; exec = "vesktop --start-minimized"; }
         { name = "CoolerControl"; exec = "coolercontrol"; }
       ]

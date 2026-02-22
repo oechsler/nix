@@ -76,8 +76,7 @@
 
   features = {
     secureBoot.enable = true;
-    virtualisation.waydroid.enable = true;  # Android container
-    apps.winboat.enable = true;             # Windows VM (seamless)
+    apps.winboat.enable = true;
   };
 
   system.stateVersion = "25.11";
