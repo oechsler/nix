@@ -39,6 +39,14 @@ features.ssh.enable = true;
 | `features.snapshots.enable` | `true` | Automatic btrfs snapshots (hourly, see [SNAPSHOTS.md](SNAPSHOTS.md)) |
 | `features.kernel` | `"cachyos"` | Kernel variant (`"cachyos"` / `"cachyos-lts"` / `"cachyos-server"` / `"default"`) |
 
+## SOPS Options
+
+Set in `configuration.nix`:
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `sops.secretsFile` | `../../sops/sops.encrypted.yaml` | Path to encrypted SOPS secrets file (override for external repos) |
+
 ## User Options
 
 Set in `configuration.nix`:
