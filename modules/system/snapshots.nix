@@ -61,20 +61,22 @@ in
             snapshot_dir = "@snapshots";  # Store snapshots in @snapshots subvolume
 
             # Snapshot subvolumes
-            # - @ (root): Only if impermanence is disabled (otherwise wiped on boot anyway)
-            # - @home: User data (always)
-            # - @persist: System state (always)
+            # - @ (root): Only if impermanence disabled (otherwise wiped on boot)
+            # - @home: Always (user data)
+            # - @persist: Only if impermanence enabled (otherwise unused)
             subvolume = lib.mkMerge [
               (lib.mkIf (!config.features.impermanence.enable) {
                 "@" = {
                   snapshot_create = "always";
                 };
               })
-              {
-                "@home" = {
+              (lib.mkIf config.features.impermanence.enable {
+                "@persist" = {
                   snapshot_create = "always";
                 };
-                "@persist" = {
+              })
+              {
+                "@home" = {
                   snapshot_create = "always";
                 };
               }
@@ -126,8 +128,10 @@ in
         ''}
       subvolume @home
         snapshot_create always
+        ${lib.optionalString config.features.impermanence.enable ''
       subvolume @persist
         snapshot_create always
+        ''}
     '';
   };
 }

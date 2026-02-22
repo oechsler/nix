@@ -8,10 +8,11 @@ Automatic hourly snapshots via btrbk. Enabled by default.
 |-----------|------------|---------|-----------|
 | `@` | `/` | Root filesystem | Only if `features.impermanence.enable = false` |
 | `@home` | `/home` | User data, dotfiles | Always |
-| `@persist` | `/persist` | System state (bluetooth, docker, NetworkManager, etc.) | Always |
+| `@persist` | `/persist` | System state (bluetooth, docker, NetworkManager, etc.) | Only if `features.impermanence.enable = true` |
 
 Not snapshotted:
-- `@` (root) — when impermanence is enabled (wiped on boot anyway)
+- `@` (root) — when impermanence enabled (wiped on boot anyway)
+- `@persist` — when impermanence disabled (unused/unnecessary)
 - `@nix` — immutable, managed by Nix
 
 ## Retention Policy
