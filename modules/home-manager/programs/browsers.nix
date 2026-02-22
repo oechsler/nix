@@ -88,7 +88,6 @@
         "browser.toolbars.bookmarks.visibility" = "never";
 
         # Toolbar layout: back forward reload | spacer | urlbar | spacer | downloads proton-pass
-        # Note: Extension ID will be auto-detected on first Firefox start
         # To customize toolbar: Right-click toolbar → Customize Toolbar
         "browser.uiCustomization.state" = builtins.toJSON {
           placements = {
@@ -100,7 +99,7 @@
               "urlbar-container"
               "customizableui-special-spring2"
               "downloads-button"
-              # Proton Pass extension will appear here after first start
+              "78272b6fa58f4a1abaac99321d503a20_proton_me-browser-action"
             ];
             toolbar-menubar = [ "menubar-items" ];
             TabsToolbar = [ "tabbrowser-tabs" ];
@@ -108,7 +107,7 @@
             widget-overflow-fixed-list = [];
             unified-extensions-area = [];
           };
-          seen = [ "developer-button" "profiler-button" ];
+          seen = [ "developer-button" "profiler-button" "78272b6fa58f4a1abaac99321d503a20_proton_me-browser-action" ];
           dirtyAreaCache = [ "nav-bar" ];
           currentVersion = 21;
           newElementCount = 2;
