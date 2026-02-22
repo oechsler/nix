@@ -117,7 +117,10 @@
         }:
         lib.nixosSystem {
           inherit system;
-          specialArgs = { inherit inputs; };
+          specialArgs = {
+            inherit inputs;
+            inherit hostPath;
+          };
           modules = [
             (import ./modules)
             inputs.home-manager.nixosModules.default
