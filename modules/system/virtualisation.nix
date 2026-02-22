@@ -4,7 +4,7 @@
 #
 # Configuration:
 #   features.virtualisation.enable = true;          # Enable Docker (default: true)
-#   features.virtualisation.waydroid.enable = true; # Android container (default: false)
+#   features.virtualisation.waydroid.enable = true; # Android container (requires virtualisation.enable)
 #
 # Docker:
 # - Docker daemon starts on boot
@@ -32,20 +32,20 @@ in
     };
   };
 
-  config = lib.mkMerge [
+  config = lib.mkIf cfg.enable (lib.mkMerge [
     # Docker
-    (lib.mkIf cfg.enable {
+    {
       virtualisation.docker = {
         enable = true;
         enableOnBoot = true;
       };
 
       users.users.${config.user.name}.extraGroups = [ "docker" ];
-    })
+    }
 
-    # Waydroid
+    # Waydroid (requires virtualisation.enable)
     (lib.mkIf cfg.waydroid.enable {
       virtualisation.waydroid.enable = true;
     })
-  ];
+  ]);
 }
