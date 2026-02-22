@@ -13,7 +13,7 @@ features.ssh.enable = true;
 
 | Toggle | Default | Description |
 |--------|---------|-------------|
-| `features.server` | `false` | Server mode — disables desktop, apps, audio, bluetooth, gaming, flatpak, appimage, wifi |
+| `features.server` | `false` | Server mode — disables desktop, apps, audio, bluetooth, gaming, flatpak, appimage, wifi, development; enables cachyos-server kernel |
 | `features.desktop.enable` | `true` | Desktop environment (SDDM, Firefox, theming) |
 | `features.desktop.wm` | `"hyprland"` | Window manager (`"hyprland"` / `"kde"`) |
 | `features.desktop.dock.enable` | `true` | Application dock for Hyprland (hypr-dock) |
