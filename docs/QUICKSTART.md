@@ -79,7 +79,7 @@ sudo mkdir -p /var/lib/sops/age && sudo cp sops/age.key /var/lib/sops/age/keys.t
 ```nix
 # Or disable features:
 features.wifi.enable = false;
-features.smb.shares = [];
+features.smb.enable = false;
 features.development.kubernetes.enable = false;
 ```
 
