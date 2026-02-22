@@ -25,7 +25,8 @@
 # - Development tools (languages, kubectl, VS Code, JetBrains, etc.)
 # - Flatpak, AppImage
 #
-# Server mode keeps:
+# Server mode enables:
+# - CachyOS server-optimized kernel
 # - Networking (Ethernet, Tailscale)
 # - Basic CLI tools (git, htop, etc.)
 # - SSH
@@ -41,7 +42,7 @@ let
   # Easy to customize: Just comment out lines you want to keep active,
   # or add new features to disable.
   #
-  serverModeDisables = {
+  serverModeConfig = {
     # Desktop & GUI
     desktop.enable = false;                # No Hyprland/KDE, SDDM, Firefox, hypr-dock
     apps.enable = false;                   # No Discord, Spotify, etc.
@@ -57,16 +58,20 @@ let
     appimage.enable = false;               # No AppImage
     gaming.enable = false;                 # No Steam, etc.
 
+    # Kernel
+    kernel = "cachyos-server";             # Server-optimized kernel
+
     # What STAYS active in server mode:
     # - Networking (Ethernet, DNS, mDNS)
     # - Tailscale VPN
     # - Basic CLI tools (git, htop, etc.)
     # - SSH
+    # - CachyOS server kernel
   };
 
   # Convert the config map to NixOS options
   # This uses lib.mkDefault so you can override individual settings
-  serverModeConfig = lib.mapAttrs (_: value: lib.mkDefault value) serverModeDisables;
+  serverModeOptions = lib.mapAttrs (_: value: lib.mkDefault value) serverModeConfig;
 in
 {
   # Feature toggles consumed by multiple modules.
@@ -95,6 +100,6 @@ in
 
   # Apply server mode configuration
   config = lib.mkIf config.features.server (
-    lib.setAttrByPath [ "features" ] serverModeConfig
+    lib.setAttrByPath [ "features" ] serverModeOptions
   );
 }

@@ -17,7 +17,7 @@
 # Differences from samuels-pc:
 # - Only one encrypted partition (no separate games partition)
 
-{ ... }:
+_:
 
 {
   boot.initrd.luks.devices = {

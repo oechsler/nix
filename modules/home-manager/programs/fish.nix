@@ -69,7 +69,7 @@
       };
     };
     plugins = [
-      { name = "fzf.fish"; src = pkgs.fishPlugins.fzf-fish.src; }
+      { name = "fzf.fish"; inherit (pkgs.fishPlugins.fzf-fish) src; }
     ];
   };
 

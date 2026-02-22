@@ -48,9 +48,11 @@
     };
 
     security.pam.services.sddm.enableGnomeKeyring = true;
-    services.gnome.gnome-keyring.enable = true;
 
-    services.gvfs.enable = true;
-    services.udisks2.enable = true;
+    services = {
+      gnome.gnome-keyring.enable = true;
+      gvfs.enable = true;
+      udisks2.enable = true;
+    };
   };
 }

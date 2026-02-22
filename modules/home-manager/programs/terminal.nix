@@ -31,53 +31,61 @@
   };
 
   config = {
-    programs.kitty = {
-      enable = true;
-      font = {
-        name = fonts.monospace;
-        size = fonts.terminalSize;
+    programs = {
+      kitty = {
+        enable = true;
+        font = {
+          name = fonts.monospace;
+          size = fonts.terminalSize;
+        };
+        settings = {
+          window_padding_width = theme.gaps.outer;
+          confirm_os_window_close = 0;
+        } // lib.optionalAttrs (features.desktop.wm != "hyprland") {
+          remember_window_size = "no";
+          initial_window_width = "96c";
+          initial_window_height = "22c";
+        };
+        keybindings = {
+          "alt+shift+enter" = "send_text all \\x1b-";
+        };
       };
-      settings = {
-        window_padding_width = theme.gaps.outer;
-        confirm_os_window_close = 0;
-      } // lib.optionalAttrs (features.desktop.wm != "hyprland") {
-        remember_window_size = "no";
-        initial_window_width = "96c";
-        initial_window_height = "22c";
+
+      starship = {
+        enable = true;
+        enableFishIntegration = true;
       };
-      keybindings = {
-        "alt+shift+enter" = "send_text all \\x1b-";
+
+      eza = {
+        enable = true;
+        enableFishIntegration = true;
+        icons = "auto";
+        extraOptions = [ "--group-directories-first" ];
+      };
+
+      bat.enable = true;
+      gitui.enable = true;
+
+      htop = {
+        enable = true;
+        settings = {
+          tree_view = true;
+          sort_key = 1;
+        };
+      };
+
+      fzf = {
+        enable = true;
+        enableFishIntegration = true;
+      };
+
+      fastfetch.enable = true;
+
+      zoxide = {
+        enable = true;
+        enableFishIntegration = true;
       };
     };
-
-    programs.starship = {
-      enable = true;
-      enableFishIntegration = true;
-    };
-
-    programs.eza = {
-      enable = true;
-      enableFishIntegration = true;
-      icons = "auto";
-      extraOptions = [ "--group-directories-first" ];
-    };
-
-    programs.bat.enable = true;
-    programs.gitui.enable = true;
-    programs.htop = {
-      enable = true;
-      settings = {
-        tree_view = true;
-        sort_key = 1;
-      };
-    };
-
-    programs.fzf = {
-      enable = true;
-      enableFishIntegration = true;
-    };
-
-    programs.fastfetch.enable = true;
 
     home.packages = with pkgs; [
       bluetui
@@ -87,10 +95,5 @@
       ripgrep
       wiremix
     ];
-
-    programs.zoxide = {
-      enable = true;
-      enableFishIntegration = true;
-    };
   };
 }

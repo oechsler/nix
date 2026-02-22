@@ -49,13 +49,13 @@ in
     }
 
     (lib.mkIf config.features.desktop.enable {
-      boot.plymouth.enable = true;
-      catppuccin.plymouth.enable = false;
+      boot = {
+        plymouth.enable = true;
 
-      # Silent boot
-      boot.consoleLogLevel = 0;
-      boot.initrd.verbose = false;
-      boot.kernelParams = [
+        # Silent boot
+        consoleLogLevel = 0;
+        initrd.verbose = false;
+        kernelParams = [
         "quiet"
         "splash"
         "boot.shell_on_fail"
@@ -64,6 +64,8 @@ in
         "rd.udev.log_level=3"
         "udev.log_priority=3"
       ];
+      };
+      catppuccin.plymouth.enable = false;
     })
   ];
 }

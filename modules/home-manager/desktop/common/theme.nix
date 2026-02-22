@@ -15,8 +15,7 @@
 
 let
   # Theme colors and packages
-  flavor = theme.catppuccin.flavor;
-  accent = theme.catppuccin.accent;
+  inherit (theme.catppuccin) flavor accent;
   isLight = flavor == "latte";
   iconName = theme.icons.name;
   iconPackage = theme.icons.package;
@@ -92,30 +91,35 @@ in
       settings.StartupWMClass = "Vesktop";
     };
 
-    # Clean up stale .bak files before home-manager checks for conflicts
-    home.activation.cleanupBackups = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-      rm -f ~/.gtkrc-2.0.bak
-    '';
-
     catppuccin = {
       enable = true;
       flavor = lib.mkDefault flavor;
       accent = lib.mkDefault accent;
     };
 
-    home.pointerCursor = {
-      name = cursorName;
-      package = cursorPackage;
-      size = cursorSize;
-      gtk.enable = true;
-      x11.enable = true;
+    home = {
+      # Clean up stale .bak files before home-manager checks for conflicts
+      activation.cleanupBackups = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+        rm -f ~/.gtkrc-2.0.bak
+      '';
+
+      pointerCursor = {
+        name = cursorName;
+        package = cursorPackage;
+        size = cursorSize;
+        gtk.enable = true;
+        x11.enable = true;
+      };
+
+      # Electron apps (Discord, VS Code, …) natively on Wayland
+      sessionVariables.NIXOS_OZONE_WL = "1";
     };
 
     gtk = {
       enable = true;
       font = {
+        inherit (fonts) size;
         name = fonts.ui;
-        size = fonts.size;
       };
       theme = {
         name = themeName;
@@ -126,9 +130,6 @@ in
         package = lib.mkForce iconPackage;
       };
     };
-
-    # Electron apps (Discord, VS Code, …) natively on Wayland
-    home.sessionVariables.NIXOS_OZONE_WL = "1";
 
     dconf.settings."org/gnome/desktop/interface".color-scheme =
       if isLight then "prefer-light" else "prefer-dark";

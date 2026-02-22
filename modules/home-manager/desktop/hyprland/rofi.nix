@@ -266,55 +266,57 @@ in
     };
 
     # Hide Rofi from drun
-    home.file.".local/share/applications/rofi.desktop".text = ''
-      [Desktop Entry]
-      Type=Application
-      Name=Rofi
-      Exec=rofi
-      Hidden=true
-    '';
-    home.file.".local/share/applications/rofi-theme-selector.desktop".text = ''
-      [Desktop Entry]
-      Type=Application
-      Name=Rofi Theme Selector
-      Exec=rofi-theme-selector
-      Hidden=true
-    '';
-    home.file.".local/share/applications/gvim.desktop".text = ''
-      [Desktop Entry]
-      Type=Application
-      Name=GVim
-      Exec=gvim
-      Hidden=true
-    '';
-    home.file.".local/share/applications/uurecord.desktop".text = ''
-      [Desktop Entry]
-      Type=Application
-      Name=uurecord
-      Exec=uurecord
-      Hidden=true
-    '';
-    home.file.".local/share/applications/uuctl.desktop".text = ''
-      [Desktop Entry]
-      Type=Application
-      Name=uuctl
-      Exec=uuctl
-      Hidden=true
-    '';
-    home.file.".local/share/applications/qt5ct.desktop".text = ''
-      [Desktop Entry]
-      Type=Application
-      Name=Qt5 Settings
-      Exec=qt5ct
-      Hidden=true
-    '';
-    home.file.".local/share/applications/qt6ct.desktop".text = ''
-      [Desktop Entry]
-      Type=Application
-      Name=Qt6 Settings
-      Exec=qt6ct
-      Hidden=true
-    '';
+    home.file = {
+      ".local/share/applications/rofi.desktop".text = ''
+        [Desktop Entry]
+        Type=Application
+        Name=Rofi
+        Exec=rofi
+        Hidden=true
+      '';
+      ".local/share/applications/rofi-theme-selector.desktop".text = ''
+        [Desktop Entry]
+        Type=Application
+        Name=Rofi Theme Selector
+        Exec=rofi-theme-selector
+        Hidden=true
+      '';
+      ".local/share/applications/gvim.desktop".text = ''
+        [Desktop Entry]
+        Type=Application
+        Name=GVim
+        Exec=gvim
+        Hidden=true
+      '';
+      ".local/share/applications/uurecord.desktop".text = ''
+        [Desktop Entry]
+        Type=Application
+        Name=uurecord
+        Exec=uurecord
+        Hidden=true
+      '';
+      ".local/share/applications/uuctl.desktop".text = ''
+        [Desktop Entry]
+        Type=Application
+        Name=uuctl
+        Exec=uuctl
+        Hidden=true
+      '';
+      ".local/share/applications/qt5ct.desktop".text = ''
+        [Desktop Entry]
+        Type=Application
+        Name=Qt5 Settings
+        Exec=qt5ct
+        Hidden=true
+      '';
+      ".local/share/applications/qt6ct.desktop".text = ''
+        [Desktop Entry]
+        Type=Application
+        Name=Qt6 Settings
+        Exec=qt6ct
+        Hidden=true
+      '';
+    };
     home.file.".local/share/applications/kvantummanager.desktop".text = ''
       [Desktop Entry]
       Type=Application
