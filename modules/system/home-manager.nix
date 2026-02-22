@@ -17,10 +17,8 @@
 # - displays: config.displays (monitor configuration)
 # - input: config.input (mouse/touchpad natural scroll)
 #
-# Integrations:
-# - Catppuccin theming (catppuccin.homeModules.catppuccin)
-# - SOPS secrets (sops-nix.homeManagerModules.sops)
-# - KDE Plasma config (plasma-manager.homeModules.plasma-manager)
+# Note: Shared modules (Catppuccin, SOPS, Plasma Manager) are imported via
+# flake.nix sharedModules, not here.
 #
 # Optional host-specific home.nix:
 # - Only needed for host-specific user configuration (e.g., idle timeouts)
@@ -43,12 +41,7 @@ in
       fonts = config.fonts.defaults;
     };
     users.${config.user.name} = {
-      imports = [
-        inputs.catppuccin.homeModules.catppuccin
-        inputs.sops-nix.homeManagerModules.sops
-        inputs.plasma-manager.homeModules.plasma-manager
-      ]
-      ++ lib.optional hasHostHomeNix hostHomeNix;
+      imports = lib.optional hasHostHomeNix hostHomeNix;
 
       # Automatic defaults (can be overridden in host-specific home.nix)
       home = {

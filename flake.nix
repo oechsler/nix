@@ -157,7 +157,9 @@
                 useUserPackages = true;
                 sharedModules = [
                   (import ./modules/home-manager)
-                  inputs.catppuccin.homeManagerModules.catppuccin
+                  inputs.catppuccin.homeModules.catppuccin
+                  inputs.sops-nix.homeManagerModules.sops
+                  inputs.plasma-manager.homeModules.plasma-manager
                 ];
               };
             }
