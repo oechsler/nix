@@ -62,39 +62,40 @@ in
     # 3. Dock Configuration
     #---------------------------
     # Main dock settings (position, size, margins)
-    xdg.configFile."hypr-dock/config.jsonc".text = builtins.toJSON {
-      CurrentTheme = "catppuccin";
-      IconSize = 36;
-      Layer = "exclusive-bottom";
-      Position = "bottom";
-      SystemGapUsed = "true";
-      Margin = theme.gaps.outer;
-      ContextPos = 5;
-      Preview = "none";  # Disable window previews
-    };
-
-    #---------------------------
-    # 4. Pinned Applications
-    #---------------------------
-    # Apps shown in dock (from desktop.pinnedApps)
-    xdg.configFile."hypr-dock/pinned.json".text = builtins.toJSON {
-      Pinned = config.desktop.pinnedApps;
-    };
-
-    #---------------------------
-    # 5. Catppuccin Theme
-    #---------------------------
-    # Theme configuration (generated from Catppuccin palette)
-    xdg.configFile."hypr-dock/themes/catppuccin/catppuccin.jsonc".text = builtins.toJSON {
-      Blur = "true";
-      Spacing = 5;
-      PreviewStyle = {
-        Size = 120;
-        BorderRadius = theme.radius.small;
-        Padding = 10;
+    xdg.configFile = {
+      "hypr-dock/config.jsonc".text = builtins.toJSON {
+        CurrentTheme = "catppuccin";
+        IconSize = 36;
+        Layer = "exclusive-bottom";
+        Position = "bottom";
+        SystemGapUsed = "true";
+        Margin = theme.gaps.outer;
+        ContextPos = 5;
+        Preview = "none";  # Disable window previews
       };
-    };
-    xdg.configFile."hypr-dock/themes/catppuccin/style.css".text = ''
+
+      #---------------------------
+      # 4. Pinned Applications
+      #---------------------------
+      # Apps shown in dock (from desktop.pinnedApps)
+      "hypr-dock/pinned.json".text = builtins.toJSON {
+        Pinned = config.desktop.pinnedApps;
+      };
+
+      #---------------------------
+      # 5. Catppuccin Theme
+      #---------------------------
+      # Theme configuration (generated from Catppuccin palette)
+      "hypr-dock/themes/catppuccin/catppuccin.jsonc".text = builtins.toJSON {
+        Blur = "true";
+        Spacing = 5;
+        PreviewStyle = {
+          Size = 120;
+          BorderRadius = theme.radius.small;
+          Padding = 10;
+        };
+      };
+      "hypr-dock/themes/catppuccin/style.css".text = ''
       window {
         background-color: transparent;
       }
@@ -163,24 +164,25 @@ in
       }
     '';
 
-    # Point indicators (dots under icons) in accent color
-    xdg.configFile."hypr-dock/themes/catppuccin/point/0.svg".text = ''
+      # Point indicators (dots under icons) in accent color
+      "hypr-dock/themes/catppuccin/point/0.svg".text = ''
       <svg width="48" height="8" viewBox="0 0 12.7 2.1167" xmlns="http://www.w3.org/2000/svg"></svg>
     '';
-    xdg.configFile."hypr-dock/themes/catppuccin/point/1.svg".text = ''
-      <svg width="48" height="9" viewBox="0 0 12.7 2.3812" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="6.35" cy="1.0583" r=".9388" fill="${accentHex}"/>
-      </svg>
-    '';
-    xdg.configFile."hypr-dock/themes/catppuccin/point/2.svg".text = ''
-      <svg width="48" height="9" viewBox="0 0 12.7 2.3812" xmlns="http://www.w3.org/2000/svg">
-        <g fill="${accentHex}"><circle cx="4.6917" cy="1.0583" r=".9388"/><circle cx="8.0083" cy="1.0583" r=".9388"/></g>
-      </svg>
-    '';
-    xdg.configFile."hypr-dock/themes/catppuccin/point/3.svg".text = ''
-      <svg width="48" height="9" viewBox="0 0 12.7 2.3812" xmlns="http://www.w3.org/2000/svg">
-        <g transform="translate(-1.6591)" fill="${accentHex}"><circle cx="4.6917" cy="1.0583" r=".9388"/><circle cx="8.0083" cy="1.0583" r=".9388"/><circle cx="11.327" cy="1.0614" r=".9388"/></g>
-      </svg>
-    '';
+      "hypr-dock/themes/catppuccin/point/1.svg".text = ''
+        <svg width="48" height="9" viewBox="0 0 12.7 2.3812" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="6.35" cy="1.0583" r=".9388" fill="${accentHex}"/>
+        </svg>
+      '';
+      "hypr-dock/themes/catppuccin/point/2.svg".text = ''
+        <svg width="48" height="9" viewBox="0 0 12.7 2.3812" xmlns="http://www.w3.org/2000/svg">
+          <g fill="${accentHex}"><circle cx="4.6917" cy="1.0583" r=".9388"/><circle cx="8.0083" cy="1.0583" r=".9388"/></g>
+        </svg>
+      '';
+      "hypr-dock/themes/catppuccin/point/3.svg".text = ''
+        <svg width="48" height="9" viewBox="0 0 12.7 2.3812" xmlns="http://www.w3.org/2000/svg">
+          <g transform="translate(-1.6591)" fill="${accentHex}"><circle cx="4.6917" cy="1.0583" r=".9388"/><circle cx="8.0083" cy="1.0583" r=".9388"/><circle cx="11.327" cy="1.0614" r=".9388"/></g>
+        </svg>
+      '';
+    };
   };
 }

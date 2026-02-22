@@ -14,8 +14,7 @@
 { config, pkgs, lib, theme, input, ... }:
 
 let
-  flavor = theme.catppuccin.flavor;
-  accent = theme.catppuccin.accent;
+  inherit (theme.catppuccin) flavor accent;
   isLight = flavor == "latte";
   iconName = theme.icons.name;
   cursorName = theme.cursor.name;
@@ -192,15 +191,17 @@ in
         };
       };
 
-      # Window decoration buttons (Mac-style: close, minimize, maximize on left)
-      kwin.titlebarButtons = {
-        left = [ "close" "minimize" "maximize" ];
-        right = [];
-      };
+      kwin = {
+        # Window decoration buttons (Mac-style: close, minimize, maximize on left)
+        titlebarButtons = {
+          left = [ "close" "minimize" "maximize" ];
+          right = [];
+        };
 
-      # Disable hot corners
-      kwin.edgeBarrier = 0;
-      kwin.cornerBarrier = false;
+        # Disable hot corners
+        edgeBarrier = 0;
+        cornerBarrier = false;
+      };
 
       # KRunner (search) on Super+Space
       shortcuts."org.kde.krunner.desktop"._launch = "Meta+Space";
@@ -210,17 +211,22 @@ in
       configFile = {
         # Breeze corner radius
         breezerc.Common.CornerRadius = theme.radius.default;
+
         # Disable screen edges (hot corners for desktop grid, etc.)
-        kwinrc.Effect-overview.BorderActivate = 9;
-        kwinrc.Effect-windowview.BorderActivate = 9;
-        kwinrc.ElectricBorders.TopLeft = "None";
-        kwinrc.ElectricBorders.TopRight = "None";
-        kwinrc.ElectricBorders.BottomLeft = "None";
-        kwinrc.ElectricBorders.BottomRight = "None";
-        kwinrc.ElectricBorders.Top = "None";
-        kwinrc.ElectricBorders.Bottom = "None";
-        kwinrc.ElectricBorders.Left = "None";
-        kwinrc.ElectricBorders.Right = "None";
+        kwinrc = {
+          Effect-overview.BorderActivate = 9;
+          Effect-windowview.BorderActivate = 9;
+          ElectricBorders = {
+            TopLeft = "None";
+            TopRight = "None";
+            BottomLeft = "None";
+            BottomRight = "None";
+            Top = "None";
+            Bottom = "None";
+            Left = "None";
+            Right = "None";
+          };
+        };
       };
     };
 

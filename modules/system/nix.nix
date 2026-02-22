@@ -36,29 +36,27 @@
   #---------------------------
   # 1. Nix Features
   #---------------------------
-  nix.settings = {
-    experimental-features = [ "nix-command" "flakes" ];
+  nix = {
+    settings = {
+      experimental-features = [ "nix-command" "flakes" ];
+      # Deduplicate identical files in /nix/store
+      # Saves disk space by hardlinking duplicate files
+      auto-optimise-store = true;
+    };
+
+    #---------------------------
+    # 2. Garbage Collection
+    #---------------------------
+    # Automatically remove old generations to save disk space
+    gc = {
+      automatic = true;
+      dates = "weekly";
+      options = "--delete-older-than 14d";  # Keep last 14 days
+    };
   };
 
   # Allow unfree packages (e.g., Discord, Spotify, proprietary drivers)
   nixpkgs.config.allowUnfree = true;
-
-  #---------------------------
-  # 2. Garbage Collection
-  #---------------------------
-  # Automatically remove old generations to save disk space
-  nix.gc = {
-    automatic = true;
-    dates = "weekly";
-    options = "--delete-older-than 14d";  # Keep last 14 days
-  };
-
-  #---------------------------
-  # 3. Store Optimization
-  #---------------------------
-  # Deduplicate identical files in /nix/store
-  # Saves disk space by hardlinking duplicate files
-  nix.settings.auto-optimise-store = true;
 
   #---------------------------
   # 4. Automatic System Upgrades
@@ -71,15 +69,6 @@
     flags = [ "--refresh" ];  # Refresh cached evaluations
   };
 
-  # Upgrade schedule
-  systemd.timers.nixos-upgrade = {
-    timerConfig = {
-      OnBootSec = "30min";  # First upgrade 30min after boot
-      OnUnitActiveSec = "24h";  # Subsequent upgrades every 24h
-      Persistent = lib.mkForce false;  # Don't run missed upgrades on boot
-    };
-  };
-
   #---------------------------
   # 5. Git Configuration
   #---------------------------
@@ -89,6 +78,16 @@
     [safe]
       directory = ${config.users.users.${config.user.name}.home}/repos/nix
   '';
+
+  systemd = {
+    # Upgrade schedule
+    timers.nixos-upgrade = {
+      timerConfig = {
+        OnBootSec = "30min";  # First upgrade 30min after boot
+        OnUnitActiveSec = "24h";  # Subsequent upgrades every 24h
+        Persistent = lib.mkForce false;  # Don't run missed upgrades on boot
+      };
+    };
 
   #---------------------------
   # 6. Upgrade Customization
@@ -108,7 +107,7 @@
   # - ExecStartPost: Check if reboot is needed and notify
   # - OnFailure: Trigger failure notification service
 
-  systemd.services.nixos-upgrade = let
+    services.nixos-upgrade = let
     flakeDir = "${config.users.users.${config.user.name}.home}/repos/nix";
     user = config.user.name;
 
@@ -164,12 +163,12 @@
     unitConfig.OnFailure = [ "nixos-upgrade-notify-failure.service" ];
   };
 
-  #---------------------------
-  # 7. Upgrade Failure Notification
-  #---------------------------
-  # Triggered when nixos-upgrade service fails
-  # Shows last 5 error lines from journal in critical notification
-  systemd.services.nixos-upgrade-notify-failure = let
+    #---------------------------
+    # 7. Upgrade Failure Notification
+    #---------------------------
+    # Triggered when nixos-upgrade service fails
+    # Shows last 5 error lines from journal in critical notification
+    services.nixos-upgrade-notify-failure = let
     notify = pkgs.writeShellScript "nixos-upgrade-notify-failure" ''
       # Extract last 5 error lines from nixos-upgrade journal
       error=$(${pkgs.systemd}/bin/journalctl -u nixos-upgrade.service -b --no-pager -p err -o cat | tail -5)
@@ -187,5 +186,6 @@
       Type = "oneshot";
       ExecStart = "${notify}";
     };
+  };
   };
 }

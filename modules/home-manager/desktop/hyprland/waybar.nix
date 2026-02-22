@@ -169,7 +169,7 @@ in
       };
     };
 
-      style = style;
+      inherit style;
     };
   };
 }

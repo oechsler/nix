@@ -39,19 +39,11 @@ jobs:
       - name: Run custom convention linter
         run: nix build .#checks.x86_64-linux.lint --show-trace
 
-      - name: Show statix suggestions (informational)
-        run: |
-          echo "=== Statix Suggestions ==="
-          nix build .#checks.x86_64-linux.statix
-          cat result || true
-        continue-on-error: true
+      - name: Run statix (anti-patterns)
+        run: nix build .#checks.x86_64-linux.statix --show-trace
 
-      - name: Show deadnix suggestions (informational)
-        run: |
-          echo "=== Deadnix Suggestions ==="
-          nix build .#checks.x86_64-linux.deadnix
-          cat result || true
-        continue-on-error: true
+      - name: Run deadnix (dead code detection)
+        run: nix build .#checks.x86_64-linux.deadnix --show-trace
 
   #===========================================================================
   # Job 2: Build Validation

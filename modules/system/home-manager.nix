@@ -28,13 +28,9 @@
     useGlobalPkgs = true;
     extraSpecialArgs = {
       inherit inputs;
+      inherit (config) locale user features displays input;
+      inherit (config) theme;
       fonts = config.fonts.defaults;
-      theme = config.theme;
-      locale = config.locale;
-      user = config.user;
-      features = config.features;
-      displays = config.displays;
-      input = config.input;
     };
     users.${config.user.name} = {
       imports = [

@@ -28,7 +28,7 @@
 { config, pkgs, lib, ... }:
 
 let
-  monitors = config.displays.monitors;
+  inherit (config.displays) monitors;
 
   blurredWallpaper = config.theme.blurredWallpaperPath;
 

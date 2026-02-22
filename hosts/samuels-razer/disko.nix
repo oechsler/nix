@@ -23,7 +23,7 @@
 # - Root (/) is ephemeral, rolled back to blank snapshot on reboot
 # - Only /home, /nix, /persist survive reboots
 
-{ ... }:
+_:
 
 {
   disko.devices = {

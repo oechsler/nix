@@ -10,7 +10,7 @@
 # - Improves performance on systems with limited RAM
 # - Compression ratio typically 2-3x
 
-{ ... }:
+_:
 
 {
   programs.coolercontrol.enable = true;

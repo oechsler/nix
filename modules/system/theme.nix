@@ -55,8 +55,7 @@
       package = lib.mkOption {
         type = lib.types.package;
         default = pkgs.catppuccin-papirus-folders.override {
-          flavor = config.theme.catppuccin.flavor;
-          accent = config.theme.catppuccin.accent;
+          inherit (config.theme.catppuccin) flavor accent;
         };
         description = "Icon theme package (Papirus with Catppuccin folder colors)";
       };
@@ -154,8 +153,7 @@
     {
       catppuccin = {
         enable = true;
-        flavor = config.theme.catppuccin.flavor;
-        accent = config.theme.catppuccin.accent;
+        inherit (config.theme.catppuccin) flavor accent;
       };
     }
 
@@ -179,17 +177,19 @@
 
     (lib.mkIf (config.theme.catppuccin.flavor != "latte") {
       # System-wide GTK dark preference
-      environment.etc."gtk-2.0/gtkrc".text = ''
-        gtk-application-prefer-dark-theme=1
-      '';
-      environment.etc."gtk-3.0/settings.ini".text = ''
-        [Settings]
-        gtk-application-prefer-dark-theme=1
-      '';
-      environment.etc."gtk-4.0/settings.ini".text = ''
-        [Settings]
-        gtk-application-prefer-dark-theme=1
-      '';
+      environment.etc = {
+        "gtk-2.0/gtkrc".text = ''
+          gtk-application-prefer-dark-theme=1
+        '';
+        "gtk-3.0/settings.ini".text = ''
+          [Settings]
+          gtk-application-prefer-dark-theme=1
+        '';
+        "gtk-4.0/settings.ini".text = ''
+          [Settings]
+          gtk-application-prefer-dark-theme=1
+        '';
+      };
 
       # dconf system database for GNOME apps
       programs.dconf = {
@@ -268,15 +268,15 @@
       system.activationScripts.rootQtDark = {
         deps = [ ];
         text = let
-          flavor = config.theme.catppuccin.flavor;
-          iconName = config.theme.icons.name;
+          inherit (config.theme.catppuccin) flavor;
+          inherit (config.theme.icons) name;
           kvantumTheme = "catppuccin-${flavor}-${config.theme.catppuccin.accent}";
 
           # Qt5 configuration: Use Kvantum style + icon theme
           qt5ctConf = pkgs.writeText "qt5ct.conf" ''
             [Appearance]
             style=kvantum
-            icon_theme=${iconName}
+            icon_theme=${name}
             color_scheme_path=
             custom_palette=false
           '';
@@ -285,7 +285,7 @@
           qt6ctConf = pkgs.writeText "qt6ct.conf" ''
             [Appearance]
             style=kvantum
-            icon_theme=${iconName}
+            icon_theme=${name}
             color_scheme_path=
             custom_palette=false
           '';
@@ -299,7 +299,7 @@
 
           # Catppuccin Kvantum theme package
           catppuccinKvantum = pkgs.catppuccin-kvantum.override {
-            accent = config.theme.catppuccin.accent;
+            inherit (config.theme.catppuccin) accent;
             variant = flavor;
           };
         in ''

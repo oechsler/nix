@@ -25,7 +25,7 @@
 { config, pkgs, lib, ... }:
 
 let
-  idle = config.idle;
+  inherit (config) idle;
 
   # ============================================================================
   # BATTERY DETECTION HELPERS

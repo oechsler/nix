@@ -91,22 +91,23 @@ in
 
     #---------------------------
     # 1. Root Account Lockdown
-    #---------------------------
-    # Why: Disable direct root login for security
-    # Users must use sudo via their personal account (audit trail)
-    users.users.root.hashedPassword = "!";  # "!" = account locked
+    users = {
+      #---------------------------
+      # Why: Disable direct root login for security
+      # Users must use sudo via their personal account (audit trail)
+      users.root.hashedPassword = "!";  # "!" = account locked
 
-    #---------------------------
-    # 2. Declarative User Management
-    #---------------------------
-    # Why: NixOS should be the single source of truth for user accounts
-    # Prevents manual changes via passwd/useradd commands
-    users.mutableUsers = false;
+      #---------------------------
+      # 2. Declarative User Management
+      #---------------------------
+      # Why: NixOS should be the single source of truth for user accounts
+      # Prevents manual changes via passwd/useradd commands
+      mutableUsers = false;
 
-    #---------------------------
-    # 3. Primary User Account
-    #---------------------------
-    users.users.${cfg.name} = {
+      #---------------------------
+      # 3. Primary User Account
+      #---------------------------
+      users.${cfg.name} = {
       isNormalUser = true;
       description = cfg.fullName;
 
@@ -117,7 +118,8 @@ in
       ];
 
       shell = pkgs.fish;
-      hashedPassword = cfg.hashedPassword;
+      inherit (cfg) hashedPassword;
+    };
     };
 
     #---------------------------

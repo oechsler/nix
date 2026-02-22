@@ -19,9 +19,11 @@
     ../../modules/home-manager
   ];
 
-  home.username = user.name;
-  home.homeDirectory = "/home/${user.name}";
-  home.stateVersion = "25.11";
+  home = {
+    username = user.name;
+    homeDirectory = "/home/${user.name}";
+    stateVersion = "25.11";
+  };
 
   programs.home-manager.enable = true;
 

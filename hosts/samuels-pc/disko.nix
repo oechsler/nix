@@ -22,7 +22,7 @@
 # - Only /home, /nix, /persist survive reboots
 # - See modules/system/impermanence.nix for persistence config
 
-{ ... }:
+_:
 
 {
   disko.devices = {
