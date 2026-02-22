@@ -7,10 +7,8 @@
 # 4. Graceful unmounting on shutdown
 #
 # Configuration options:
-#   features.smb.enable = true;  # Enable SMB mounts (default: true)
-#
-# SMB share configuration in this file:
-#   smbShares = [ "personal-drive" ];  # List of share names to mount
+#   features.smb.enable = true;                      # Enable SMB mounts (default: true)
+#   features.smb.shares = [ "personal-drive" ];      # SMB shares to mount (default: ["personal-drive"])
 #
 # Required SOPS secrets for each share:
 #   smb/<name>/label    - Display name (e.g., "Personal Drive")
@@ -31,11 +29,6 @@
 
 let
   cfg = config.features.smb;
-
-  # List of SMB shares to mount
-  # Add new shares here and create corresponding SOPS secrets
-  smbShares = [ "personal-drive" ];
-
   user = config.users.users.${config.user.name};
 
   # ============================================================================
@@ -74,7 +67,7 @@ let
   # SOPS SECRETS CONFIGURATION
   # ============================================================================
   # Generate SOPS secret definitions for all SMB shares
-  # For each share in smbShares, we need 4 secrets:
+  # For each share in cfg.shares, we need 4 secrets:
   # - label: Display name (e.g., "Personal Drive")
   # - path: SMB path (e.g., "//192.168.1.100/share")
   # - username: SMB username
@@ -84,7 +77,7 @@ let
     { name = "smb/${name}/path"; value = {}; }
     { name = "smb/${name}/username"; value = {}; }
     { name = "smb/${name}/password"; value = {}; }
-  ]) smbShares));
+  ]) cfg.shares));
 
   # ============================================================================
   # MOUNT SCRIPT
@@ -150,7 +143,7 @@ let
         fi
       fi
     ''
-  ) smbShares;
+  ) cfg.shares;
 
   # ============================================================================
   # UNMOUNT SCRIPT
@@ -165,7 +158,7 @@ let
       # Lazy unmount: detach immediately, clean up when no longer busy
       umount -l "${user.home}/smb/${label}" || true
     ''
-  ) smbShares;
+  ) cfg.shares;
 in
 {
   #===========================
@@ -174,6 +167,11 @@ in
 
   options.features.smb = {
     enable = (lib.mkEnableOption "SMB network share mounts") // { default = true; };
+    shares = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ "personal-drive" ];
+      description = "SMB share names to mount — each needs smb/<name>/{label,path,username,password} SOPS secrets";
+    };
   };
 
   #===========================
@@ -208,7 +206,7 @@ in
           username=${config.sops.placeholder."smb/${name}/username"}
           password=${config.sops.placeholder."smb/${name}/password"}
         '';
-      }) smbShares) // {
+      }) cfg.shares) // {
         # Mount script (generated from mountContent)
         "smb-mount.sh".content = "#!/bin/bash\n" + mountContent;
         # Unmount script (generated from umountContent)

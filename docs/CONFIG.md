@@ -23,6 +23,7 @@ features.ssh.enable = true;
 | `features.virtualisation.enable` | `true` | Docker daemon + user group |
 | `features.virtualisation.waydroid.enable` | `false` | Waydroid Android container |
 | `features.smb.enable` | `true` | SMB network share mounts (auto-mount with retry) |
+| `features.smb.shares` | `["personal-drive"]` | SMB share names (via SOPS secrets) |
 | `features.flatpak.enable` | `true` | Flatpak + Flathub (Flatseal, Flatsweep) |
 | `features.appimage.enable` | `true` | AppImage support + auto-watcher in ~/Applications |
 | `features.tailscale.enable` | `true` | Tailscale VPN (+ trayscale tray icon on desktop) |
