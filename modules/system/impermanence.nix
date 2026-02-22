@@ -1,9 +1,11 @@
 # Impermanence Configuration
 #
+# Feature toggle: features.impermanence.enable (default: true)
+#
 # This module configures:
 # 1. Impermanent root filesystem (wiped on every boot)
 # 2. Persistent storage in /persist (btrfs subvolume)
-# 3. Root subvolume rollback at boot
+# 3. Root subvolume rollback at boot (requires encryption)
 #
 # Why impermanence:
 # - Security: Malware and rootkits don't survive reboot
@@ -35,17 +37,20 @@
 { config, lib, ... }:
 
 let
-  # LUKS-encrypted btrfs root partition
-  # After unlock: /dev/mapper/cryptroot
-  rootPartition = "/dev/mapper/cryptroot";
-  systemdDevice = "dev-mapper-cryptroot.device";
+  # Extract root device from filesystem configuration
+  # Works with both LUKS (/dev/mapper/cryptroot) and direct devices
+  rootDevice = config.fileSystems."/".device;
+
+  # Convert device path to systemd device unit name
+  # Example: /dev/mapper/cryptroot → dev-mapper-cryptroot.device
+  systemdDevice = lib.replaceStrings ["/"] ["-"] (lib.removePrefix "/" rootDevice) + ".device";
 in
 {
   #===========================
   # Configuration
   #===========================
 
-  config = {
+  config = lib.mkIf config.features.impermanence.enable {
 
     #---------------------------
     # 1. Persistent Directories
@@ -86,6 +91,9 @@ in
     #---------------------------
     # Store SSH host keys in /persist to maintain server identity across reboots
     # Without this, SSH clients would see "WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED"
+    #
+    # When impermanence is enabled: /persist/etc/ssh/
+    # When impermanence is disabled: /etc/ssh/ (standard NixOS location)
     services.openssh.hostKeys = [
       {
         path = "/persist/etc/ssh/ssh_host_ed25519_key";
@@ -108,7 +116,7 @@ in
     # Solution: Delete and recreate @ subvolume in initrd before mounting root
     #
     # How it works:
-    # 1. Run in initrd after LUKS unlock but before mounting root
+    # 1. Run in initrd after device availability (LUKS unlock if encrypted)
     # 2. Mount btrfs root (/) to access subvolumes
     # 3. Delete all nested subvolumes under @ (if any)
     # 4. Delete @ subvolume (the root filesystem)
@@ -117,10 +125,12 @@ in
     #
     # Result: Every boot starts with clean root filesystem
     # Only /persist and /nix survive (separate subvolumes)
+    #
+    # Device detection: Uses config.fileSystems."/".device (works with LUKS and direct devices)
     boot.initrd.systemd.services.rollback = {
       description = "Rollback btrfs root to empty snapshot";
       wantedBy = [ "initrd.target" ];
-      after = [ systemdDevice ];  # Wait for LUKS unlock
+      after = lib.mkIf config.features.encryption.enable [ systemdDevice ];  # Wait for LUKS unlock if encrypted
       before = [ "sysroot.mount" ];  # Must complete before mounting root
       unitConfig.DefaultDependencies = "no";
       serviceConfig.Type = "oneshot";
@@ -129,7 +139,7 @@ in
 
         # Mount btrfs root to access subvolumes
         # subvol=/ means mount the btrfs root (not @ subvolume)
-        mount -t btrfs -o subvol=/ ${rootPartition} /mnt
+        mount -t btrfs -o subvol=/ ${rootDevice} /mnt
 
         # Delete all nested subvolumes under @ (e.g., snapshots)
         # cut -f9: Extract subvolume path from btrfs output
