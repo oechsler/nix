@@ -1,7 +1,7 @@
 # Automatic Btrfs Snapshots Configuration
 #
 # This module configures:
-# 1. Automatic hourly snapshots of @home and @persist subvolumes
+# 1. Automatic hourly snapshots of important subvolumes
 # 2. Automatic cleanup with retention policy
 # 3. Snapshot access via /mnt/btrfs-root/@snapshots
 #
@@ -10,7 +10,8 @@
 #
 # Snapshot schedule:
 #   - Runs: Every hour
-#   - Subvolumes: @home, @persist (not @ because impermanence wipes it anyway)
+#   - Subvolumes: @home, @persist
+#   - Subvolumes (conditional): @ (only if impermanence is disabled)
 #   - Storage: /mnt/btrfs-root/@snapshots/
 #
 # Retention policy:
@@ -59,17 +60,25 @@ in
           volume."/mnt/btrfs-root" = {
             snapshot_dir = "@snapshots";  # Store snapshots in @snapshots subvolume
 
-            # Snapshot @home (user data)
-            subvolume."@home" = {
-              snapshot_create = "always";
-            };
-
-            # Snapshot @persist (system state)
-            subvolume."@persist" = {
-              snapshot_create = "always";
-            };
-
-            # Note: @ (root) is not snapshotted because impermanence wipes it on boot
+            # Snapshot subvolumes
+            # - @ (root): Only if impermanence is disabled (otherwise wiped on boot anyway)
+            # - @home: User data (always)
+            # - @persist: System state (always)
+            subvolume = lib.mkMerge [
+              (lib.mkIf (!config.features.impermanence.enable) {
+                "@" = {
+                  snapshot_create = "always";
+                };
+              })
+              {
+                "@home" = {
+                  snapshot_create = "always";
+                };
+                "@persist" = {
+                  snapshot_create = "always";
+                };
+              }
+            ];
           };
         };
       };
@@ -80,8 +89,11 @@ in
     #---------------------------
     # Mount btrfs root (subvol=/) so btrbk can access all subvolumes
     # This is separate from the main root mount (which mounts subvol=@)
+    #
+    # Device detection: Use same device as root filesystem
+    # Works with both LUKS (/dev/mapper/cryptroot) and direct devices
     fileSystems."/mnt/btrfs-root" = {
-      device = "/dev/mapper/cryptroot";
+      inherit (config.fileSystems."/") device;
       fsType = "btrfs";
       options = [
         "subvol=/"       # Mount btrfs root, not @ subvolume
@@ -108,10 +120,14 @@ in
 
       volume /mnt/btrfs-root
         snapshot_dir @snapshots
-        subvolume @home
-          snapshot_create always
-        subvolume @persist
-          snapshot_create always
+        ${lib.optionalString (!config.features.impermanence.enable) ''
+      subvolume @
+        snapshot_create always
+        ''}
+      subvolume @home
+        snapshot_create always
+      subvolume @persist
+        snapshot_create always
     '';
   };
 }

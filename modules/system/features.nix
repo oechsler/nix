@@ -79,6 +79,15 @@ in
   # Single-module toggles (gaming, bluetooth, etc.) are defined in their own modules.
   options.features = {
     server = lib.mkEnableOption "server mode (disables desktop, audio, bluetooth, gaming, etc.)";
+
+    impermanence = {
+      enable = (lib.mkEnableOption "impermanent root with rollback on boot") // { default = true; };
+    };
+
+    encryption = {
+      enable = (lib.mkEnableOption "LUKS full disk encryption") // { default = true; };
+    };
+
     desktop = {
       enable = (lib.mkEnableOption "desktop environment (Hyprland, SDDM, Firefox)") // { default = true; };
       wm = lib.mkOption {

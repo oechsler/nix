@@ -14,6 +14,8 @@ features.ssh.enable = true;
 | Toggle | Default | Description |
 |--------|---------|-------------|
 | `features.server` | `false` | Server mode — disables desktop, apps, audio, bluetooth, gaming, flatpak, appimage, wifi, development; enables cachyos-server kernel |
+| `features.impermanence.enable` | `true` | Impermanent root with btrfs rollback on boot — see [System Requirements](#system-requirements) |
+| `features.encryption.enable` | `true` | LUKS full disk encryption |
 | `features.desktop.enable` | `true` | Desktop environment (SDDM, Firefox, theming) |
 | `features.desktop.wm` | `"hyprland"` | Window manager (`"hyprland"` / `"kde"`) |
 | `features.desktop.dock.enable` | `true` | Application dock for Hyprland (hypr-dock) |
@@ -219,8 +221,37 @@ Set in `home.nix`. Works on both Hyprland (via hypridle) and KDE (via PowerDevil
 
 ## Impermanence
 
+> **⚠️ Optional Feature**: Impermanence is enabled by default but can be disabled with `features.impermanence.enable = false;`.
+
 Root filesystem (`/`) is wiped on every boot. Only explicitly declared paths in `/persist` survive. See [INSTALL.md](INSTALL.md#impermanence) for details.
 
 ## Snapshots
 
 See [SNAPSHOTS.md](SNAPSHOTS.md) for snapshot management (restore, browse, cleanup).
+
+## System Requirements
+
+### Default Configuration (Opinionated)
+
+This config is opinionated and assumes:
+- **Filesystem**: BTRFS with subvolume layout (`@`, `@home`, `@nix`, `@persist`, `@snapshots`)
+- **Encryption**: LUKS2 full disk encryption
+- **Impermanence**: Root filesystem wiped on boot
+
+### Disabling Features
+
+Both impermanence and encryption can be disabled:
+
+```nix
+# Traditional persistent root (no rollback)
+features.impermanence.enable = false;
+
+# Unencrypted disk (not recommended for laptops)
+features.encryption.enable = false;
+```
+
+**Note**: Disabling impermanence keeps your root filesystem persistent — state accumulates normally. Disabling encryption requires manually removing LUKS from your `disko.nix` or creating a new disk layout.
+
+### Partition Layout Requirements
+
+See [INSTALL.md](INSTALL.md#disk-layout) for the required partition and subvolume structure.

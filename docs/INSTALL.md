@@ -50,6 +50,10 @@ samuels-pc has an additional encrypted games disk:
 
 ## Impermanence
 
+> **⚠️ Optional Feature**: Impermanence is enabled by default but can be disabled with `features.impermanence.enable = false;`.
+>
+> **Requires**: BTRFS filesystem with `@` and `@persist` subvolumes.
+
 Root (`@`) is wiped on every boot. Persistent data goes in `/persist`:
 - `/var/lib/bluetooth`
 - `/var/lib/docker`
