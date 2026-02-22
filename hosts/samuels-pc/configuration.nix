@@ -74,7 +74,11 @@
     }
   ];
 
-  features.secureBoot.enable = true;
+  features = {
+    secureBoot.enable = true;
+    virtualisation.waydroid.enable = true;  # Android container
+    apps.winboat.enable = true;             # Windows VM (seamless)
+  };
 
   system.stateVersion = "25.11";
 }

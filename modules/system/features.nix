@@ -66,6 +66,7 @@ let
     # - Tailscale VPN
     # - Basic CLI tools (git, htop, etc.)
     # - SSH
+    # - Docker (virtualisation.enable stays true)
     # - CachyOS server kernel
   };
 
@@ -95,6 +96,7 @@ in
     };
     apps = {
       enable = (lib.mkEnableOption "desktop applications (Discord, Spotify, etc.)") // { default = true; };
+      winboat.enable = lib.mkEnableOption "WinBoat (Windows VM with seamless integration)";
     };
   };
 
