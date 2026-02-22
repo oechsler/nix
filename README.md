@@ -7,47 +7,34 @@ My personal NixOS configurations using Flakes and Home-Manager.
 ## Structure
 
 ```
-hosts/                          # Host-specific configurations
+hosts/          # Per-host configs
 modules/
-  desktop/                      # Desktop environments (Hyprland, KDE, SDDM)
-  home-manager/
-    desktop/
-      common/                   # Cross-WM (GTK, bookmarks, autostart, idle)
-      hyprland/                 # Hyprland-specific (waybar, rofi, hyprlock, etc.)
-      kde/                      # KDE-specific (Plasma, Dolphin, displays)
-    programs/                   # Terminal, browsers, dev tools, apps
-  programs/                     # System-level program configs
-  system/                       # System modules (audio, networking, boot, ...)
-sops/                           # Encrypted secrets (age)
-backgrounds/                    # Wallpaper images
-pictures/                       # User profile pictures
+  system/       # Boot, networking, impermanence, snapshots
+  desktop/      # Hyprland, KDE, SDDM
+  home-manager/ # User programs, dotfiles, theming
+sops/           # Encrypted secrets
 ```
 
 ## Quick Start
 
-See [docs/INSTALL.md](docs/INSTALL.md) for installation instructions.
+- **Fresh install:** [docs/INSTALL.md](docs/INSTALL.md)
+- **Use as base for your config:** [docs/QUICKSTART.md](docs/QUICKSTART.md)
+- **Configuration reference:** [docs/CONFIG.md](docs/CONFIG.md)
 
-## Configuration
+## Features
 
-All features are toggleable per host. Example:
+All features are toggleable per host:
 
 ```nix
-features.server = true;          # Disables all desktop features
-features.gaming.enable = false;
-features.desktop.wm = "kde";     # or "hyprland"
+features.server = true;               # Minimal server (no desktop, optimized kernel)
+features.impermanence.enable = false; # Disable root wipe on boot
+features.gaming.enable = false;       # No Steam/gaming
+features.desktop.wm = "kde";          # Hyprland or KDE
 ```
 
-See [docs/CONFIG.md](docs/CONFIG.md) for the full configuration reference including:
-- Feature toggles (desktop, gaming, development, server mode, ...)
-- Theme options (Catppuccin flavors, wallpapers, gaps, borders)
-- Display configuration (multi-monitor, scaling, rotation)
-- Font, locale, input, autostart, and more
+## Using as Flake Input
 
-## Usage as Flake Dependency
-
-**Quick Start:** See [docs/QUICKSTART.md](docs/QUICKSTART.md) for a complete tutorial.
-
-This flake exports `lib.mkHost` and `lib.mkDisko` for building NixOS systems:
+This flake exports `lib.mkHost` for building NixOS systems:
 
 ```nix
 # your-repo/flake.nix
@@ -68,18 +55,13 @@ This flake exports `lib.mkHost` and `lib.mkDisko` for building NixOS systems:
 }
 ```
 
-**What's included:**
-- Base modules (system, desktop, programs)
+**Included:**
+- System modules (audio, networking, boot, impermanence, snapshots)
+- Desktop environments (Hyprland, KDE)
 - Home-Manager + Catppuccin theming
-- SOPS secrets, Disko, Impermanence
-- CachyOS optimized kernel (server variant when `serverMode = true`)
-- nix-flatpak support
+- SOPS secrets, Disko partitioning
+- CachyOS kernel (desktop + server variants)
 
-**Server mode** (`serverMode = true`) automatically:
-- Disables: Desktop, audio, bluetooth, WiFi, development tools, gaming
-- Enables: CachyOS server-optimized kernel
-- Keeps: SSH, Tailscale, basic CLI tools (git, htop, neovim, etc.)
+**Server mode:** Disables desktop/audio/bluetooth/WiFi/development/gaming/virtualisation. Keeps SSH, Tailscale, CLI tools.
 
-**Disko** (`lib.mkDisko`) is optional for declarative disk partitioning:
-- Include `diskoConfigurations` if you want reproducible disk layouts
-- Omit it if you have existing partitions and use `hardware-configuration.nix` only
+See [docs/QUICKSTART.md](docs/QUICKSTART.md) for detailed setup guide.
