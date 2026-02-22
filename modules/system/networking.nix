@@ -108,9 +108,13 @@ in
     # 1. Base Networking
     #---------------------------
     {
-      networking.networkmanager.enable = true;
-      networking.networkmanager.wifi.backend = "iwd";
-      networking.wireless.iwd.enable = true;
+      networking = {
+        networkmanager = {
+          enable = true;
+          wifi.backend = "iwd";
+        };
+        wireless.iwd.enable = true;
+      };
 
       # systemd-resolved for DNS
       services.resolved = {

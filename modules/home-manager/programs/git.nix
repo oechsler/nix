@@ -23,7 +23,8 @@
 {
   home.packages = [ pkgs.git-credential-manager ];
 
-  programs.git = {
+  programs = {
+    git = {
     enable = true;
 
     signing = {
@@ -62,17 +63,17 @@
     ];
   };
 
-  programs.delta = {
-    enable = true;
-    enableGitIntegration = true;
-    options = {
-      navigate = true;
-      side-by-side = true;
+    delta = {
+      enable = true;
+      enableGitIntegration = true;
+      options = {
+        navigate = true;
+        side-by-side = true;
+      };
     };
-  };
 
-  # Bitwarden SSH Agent
-  programs.ssh = {
+    # Bitwarden SSH Agent
+    ssh = {
     enable = true;
     enableDefaultConfig = false;
     matchBlocks."*" = {
@@ -80,6 +81,7 @@
       extraOptions = {
         IdentityAgent = "${config.home.homeDirectory}/.bitwarden-ssh-agent.sock";
       };
+    };
     };
   };
 

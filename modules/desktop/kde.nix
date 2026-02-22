@@ -21,7 +21,11 @@
 
 {
   config = lib.mkIf (config.features.desktop.enable && config.features.desktop.wm == "kde") {
-    services.desktopManager.plasma6.enable = true;
+    services = {
+      desktopManager.plasma6.enable = true;
+      gvfs.enable = true;
+      udisks2.enable = true;
+    };
 
     xdg.portal = {
       enable = true;
@@ -34,8 +38,5 @@
       partitionmanager
       plasma-browser-integration
     ];
-
-    services.gvfs.enable = true;
-    services.udisks2.enable = true;
   };
 }

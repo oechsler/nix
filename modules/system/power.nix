@@ -12,7 +12,7 @@
 # - Desktop environments provide better UX (confirmation dialogs, logout options)
 # - Prevents accidental shutdowns from brief button presses
 
-{ ... }:
+_:
 
 {
   services.power-profiles-daemon.enable = true;

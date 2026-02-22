@@ -25,7 +25,7 @@
 # - cryptroot: disk-main-root
 # - cryptgames: disk-games-games
 
-{ ... }:
+_:
 
 {
   boot.initrd.luks.devices = {

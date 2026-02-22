@@ -21,8 +21,8 @@
 { config, lib, ... }:
 
 let
+  inherit (config.fileManager) bookmarks;
   home = config.home.homeDirectory;
-  bookmarks = config.fileManager.bookmarks;
   bookmarkedPaths = map (b: b.path) bookmarks;
 
   # XDG directories that Dolphin auto-discovers

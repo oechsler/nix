@@ -12,7 +12,7 @@
 #   gh issue list
 #   gh repo clone owner/repo
 
-{ ... }:
+_:
 
 {
   programs.gh = {
