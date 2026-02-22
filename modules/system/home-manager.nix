@@ -47,7 +47,7 @@ in
       home = {
         username = config.user.name;
         homeDirectory = "/home/${config.user.name}";
-        stateVersion = config.system.stateVersion;
+        inherit (config.system) stateVersion;
       };
 
       programs.home-manager.enable = true;
