@@ -55,12 +55,11 @@ samuels-pc has an additional encrypted games disk:
 > **Requires**: BTRFS filesystem with `@` and `@persist` subvolumes.
 
 Root (`@`) is wiped on every boot. Persistent data goes in `/persist`:
-- `/var/lib/bluetooth`
-- `/var/lib/docker`
-- `/var/lib/NetworkManager`
-- `/var/lib/nixos`
-- `/var/lib/sops`
-- etc.
+- `/var/lib/NetworkManager`, `/var/lib/bluetooth`
+- `/var/lib/docker`, `/var/lib/waydroid`
+- `/var/lib/nixos`, `/var/lib/sops`
+- `/persist/etc/ssh/*` (SSH host keys)
+- etc. (see `modules/system/impermanence.nix` for full list)
 
 User password is declarative in `modules/system/users.nix`.
 
