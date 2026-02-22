@@ -1,14 +1,18 @@
 # Development Tools Configuration
 #
-# This module is split into two parts:
+# This module is split into three parts:
 #
 # 1. CLI Tools (features.development.enable = true)
 #    - Languages: Go, Rust, Java, Node.js
-#    - Kubernetes: kubectl, helm, k9s
 #    - Utilities: cloc, distrobox
 #    - Useful on servers and desktops
 #
-# 2. GUI Tools (features.development.gui.enable = true)
+# 2. Kubernetes Tools (features.development.kubernetes.enable = true)
+#    - kubectl, helm, k9s
+#    - Kubeconfig via SOPS secrets
+#    - Optional, requires SOPS setup
+#
+# 3. GUI Tools (features.development.gui.enable = true)
 #    - VS Code
 #    - JetBrains Toolbox (IntelliJ IDEA, etc.)
 #    - DBeaver (Database GUI)
@@ -20,9 +24,28 @@
 { config, pkgs, features, lib, ... }:
 
 {
+  #===========================
+  # Configuration
+  #===========================
+
   config = lib.mkMerge [
     # CLI Development Tools (always useful, even on servers)
     (lib.mkIf features.development.enable {
+      home.packages = with pkgs; [
+        # Development utilities
+        cloc          # Count lines of code
+        distrobox     # Container environments
+
+        # Languages & Compilers
+        go
+        rustup
+        jdk
+        nodejs
+      ];
+    })
+
+    # Kubernetes Tools (optional, requires SOPS)
+    (lib.mkIf (features.development.enable && features.development.kubernetes.enable) {
       # Kubernetes config from sops
       sops = {
         defaultSopsFile = ../../../sops/sops.encrypted.yaml;
@@ -53,16 +76,6 @@
         kubectl
         kubernetes-helm
         kubectx
-
-        # Development utilities
-        cloc          # Count lines of code
-        distrobox     # Container environments
-
-        # Languages & Compilers
-        go
-        rustup
-        jdk
-        nodejs
       ];
     })
 
