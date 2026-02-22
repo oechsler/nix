@@ -36,7 +36,7 @@ let
   # Add new shares here and create corresponding SOPS secrets
   smbShares = [ "personal-drive" ];
 
-  user = config.users.users.samuel;
+  user = config.users.users.${config.user.name};
 
   # ============================================================================
   # NETWORK READINESS CHECK
