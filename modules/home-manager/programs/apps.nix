@@ -18,7 +18,9 @@
 # - PrusaSlicer - 3D printing
 # - Pika Backup - Backups
 # - Alsa Scarlett GUI - Audio interface control
-# - WinBoat - Windows apps in VM with seamless integration
+#
+# Optional apps (with feature toggles):
+# - WinBoat - Windows VM with seamless integration (features.apps.winboat.enable)
 #
 # KDE apps:
 # - Filelight - Disk usage analyzer
@@ -55,8 +57,7 @@ in
       pika-backup
       prusa-slicer
       spotify
-      winboat
-    ];
+    ] ++ lib.optional features.apps.winboat.enable winboat;
   }
 
   #---------------------------

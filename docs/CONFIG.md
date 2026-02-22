@@ -21,6 +21,7 @@ features.ssh.enable = true;
 | `features.bluetooth.enable` | `true` | Bluetooth support (power on boot) |
 | `features.gaming.enable` | `true` | Steam, GameMode, Gamescope |
 | `features.virtualisation.enable` | `true` | Docker daemon + user group |
+| `features.virtualisation.waydroid.enable` | `false` | Waydroid Android container (requires Wayland) |
 | `features.smb.enable` | `true` | SMB network share mounts (auto-mount with retry) |
 | `features.flatpak.enable` | `true` | Flatpak + Flathub (Flatseal, Flatsweep) |
 | `features.appimage.enable` | `true` | AppImage support + auto-watcher in ~/Applications |
@@ -29,6 +30,7 @@ features.ssh.enable = true;
 | `features.wifi.networks` | `["home"]` | WiFi network names to manage — each needs `wifi/<name>/ssid` + `wifi/<name>/psk` SOPS secrets |
 | `features.development.enable` | `true` | IDEs, languages (Go, Rust, Node, Java), K8s tools |
 | `features.apps.enable` | `true` | Desktop apps (Discord, Spotify, Obsidian, LibreOffice, ...) |
+| `features.apps.winboat.enable` | `false` | WinBoat (Windows VM with seamless integration) |
 | `features.secureBoot.enable` | `false` | UEFI Secure Boot via lanzaboote |
 | `features.ssh.enable` | `false` | OpenSSH server + GitHub key sync (every 15 min) |
 | `features.snapshots.enable` | `true` | Automatic btrfs snapshots (hourly, see [SNAPSHOTS.md](SNAPSHOTS.md)) |
