@@ -26,11 +26,11 @@
 # - Only needed for host-specific user configuration (e.g., idle timeouts)
 # - If missing, only common modules are loaded
 
-{ config, inputs, lib, ... }:
+{ config, inputs, lib, hostPath, ... }:
 
 let
   # Check if host has a custom home.nix file
-  hostHomeNix = ../../hosts/${config.networking.hostName}/home.nix;
+  hostHomeNix = hostPath + "/home.nix";
   hasHostHomeNix = builtins.pathExists hostHomeNix;
 in
 {
