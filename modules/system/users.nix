@@ -127,7 +127,8 @@ in
     #---------------------------
     # AccountsService provides user icons to SDDM, system settings, etc.
     # Icons must be in /var/lib/AccountsService/icons/<username>
-    system.activationScripts.userIcon = ''
+    # Only needed for desktop systems (SDDM, system settings)
+    system.activationScripts.userIcon = lib.mkIf (!config.features.server) ''
       mkdir -p /var/lib/AccountsService/icons
       cp ${cfg.icon} /var/lib/AccountsService/icons/${cfg.name}
     '';
@@ -135,8 +136,8 @@ in
     #---------------------------
     # 5. Home Directory Structure
     #---------------------------
-    # Default: Create ~/repos directory
-    user.directories = [ "repos" ];
+    # Default: Create ~/repos directory (desktop only)
+    user.directories = lib.optionals (!config.features.server) [ "repos" ];
 
     # Create directories via tmpfiles (runs on boot)
     systemd.tmpfiles.rules = map (dir:
