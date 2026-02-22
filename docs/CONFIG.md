@@ -234,7 +234,9 @@ See [SNAPSHOTS.md](SNAPSHOTS.md) for snapshot management (restore, browse, clean
 ### Default Configuration (Opinionated)
 
 This config is opinionated and assumes:
-- **Filesystem**: BTRFS with subvolume layout (`@`, `@home`, `@nix`, `@persist`, `@snapshots`)
+- **Filesystem**: BTRFS with subvolume layout
+  - Required: `@`, `@home`, `@nix`, `@snapshots`
+  - Optional: `@persist` (only needed when impermanence enabled)
 - **Encryption**: LUKS2 full disk encryption
 - **Impermanence**: Root filesystem wiped on boot
 
@@ -250,7 +252,9 @@ features.impermanence.enable = false;
 features.encryption.enable = false;
 ```
 
-**Note**: Disabling impermanence keeps your root filesystem persistent — state accumulates normally. Disabling encryption requires manually removing LUKS from your `disko.nix` or creating a new disk layout.
+**Note**:
+- Disabling impermanence: Root stays persistent (state accumulates normally). The `/persist` subvolume and mount become unnecessary.
+- Disabling encryption: Requires removing LUKS from `disko.nix` or creating a new disk layout.
 
 ### Partition Layout Requirements
 
