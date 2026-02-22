@@ -49,6 +49,8 @@ This guide shows how to use this NixOS configuration as a base for your own syst
 mkdir -p hosts/my-server
 ```
 
+**Note:** You can optionally create `hosts/my-server/home.nix` for host-specific Home Manager configuration (e.g., different idle timeouts per machine). Basic values like username and stateVersion are set automatically.
+
 ## 3. Create Host Configuration
 
 ```nix
@@ -79,10 +81,10 @@ mkdir -p hosts/my-server
     # kernel = "cachyos-server";  # Already set by serverMode = true
   };
 
-  # Home-Manager user configuration
+  # Home-Manager user configuration (optional)
+  # Basic values (username, homeDirectory, stateVersion) are set automatically.
+  # Only needed for user-specific overrides like Git config, packages, etc.
   home-manager.users.your-username = {
-    home.stateVersion = "24.11";
-
     # Git config
     programs.git = {
       userName = "Your Name";
