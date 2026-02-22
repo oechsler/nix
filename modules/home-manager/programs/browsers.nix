@@ -147,6 +147,7 @@
 
         "signon.rememberSignons" = false;
         "signon.autofillForms" = false;
+        "signon.firefoxRelay.feature" = "disabled";
         "extensions.formautofill.creditCards.enabled" = false;
         "extensions.formautofill.addresses.enabled" = false;
 
