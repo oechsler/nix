@@ -56,9 +56,9 @@ nix build .#nixosConfigurations.my-host.config.system.build.toplevel
 
 ## What You Get
 
-**Server mode:** Fish, Git, Neovim, Docker, SSH (optional), Tailscale (optional)
+**Server mode:** Fish, Git, Neovim, SSH (optional), Tailscale (optional)
 
-**Desktop mode:** Everything from server + Hyprland/KDE, Firefox, Audio, Development tools
+**Desktop mode:** Everything from server + Hyprland/KDE, Firefox, Audio, Development tools, Docker
 
 ## SOPS Secrets (WiFi/SMB/Kubernetes)
 
@@ -81,6 +81,23 @@ sudo mkdir -p /var/lib/sops/age && sudo cp sops/age.key /var/lib/sops/age/keys.t
 features.wifi.enable = false;
 features.smb.enable = false;
 features.development.kubernetes.enable = false;
+```
+
+## Optional Features
+
+By default, the config is opinionated:
+- **Impermanence:** Root is wiped on boot (`features.impermanence.enable = true`)
+- **LUKS encryption:** Full disk encryption (`features.encryption.enable = true`)
+- **BTRFS required:** With subvolumes `@`, `@home`, `@nix`, `@persist`, `@snapshots`
+
+To disable:
+
+```nix
+# hosts/my-host/configuration.nix
+{
+  features.impermanence.enable = false;  # Keep traditional persistent root
+  features.encryption.enable = false;    # Skip LUKS (requires custom disk layout)
+}
 ```
 
 ## Next Steps
