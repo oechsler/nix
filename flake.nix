@@ -238,10 +238,11 @@
         # statix: Anti-patterns and best practices (enforced)
         # https://github.com/oppiliappan/statix
         statix = pkgs.runCommand "statix-check" { } ''
-          ${pkgs.statix}/bin/statix check ${./.} \
-            --ignore hosts/samuels-pc/hardware-configuration.generated.nix \
-            --ignore hosts/samuels-razer/hardware-configuration.generated.nix \
-            --format=stderr
+          # Copy source and remove generated hardware configs before checking
+          cp -r ${./.} ./source
+          chmod -R +w ./source
+          rm -f ./source/hosts/*/hardware-configuration.generated.nix
+          ${pkgs.statix}/bin/statix check ./source --format=stderr
           touch $out
         '';
 
