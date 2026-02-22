@@ -17,6 +17,8 @@
 # User info:
 #   Name: From user.fullName
 #   Email: From user.email
+#
+# Note: SSH agent is configured in proton-pass.nix
 
 { config, pkgs, user, ... }:
 
@@ -71,21 +73,5 @@
         side-by-side = true;
       };
     };
-
-    # Bitwarden SSH Agent
-    ssh = {
-    enable = true;
-    enableDefaultConfig = false;
-    matchBlocks."*" = {
-      identityFile = "${config.home.homeDirectory}/.ssh/id_ed25519";
-      extraOptions = {
-        IdentityAgent = "${config.home.homeDirectory}/.bitwarden-ssh-agent.sock";
-      };
-    };
-    };
-  };
-
-  home.sessionVariables = {
-    SSH_AUTH_SOCK = "${config.home.homeDirectory}/.bitwarden-ssh-agent.sock";
   };
 }

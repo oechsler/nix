@@ -8,7 +8,6 @@
 # - Hyprland: GNOME/GTK utilities
 #
 # Common apps:
-# - Bitwarden - Password manager
 # - Vesktop - Discord client
 # - Spotify - Music streaming
 # - Nextcloud - Cloud sync
@@ -19,6 +18,8 @@
 # - Pika Backup - Backups
 # - Alsa Scarlett GUI - Audio interface control
 #
+# Note: Proton Pass is configured in proton-pass.nix
+#
 # Optional apps (with feature toggles):
 # - WinBoat - Windows VM with seamless integration (features.apps.winboat.enable)
 #
@@ -28,7 +29,8 @@
 # Hyprland apps:
 # - Baobab - Disk usage analyzer (GNOME)
 # - Loupe - Image viewer (GNOME)
-# - GNOME Keyring - Secret storage
+# - GNOME Keyring - Secret storage for browsers, VSCode, etc.
+# - libsecret - Tools for accessing gnome-keyring (used by Chrome, VSCode, etc.)
 
 { pkgs, features, lib, ... }:
 
@@ -48,7 +50,6 @@ in
   {
     home.packages = with pkgs; [
       alsa-scarlett-gui
-      bitwarden-desktop
       vesktop
       freecad
       libreoffice
@@ -74,6 +75,9 @@ in
   #---------------------------
   # GNOME/GTK utilities for tiling WMs
   (lib.mkIf (!isKde) {
+    # GNOME Keyring for credential storage
+    # Used by: Chrome/Chromium, VSCode, Vesktop, etc.
+    # Note: Proton Pass uses kernel keyring instead (via keyutils)
     services.gnome-keyring = {
       enable = true;
       components = [ "secrets" ];
@@ -82,6 +86,7 @@ in
     home.packages = with pkgs; [
       baobab
       loupe
+      libsecret  # Provides secret-tool and library for apps to access gnome-keyring
     ];
   })
   ]);
