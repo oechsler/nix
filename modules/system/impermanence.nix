@@ -57,28 +57,42 @@ in
     #---------------------------
     # Bind /persist/* to their expected locations
     # Example: /persist/var/lib/bluetooth → /var/lib/bluetooth
+    #
+    # Directories are added conditionally based on enabled features
     environment.persistence."/persist" = {
       hideMounts = true;  # Don't show bind mounts in df/mount output
 
       directories = [
-        # Network
-        "/var/lib/iwd"              # WiFi credentials
-        "/var/lib/NetworkManager"   # Network connections
-        "/var/lib/bluetooth"        # Bluetooth pairings
-        "/var/lib/tailscale"        # Tailscale VPN identity
+        # Network (conditional)
+        "/var/lib/NetworkManager"   # Network connections (always, needed for ethernet too)
 
-        # Applications
-        "/var/lib/docker"    # Docker containers/images
-        "/var/lib/flatpak"   # Flatpak apps
-
-        # System State
-        "/var/lib/nixos"           # NixOS state (users, groups, etc.)
-        "/var/lib/sddm"            # SDDM state
-        "/var/lib/sops"            # SOPS secrets
-        "/var/lib/sbctl"           # Secure Boot keys
-        "/var/lib/systemd/rfkill"  # Radio kill switch state
-        "/var/lib/systemd/timers"  # Systemd timer state
-        "/var/lib/systemd/coredump"  # Core dumps
+        # System State (always)
+        "/var/lib/nixos"              # NixOS state (users, groups, etc.)
+        "/var/lib/sops"               # SOPS secrets
+        "/var/lib/systemd/rfkill"     # Radio kill switch state
+        "/var/lib/systemd/timers"     # Systemd timer state
+        "/var/lib/systemd/coredump"   # Core dumps
+      ]
+      ++ lib.optionals config.features.wifi.enable [
+        "/var/lib/iwd"                # WiFi credentials
+      ]
+      ++ lib.optionals config.features.bluetooth.enable [
+        "/var/lib/bluetooth"          # Bluetooth pairings
+      ]
+      ++ lib.optionals config.features.tailscale.enable [
+        "/var/lib/tailscale"          # Tailscale VPN identity
+      ]
+      ++ lib.optionals config.features.virtualisation.enable [
+        "/var/lib/docker"             # Docker containers/images
+      ]
+      ++ lib.optionals config.features.flatpak.enable [
+        "/var/lib/flatpak"            # Flatpak apps
+      ]
+      ++ lib.optionals config.features.desktop.enable [
+        "/var/lib/sddm"               # SDDM state
+      ]
+      ++ lib.optionals config.features.secureBoot.enable [
+        "/var/lib/sbctl"              # Secure Boot keys
       ];
 
       files = [
