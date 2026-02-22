@@ -4,9 +4,14 @@
 #
 # Structure:
 # - inputs: External dependencies (nixpkgs, home-manager, etc.)
-# - outputs: NixOS configurations and disko configurations
+# - outputs:
+#   - lib.mkHost: Reusable function for building NixOS systems
+#   - lib.mkDisko: Helper for importing disko configurations (optional)
+#   - nixosConfigurations: Local host configurations (samuels-pc, samuels-razer)
+#   - diskoConfigurations: Disk layouts for local hosts
+#   - checks: CI/CD linters (custom conventions, statix, deadnix)
 #
-# Hosts:
+# Local Hosts:
 # - samuels-pc: Desktop workstation (2x 1440p, Secure Boot, dual-boot)
 # - samuels-razer: Laptop (gaming laptop, portable workstation)
 #
@@ -22,11 +27,14 @@
 #
 # Custom packages:
 # - hypr-dock: Application dock for Hyprland (local package)
-# - cachyos-kernel: Optimized Linux kernel
+# - cachyos-kernel: Optimized Linux kernel (shared with external repos)
 #
-# Usage:
+# Usage (local hosts):
 #   nixos-rebuild switch --flake .#samuels-pc
 #   nixos-rebuild switch --flake .#samuels-razer
+#
+# Usage (as dependency in other repos):
+#   See lib.mkHost documentation in README.md
 {
   description = "Samuel's NixOS configuration";
 
@@ -92,42 +100,123 @@
     nix-flatpak.url = "github:gmodena/nix-flatpak";
   };
 
-  outputs = { self, nixpkgs, ... }@inputs:
+  outputs =
+    { self, nixpkgs, ... }@inputs:
     let
       system = "x86_64-linux";
+      inherit (nixpkgs) lib;
 
-      mkHost = hostName: nixpkgs.lib.nixosSystem {
-        inherit system;
-        specialArgs = { inherit inputs; };
-        modules = [
-          ./hosts/${hostName}/configuration.nix
-          inputs.home-manager.nixosModules.default
-          inputs.catppuccin.nixosModules.catppuccin
-          inputs.sops-nix.nixosModules.sops
-          inputs.nix-flatpak.nixosModules.nix-flatpak
-          inputs.disko.nixosModules.disko
-          inputs.impermanence.nixosModules.impermanence
-          {
-            nixpkgs.overlays = [
-              inputs.cachyos-kernel.overlays.pinned
-              (final: prev: {
-                hypr-dock = final.callPackage ./packages/hypr-dock.nix { };
-              })
-            ];
-          }
-        ];
-      };
+      # Base host builder with shared configuration
+      mkHostBase =
+        {
+          hostName,
+          hostPath,
+          serverMode ? false,
+          extraModules ? [ ],
+          withHyprDock ? false,
+        }:
+        lib.nixosSystem {
+          inherit system;
+          specialArgs = { inherit inputs; };
+          modules = [
+            (import ./modules)
+            inputs.home-manager.nixosModules.default
+            inputs.catppuccin.nixosModules.catppuccin
+            inputs.sops-nix.nixosModules.sops
+            inputs.disko.nixosModules.disko
+            inputs.impermanence.nixosModules.impermanence
+
+            # Shared overlays (always included)
+            inputs.nix-flatpak.nixosModules.nix-flatpak
+            {
+              nixpkgs.overlays = [
+                inputs.cachyos-kernel.overlays.pinned
+              ];
+            }
+          ]
+          ++ lib.optionals withHyprDock [
+            # Local-only overlay (only for this repo's hosts)
+            {
+              nixpkgs.overlays = [
+                (final: prev: {
+                  hypr-dock = final.callPackage ./packages/hypr-dock.nix { };
+                })
+              ];
+            }
+          ]
+          ++ [
+            {
+              networking.hostName = hostName;
+              features.server = serverMode;
+
+              home-manager = {
+                useGlobalPkgs = true;
+                useUserPackages = true;
+                sharedModules = [
+                  (import ./modules/home-manager)
+                  inputs.catppuccin.homeManagerModules.catppuccin
+                ];
+              };
+            }
+            (hostPath + "/configuration.nix")
+          ]
+          ++ extraModules;
+        };
+
+      # Internal mkHost for this repo's hosts (with hypr-dock overlay)
+      mkHost =
+        hostName:
+        mkHostBase {
+          inherit hostName;
+          hostPath = ./hosts/${hostName};
+          withHyprDock = true;
+        };
+
+      # Exported mkHost for use in other repos (without local overlays)
+      mkHostExternal =
+        {
+          hostName,
+          hostPath,
+          serverMode ? false,
+          extraModules ? [ ],
+        }:
+        mkHostBase {
+          inherit
+            hostName
+            hostPath
+            serverMode
+            extraModules
+            ;
+        };
+
+      # Internal mkDisko for this repo's hosts
+      mkDisko = hostName: import ./hosts/${hostName}/disko.nix;
+
+      # Exported mkDisko for external use
+      mkDiskoExternal = hostPath: import (hostPath + "/disko.nix");
+
       pkgs = import nixpkgs { inherit system; };
     in
     {
-      diskoConfigurations = {
-        samuels-pc = import ./hosts/samuels-pc/disko.nix;
-        samuels-razer = import ./hosts/samuels-razer/disko.nix;
-      };
-
+      #===========================
+      # Local Host Configurations
+      #===========================
       nixosConfigurations = {
         samuels-razer = mkHost "samuels-razer";
         samuels-pc = mkHost "samuels-pc";
+      };
+
+      diskoConfigurations = {
+        samuels-pc = mkDisko "samuels-pc";
+        samuels-razer = mkDisko "samuels-razer";
+      };
+
+      #===========================
+      # Exported Library Functions
+      #===========================
+      lib = {
+        mkHost = mkHostExternal;
+        mkDisko = mkDiskoExternal;
       };
 
       #===========================
@@ -136,25 +225,26 @@
       checks.${system} = {
         # Custom convention linter (self-documenting)
         # Enforces: NIX_CODE_STYLE.md, NIX_DOCS_STYLE.md
-        lint = import ./lint.nix { inherit pkgs; lib = pkgs.lib; };
+        lint = import ./lint.nix {
+          inherit pkgs;
+          inherit (pkgs) lib;
+        };
 
-        # statix: Anti-patterns and best practices (informational)
+        # statix: Anti-patterns and best practices (enforced)
         # https://github.com/oppiliappan/statix
-        # Note: Does not fail build, only reports suggestions
         statix = pkgs.runCommand "statix-check" { } ''
           ${pkgs.statix}/bin/statix check ${./.} \
-            --ignore=hosts/*/hardware-configuration.generated.nix \
-            --format=stderr \
-            2>&1 | tee $out || true
-          # Don't fail build on warnings - statix is informational
+            --ignore hosts/samuels-pc/hardware-configuration.generated.nix \
+            --ignore hosts/samuels-razer/hardware-configuration.generated.nix \
+            --format=stderr
+          touch $out
         '';
 
-        # deadnix: Dead code detection (informational)
+        # deadnix: Dead code detection (enforced)
         # https://github.com/astro/deadnix
-        # Note: Does not fail build, only reports suggestions
         deadnix = pkgs.runCommand "deadnix-check" { } ''
-          ${pkgs.deadnix}/bin/deadnix ${./.} 2>&1 | tee $out || true
-          # Don't fail build on warnings - deadnix is informational
+          ${pkgs.deadnix}/bin/deadnix ${./.}
+          touch $out
         '';
       };
     };

@@ -42,3 +42,44 @@ See [docs/CONFIG.md](docs/CONFIG.md) for the full configuration reference includ
 - Theme options (Catppuccin flavors, wallpapers, gaps, borders)
 - Display configuration (multi-monitor, scaling, rotation)
 - Font, locale, input, autostart, and more
+
+## Usage as Flake Dependency
+
+**Quick Start:** See [docs/QUICKSTART.md](docs/QUICKSTART.md) for a complete tutorial.
+
+This flake exports `lib.mkHost` and `lib.mkDisko` for building NixOS systems:
+
+```nix
+# your-repo/flake.nix
+{
+  inputs.samuels-config.url = "github:user/nix";  # or path:/path/to/nix
+
+  outputs = { samuels-config, ... }: {
+    nixosConfigurations.my-host = samuels-config.lib.mkHost {
+      hostName = "my-host";
+      hostPath = ./hosts/my-host;
+      serverMode = true;              # Optional: minimal server (no desktop, optimized kernel)
+      extraModules = [ /* ... */ ];   # Optional: additional modules
+    };
+
+    # Optional: Declarative disk partitioning
+    diskoConfigurations.my-host = samuels-config.lib.mkDisko ./hosts/my-host;
+  };
+}
+```
+
+**What's included:**
+- Base modules (system, desktop, programs)
+- Home-Manager + Catppuccin theming
+- SOPS secrets, Disko, Impermanence
+- CachyOS optimized kernel (server variant when `serverMode = true`)
+- nix-flatpak support
+
+**Server mode** (`serverMode = true`) automatically:
+- Disables: Desktop, audio, bluetooth, WiFi, development tools, gaming
+- Enables: CachyOS server-optimized kernel
+- Keeps: SSH, Tailscale, basic CLI tools (git, htop, neovim, etc.)
+
+**Disko** (`lib.mkDisko`) is optional for declarative disk partitioning:
+- Include `diskoConfigurations` if you want reproducible disk layouts
+- Omit it if you have existing partitions and use `hardware-configuration.nix` only
