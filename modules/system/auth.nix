@@ -5,10 +5,14 @@
 #   features.auth.yubikey.enable = false;  # YubiKey authentication (FIDO2, touch only)
 #   features.auth.yubikey.pin = false;    # Require FIDO2 PIN in addition to touch
 #
-# Auth flow (local — login/sddm/sudo/polkit):
+# Auth flow (login/sddm/sudo):
 #   TOTP only:            OTP (3 attempts) → Password
 #   YubiKey only:         YubiKey → Password
 #   Both:                 YubiKey → OTP (3 attempts) → Password
+#   Note: sddm uses PAM "substack login", inherits login's config.
+#
+# Auth flow (polkit):
+#   Password only (agent can't handle pam_oath/u2f conversation)
 #
 # Auth flow (SSH):
 #   TOTP only:            Public-Key + OTP
@@ -43,13 +47,14 @@ let
   oathFile = "${prefix}/etc/users.oath";
   u2fFile = "${prefix}/etc/u2f_mappings";
 
-  # Services that get 2FA-as-sufficient with password fallback
-  localServices = [
+  # Terminal services: support 3 OTP retries before password fallback
+  terminalServices = [
     "login"
-    "sddm"
     "sudo"
-    "polkit-1"
   ];
+
+  # SDDM: single OTP attempt (graphical, but needs 2FA for login)
+  # polkit-1: password only (can't handle pam_oath conversation, user is already logged in)
 
   #--- CLI Tools ---
 
@@ -247,10 +252,10 @@ in
         # digits = 6 (default)
       };
 
-      # All services: 3 OTP attempts before fallback
+      # Terminal services + SSH: 3 OTP attempts before fallback
       # [success=done default=ignore] = if correct → done, if wrong → try next
-      # After 3 failures: local → password prompt (pam_unix), SSH → denied (pam_deny)
-      security.pam.services = lib.genAttrs (localServices ++ [ "sshd" ]) (_: {
+      # After 3 failures: terminal → password prompt (pam_unix), SSH → denied (pam_deny)
+      security.pam.services = lib.genAttrs (terminalServices ++ [ "sshd" ]) (_: {
         oathAuth = true;
         rules.auth = {
           oath.control = lib.mkForce "[success=done default=ignore]";
@@ -267,7 +272,10 @@ in
             args = [ "usersfile=${oathFile}" "window=3" "digits=6" ];
           };
         };
-      });
+      })
+      # Note: sddm uses "substack login" so it inherits login's 3 OTP retries.
+      # polkit-1 is excluded — its agent can't handle pam_oath conversation.
+      ;
     })
 
     #--- YubiKey ---
@@ -289,10 +297,11 @@ in
         userVerification = true; # Require FIDO2 PIN (touch alone is not enough)
       };
 
-      # Local services: YubiKey as sufficient (primary, before OTP in PAM order)
+      # All local services + SSH: YubiKey as sufficient (single touch, no retry needed)
       # u2f control is already "sufficient" from global security.pam.u2f.control
+      # polkit excluded — can't handle u2f conversation either
       security.pam.services =
-        lib.genAttrs localServices (_: {
+        lib.genAttrs (terminalServices ++ [ "sddm" ]) (_: {
           u2fAuth = true;
         })
         // {
