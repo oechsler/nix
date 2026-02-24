@@ -20,6 +20,7 @@ sops/           # Encrypted secrets
 - **Fresh install:** [docs/INSTALL.md](docs/INSTALL.md)
 - **Use as base for your config:** [docs/QUICKSTART.md](docs/QUICKSTART.md)
 - **Configuration reference:** [docs/CONFIG.md](docs/CONFIG.md)
+- **Security overview:** [docs/SECURITY.md](docs/SECURITY.md)
 
 ## Features
 
