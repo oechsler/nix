@@ -13,7 +13,8 @@ Use this NixOS configuration as foundation for your own systems.
     nixosConfigurations.my-host = base-config.lib.mkHost {
       hostName = "my-host";
       hostPath = ./hosts/my-host;
-      serverMode = true;  # false for desktop
+      serverMode = true;    # false for desktop
+      extraModules = [ ];   # optional: additional NixOS modules
     };
   };
 }
@@ -58,7 +59,7 @@ nix build .#nixosConfigurations.my-host.config.system.build.toplevel
 
 **Server mode:** Fish, Git, Neovim, SSH (optional), Tailscale (optional)
 
-**Desktop mode:** Everything from server + Hyprland/KDE, Firefox, Audio, Development tools, Docker
+**Desktop mode:** Everything from server + Hyprland/KDE, Firefox, Audio, Development tools, Docker (`features.virtualisation.enable`)
 
 ## SOPS Secrets (WiFi/SMB/Kubernetes)
 

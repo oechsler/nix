@@ -13,21 +13,31 @@ Both methods work independently or combined. Password serves as a local fallback
 
 ## Auth Flow
 
-### Local (login, SDDM, sudo, polkit)
+### Local (login, SDDM, sudo)
 
-Each method is tried in order. The first success grants access, on failure the next method is tried.
+Each method is tried in order. The first success grants access, on failure the next method is tried. TOTP allows 3 attempts before falling back. SDDM inherits login's PAM configuration.
 
 | Enabled | Auth chain |
 |---------|-----------|
-| TOTP only | OTP → Password |
+| TOTP only | OTP (3 attempts) → Password |
 | YubiKey only | YubiKey → Password |
-| Both | YubiKey → OTP → Password |
+| Both | YubiKey → OTP (3 attempts) → Password |
+
+### Polkit
+
+Polkit uses a different auth flow because `polkit-agent-helper-1` sends each PAM prompt individually — TOTP's multi-round conversation is unreliable with this protocol. YubiKey works because it only needs touch (no text input).
+
+| Enabled | Auth chain |
+|---------|-----------|
+| TOTP only | Password only (TOTP excluded) |
+| YubiKey only | YubiKey touch or Password |
+| Both | YubiKey touch or Password |
 
 ### SSH
 
 SSH uses two-stage authentication: first the SSH key, then a second factor via PAM.
 
-1. **Public-Key**: OpenSSH verifies `~/.ssh/authorized_keys` (synced from GitHub via `ssh.nix`)
+1. **Public-Key**: OpenSSH verifies `~/.ssh/authorized_keys` (synced from GitHub via `ssh.nix`, every 15 min)
 2. **Keyboard-Interactive**: OpenSSH hands off to PAM, which prompts for TOTP/YubiKey
 
 This is enforced by `AuthenticationMethods = "publickey,keyboard-interactive"` — both stages must succeed. Password auth (`PasswordAuthentication`) and unix PAM auth (`unixAuth`) are disabled, so there is no password fallback over SSH.
@@ -64,6 +74,9 @@ Enable in your host's `configuration.nix`:
 
 ```nix
 features.auth.yubikey.enable = true;
+
+# Optional: require FIDO2 PIN in addition to touch
+features.auth.yubikey.pin = true;
 ```
 
 Then register your key:
@@ -72,7 +85,7 @@ Then register your key:
 sudo yubikey-init
 ```
 
-This writes credentials to `/etc/u2f_mappings`. Rebuild to activate.
+This writes credentials to `/etc/u2f_mappings` (or `/persist/etc/u2f_mappings` with impermanence). Rebuild to activate.
 
 To register a backup key, run `sudo yubikey-init` again and choose **Add another key**.
 
@@ -87,12 +100,14 @@ user.hashedPassword = "$6$...";
 
 ## Files
 
-| File | Purpose | Persisted |
-|------|---------|-----------|
-| `/etc/users.oath` | TOTP secrets | Yes (impermanence) |
-| `/etc/u2f_mappings` | YubiKey credentials | Yes (impermanence) |
-| `modules/system/auth.nix` | PAM configuration, CLI tools | — |
-| `modules/system/users.nix` | Password hash (default: locked) | — |
+Auth files use `persistPrefix` directly (not impermanence bind-mounts) because `pam_oath`/`pam_u2f` update files via `temp + rename()`, which fails across bind-mount boundaries.
+
+| File | Purpose |
+|------|---------|
+| `/persist/etc/users.oath` (or `/etc/users.oath` without impermanence) | TOTP secrets |
+| `/persist/etc/u2f_mappings` (or `/etc/u2f_mappings` without impermanence) | YubiKey credentials |
+| `modules/system/auth.nix` | PAM configuration, CLI tools |
+| `modules/system/users.nix` | Password hash (default: locked) |
 
 ## Disabling
 
