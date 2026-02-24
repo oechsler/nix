@@ -151,6 +151,7 @@ FEAT_ENCRYPTION=false
 FEAT_IMPERMANENCE=false
 PERSIST_PREFIX=""
 FEAT_TOTP=false
+FEAT_YUBIKEY=false
 FEAT_SECURE_BOOT=false
 FEAT_DESKTOP=false
 FEAT_WM=""
@@ -168,6 +169,7 @@ phase_detect_features() {
       impermanence = cfg.features.impermanence.enable;
       persistPrefix = cfg.features.impermanence.persistPrefix;
       totp = cfg.features.auth.totp.enable;
+      yubikey = cfg.features.auth.yubikey.enable;
       secureBoot = cfg.features.secureBoot.enable;
       desktop = cfg.features.desktop.enable;
       wm = cfg.features.desktop.wm;
@@ -183,11 +185,11 @@ phase_detect_features() {
   fi
 
   read -r FEAT_ENCRYPTION FEAT_IMPERMANENCE PERSIST_PREFIX FEAT_TOTP \
-          FEAT_SECURE_BOOT FEAT_DESKTOP FEAT_WM FEAT_SERVER CONFIG_USERNAME \
-          CONFIG_PASSWORD_LOCKED \
+          FEAT_YUBIKEY FEAT_SECURE_BOOT FEAT_DESKTOP FEAT_WM FEAT_SERVER \
+          CONFIG_USERNAME CONFIG_PASSWORD_LOCKED \
     < <(echo "$json" | jq -r '[
       .encryption, .impermanence, .persistPrefix, .totp,
-      .secureBoot, .desktop, .wm, .server, .userName,
+      .yubikey, .secureBoot, .desktop, .wm, .server, .userName,
       .passwordLocked
     ] | @tsv')
 
@@ -203,6 +205,7 @@ phase_detect_features() {
   echo -e "    Encryption:    $(label_bool "$FEAT_ENCRYPTION")"
   echo -e "    Impermanence:  $(label_bool "$FEAT_IMPERMANENCE")"
   echo -e "    TOTP 2FA:      $(label_bool "$FEAT_TOTP")"
+  echo -e "    YubiKey:       $(label_bool "$FEAT_YUBIKEY")"
   echo -e "    Secure Boot:   $(label_bool "$FEAT_SECURE_BOOT")"
   if [[ "$CONFIG_PASSWORD_LOCKED" == "true" ]]; then
     echo -e "    Password:      ${YELLOW}not set${RESET}"
@@ -331,6 +334,9 @@ phase_summary() {
   echo -e "    SOPS:         age key from SSH key"
   if [[ "$FEAT_TOTP" == "true" ]]; then
     echo -e "    TOTP 2FA:     will be configured"
+  fi
+  if [[ "$FEAT_YUBIKEY" == "true" ]]; then
+    echo -e "    YubiKey:      will be configured"
   fi
   echo ""
   echo -e "  ${RED}${BOLD}WARNING: This will ERASE all data on the configured disks!${RESET}"
@@ -492,6 +498,25 @@ setup_totp() {
   success "TOTP configured"
 }
 
+setup_yubikey() {
+  local mappings_file="/mnt${PERSIST_PREFIX}/etc/u2f_mappings"
+  mkdir -p "$(dirname "$mappings_file")"
+
+  info "Insert your YubiKey and press the button when prompted..."
+  echo ""
+
+  local credentials
+  credentials=$(nix-shell -p pam_u2f --run "pamu2fcfg -u $CONFIG_USERNAME")
+  if [[ -z "$credentials" ]]; then
+    return 1
+  fi
+
+  echo "$credentials" > "$mappings_file"
+  chmod 600 "$mappings_file"
+
+  success "YubiKey registered for $CONFIG_USERNAME"
+}
+
 copy_config() {
   local dest="/mnt/home/$CONFIG_USERNAME/repos/nix"
   if [[ ! -d "$dest" ]]; then
@@ -508,6 +533,12 @@ phase_post_install() {
   if [[ "$FEAT_TOTP" == "true" ]]; then
     if ! setup_totp; then
       warn "TOTP setup failed. Run 'totp-init' after first boot."
+    fi
+  fi
+
+  if [[ "$FEAT_YUBIKEY" == "true" ]]; then
+    if ! setup_yubikey; then
+      warn "YubiKey setup failed. Run 'yubikey-init' after first boot."
     fi
   fi
 
@@ -541,6 +572,10 @@ phase_complete() {
 
   if [[ "$FEAT_TOTP" == "true" ]]; then
     echo "  TOTP: Use the code from your authenticator app"
+  fi
+
+  if [[ "$FEAT_YUBIKEY" == "true" ]]; then
+    echo "  YubiKey: Touch your key at login prompt"
   fi
 
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
