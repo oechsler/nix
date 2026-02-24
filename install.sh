@@ -121,6 +121,20 @@ echo "$AGE_KEY" > "$SOPS_SYSTEM_DIR/keys.txt"
 chmod 600 "$SOPS_USER_DIR/keys.txt" "$SOPS_SYSTEM_DIR/keys.txt"
 echo "==> Age key saved to $SOPS_USER_DIR/ and $SOPS_SYSTEM_DIR/"
 
+echo "==> Setting up TOTP 2FA..."
+SECRET_HEX=$(od -An -tx1 -N20 /dev/urandom | tr -d ' \n')
+SECRET_B32=$(python3 -c "import base64; print(base64.b32encode(bytes.fromhex('$SECRET_HEX')).decode())")
+
+OATH_FILE="/mnt/persist/etc/users.oath"
+mkdir -p "$(dirname "$OATH_FILE")"
+echo "HOTP/T30/6 $USERNAME - $SECRET_HEX" > "$OATH_FILE"
+chmod 600 "$OATH_FILE"
+
+echo "    Scan this QR code with your TOTP app:"
+nix-shell -p qrencode --run \
+  "qrencode -t ANSIUTF8 'otpauth://totp/${USERNAME}@${HOST}?secret=${SECRET_B32}&issuer=NixOS'"
+echo "    Backup secret (base32): $SECRET_B32"
+
 if [[ ! -d "/mnt/home/$USERNAME/repos/nix" ]]; then
   echo "==> Copying config to ~/repos/nix..."
   mkdir -p "/mnt/home/$USERNAME/repos"

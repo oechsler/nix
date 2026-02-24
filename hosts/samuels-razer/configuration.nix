@@ -49,6 +49,10 @@
     }
   ];
 
+  # Fallback password (TOTP is primary auth — see auth.nix)
+  # Change with: mkpasswd -m sha-512
+  user.hashedPassword = "$6$KGdmWN5KyLLzqxo9$/8Zy.CZ3DBNVr/wWwAO4JmDFzKBsE90roS.w9ryPqSCxwcJiDwLtURWL1oxcFBlfvxBosnCC/Nr2ipk07EZIR.";
+
   features.desktop.wm = "kde";
   fonts.defaults.terminalSize = 10;
 
