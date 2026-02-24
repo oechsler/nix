@@ -234,6 +234,10 @@ in
     pkgs.satty
     pkgs.wl-clipboard
     pkgs.cliphist
+    # GTK portal must be in the same profile as the Hyprland portal,
+    # otherwise xdg-desktop-portal won't find gtk.portal and the
+    # Settings interface (dark mode, color-scheme) won't work.
+    pkgs.xdg-desktop-portal-gtk
   ];
 
   wayland.windowManager.hyprland = {
@@ -257,7 +261,11 @@ in
         "XCURSOR_SIZE,${toString theme.cursor.size}"
         "HYPRCURSOR_THEME,${theme.cursor.name}"
         "HYPRCURSOR_SIZE,${toString theme.cursor.size}"
-        "QT_QPA_PLATFORMTHEME,qt6ct"
+        # gnome platform theme reads color-scheme from the XDG portal,
+        # enabling dark mode detection in QtWebEngine apps (CoolerControl etc.).
+        # qt6ct doesn't implement colorScheme(), so Qt always reports "light".
+        # Kvantum styling is preserved via QT_STYLE_OVERRIDE.
+        "QT_QPA_PLATFORMTHEME,gnome"
         "GTK_THEME,catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-standard"
         "HYPRSHOT_DIR,${config.xdg.userDirs.pictures}"
       ];
