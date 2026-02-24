@@ -104,6 +104,9 @@ in
       files = [
         "/etc/machine-id"  # Unique machine identifier
       ];
+      # Note: auth files (users.oath, u2f_mappings) are NOT listed here.
+      # pam_oath/pam_u2f update via temp + rename(), which fails across
+      # bind-mount boundaries. auth.nix points directly to /persist instead.
     };
 
     #---------------------------

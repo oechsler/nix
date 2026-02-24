@@ -14,8 +14,10 @@
 #   user.github = "oechsler";              # GitHub username (default: "oechsler")
 #   user.directories = [ "repos" ];        # Extra home directories (default: ["repos"])
 #
-# Password management:
-#   - Passwords are declarative (hashed, stored in config)
+# Authentication:
+#   - TOTP is the primary auth method (see auth.nix)
+#   - Password is a fallback for local services (login, sudo, SDDM)
+#   - Default: account locked ("!") — hosts MUST set user.hashedPassword
 #   - Generate hash: mkpasswd -m sha-512
 #   - Root account is locked (only sudo access via user account)
 #
@@ -78,8 +80,8 @@ in
     # Authentication
     hashedPassword = lib.mkOption {
       type = lib.types.str;
-      default = "$6$KGdmWN5KyLLzqxo9$/8Zy.CZ3DBNVr/wWwAO4JmDFzKBsE90roS.w9ryPqSCxwcJiDwLtURWL1oxcFBlfvxBosnCC/Nr2ipk07EZIR.";
-      description = "Hashed password (generate with: mkpasswd -m sha-512)";
+      default = "!";  # Locked — hosts must set a password for fallback auth
+      description = "Hashed password (generate with: mkpasswd -m sha-512). Default '!' = locked.";
     };
   };
 
