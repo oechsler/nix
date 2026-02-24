@@ -36,6 +36,7 @@
     ./packages.nix
     ./ssh.nix
     ./auth.nix
+    ./tpm.nix
     ./snapshots.nix
     ./features.nix
     ./displays.nix
