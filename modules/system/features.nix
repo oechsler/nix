@@ -17,6 +17,10 @@
 # Apps:
 #   features.apps.enable = true;            # Desktop apps (Discord, Spotify, etc.)
 #
+# Auth:
+#   features.auth.totp.enable = true;       # TOTP 2FA (default: true)
+#   features.auth.yubikey.enable = false;   # YubiKey (primary method when active)
+#
 # Server mode disables:
 # - Desktop environment (Hyprland/KDE, SDDM, Firefox, hypr-dock)
 # - Audio, Bluetooth, WiFi
@@ -82,6 +86,12 @@ in
 
     impermanence = {
       enable = (lib.mkEnableOption "impermanent root with rollback on boot") // { default = true; };
+      persistPrefix = lib.mkOption {
+        type = lib.types.str;
+        readOnly = true;
+        default = if config.features.impermanence.enable then "/persist" else "";
+        description = "Path prefix for persistent files. '/persist' when impermanence is active, '' otherwise. Use this for files that must bypass bind-mounts (e.g., pam_oath usersfile).";
+      };
       extraPaths = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];

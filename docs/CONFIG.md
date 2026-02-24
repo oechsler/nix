@@ -37,6 +37,9 @@ features.ssh.enable = true;
 | `features.development.kubernetes.enable` | `true` | Kubernetes tools (kubectl, k9s) with kubeconfig via SOPS |
 | `features.apps.enable` | `true` | Desktop apps (Discord, Spotify, Obsidian, LibreOffice, ...) |
 | `features.apps.winboat.enable` | `false` | WinBoat Windows VM (seamless integration) |
+| `features.auth.totp.enable` | `true` | TOTP for login, sudo, SDDM, polkit, SSH (see [AUTH.md](AUTH.md)) |
+| `features.auth.yubikey.enable` | `false` | YubiKey for login, sudo, SDDM, polkit, SSH (see [AUTH.md](AUTH.md)) |
+| `features.auth.yubikey.pin` | `false` | Require FIDO2 PIN on YubiKey (in addition to touch) |
 | `features.secureBoot.enable` | `false` | UEFI Secure Boot via lanzaboote |
 | `features.ssh.enable` | `false` | OpenSSH server + GitHub key sync (every 15 min) |
 | `features.snapshots.enable` | `true` | Automatic btrfs snapshots (hourly, see [SNAPSHOTS.md](SNAPSHOTS.md)) |
@@ -61,6 +64,7 @@ Set in `configuration.nix`:
 | `user.email` | `"samuel@oechsler.it"` | Email address |
 | `user.github` | `"oechsler"` | GitHub username (for SSH key import) |
 | `user.icon` | `pictures/sam-memoji.png` | Profile picture (SDDM) |
+| `user.hashedPassword` | `"!"` (locked) | Password hash — generate with `mkpasswd -m sha-512`. Default locks the account (TOTP-only). |
 | `user.directories` | `[]` | Extra directories to create in `~` |
 
 ## Theme Options
