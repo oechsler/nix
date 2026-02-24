@@ -69,6 +69,7 @@ let
     runtimeInputs = with pkgs; [
       coreutils
       python3
+      oath-toolkit
       qrencode
     ];
     text = ''
@@ -81,14 +82,26 @@ let
       HOSTNAME="$(hostname)"
 
       # Check for existing secret
-      if [[ -f "$OATH_FILE" ]] && grep -q "^HOTP/T30/6 $USERNAME " "$OATH_FILE" 2>/dev/null; then
-        echo "TOTP secret already exists for $USERNAME."
-        read -rp "Reset and generate new secret? [y/N] " RESET
-        if [[ "''${RESET}" != "y" && "''${RESET}" != "Y" ]]; then
+      if [[ -f "$OATH_FILE" ]] && grep -q "HOTP/T30/6 $USERNAME " "$OATH_FILE" 2>/dev/null; then
+        echo "TOTP secret exists for $USERNAME."
+        echo ""
+        echo "  [r] Re-enroll (generate new secret)"
+        echo "  [q] Quit"
+      else
+        echo "No TOTP secret for $USERNAME."
+        echo ""
+        echo "  [e] Enroll (generate secret)"
+        echo "  [q] Quit"
+      fi
+      echo ""
+      read -rp "Choice: " CHOICE
+      case "$CHOICE" in
+        e|E|r|R) ;; # continue below
+        *)
           echo "Aborted."
           exit 0
-        fi
-      fi
+          ;;
+      esac
 
       # Generate 20-byte random secret (hex)
       SECRET_HEX=$(od -An -tx1 -N20 /dev/urandom | tr -d ' \n')
@@ -107,6 +120,26 @@ let
       qrencode -t ANSIUTF8 "otpauth://totp/''${USERNAME}@''${HOSTNAME}?secret=''${SECRET_B32}&issuer=NixOS"
       echo ""
       echo "Backup secret (base32): $SECRET_B32"
+      echo ""
+
+      # Verify OTP before confirming
+      VERIFIED=false
+      for _ in 1 2 3; do
+        read -rp "Enter OTP code to verify: " OTP_CODE
+        EXPECTED=$(oathtool --totp -d 6 "$SECRET_HEX")
+        if [[ "$OTP_CODE" == "$EXPECTED" ]]; then
+          VERIFIED=true
+          break
+        fi
+        echo "Incorrect. Try again."
+      done
+
+      if [[ "$VERIFIED" != "true" ]]; then
+        echo "Verification failed. Removing secret."
+        rm -f "$OATH_FILE"
+        exit 1
+      fi
+
       echo ""
       echo "TOTP configured for $USERNAME."
       echo "Run 'sudo nixos-rebuild switch' to activate PAM changes."
