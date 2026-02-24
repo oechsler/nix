@@ -31,11 +31,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1771871930,
-        "narHash": "sha256-ILJL79Unz7Z40/7FLJzIl4hVX3N6VK/E+3YVWENocxk=",
+        "lastModified": 1771958049,
+        "narHash": "sha256-Nb9pkZKYfP6eh3Qidtyw4I1OlUNJzmgdYdNMjG92/ME=",
         "owner": "xddxdd",
         "repo": "nix-cachyos-kernel",
-        "rev": "fb3d3733ba4ff81440196d99c989b05fb96996d4",
+        "rev": "978dc433f397df8e2876cd8d2265dc641be28fd9",
         "type": "github"
       },
       "original": {
