@@ -6,9 +6,9 @@
 #   features.auth.yubikey.pin = false;    # Require FIDO2 PIN in addition to touch
 #
 # Auth flow (local — login/sddm/sudo/polkit):
-#   TOTP only:            OTP → Password
+#   TOTP only:            OTP (3 attempts) → Password
 #   YubiKey only:         YubiKey → Password
-#   Both:                 YubiKey → OTP → Password
+#   Both:                 YubiKey → OTP (3 attempts) → Password
 #
 # Auth flow (SSH):
 #   TOTP only:            Public-Key + OTP
@@ -247,13 +247,26 @@ in
         # digits = 6 (default)
       };
 
-      # All services: OTP as sufficient
-      # Built-in oath control is "requisite" — override to "sufficient" because:
-      # - Local: wrong OTP falls through to password prompt
-      # - SSH: correct OTP grants immediate access (no pam_unix after it)
+      # All services: 3 OTP attempts before fallback
+      # [success=done default=ignore] = if correct → done, if wrong → try next
+      # After 3 failures: local → password prompt (pam_unix), SSH → denied (pam_deny)
       security.pam.services = lib.genAttrs (localServices ++ [ "sshd" ]) (_: {
         oathAuth = true;
-        rules.auth.oath.control = lib.mkForce "sufficient";
+        rules.auth = {
+          oath.control = lib.mkForce "[success=done default=ignore]";
+          oath_retry2 = {
+            order = 11120;
+            control = "[success=done default=ignore]";
+            modulePath = "${pkgs.oath-toolkit}/lib/security/pam_oath.so";
+            args = [ "usersfile=${oathFile}" "window=3" "digits=6" ];
+          };
+          oath_retry3 = {
+            order = 11140;
+            control = "[success=done default=ignore]";
+            modulePath = "${pkgs.oath-toolkit}/lib/security/pam_oath.so";
+            args = [ "usersfile=${oathFile}" "window=3" "digits=6" ];
+          };
+        };
       });
     })
 
