@@ -469,6 +469,26 @@ setup_totp() {
   echo ""
   echo -e "    Backup secret (base32): ${BOLD}$secret_b32${RESET}"
   echo ""
+
+  # Verify OTP before confirming
+  local verified=false
+  for _ in 1 2 3; do
+    read -rp "  Enter OTP code to verify: " otp_code
+    local expected
+    expected=$(nix-shell -p oath-toolkit --run "oathtool --totp -d 6 $secret_hex")
+    if [[ "$otp_code" == "$expected" ]]; then
+      verified=true
+      break
+    fi
+    warn "Incorrect. Try again."
+  done
+
+  if [[ "$verified" != "true" ]]; then
+    warn "Verification failed. Removing secret."
+    rm -f "$oath_file"
+    return 1
+  fi
+
   success "TOTP configured"
 }
 
