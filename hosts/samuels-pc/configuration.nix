@@ -80,7 +80,6 @@
 
   features = {
     secureBoot.enable = true;
-    ssh.enable = true;
   };
 
   system.stateVersion = "25.11";
