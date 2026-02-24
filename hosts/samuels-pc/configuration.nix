@@ -76,7 +76,7 @@
 
   # Fallback password (TOTP is primary auth — see auth.nix)
   # Change with: mkpasswd -m sha-512
-  user.hashedPassword = "$6$KGdmWN5KyLLzqxo9$/8Zy.CZ3DBNVr/wWwAO4JmDFzKBsE90roS.w9ryPqSCxwcJiDwLtURWL1oxcFBlfvxBosnCC/Nr2ipk07EZIR.";
+  user.hashedPassword = "$6$eouQ19UhxClnaJSz$NP8qpO1RmCjNPZsiqYlE6VIYKCZOepx3ZO6DYy1y/.zSljMSeIQkpOGIHwCuvmwLhqOX5eULDB1lXpwo8GGo//";
 
   features = {
     secureBoot.enable = true;
