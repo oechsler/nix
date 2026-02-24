@@ -12,7 +12,13 @@
 #   Note: sddm uses PAM "substack login", inherits login's config.
 #
 # Auth flow (polkit):
-#   Password only (agent can't handle pam_oath/u2f conversation)
+#   TOTP only:            Password only (oath excluded — multi-round conversation unreliable)
+#   YubiKey only:         YubiKey touch or Password
+#   Both:                 YubiKey touch or Password
+#   polkit-agent-helper-1 sends each PAM prompt individually to the agent and reads
+#   responses from stdin. oath needs a conversation round that most agents mishandle
+#   (race conditions with socket activation, EOF on second prompt). u2f works because
+#   it only needs PAM_TEXT_INFO (no response) + physical touch, no text input.
 #
 # Auth flow (SSH):
 #   TOTP only:            Public-Key + OTP
@@ -54,7 +60,7 @@ let
   ];
 
   # SDDM: single OTP attempt (graphical, but needs 2FA for login)
-  # polkit-1: password only (can't handle pam_oath conversation, user is already logged in)
+  # polkit-1: password only for oath (conversation protocol unreliable), u2f via touch
 
   #--- CLI Tools ---
 
@@ -274,7 +280,8 @@ in
         };
       })
       # Note: sddm uses "substack login" so it inherits login's 3 OTP retries.
-      # polkit-1 is excluded — its agent can't handle pam_oath conversation.
+      # polkit-1: oath excluded — polkit-agent-helper-1 uses multi-round conversation
+      # (PAM_PROMPT_ECHO_OFF per module), but agents handle this unreliably.
       ;
     })
 
@@ -299,9 +306,9 @@ in
 
       # All local services + SSH: YubiKey as sufficient (single touch, no retry needed)
       # u2f control is already "sufficient" from global security.pam.u2f.control
-      # polkit excluded — can't handle u2f conversation either
+      # polkit: u2f works — touch only, no text input needed from the agent
       security.pam.services =
-        lib.genAttrs (terminalServices ++ [ "sddm" ]) (_: {
+        lib.genAttrs (terminalServices ++ [ "sddm" "polkit-1" ]) (_: {
           u2fAuth = true;
         })
         // {
