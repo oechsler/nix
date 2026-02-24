@@ -19,7 +19,7 @@
 #   6. State version detection
 #   7. Disko partitioning
 #   8. NixOS installation
-#   9. Post-install setup (SSH, SOPS, TOTP)
+#   9. Post-install setup (SSH, SOPS, TOTP, YubiKey)
 
 set -euo pipefail
 
