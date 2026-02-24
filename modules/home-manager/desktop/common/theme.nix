@@ -129,6 +129,9 @@ in
         name = lib.mkForce iconName;
         package = lib.mkForce iconPackage;
       };
+      # WebKitGTK/Tauri apps (CoolerControl) need this to detect dark mode
+      gtk3.extraConfig.gtk-application-prefer-dark-theme = !isLight;
+      gtk4.extraConfig.gtk-application-prefer-dark-theme = !isLight;
     };
 
     dconf.settings."org/gnome/desktop/interface".color-scheme =
