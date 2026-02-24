@@ -16,6 +16,13 @@
     noDisplay = true;
   };
 
+  xdg.mimeApps = {
+    enable = true;
+    defaultApplications = {
+      "application/pdf" = [ "firefox.desktop" ];
+    };
+  };
+
   xdg.userDirs = {
     enable = true;
     createDirectories = true;
