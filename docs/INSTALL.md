@@ -5,7 +5,8 @@
 Boot the NixOS ISO and run:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | sudo bash
+curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh -o /tmp/quickstart.sh
+sudo bash /tmp/quickstart.sh
 ```
 
 This clones the repo and launches the interactive installer. It will:
@@ -13,9 +14,9 @@ This clones the repo and launches the interactive installer. It will:
 1. Show available hosts and let you pick one
 2. Read the host's config to detect enabled features
 3. Prompt only for what's needed (LUKS password, SSH key)
-4. Partition, install, and set up post-install (SSH, SOPS, TOTP)
+4. Partition, install, and set up post-install (SSH, SOPS, TOTP, YubiKey)
 
-To test a different branch: `BRANCH=dev curl -sL ... | sudo bash`
+To test a different branch: `BRANCH=dev bash /tmp/quickstart.sh`
 
 ### Manual Install
 
