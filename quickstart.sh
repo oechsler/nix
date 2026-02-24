@@ -65,4 +65,4 @@ ok "Repository ready at $CLONE_DIR"
 echo ""
 info "Starting installer..."
 echo ""
-exec bash "$CLONE_DIR/install.sh" "$@"
+exec bash "$CLONE_DIR/install.sh" "$@" </dev/tty
