@@ -258,6 +258,13 @@
           ${pkgs.deadnix}/bin/deadnix ${./.}
           touch $out
         '';
+
+        # shellcheck: Shell script linter (enforced)
+        # https://www.shellcheck.net
+        shellcheck = pkgs.runCommand "shellcheck-check" { } ''
+          ${pkgs.shellcheck}/bin/shellcheck ${./.}/*.sh
+          touch $out
+        '';
       };
     };
 }

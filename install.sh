@@ -1,155 +1,528 @@
 #!/usr/bin/env bash
+# NixOS Interactive Installer
+#
+# Smart-hybrid installer that reads the host's configuration to determine
+# which features are enabled, and only prompts for relevant setup steps.
+#
+# Usage:
+#   ./install.sh                      # Interactive (recommended)
+#   ./install.sh -h HOST              # Pre-select host
+#   ./install.sh -h HOST -s KEY -p PWD -y  # Fully automated
+#   ./install.sh --dry-run            # Test phases 1-5 without changes
+#
+# Phases:
+#   1. Environment validation
+#   2. Host selection
+#   3. Feature detection (nix eval)
+#   4. Interactive prompts (conditional)
+#   5. Summary + confirmation
+#   6. State version detection
+#   7. Disko partitioning
+#   8. NixOS installation
+#   9. Post-install setup (SSH, SOPS, TOTP)
+
 set -euo pipefail
 
-HOST=""
-USERNAME=""
-SSH_KEY=""
-YES=false
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+#===========================
+# CLI Arguments
+#===========================
 
-list_hosts() {
-  echo "Available hosts:"
-  for dir in "$SCRIPT_DIR"/hosts/*/; do
-    echo "  $(basename "$dir")"
-  done
-}
+HOST=""
+SSH_KEY=""
+LUKS_PASSWORD=""
+YES=false
+DRY_RUN=false
+REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -h|--host) HOST="$2"; shift 2 ;;
-    -u|--user) USERNAME="$2"; shift 2 ;;
-    -s|--ssh-key) SSH_KEY="$2"; shift 2 ;;
-    -y|--yes) YES=true; shift ;;
+    -h|--host)           HOST="$2"; shift 2 ;;
+    -s|--ssh-key)        SSH_KEY="$2"; shift 2 ;;
+    -p|--luks-password)  LUKS_PASSWORD="$2"; shift 2 ;;
+    -y|--yes)            YES=true; shift ;;
+    --dry-run)           DRY_RUN=true; shift ;;
     *)
-      echo "Usage: $0 -h <hostname> [-u <username>] [-s <ssh-key>] [-y]"
-      list_hosts
+      echo "Usage: $0 [-h HOST] [-s SSH_KEY] [-p LUKS_PASSWORD] [-y] [--dry-run]"
       exit 1
       ;;
   esac
 done
 
-if [[ -z "$HOST" ]]; then
-  echo "Usage: $0 -h <hostname> [-u <username>] [-s <ssh-key>] [-y]"
-  list_hosts
-  exit 1
+#===========================
+# Colors & Helpers
+#===========================
+
+if [[ -t 1 ]]; then
+  RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[0;33m'
+  BLUE='\033[0;34m' BOLD='\033[1m' DIM='\033[2m' RESET='\033[0m'
+else
+  RED='' GREEN='' YELLOW='' BLUE='' BOLD='' DIM='' RESET=''
 fi
 
-REPO_DIR="$SCRIPT_DIR"
-HOST_DIR="$REPO_DIR/hosts/$HOST"
+STEP_CURRENT=0
+STEP_TOTAL=0
 
-if [[ ! -d "$HOST_DIR" ]]; then
-  echo "Error: host '$HOST' not found in $REPO_DIR/hosts/"
-  exit 1
-fi
+info()    { echo -e "${BLUE}==>${RESET} ${BOLD}$*${RESET}"; }
+success() { echo -e "    ${GREEN}$*${RESET}"; }
+warn()    { echo -e "${YELLOW}!!${RESET} $*"; }
+error()   { echo -e "${RED}ERROR:${RESET} $*" >&2; exit 1; }
+step()    { STEP_CURRENT=$((STEP_CURRENT + 1)); echo ""; info "[$STEP_CURRENT/$STEP_TOTAL] $*"; }
 
-export NIX_CONFIG="experimental-features = nix-command flakes"
+label_bool() { [[ "$1" == "true" ]] && echo -e "${GREEN}enabled${RESET}" || echo -e "${DIM}disabled${RESET}"; }
 
-# LUKS password setup
-if [[ ! -f /tmp/luks-password ]]; then
+#===========================
+# Phase 1: Environment
+#===========================
+
+phase_validate() {
+  info "NixOS Installer"
   echo ""
-  echo "==> Setting up LUKS disk encryption..."
-  read -rsp "Enter LUKS password: " LUKS_PASS
-  echo
-  read -rsp "Confirm LUKS password: " LUKS_PASS_CONFIRM
-  echo
-  if [[ "$LUKS_PASS" != "$LUKS_PASS_CONFIRM" ]]; then
-    echo "Error: Passwords do not match"
-    exit 1
+
+  if [[ "$DRY_RUN" == true ]]; then
+    warn "Dry-run mode: no changes will be made"
+    echo ""
   fi
-  echo "$LUKS_PASS" > /tmp/luks-password
-  chmod 600 /tmp/luks-password
-  echo "    LUKS password saved to /tmp/luks-password"
-else
-  echo "==> Using existing /tmp/luks-password"
-fi
 
-echo "==> Detecting NixOS version for stateVersion..."
-NIXOS_VERSION="$(nixos-version | cut -d. -f1,2)"
-echo "    Detected version: $NIXOS_VERSION"
-sed -i "s|system\.stateVersion = \"[^\"]*\"|system.stateVersion = \"$NIXOS_VERSION\"|" "$HOST_DIR/configuration.nix"
-sed -i "s|home\.stateVersion = \"[^\"]*\"|home.stateVersion = \"$NIXOS_VERSION\"|" "$HOST_DIR/home.nix"
-git -C "$REPO_DIR" add "$HOST_DIR/configuration.nix" "$HOST_DIR/home.nix"
+  [[ $EUID -eq 0 ]] || error "Must run as root."
 
-DISKO_ARGS=(--mode destroy,format,mount --flake "$REPO_DIR#$HOST")
-if [[ "$YES" == true ]]; then
-  DISKO_ARGS+=(--yes-wipe-all-disks)
-fi
+  command -v nix &>/dev/null || error "Nix is not available."
 
-echo "==> Partitioning and formatting disks..."
-nix run github:nix-community/disko -- "${DISKO_ARGS[@]}"
+  export NIX_CONFIG="experimental-features = nix-command flakes"
 
-echo "==> Generating hardware configuration..."
-nixos-generate-config --root /mnt --show-hardware-config > "$HOST_DIR/hardware-configuration.generated.nix"
-git -C "$REPO_DIR" add --all
+  success "Environment OK"
+}
 
-echo "==> Installing NixOS..."
-nixos-install --flake "$REPO_DIR#$HOST" --no-root-password
+#===========================
+# Phase 2: Host Selection
+#===========================
 
-echo "==> Setting up SSH key and sops age key..."
-if [[ -n "$SSH_KEY" ]]; then
-  SSH_KEY_FILE="$SSH_KEY"
+phase_select_host() {
+  local hosts=()
+  local descriptions=()
+
+  for dir in "$REPO_DIR"/hosts/*/; do
+    local name
+    name="$(basename "$dir")"
+    [[ -f "$dir/configuration.nix" ]] || continue
+    hosts+=("$name")
+    # Extract description from first comment line of configuration.nix
+    local desc
+    desc="$(head -1 "$dir/configuration.nix" | sed 's/^# *//' | sed 's/ *$//')"
+    descriptions+=("$desc")
+  done
+
+  [[ ${#hosts[@]} -gt 0 ]] || error "No hosts found in $REPO_DIR/hosts/"
+
+  # Validate pre-selected host
+  if [[ -n "$HOST" ]]; then
+    local found=false
+    for h in "${hosts[@]}"; do
+      [[ "$h" == "$HOST" ]] && found=true
+    done
+    [[ "$found" == true ]] || error "Host '$HOST' not found. Available: ${hosts[*]}"
+    return
+  fi
+
+  # Interactive selection
+  echo ""
+  info "Available hosts:"
+  echo ""
+  for i in "${!hosts[@]}"; do
+    echo -e "    ${BOLD}[$((i+1))]${RESET} ${hosts[$i]}  ${DIM}— ${descriptions[$i]}${RESET}"
+  done
+  echo ""
+
+  local choice
+  read -rp "    Select host [1-${#hosts[@]}]: " choice
+
+  if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#hosts[@]} )); then
+    HOST="${hosts[$((choice-1))]}"
+  else
+    error "Invalid selection."
+  fi
+}
+
+#===========================
+# Phase 3: Feature Detection
+#===========================
+
+# Feature variables (populated by detect_features)
+FEAT_ENCRYPTION=false
+FEAT_IMPERMANENCE=false
+PERSIST_PREFIX=""
+FEAT_TOTP=false
+FEAT_SECURE_BOOT=false
+FEAT_DESKTOP=false
+FEAT_WM=""
+FEAT_SERVER=false
+CONFIG_USERNAME=""
+
+phase_detect_features() {
+  info "Reading configuration for $HOST..."
+
+  local json
+  json=$(nix eval --json "$REPO_DIR#nixosConfigurations.${HOST}.config" --apply '
+    cfg: {
+      encryption = cfg.features.encryption.enable;
+      impermanence = cfg.features.impermanence.enable;
+      persistPrefix = cfg.features.impermanence.persistPrefix;
+      totp = cfg.features.auth.totp.enable;
+      secureBoot = cfg.features.secureBoot.enable;
+      desktop = cfg.features.desktop.enable;
+      wm = cfg.features.desktop.wm;
+      server = cfg.features.server;
+      userName = cfg.user.name;
+    }
+  ') || error "Failed to evaluate configuration. Check flake syntax."
+
+  # Ensure jq is available (not on NixOS ISO by default)
+  if ! command -v jq &>/dev/null; then
+    nix-env -iA nixos.jq 2>/dev/null
+  fi
+
+  read -r FEAT_ENCRYPTION FEAT_IMPERMANENCE PERSIST_PREFIX FEAT_TOTP \
+          FEAT_SECURE_BOOT FEAT_DESKTOP FEAT_WM FEAT_SERVER CONFIG_USERNAME \
+    < <(echo "$json" | jq -r '[
+      .encryption, .impermanence, .persistPrefix, .totp,
+      .secureBoot, .desktop, .wm, .server, .userName
+    ] | @tsv')
+
+  success "Features detected"
+  echo ""
+  echo -e "    Host:          ${BOLD}$HOST${RESET}"
+  echo -e "    Username:      ${BOLD}$CONFIG_USERNAME${RESET}"
+  if [[ "$FEAT_SERVER" == "true" ]]; then
+    echo -e "    Mode:          ${BOLD}Server${RESET}"
+  elif [[ "$FEAT_DESKTOP" == "true" ]]; then
+    echo -e "    Desktop:       ${BOLD}$FEAT_WM${RESET}"
+  fi
+  echo -e "    Encryption:    $(label_bool "$FEAT_ENCRYPTION")"
+  echo -e "    Impermanence:  $(label_bool "$FEAT_IMPERMANENCE")"
+  echo -e "    TOTP 2FA:      $(label_bool "$FEAT_TOTP")"
+  echo -e "    Secure Boot:   $(label_bool "$FEAT_SECURE_BOOT")"
+}
+
+#===========================
+# Phase 4: Prompts
+#===========================
+
+SSH_KEY_FILE=""
+AGE_KEY=""
+
+phase_collect_inputs() {
+  # --- LUKS Password ---
+  if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
+    echo ""
+    if [[ -f /tmp/luks-password ]]; then
+      info "Using existing /tmp/luks-password"
+    elif [[ -n "$LUKS_PASSWORD" ]]; then
+      echo "$LUKS_PASSWORD" > /tmp/luks-password
+      chmod 600 /tmp/luks-password
+      success "LUKS password set via -p"
+    elif [[ "$YES" == true ]]; then
+      error "Encryption enabled but no LUKS password. Use -p PASSWORD or pre-create /tmp/luks-password."
+    else
+      info "LUKS Disk Encryption"
+      local pass pass_confirm
+      read -rsp "    Enter LUKS password: " pass; echo
+      read -rsp "    Confirm password:    " pass_confirm; echo
+      [[ "$pass" == "$pass_confirm" ]] || error "Passwords do not match."
+      echo "$pass" > /tmp/luks-password
+      chmod 600 /tmp/luks-password
+      success "Password saved"
+    fi
+  fi
+
+  # --- SSH Key ---
+  echo ""
+  info "SSH Key (required for SOPS secrets)"
+  if [[ -n "$SSH_KEY" ]]; then
+    SSH_KEY_FILE="$SSH_KEY"
+    [[ -f "$SSH_KEY_FILE" ]] || error "SSH key file not found: $SSH_KEY_FILE"
+  elif [[ "$YES" == true ]]; then
+    error "SSH key required. Use -s /path/to/key."
+  else
+    echo ""
+    echo -e "    ${BOLD}[1]${RESET} Enter file path"
+    echo -e "    ${BOLD}[2]${RESET} Paste key content"
+    echo ""
+    local choice
+    read -rp "    Choice [1-2]: " choice
+
+    case "$choice" in
+      1)
+        read -rp "    Path to SSH private key: " SSH_KEY_FILE
+        [[ -f "$SSH_KEY_FILE" ]] || error "File not found: $SSH_KEY_FILE"
+        ;;
+      2)
+        echo "    Paste your ed25519 private key (end with Ctrl+D):"
+        SSH_KEY_FILE="$(mktemp)"
+        cat > "$SSH_KEY_FILE"
+        chmod 600 "$SSH_KEY_FILE"
+        ;;
+      *)
+        error "Invalid choice."
+        ;;
+    esac
+  fi
+  success "SSH key ready"
+}
+
+#===========================
+# Phase 5: Summary
+#===========================
+
+phase_summary() {
+  local host_dir="$REPO_DIR/hosts/$HOST"
+
+  echo ""
+  echo -e "${BOLD}============================================${RESET}"
+  echo -e "${BOLD}  Installation Summary${RESET}"
+  echo -e "${BOLD}============================================${RESET}"
+  echo ""
+  echo -e "  Host:           $HOST"
+  echo -e "  Username:       $CONFIG_USERNAME"
+  echo ""
+  echo -e "  ${BOLD}Disk Setup:${RESET}"
+  if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
+    echo -e "    Encryption:   LUKS (password set)"
+  else
+    echo -e "    Encryption:   none"
+  fi
+  echo -e "    Filesystem:   btrfs with subvolumes"
+  if [[ "$FEAT_IMPERMANENCE" == "true" ]]; then
+    echo -e "    Impermanence: enabled (persist: $PERSIST_PREFIX)"
+  else
+    echo -e "    Impermanence: disabled"
+  fi
+  echo ""
+  echo -e "  ${BOLD}Post-Install:${RESET}"
+  echo -e "    SSH key:      will be installed"
+  echo -e "    SOPS:         age key from SSH key"
+  if [[ "$FEAT_TOTP" == "true" ]]; then
+    echo -e "    TOTP 2FA:     will be configured"
+  fi
+  echo ""
+  echo -e "  ${RED}${BOLD}WARNING: This will ERASE all data on the configured disks!${RESET}"
+  echo ""
+
+  if [[ "$DRY_RUN" == true ]]; then
+    success "Dry-run complete. No changes were made."
+    exit 0
+  fi
+
+  if [[ "$YES" != true ]]; then
+    local confirm
+    read -rp "  Continue? [y/N]: " confirm
+    [[ "$confirm" =~ ^[yY]$ ]] || { echo "Aborted."; exit 0; }
+  fi
+}
+
+#===========================
+# Phase 6: State Version
+#===========================
+
+phase_state_version() {
+  local host_dir="$REPO_DIR/hosts/$HOST"
+
+  local version
+  version="$(nixos-version | cut -d. -f1,2)"
+  success "NixOS version: $version"
+
+  sed -i "s|system\.stateVersion = \"[^\"]*\"|system.stateVersion = \"$version\"|" \
+    "$host_dir/configuration.nix"
+
+  if [[ -f "$host_dir/home.nix" ]]; then
+    sed -i "s|home\.stateVersion = \"[^\"]*\"|home.stateVersion = \"$version\"|" \
+      "$host_dir/home.nix"
+  fi
+
+  git -C "$REPO_DIR" add "$host_dir/"
+}
+
+#===========================
+# Phase 7: Disko
+#===========================
+
+phase_partition() {
+  # shellcheck disable=SC2054  # comma is disko syntax, not array separator
+  local disko_args=(--mode destroy,format,mount --flake "$REPO_DIR#$HOST")
+  if [[ "$YES" == true ]]; then
+    disko_args+=(--yes-wipe-all-disks)
+  fi
+
+  if ! nix run github:nix-community/disko -- "${disko_args[@]}"; then
+    error "Disko failed. Check disk IDs in hosts/$HOST/disko.nix"
+  fi
+
+  success "Disks partitioned and mounted at /mnt"
+}
+
+#===========================
+# Phase 8: NixOS Install
+#===========================
+
+phase_install() {
+  local host_dir="$REPO_DIR/hosts/$HOST"
+
+  nixos-generate-config --root /mnt --show-hardware-config > "$host_dir/hardware-configuration.generated.nix"
+  git -C "$REPO_DIR" add --all
+
+  if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password; then
+    error "nixos-install failed. Check the output above."
+  fi
+
+  success "NixOS installed"
+}
+
+#===========================
+# Phase 9: Post-Install
+#===========================
+
+setup_ssh() {
   AGE_KEY="$(nix-shell -p ssh-to-age --run "ssh-to-age -private-key -i $SSH_KEY_FILE")"
-else
-  echo "Paste your ed25519 private SSH key (end with Ctrl+D):"
-  SSH_KEY_FILE="$(mktemp)"
-  cat > "$SSH_KEY_FILE"
-  chmod 600 "$SSH_KEY_FILE"
-  AGE_KEY="$(nix-shell -p ssh-to-age --run "ssh-to-age -private-key -i $SSH_KEY_FILE")"
-fi
 
-if [[ -z "$USERNAME" ]]; then
-  read -rp "Username for SSH/sops setup: " USERNAME
-fi
+  local ssh_dir="/mnt/home/$CONFIG_USERNAME/.ssh"
+  mkdir -p "$ssh_dir"
+  cp "$SSH_KEY_FILE" "$ssh_dir/id_ed25519"
+  ssh-keygen -y -f "$SSH_KEY_FILE" > "$ssh_dir/id_ed25519.pub"
+  chmod 700 "$ssh_dir"
+  chmod 600 "$ssh_dir/id_ed25519"
+  chmod 644 "$ssh_dir/id_ed25519.pub"
 
-SSH_DIR="/mnt/home/$USERNAME/.ssh"
-mkdir -p "$SSH_DIR"
-cp "$SSH_KEY_FILE" "$SSH_DIR/id_ed25519"
-ssh-keygen -y -f "$SSH_KEY_FILE" > "$SSH_DIR/id_ed25519.pub"
-chmod 700 "$SSH_DIR"
-chmod 600 "$SSH_DIR/id_ed25519"
-chmod 644 "$SSH_DIR/id_ed25519.pub"
-echo "==> SSH key pair saved to $SSH_DIR/"
+  # Clean up temp file if pasted interactively
+  [[ -n "$SSH_KEY" ]] || rm -f "$SSH_KEY_FILE"
 
-# Clean up temp file if interactive
-[[ -z "$SSH_KEY" ]] && rm -f "$SSH_KEY_FILE"
+  success "SSH key installed"
+}
 
-SOPS_USER_DIR="/mnt/home/$USERNAME/.config/sops/age"
-SOPS_SYSTEM_DIR="/mnt/persist/var/lib/sops/age"
-mkdir -p "$SOPS_USER_DIR" "$SOPS_SYSTEM_DIR"
-echo "$AGE_KEY" > "$SOPS_USER_DIR/keys.txt"
-echo "$AGE_KEY" > "$SOPS_SYSTEM_DIR/keys.txt"
-chmod 600 "$SOPS_USER_DIR/keys.txt" "$SOPS_SYSTEM_DIR/keys.txt"
-echo "==> Age key saved to $SOPS_USER_DIR/ and $SOPS_SYSTEM_DIR/"
+setup_sops() {
+  local user_dir="/mnt/home/$CONFIG_USERNAME/.config/sops/age"
+  local system_dir="/mnt${PERSIST_PREFIX}/var/lib/sops/age"
 
-echo "==> Setting up TOTP 2FA..."
-SECRET_HEX=$(od -An -tx1 -N20 /dev/urandom | tr -d ' \n')
-SECRET_B32=$(python3 -c "import base64; print(base64.b32encode(bytes.fromhex('$SECRET_HEX')).decode())")
+  mkdir -p "$user_dir" "$system_dir"
+  echo "$AGE_KEY" > "$user_dir/keys.txt"
+  echo "$AGE_KEY" > "$system_dir/keys.txt"
+  chmod 600 "$user_dir/keys.txt" "$system_dir/keys.txt"
 
-OATH_FILE="/mnt/persist/etc/users.oath"
-mkdir -p "$(dirname "$OATH_FILE")"
-echo "HOTP/T30/6 $USERNAME - $SECRET_HEX" > "$OATH_FILE"
-chmod 600 "$OATH_FILE"
+  success "SOPS age key saved"
+}
 
-echo "    Scan this QR code with your TOTP app:"
-nix-shell -p qrencode --run \
-  "qrencode -t ANSIUTF8 'otpauth://totp/${USERNAME}@${HOST}?secret=${SECRET_B32}&issuer=NixOS'"
-echo "    Backup secret (base32): $SECRET_B32"
+setup_totp() {
+  local secret_hex secret_b32 oath_file
+  secret_hex=$(od -An -tx1 -N20 /dev/urandom | tr -d ' \n')
+  secret_b32=$(python3 -c "import base64; print(base64.b32encode(bytes.fromhex('$secret_hex')).decode())")
 
-if [[ ! -d "/mnt/home/$USERNAME/repos/nix" ]]; then
-  echo "==> Copying config to ~/repos/nix..."
-  mkdir -p "/mnt/home/$USERNAME/repos"
-  cp -r "$REPO_DIR" "/mnt/home/$USERNAME/repos/nix"
-fi
+  oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"
+  mkdir -p "$(dirname "$oath_file")"
+  echo "HOTP/T30/6 $CONFIG_USERNAME - $secret_hex" > "$oath_file"
+  chmod 600 "$oath_file"
 
-echo "==> Fixing home directory ownership..."
-nixos-enter --root /mnt -c "chown -R $USERNAME:users /home/$USERNAME"
+  echo ""
+  info "Scan this QR code with your authenticator app:"
+  echo ""
+  nix-shell -p qrencode --run \
+    "qrencode -t ANSIUTF8 'otpauth://totp/${CONFIG_USERNAME}@${HOST}?secret=${secret_b32}&issuer=NixOS'"
+  echo ""
+  echo -e "    Backup secret (base32): ${BOLD}$secret_b32${RESET}"
+  echo ""
+  success "TOTP configured"
+}
 
-# Cleanup
-rm -f /tmp/luks-password
+copy_config() {
+  local dest="/mnt/home/$CONFIG_USERNAME/repos/nix"
+  if [[ ! -d "$dest" ]]; then
+    mkdir -p "/mnt/home/$CONFIG_USERNAME/repos"
+    cp -r "$REPO_DIR" "$dest"
+    success "Config copied to ~/repos/nix"
+  fi
+}
 
-echo ""
-echo "==> Installation complete!"
-echo "    - LUKS: Enter disk encryption password at boot"
-echo "    - Login: Password is set declaratively in NixOS config"
-echo ""
-echo "You can reboot now."
+phase_post_install() {
+  setup_ssh
+  setup_sops
+
+  if [[ "$FEAT_TOTP" == "true" ]]; then
+    if ! setup_totp; then
+      warn "TOTP setup failed. Run 'totp-init' after first boot."
+    fi
+  fi
+
+  if ! copy_config; then
+    warn "Config copy failed. Clone the repo manually after boot."
+  fi
+
+  info "Fixing home directory ownership..."
+  nixos-enter --root /mnt -c "chown -R $CONFIG_USERNAME:users /home/$CONFIG_USERNAME"
+
+  # Cleanup
+  rm -f /tmp/luks-password
+}
+
+#===========================
+# Phase 10: Done
+#===========================
+
+phase_complete() {
+  echo ""
+  echo -e "${BOLD}============================================${RESET}"
+  echo -e "${GREEN}${BOLD}  Installation complete!${RESET}"
+  echo -e "${BOLD}============================================${RESET}"
+  echo ""
+
+  if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
+    echo "  LUKS: Enter disk encryption password at boot"
+  fi
+
+  echo "  Login: Password is set in NixOS config"
+
+  if [[ "$FEAT_TOTP" == "true" ]]; then
+    echo "  TOTP: Use the code from your authenticator app"
+  fi
+
+  if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
+    echo ""
+    echo -e "  ${BOLD}Secure Boot (post-install):${RESET}"
+    echo "    1. Boot into the new system"
+    echo "    2. sudo sbctl create-keys"
+    echo "    3. sudo nixos-rebuild switch --flake ~/repos/nix#$HOST"
+    echo "    4. sudo sbctl enroll-keys --microsoft"
+    echo "    5. Reboot, enable Secure Boot in UEFI"
+  fi
+
+  echo ""
+  echo "  You can reboot now."
+  echo ""
+}
+
+#===========================
+# Main
+#===========================
+
+main() {
+  phase_validate
+  phase_select_host
+  phase_detect_features
+  phase_collect_inputs
+
+  phase_summary
+
+  # Destructive phases
+  STEP_TOTAL=4
+
+  step "Detecting NixOS version"
+  phase_state_version
+
+  step "Partitioning disks"
+  phase_partition
+
+  step "Installing NixOS"
+  phase_install
+
+  step "Post-install setup"
+  phase_post_install
+
+  phase_complete
+}
+
+main

@@ -1,26 +1,48 @@
 # NixOS Installation
 
-## Quick Install
+## Quickstart
+
+Boot the NixOS ISO and run:
 
 ```bash
-# 1. Boot NixOS ISO
-
-# 2. Clone and run installer
-nix-env -iA nixos.git
-git clone https://github.com/oechsler/nix.git /tmp/nix
-cd /tmp/nix
-./install.sh -h samuels-razer
-
-# 3. Reboot
-reboot
+curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | sudo bash
 ```
 
-The installer prompts interactively for:
-- LUKS disk encryption password
-- SSH private key (paste it)
-- Username for SSH/sops setup
+This clones the repo and launches the interactive installer. It will:
 
-Use `-y` to skip disk wipe confirmation, `-s /path/to/key` to provide SSH key as file.
+1. Show available hosts and let you pick one
+2. Read the host's config to detect enabled features
+3. Prompt only for what's needed (LUKS password, SSH key)
+4. Partition, install, and set up post-install (SSH, SOPS, TOTP)
+
+To test a different branch: `BRANCH=dev curl -sL ... | sudo bash`
+
+### Manual Install
+
+```bash
+nix-env -iA nixos.git
+git clone https://github.com/oechsler/nix.git /tmp/nix-config
+sudo /tmp/nix-config/install.sh
+```
+
+### CLI Options
+
+```
+./install.sh                              # Interactive (recommended)
+./install.sh -h HOST                      # Pre-select host
+./install.sh -h HOST -s KEY -p PWD -y     # Fully automated
+./install.sh --dry-run                    # Test without making changes
+```
+
+| Flag | Description |
+|------|-------------|
+| `-h HOST` | Pre-select host (skip menu) |
+| `-s FILE` | SSH private key path |
+| `-p PASSWORD` | LUKS disk encryption password |
+| `-y` | Skip confirmation (requires `-s`, `-p` if encryption enabled) |
+| `--dry-run` | Run detection phases without making changes |
+
+The installer reads each host's configuration via `nix eval` to determine which features are enabled (encryption, impermanence, TOTP, etc.) and only asks relevant questions.
 
 ## Disk Layout
 
