@@ -83,6 +83,25 @@ in
       components = [ "secrets" ];
     };
 
+    # Auto-unlock gnome-keyring with empty password at session start.
+    # OTP login (success=done) skips pam_gnome_keyring's auth phase, so PAM
+    # can't capture the password for keyring unlock.
+    # Setup: set keyring password to empty via seahorse, or delete
+    # ~/.local/share/keyrings/login.keyring to start fresh.
+    systemd.user.services.gnome-keyring-unlock = {
+      Unit = {
+        Description = "Unlock GNOME Keyring";
+        After = [ "gnome-keyring-daemon.service" ];
+      };
+      Service = {
+        Type = "oneshot";
+        ExecStart = toString (pkgs.writeShellScript "gnome-keyring-unlock" ''
+          ${pkgs.gnome-keyring}/bin/gnome-keyring-daemon --start --unlock < /dev/null
+        '');
+      };
+      Install.WantedBy = [ "graphical-session.target" ];
+    };
+
     home.packages = with pkgs; [
       baobab
       loupe
