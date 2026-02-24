@@ -38,7 +38,10 @@ in
 
     catppuccin.kvantum.enable = true;
 
-    home.sessionVariables.QT_QPA_PLATFORMTHEME = "qt5ct";
+    # gnome platform theme reads color-scheme from portal (dark mode detection)
+    # while QT_STYLE_OVERRIDE=kvantum preserves the Kvantum look
+    # mkForce overrides the value set by qt.platformTheme.name = "qtct"
+    home.sessionVariables.QT_QPA_PLATFORMTHEME = lib.mkForce "gnome";
 
     home.packages = with pkgs; [
       libsForQt5.qt5ct
