@@ -36,10 +36,10 @@ sudo /tmp/nix-config/install.sh
 
 | Flag | Description |
 |------|-------------|
-| `-h HOST` | Pre-select host (skip menu) |
-| `-s FILE` | SSH private key path |
-| `-p PASSWORD` | LUKS disk encryption password |
-| `-y` | Skip confirmation (requires `-s`, `-p` if encryption enabled) |
+| `-h`, `--host HOST` | Pre-select host (skip menu) |
+| `-s`, `--ssh-key FILE` | SSH private key path |
+| `-p`, `--luks-password PASSWORD` | LUKS disk encryption password |
+| `-y`, `--yes` | Skip confirmation (requires `-s`, `-p` if encryption enabled) |
 | `--dry-run` | Run detection phases without making changes |
 
 The installer reads each host's configuration via `nix eval` to determine which features are enabled (encryption, impermanence, TOTP, etc.) and only asks relevant questions.

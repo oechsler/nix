@@ -167,7 +167,7 @@ Set in `home.nix`:
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `autostart.apps` | Bitwarden, Vesktop, CoolerControl, Beeper (+ conditional) | Apps to start on login (works on Hyprland + KDE) |
+| `autostart.apps` | Proton Pass, Vesktop, CoolerControl (+ conditional) | Apps to start on login (works on Hyprland + KDE) |
 
 Default autostart apps are extended based on feature toggles:
 - Nextcloud is added on Hyprland (KDE manages its own autostart)
