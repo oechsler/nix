@@ -156,6 +156,7 @@ FEAT_DESKTOP=false
 FEAT_WM=""
 FEAT_SERVER=false
 CONFIG_USERNAME=""
+CONFIG_PASSWORD_LOCKED=false
 
 phase_detect_features() {
   info "Reading configuration for $HOST..."
@@ -172,6 +173,7 @@ phase_detect_features() {
       wm = cfg.features.desktop.wm;
       server = cfg.features.server;
       userName = cfg.user.name;
+      passwordLocked = cfg.user.hashedPassword == "!";
     }
   ') || error "Failed to evaluate configuration. Check flake syntax."
 
@@ -182,9 +184,11 @@ phase_detect_features() {
 
   read -r FEAT_ENCRYPTION FEAT_IMPERMANENCE PERSIST_PREFIX FEAT_TOTP \
           FEAT_SECURE_BOOT FEAT_DESKTOP FEAT_WM FEAT_SERVER CONFIG_USERNAME \
+          CONFIG_PASSWORD_LOCKED \
     < <(echo "$json" | jq -r '[
       .encryption, .impermanence, .persistPrefix, .totp,
-      .secureBoot, .desktop, .wm, .server, .userName
+      .secureBoot, .desktop, .wm, .server, .userName,
+      .passwordLocked
     ] | @tsv')
 
   success "Features detected"
@@ -200,6 +204,11 @@ phase_detect_features() {
   echo -e "    Impermanence:  $(label_bool "$FEAT_IMPERMANENCE")"
   echo -e "    TOTP 2FA:      $(label_bool "$FEAT_TOTP")"
   echo -e "    Secure Boot:   $(label_bool "$FEAT_SECURE_BOOT")"
+  if [[ "$CONFIG_PASSWORD_LOCKED" == "true" ]]; then
+    echo -e "    Password:      ${YELLOW}not set${RESET}"
+  else
+    echo -e "    Password:      ${GREEN}set in config${RESET}"
+  fi
 }
 
 #===========================
@@ -208,6 +217,7 @@ phase_detect_features() {
 
 SSH_KEY_FILE=""
 AGE_KEY=""
+USER_PASSWORD_HASH=""
 
 phase_collect_inputs() {
   # --- LUKS Password ---
@@ -266,6 +276,23 @@ phase_collect_inputs() {
     esac
   fi
   success "SSH key ready"
+
+  # --- User Password ---
+  if [[ "$CONFIG_PASSWORD_LOCKED" == "true" ]]; then
+    echo ""
+    warn "No password set in host config — account would be locked after install."
+    info "User Password"
+    local pass pass_confirm
+    read -rsp "    Enter password for $CONFIG_USERNAME: " pass; echo
+    read -rsp "    Confirm password:    " pass_confirm; echo
+    [[ "$pass" == "$pass_confirm" ]] || error "Passwords do not match."
+    if command -v mkpasswd &>/dev/null; then
+      USER_PASSWORD_HASH="$(echo "$pass" | mkpasswd -m sha-512 -s)"
+    else
+      USER_PASSWORD_HASH="$(echo "$pass" | nix-shell -p mkpasswd --run 'mkpasswd -m sha-512 -s')"
+    fi
+    success "Password hash generated"
+  fi
 }
 
 #===========================
@@ -297,6 +324,9 @@ phase_summary() {
   fi
   echo ""
   echo -e "  ${BOLD}Post-Install:${RESET}"
+  if [[ -n "$USER_PASSWORD_HASH" ]]; then
+    echo -e "    Password:     will be written to config"
+  fi
   echo -e "    SSH key:      will be installed"
   echo -e "    SOPS:         age key from SSH key"
   if [[ "$FEAT_TOTP" == "true" ]]; then
@@ -335,6 +365,19 @@ phase_state_version() {
   if [[ -f "$host_dir/home.nix" ]]; then
     sed -i "s|home\.stateVersion = \"[^\"]*\"|home.stateVersion = \"$version\"|" \
       "$host_dir/home.nix"
+  fi
+
+  # Write generated password hash into host config
+  if [[ -n "$USER_PASSWORD_HASH" ]]; then
+    if grep -q 'user\.hashedPassword' "$host_dir/configuration.nix"; then
+      sed -i "s|user\.hashedPassword = \"[^\"]*\"|user.hashedPassword = \"$USER_PASSWORD_HASH\"|" \
+        "$host_dir/configuration.nix"
+    else
+      # Append before closing brace
+      sed -i "\$i\\  user.hashedPassword = \"$USER_PASSWORD_HASH\";" \
+        "$host_dir/configuration.nix"
+    fi
+    success "Password hash written to configuration.nix"
   fi
 
   git -C "$REPO_DIR" add "$host_dir/"
