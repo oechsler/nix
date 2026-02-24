@@ -5,7 +5,8 @@
 # Intended for use on a NixOS ISO (fresh install environment).
 #
 # Usage:
-#   curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | bash
+#   curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh -o /tmp/quickstart.sh
+#   sudo bash /tmp/quickstart.sh
 #
 # Environment variables:
 #   BRANCH  — Git branch to clone (default: main)
@@ -65,4 +66,4 @@ ok "Repository ready at $CLONE_DIR"
 echo ""
 info "Starting installer..."
 echo ""
-exec bash "$CLONE_DIR/install.sh" "$@" </dev/tty
+exec bash "$CLONE_DIR/install.sh" "$@"
