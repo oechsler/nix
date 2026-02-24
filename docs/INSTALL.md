@@ -159,51 +159,33 @@ Should show "Secure Boot: enabled".
 
 ## TPM Unlock (Optional)
 
-After setting up Secure Boot with lanzaboote, you can add TPM-based auto-unlock.
+TPM-based auto-unlock for LUKS-encrypted disks. Works with or without Secure Boot.
+PCR 0+7 seals to firmware + Secure Boot state. If Secure Boot is enabled later,
+re-run `tpm-init` to re-enroll.
 
-### Single Disk (samuels-razer)
+### Setup
 
 ```bash
-# Enroll TPM for root disk (keeps password as fallback)
-sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-root --tpm2-device=auto --tpm2-pcrs=0+7
+sudo tpm-init
 ```
 
-### Multiple Disks (samuels-pc)
+Enrolls all LUKS partitions automatically. The password stays as fallback.
 
-Each LUKS-encrypted disk needs its own TPM enrollment:
+### Remove
 
 ```bash
-# Enroll root disk
-sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-root --tpm2-device=auto --tpm2-pcrs=0+7
-
-# Enroll games disk
-sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-games-games --tpm2-device=auto --tpm2-pcrs=0+7
+sudo tpm-init   # Choose "wipe"
 ```
 
-Both disks will auto-unlock on boot. The password stays as fallback for each disk.
-
-### Verify and Test
+### Manual Reference
 
 ```bash
-# List enrolled key slots for each disk
+# List enrolled key slots
 sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-root
-sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-games-games
 
-# Reboot to test auto-unlock
-```
+# Enroll single device manually
+sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-root --tpm2-device=auto --tpm2-pcrs=0+7
 
-This binds LUKS keys to your TPM - disks auto-unlock in your PC but are useless if stolen.
-
-### Remove TPM Enrollment
-
-To remove TPM auto-unlock and go back to password-only:
-
-```bash
-# Remove TPM slot from root disk
+# Remove TPM slot manually
 sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-root --wipe-slot=tpm2
-
-# Remove TPM slot from games disk (samuels-pc only)
-sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-games-games --wipe-slot=tpm2
 ```
-
-The password slot remains intact.
