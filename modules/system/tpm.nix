@@ -85,7 +85,7 @@ let
           read -rsp "LUKS password: " PASSWORD
           echo ""
           PASS_FILE="$(mktemp)"
-          echo "$PASSWORD" > "$PASS_FILE"
+          printf '%s' "$PASSWORD" > "$PASS_FILE"
           chmod 600 "$PASS_FILE"
           for dev in "''${DEVICES[@]}"; do
             if systemd-cryptenroll "$dev" 2>/dev/null | grep -q "tpm2"; then
