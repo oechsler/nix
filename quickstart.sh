@@ -6,7 +6,7 @@
 #
 # Usage (as root on NixOS ISO):
 #   curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | bash
-#   curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | sudo bash
+#   curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | bash -s -- [FLAGS]
 #
 # Environment variables:
 #   BRANCH  — Git branch to clone (default: main)
