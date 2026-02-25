@@ -32,6 +32,7 @@ DO_FORMAT=false
 DO_INSTALL=false
 DO_POST_INSTALL=false
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+STATE_FILE="/tmp/nix-installer.env"
 
 show_help() {
   cat <<'EOF'
@@ -108,6 +109,35 @@ error()   { echo -e "${RED}ERROR:${RESET} $*" >&2; exit 1; }
 step()    { STEP_CURRENT=$((STEP_CURRENT + 1)); echo ""; info "[$STEP_CURRENT/$STEP_TOTAL] $*"; }
 
 label_bool() { [[ "$1" == "true" ]] && echo -e "${GREEN}enabled${RESET}" || echo -e "${DIM}disabled${RESET}"; }
+
+#===========================
+# State Persistence
+#===========================
+
+load_state() {
+  if [[ -f "$STATE_FILE" ]]; then
+    echo ""
+    info "Resuming previous session"
+    # Save CLI values before sourcing (CLI has priority)
+    local cli_host="$HOST" cli_ssh="$SSH_KEY_FILE" cli_password="$USER_PASSWORD_HASH"
+    # shellcheck source=/dev/null
+    source "$STATE_FILE"
+    # Restore CLI values where set
+    [[ -n "$cli_host" ]] && HOST="$cli_host"
+    [[ -n "$cli_ssh" ]] && SSH_KEY_FILE="$cli_ssh"
+    [[ -n "$cli_password" ]] && USER_PASSWORD_HASH="$cli_password"
+    success "Loaded: host=$HOST"
+  fi
+}
+
+save_state() {
+  cat > "$STATE_FILE" <<EOF
+HOST="$HOST"
+SSH_KEY_FILE="$SSH_KEY_FILE"
+USER_PASSWORD_HASH="$USER_PASSWORD_HASH"
+EOF
+  chmod 600 "$STATE_FILE"
+}
 
 #===========================
 # Phase 1: Environment
@@ -208,6 +238,7 @@ LUKS_DEVICES=()
 TPM_ENROLLED=false
 
 phase_detect_features() {
+  echo ""
   info "Reading configuration for $HOST..."
 
   local json
@@ -305,9 +336,12 @@ phase_collect_inputs() {
   if [[ "$DO_POST_INSTALL" == true ]]; then
     echo ""
     info "SSH Key (required for SOPS secrets)"
-    if [[ -n "$SSH_KEY" ]]; then
+    if [[ -n "$SSH_KEY_FILE" && -f "$SSH_KEY_FILE" ]]; then
+      success "SSH key ready (cached)"
+    elif [[ -n "$SSH_KEY" ]]; then
       SSH_KEY_FILE="$SSH_KEY"
       [[ -f "$SSH_KEY_FILE" ]] || error "SSH key file not found: $SSH_KEY_FILE"
+      success "SSH key ready"
     elif [[ "$YES" == true ]]; then
       error "SSH key required. Use -s /path/to/key."
     else
@@ -333,26 +367,32 @@ phase_collect_inputs() {
           error "Invalid choice."
           ;;
       esac
+      success "SSH key ready"
     fi
-    success "SSH key ready"
   fi
 
   # --- User Password ---
   if [[ "$CONFIG_PASSWORD_LOCKED" == "true" ]]; then
     echo ""
-    warn "No password set in host config — account would be locked after install."
-    info "User Password"
-    local pass pass_confirm
-    read -rsp "    Enter password for $CONFIG_USERNAME: " pass; echo
-    read -rsp "    Confirm password:    " pass_confirm; echo
-    [[ "$pass" == "$pass_confirm" ]] || error "Passwords do not match."
-    if command -v mkpasswd &>/dev/null; then
-      USER_PASSWORD_HASH="$(echo "$pass" | mkpasswd -m sha-512 -s)"
+    if [[ -n "$USER_PASSWORD_HASH" ]]; then
+      success "Password hash ready (cached)"
     else
-      USER_PASSWORD_HASH="$(echo "$pass" | nix-shell -p mkpasswd --run 'mkpasswd -m sha-512 -s')"
+      warn "No password set in host config — account would be locked after install."
+      info "User Password"
+      local pass pass_confirm
+      read -rsp "    Enter password for $CONFIG_USERNAME: " pass; echo
+      read -rsp "    Confirm password:    " pass_confirm; echo
+      [[ "$pass" == "$pass_confirm" ]] || error "Passwords do not match."
+      if command -v mkpasswd &>/dev/null; then
+        USER_PASSWORD_HASH="$(echo "$pass" | mkpasswd -m sha-512 -s)"
+      else
+        USER_PASSWORD_HASH="$(echo "$pass" | nix-shell -p mkpasswd --run 'mkpasswd -m sha-512 -s')"
+      fi
+      success "Password hash generated"
     fi
-    success "Password hash generated"
   fi
+
+  save_state
 }
 
 #===========================
@@ -365,46 +405,46 @@ phase_summary() {
   echo -e "${BOLD}  Installation Summary${RESET}"
   echo -e "${BOLD}============================================${RESET}"
   echo ""
-  echo -e "  Host:           $HOST"
-  echo -e "  Username:       $CONFIG_USERNAME"
+  echo -e "    Host:           $HOST"
+  echo -e "    Username:       $CONFIG_USERNAME"
   # shellcheck disable=SC2046
-  echo -e "  Steps:          $(printf '%s ' \
+  echo -e "    Steps:          $(printf '%s ' \
     $([[ "$DO_FORMAT" == true ]] && echo "format") \
     $([[ "$DO_INSTALL" == true ]] && echo "install") \
     $([[ "$DO_POST_INSTALL" == true ]] && echo "post-install"))"
   echo ""
   if [[ "$DO_FORMAT" == true ]]; then
-    echo -e "  ${BOLD}Disk Setup:${RESET}"
+    echo -e "    ${BOLD}Disk Setup:${RESET}"
     if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
-      echo -e "    Encryption:   LUKS (password set)"
+      echo -e "      Encryption:   LUKS (password set)"
     else
-      echo -e "    Encryption:   none"
+      echo -e "      Encryption:   none"
     fi
-    echo -e "    Filesystem:   btrfs with subvolumes"
+    echo -e "      Filesystem:   btrfs with subvolumes"
     if [[ "$FEAT_IMPERMANENCE" == "true" ]]; then
-      echo -e "    Impermanence: enabled (persist: $PERSIST_PREFIX)"
+      echo -e "      Impermanence: enabled (persist: $PERSIST_PREFIX)"
     else
-      echo -e "    Impermanence: disabled"
+      echo -e "      Impermanence: disabled"
     fi
     echo ""
   fi
   if [[ "$DO_POST_INSTALL" == true ]]; then
-    echo -e "  ${BOLD}Post-Install:${RESET}"
+    echo -e "    ${BOLD}Post-Install:${RESET}"
     if [[ -n "$USER_PASSWORD_HASH" ]]; then
-      echo -e "    Password:     will be written to config"
+      echo -e "      Password:     will be written to config"
     fi
-    echo -e "    SSH key:      will be installed"
-    echo -e "    SOPS:         age key from SSH key"
+    echo -e "      SSH key:      will be installed"
+    echo -e "      SOPS:         age key from SSH key"
     if [[ "$FEAT_TOTP" == "true" ]]; then
-      echo -e "    TOTP 2FA:     will be configured"
+      echo -e "      TOTP 2FA:     will be configured"
     fi
     if [[ "$FEAT_YUBIKEY" == "true" ]]; then
-      echo -e "    YubiKey:      will be configured"
+      echo -e "      YubiKey:      will be configured"
     fi
     echo ""
   fi
   if [[ "$DO_FORMAT" == true ]]; then
-    echo -e "  ${RED}${BOLD}WARNING: This will ERASE all data on the configured disks!${RESET}"
+    echo -e "    ${RED}${BOLD}WARNING: This will ERASE all data on the configured disks!${RESET}"
   fi
   echo ""
 
@@ -415,7 +455,7 @@ phase_summary() {
 
   if [[ "$YES" != true ]]; then
     local confirm
-    read -rp "  Continue? [y/N]: " confirm
+    read -rp "    Continue? [y/N]: " confirm
     [[ "$confirm" =~ ^[yY]$ ]] || { echo "Aborted."; exit 0; }
   fi
 }
@@ -555,7 +595,7 @@ setup_totp() {
   # Verify OTP before confirming
   local verified=false
   for _ in 1 2 3; do
-    read -rp "  Enter OTP code to verify: " otp_code
+    read -rp "    Enter OTP code to verify: " otp_code
     local expected
     expected=$(nix-shell -p oath-toolkit --run "oathtool --totp -d 6 $secret_hex")
     if [[ "$otp_code" == "$expected" ]]; then
@@ -676,34 +716,34 @@ phase_complete() {
   echo ""
 
   if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
-    echo "  LUKS: Enter disk encryption password at boot"
+    echo "    LUKS: Enter disk encryption password at boot"
     if [[ "$TPM_ENROLLED" == "true" ]]; then
-      echo "  TPM:  Auto-unlock enrolled (password still works as fallback)"
+      echo "    TPM:  Auto-unlock enrolled (password still works as fallback)"
     fi
   fi
 
-  echo "  Login: Password is set in NixOS config"
+  echo "    Login: Password is set in NixOS config"
 
   if [[ "$FEAT_TOTP" == "true" ]]; then
-    echo "  TOTP: Use the code from your authenticator app"
+    echo "    TOTP: Use the code from your authenticator app"
   fi
 
   if [[ "$FEAT_YUBIKEY" == "true" ]]; then
-    echo "  YubiKey: Touch your key at login prompt"
+    echo "    YubiKey: Touch your key at login prompt"
   fi
 
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
     echo ""
-    echo -e "  ${BOLD}Secure Boot (post-install):${RESET}"
-    echo "    1. Boot into the new system"
-    echo "    2. sudo sbctl create-keys"
-    echo "    3. sudo nixos-rebuild switch --flake ~/repos/nix#$HOST"
-    echo "    4. sudo sbctl enroll-keys --microsoft"
-    echo "    5. Reboot, enable Secure Boot in UEFI"
+    echo -e "    ${BOLD}Secure Boot (post-install):${RESET}"
+    echo "      1. Boot into the new system"
+    echo "      2. sudo sbctl create-keys"
+    echo "      3. sudo nixos-rebuild switch --flake ~/repos/nix#$HOST"
+    echo "      4. sudo sbctl enroll-keys --microsoft"
+    echo "      5. Reboot, enable Secure Boot in UEFI"
   fi
 
   echo ""
-  echo "  You can reboot now."
+  echo "    You can reboot now."
   echo ""
 }
 
@@ -712,6 +752,7 @@ phase_complete() {
 #===========================
 
 main() {
+  load_state
   phase_validate
   phase_select_host
   phase_detect_features
@@ -755,7 +796,7 @@ main() {
   phase_complete
 
   # Cleanup
-  rm -f /tmp/luks-password
+  rm -f /tmp/luks-password "$STATE_FILE"
 }
 
 main
