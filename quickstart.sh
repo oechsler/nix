@@ -40,7 +40,7 @@ ok()    { echo -e "    ${GREEN}$*${RESET}"; }
 info "NixOS Quickstart"
 echo ""
 
-[[ $EUID -eq 0 ]] || error "Must run as root. Log in as root on the NixOS ISO, or use: sudo bash /tmp/quickstart.sh"
+[[ $EUID -eq 0 ]] || error "Must run as root. Log in as root on the NixOS ISO."
 
 command -v nixos-version &>/dev/null || error "Not a NixOS system."
 
