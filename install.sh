@@ -460,7 +460,7 @@ setup_sops() {
 setup_totp() {
   local secret_hex secret_b32 oath_file
   secret_hex=$(od -An -tx1 -N20 /dev/urandom | tr -d ' \n')
-  secret_b32=$(python3 -c "import base64; print(base64.b32encode(bytes.fromhex('$secret_hex')).decode())")
+  secret_b32=$(printf '%s' "$secret_hex" | sed 's/../\\x&/g' | xargs -0 printf '%b' | base32 | tr -d '\n')
 
   oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"
   mkdir -p "$(dirname "$oath_file")"
@@ -471,7 +471,7 @@ setup_totp() {
   info "Scan this QR code with your authenticator app:"
   echo ""
   nix-shell -p qrencode --run \
-    "qrencode -t ANSIUTF8 'otpauth://totp/${CONFIG_USERNAME}@${HOST}?secret=${secret_b32}&issuer=NixOS'"
+    "qrencode -t ANSIUTF8 'otpauth://totp/NixOS:${CONFIG_USERNAME}@${HOST}?secret=${secret_b32}&issuer=NixOS'"
   echo ""
   echo -e "    Backup secret (base32): ${BOLD}$secret_b32${RESET}"
   echo ""
