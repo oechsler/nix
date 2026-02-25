@@ -4,7 +4,7 @@
 # Downloads the NixOS configuration repository and runs the installer.
 # Intended for use on a NixOS ISO (fresh install environment).
 #
-# Usage (as root on NixOS ISO):
+# Usage (on NixOS ISO — become root first with `sudo -i`):
 #   curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | bash
 #   curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | bash -s -- [FLAGS]
 #

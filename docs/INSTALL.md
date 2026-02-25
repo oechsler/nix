@@ -2,9 +2,10 @@
 
 ## Quickstart
 
-Boot the NixOS ISO (you're root by default) and run:
+Boot the NixOS ISO and become root first:
 
 ```bash
+sudo -i
 curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | bash
 ```
 
