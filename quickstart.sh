@@ -4,14 +4,21 @@
 # Downloads the NixOS configuration repository and runs the installer.
 # Intended for use on a NixOS ISO (fresh install environment).
 #
-# Usage:
+# Usage (as root on NixOS ISO):
+#   curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | bash
+#
+# Alternative (download first):
 #   curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh -o /tmp/quickstart.sh
-#   sudo bash /tmp/quickstart.sh
+#   bash /tmp/quickstart.sh
+#
+# IMPORTANT: Do NOT pipe through sudo (curl | sudo bash). The sudo PTY
+# breaks interactive prompts. Instead, run as root directly (NixOS ISO
+# default) or use the download-first approach with sudo.
 #
 # Environment variables:
 #   BRANCH  — Git branch to clone (default: main)
 #   REPO    — Git repository URL (default: github.com/oechsler/nix)
-
+{
 set -euo pipefail
 
 REPO_URL="${REPO:-https://github.com/oechsler/nix.git}"
@@ -33,7 +40,7 @@ ok()    { echo -e "    ${GREEN}$*${RESET}"; }
 info "NixOS Quickstart"
 echo ""
 
-[[ $EUID -eq 0 ]] || error "Must run as root. Try: sudo bash or log in as root on the NixOS ISO."
+[[ $EUID -eq 0 ]] || error "Must run as root. Log in as root on the NixOS ISO, or use: sudo bash /tmp/quickstart.sh"
 
 command -v nixos-version &>/dev/null || error "Not a NixOS system."
 
@@ -62,8 +69,20 @@ else
 fi
 ok "Repository ready at $CLONE_DIR"
 
+# --- Restore stdin for interactive prompts ---
+# When piped (curl | bash), stdin is the pipe stream. After the { } block
+# is fully read, stdin is at EOF. Reopen from /dev/tty so the installer
+# can prompt interactively.
+# NOTE: This does NOT work with 'curl | sudo bash' because sudo's use_pty
+# makes /dev/tty point to the sudo PTY, not the real terminal.
+if [[ ! -t 0 ]]; then
+  exec < /dev/tty || error "Cannot reopen terminal for interactive input. Do not use 'curl | sudo bash'. Run as root directly or download first."
+fi
+
 # --- Hand off to installer ---
 echo ""
 info "Starting installer..."
 echo ""
 exec bash "$CLONE_DIR/install.sh" "$@"
+exit
+}
