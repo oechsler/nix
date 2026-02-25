@@ -2,11 +2,10 @@
 
 ## Quickstart
 
-Boot the NixOS ISO and run:
+Boot the NixOS ISO (you're root by default) and run:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh -o /tmp/quickstart.sh
-sudo bash /tmp/quickstart.sh
+curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | bash
 ```
 
 This clones the repo and launches the interactive installer. It will:
@@ -20,39 +19,46 @@ CLI flags are passed through to `install.sh`:
 
 ```bash
 # Re-run only post-install (e.g. after failed TOTP setup)
-sudo bash /tmp/quickstart.sh --post-install-only -h HOST -s /path/to/key
+curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | bash -s -- --post-install --host HOST -s /path/to/key
 ```
 
-To test a different branch: `BRANCH=dev bash /tmp/quickstart.sh`
+To test a different branch: `BRANCH=dev curl -sL ... | bash`
+
+> **Do NOT use `curl | sudo bash`** — sudo's PTY breaks interactive prompts. On the NixOS ISO you're already root.
 
 ### Manual Install
 
 ```bash
 nix-env -iA nixos.git
 git clone https://github.com/oechsler/nix.git /tmp/nix-config
-sudo /tmp/nix-config/install.sh
+/tmp/nix-config/install.sh
 ```
 
 ### CLI Options
 
 ```
-./install.sh                              # Interactive (recommended)
-./install.sh -h HOST                      # Pre-select host
-./install.sh -h HOST -s KEY -p PWD -y     # Fully automated
-./install.sh --dry-run                    # Test without making changes
-./install.sh --post-install-only -h HOST  # Re-run only post-install setup
+./install.sh                              # Full install (all steps)
+./install.sh --host mythinkpad            # Pre-select host
+./install.sh --host HOST -s KEY -p PWD -y # Fully automated
+./install.sh --install --post-install     # Reinstall without formatting
+./install.sh --post-install               # Re-run post-install only
+./install.sh --dry-run                    # Show summary and exit
+./install.sh -h                           # Show help
 ```
 
 | Flag | Description |
 |------|-------------|
-| `-h`, `--host HOST` | Pre-select host (skip menu) |
+| `--format` | Partition and format disks (disko) |
+| `--install` | Install NixOS (nixos-install) |
+| `--post-install` | Post-install setup (SSH, SOPS, TOTP, YubiKey, TPM) |
+| `--host HOST` | Pre-select host (skip menu) |
 | `-s`, `--ssh-key FILE` | SSH private key path |
 | `-p`, `--luks-password PASSWORD` | LUKS disk encryption password |
 | `-y`, `--yes` | Skip confirmation (requires `-s`, `-p` if encryption enabled) |
-| `--dry-run` | Run detection phases without making changes |
-| `--post-install-only` | Skip partitioning/install, re-run only post-install (SSH, SOPS, TOTP, YubiKey). Target system must be mounted at `/mnt`. |
+| `--dry-run` | Show summary and exit without making changes |
+| `-h`, `--help` | Show help |
 
-The installer reads each host's configuration via `nix eval` to determine which features are enabled (encryption, impermanence, TOTP, etc.) and only asks relevant questions.
+Steps are combinable. If none specified, all three run. The installer reads each host's configuration via `nix eval` to determine which features are enabled (encryption, impermanence, TOTP, etc.) and only asks relevant questions.
 
 ## Disk Layout
 
