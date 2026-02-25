@@ -473,6 +473,16 @@ phase_partition() {
   success "Disks partitioned and mounted at /mnt"
 }
 
+phase_mount() {
+  local disko_args=(--mode mount --flake "$REPO_DIR#$HOST")
+
+  if ! nix run github:nix-community/disko -- "${disko_args[@]}"; then
+    error "Disko mount failed. Are the disks connected?"
+  fi
+
+  success "Existing disks mounted at /mnt"
+}
+
 #===========================
 # Phase 8: NixOS Install
 #===========================
@@ -708,20 +718,26 @@ main() {
   phase_collect_inputs
   phase_summary
 
-  # /mnt check when skipping format but needing install or post-install
+  # Mount existing disks via disko if /mnt is not mounted and format was not requested
   if [[ "$DO_FORMAT" != true ]] && [[ "$DO_INSTALL" == true || "$DO_POST_INSTALL" == true ]]; then
-    mountpoint -q /mnt 2>/dev/null || error "/mnt is not mounted. Run with --format or mount manually."
+    if ! mountpoint -q /mnt 2>/dev/null; then
+      DO_MOUNT=true
+    fi
   fi
 
   # Dynamic step count
   STEP_TOTAL=0
   [[ "$DO_FORMAT" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
+  [[ "${DO_MOUNT:-false}" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
   [[ "$DO_INSTALL" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 2))  # state version + install
   [[ "$DO_POST_INSTALL" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
 
   if [[ "$DO_FORMAT" == true ]]; then
     step "Partitioning disks"
     phase_partition
+  elif [[ "${DO_MOUNT:-false}" == true ]]; then
+    step "Mounting existing disks"
+    phase_mount
   fi
 
   if [[ "$DO_INSTALL" == true ]]; then
