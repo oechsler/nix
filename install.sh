@@ -315,7 +315,7 @@ phase_collect_inputs() {
     if [[ -f /tmp/luks-password ]]; then
       info "Using existing /tmp/luks-password"
     elif [[ -n "$LUKS_PASSWORD" ]]; then
-      echo "$LUKS_PASSWORD" > /tmp/luks-password
+      printf '%s' "$LUKS_PASSWORD" > /tmp/luks-password
       chmod 600 /tmp/luks-password
       success "LUKS password set via -p"
     elif [[ "$YES" == true ]]; then
@@ -326,7 +326,7 @@ phase_collect_inputs() {
       read -rsp "    Enter LUKS password: " pass; echo
       read -rsp "    Confirm password:    " pass_confirm; echo
       [[ "$pass" == "$pass_confirm" ]] || error "Passwords do not match."
-      echo "$pass" > /tmp/luks-password
+      printf '%s' "$pass" > /tmp/luks-password
       chmod 600 /tmp/luks-password
       success "Password saved"
     fi
@@ -648,7 +648,7 @@ setup_tpm() {
   if [[ ! -f "$password_file" ]]; then
     local password
     read -rsp "    LUKS password for TPM enrollment: " password; echo
-    echo "$password" > "$password_file"
+    printf '%s' "$password" > "$password_file"
     chmod 600 "$password_file"
   fi
 
@@ -680,13 +680,19 @@ phase_post_install() {
   setup_sops
 
   if [[ "$FEAT_TOTP" == "true" ]]; then
-    if ! setup_totp; then
+    local oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"
+    if [[ -f "$oath_file" ]]; then
+      success "TOTP already configured (cached)"
+    elif ! setup_totp; then
       warn "TOTP setup failed. Run 'totp-init' after first boot."
     fi
   fi
 
   if [[ "$FEAT_YUBIKEY" == "true" ]]; then
-    if ! setup_yubikey; then
+    local mappings_file="/mnt${PERSIST_PREFIX}/etc/u2f_mappings"
+    if [[ -f "$mappings_file" ]]; then
+      success "YubiKey already configured (cached)"
+    elif ! setup_yubikey; then
       warn "YubiKey setup failed. Run 'yubikey-init' after first boot."
     fi
   fi
