@@ -24,8 +24,6 @@ curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | bas
 
 To test a different branch: `BRANCH=dev curl -sL ... | bash`
 
-> **Do NOT use `curl | sudo bash`** — sudo's PTY breaks interactive prompts. On the NixOS ISO you're already root.
-
 ### Manual Install
 
 ```bash

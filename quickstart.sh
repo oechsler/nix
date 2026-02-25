@@ -6,14 +6,7 @@
 #
 # Usage (as root on NixOS ISO):
 #   curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | bash
-#
-# Alternative (download first):
-#   curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh -o /tmp/quickstart.sh
-#   bash /tmp/quickstart.sh
-#
-# IMPORTANT: Do NOT pipe through sudo (curl | sudo bash). The sudo PTY
-# breaks interactive prompts. Instead, run as root directly (NixOS ISO
-# default) or use the download-first approach with sudo.
+#   curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | sudo bash
 #
 # Environment variables:
 #   BRANCH  — Git branch to clone (default: main)
@@ -73,10 +66,8 @@ ok "Repository ready at $CLONE_DIR"
 # When piped (curl | bash), stdin is the pipe stream. After the { } block
 # is fully read, stdin is at EOF. Reopen from /dev/tty so the installer
 # can prompt interactively.
-# NOTE: This does NOT work with 'curl | sudo bash' because sudo's use_pty
-# makes /dev/tty point to the sudo PTY, not the real terminal.
 if [[ ! -t 0 ]]; then
-  exec < /dev/tty || error "Cannot reopen terminal for interactive input. Do not use 'curl | sudo bash'. Run as root directly or download first."
+  exec < /dev/tty || error "Cannot reopen terminal for interactive input."
 fi
 
 # --- Hand off to installer ---
