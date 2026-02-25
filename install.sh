@@ -9,6 +9,7 @@
 #   ./install.sh -h HOST              # Pre-select host
 #   ./install.sh -h HOST -s KEY -p PWD -y  # Fully automated
 #   ./install.sh --dry-run            # Test phases 1-5 without changes
+#   ./install.sh --post-install-only  # Re-run only post-install (phase 9)
 #
 # Phases:
 #   1. Environment validation
@@ -32,6 +33,7 @@ SSH_KEY=""
 LUKS_PASSWORD=""
 YES=false
 DRY_RUN=false
+POST_INSTALL_ONLY=false
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 
 while [[ $# -gt 0 ]]; do
@@ -41,8 +43,9 @@ while [[ $# -gt 0 ]]; do
     -p|--luks-password)  LUKS_PASSWORD="$2"; shift 2 ;;
     -y|--yes)            YES=true; shift ;;
     --dry-run)           DRY_RUN=true; shift ;;
+    --post-install-only) POST_INSTALL_ONLY=true; shift ;;
     *)
-      echo "Usage: $0 [-h HOST] [-s SSH_KEY] [-p LUKS_PASSWORD] [-y] [--dry-run]"
+      echo "Usage: $0 [-h HOST] [-s SSH_KEY] [-p LUKS_PASSWORD] [-y] [--dry-run] [--post-install-only]"
       exit 1
       ;;
   esac
@@ -78,8 +81,17 @@ phase_validate() {
   info "NixOS Installer"
   echo ""
 
+  if [[ "$DRY_RUN" == true && "$POST_INSTALL_ONLY" == true ]]; then
+    error "--dry-run and --post-install-only are mutually exclusive."
+  fi
+
   if [[ "$DRY_RUN" == true ]]; then
     warn "Dry-run mode: no changes will be made"
+    echo ""
+  fi
+
+  if [[ "$POST_INSTALL_ONLY" == true ]]; then
+    warn "Post-install only: skipping partitioning and NixOS install"
     echo ""
   fi
 
@@ -223,8 +235,8 @@ AGE_KEY=""
 USER_PASSWORD_HASH=""
 
 phase_collect_inputs() {
-  # --- LUKS Password ---
-  if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
+  # --- LUKS Password (not needed for post-install-only) ---
+  if [[ "$FEAT_ENCRYPTION" == "true" && "$POST_INSTALL_ONLY" != true ]]; then
     echo ""
     if [[ -f /tmp/luks-password ]]; then
       info "Using existing /tmp/luks-password"
@@ -603,24 +615,32 @@ main() {
   phase_detect_features
   phase_collect_inputs
 
-  phase_summary
+  if [[ "$POST_INSTALL_ONLY" == true ]]; then
+    [[ -d /mnt/nix ]] || error "/mnt/nix not found. Mount the target system at /mnt first."
 
-  # Destructive phases
-  STEP_TOTAL=4
+    STEP_TOTAL=1
+    step "Post-install setup"
+    phase_post_install
+    phase_complete
+  else
+    phase_summary
 
-  step "Detecting NixOS version"
-  phase_state_version
+    STEP_TOTAL=4
 
-  step "Partitioning disks"
-  phase_partition
+    step "Detecting NixOS version"
+    phase_state_version
 
-  step "Installing NixOS"
-  phase_install
+    step "Partitioning disks"
+    phase_partition
 
-  step "Post-install setup"
-  phase_post_install
+    step "Installing NixOS"
+    phase_install
 
-  phase_complete
+    step "Post-install setup"
+    phase_post_install
+
+    phase_complete
+  fi
 }
 
 main

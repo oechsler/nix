@@ -16,6 +16,13 @@ This clones the repo and launches the interactive installer. It will:
 3. Prompt only for what's needed (LUKS password, SSH key)
 4. Partition, install, and set up post-install (SSH, SOPS, TOTP, YubiKey)
 
+CLI flags are passed through to `install.sh`:
+
+```bash
+# Re-run only post-install (e.g. after failed TOTP setup)
+sudo bash /tmp/quickstart.sh --post-install-only -h HOST -s /path/to/key
+```
+
 To test a different branch: `BRANCH=dev bash /tmp/quickstart.sh`
 
 ### Manual Install
@@ -33,6 +40,7 @@ sudo /tmp/nix-config/install.sh
 ./install.sh -h HOST                      # Pre-select host
 ./install.sh -h HOST -s KEY -p PWD -y     # Fully automated
 ./install.sh --dry-run                    # Test without making changes
+./install.sh --post-install-only -h HOST  # Re-run only post-install setup
 ```
 
 | Flag | Description |
@@ -42,6 +50,7 @@ sudo /tmp/nix-config/install.sh
 | `-p`, `--luks-password PASSWORD` | LUKS disk encryption password |
 | `-y`, `--yes` | Skip confirmation (requires `-s`, `-p` if encryption enabled) |
 | `--dry-run` | Run detection phases without making changes |
+| `--post-install-only` | Skip partitioning/install, re-run only post-install (SSH, SOPS, TOTP, YubiKey). Target system must be mounted at `/mnt`. |
 
 The installer reads each host's configuration via `nix eval` to determine which features are enabled (encryption, impermanence, TOTP, etc.) and only asks relevant questions.
 
