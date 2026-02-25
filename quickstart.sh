@@ -45,12 +45,14 @@ ok "Network OK"
 
 # --- Install git ---
 if ! command -v git &>/dev/null; then
+  echo ""
   info "Installing git..."
   nix-env -iA nixos.git
 fi
 ok "Git available"
 
 # --- Clone repository ---
+echo ""
 if [[ -d "$CLONE_DIR" ]]; then
   info "Updating existing clone at $CLONE_DIR..."
   git -C "$CLONE_DIR" fetch origin "$BRANCH"
