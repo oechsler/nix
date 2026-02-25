@@ -5,22 +5,17 @@
 # which features are enabled, and only prompts for relevant setup steps.
 #
 # Usage:
-#   ./install.sh                      # Interactive (recommended)
-#   ./install.sh -h HOST              # Pre-select host
-#   ./install.sh -h HOST -s KEY -p PWD -y  # Fully automated
-#   ./install.sh --dry-run            # Test phases 1-5 without changes
-#   ./install.sh --post-install-only  # Re-run only post-install (phase 9)
+#   ./install.sh                              # Full install (all steps)
+#   ./install.sh --host mythinkpad            # Pre-select host
+#   ./install.sh --install --post-install     # Reinstall without formatting
+#   ./install.sh --post-install               # Re-run post-install only
+#   ./install.sh --dry-run                    # Show summary and exit
+#   ./install.sh -h                           # Show help
 #
-# Phases:
-#   1. Environment validation
-#   2. Host selection
-#   3. Feature detection (nix eval)
-#   4. Interactive prompts (conditional)
-#   5. Summary + confirmation
-#   6. State version detection
-#   7. Disko partitioning
-#   8. NixOS installation
-#   9. Post-install setup (SSH, SOPS, TOTP, YubiKey)
+# Steps (combinable, default: all):
+#   --format        Partition and format disks (disko)
+#   --install       Install NixOS (nixos-install)
+#   --post-install  Post-install setup (SSH, SOPS, TOTP, YubiKey, TPM)
 
 set -euo pipefail
 
@@ -33,23 +28,64 @@ SSH_KEY=""
 LUKS_PASSWORD=""
 YES=false
 DRY_RUN=false
-POST_INSTALL_ONLY=false
+DO_FORMAT=false
+DO_INSTALL=false
+DO_POST_INSTALL=false
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+show_help() {
+  cat <<'EOF'
+NixOS Interactive Installer
+
+Usage: install.sh [options]
+
+Steps (combinable, default: all):
+  --format           Partition and format disks (disko)
+  --install          Install NixOS (nixos-install)
+  --post-install     Post-install setup (SSH, SOPS, TOTP, YubiKey, TPM)
+
+Options:
+  --host HOST        Pre-select host configuration
+  -s, --ssh-key PATH Path to SSH private key
+  -p, --luks-password PWD  LUKS encryption password
+  -y, --yes          Skip confirmation prompts
+  --dry-run          Show summary and exit
+  -h, --help         Show this help
+
+Examples:
+  install.sh                              Full install (all steps)
+  install.sh --host mythinkpad            Pre-select host
+  install.sh --install --post-install     Reinstall without formatting
+  install.sh --post-install               Re-run post-install only
+EOF
+  exit 0
+}
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    -h|--host)           HOST="$2"; shift 2 ;;
+    -h|--help)           show_help ;;
+    --host)              HOST="$2"; shift 2 ;;
     -s|--ssh-key)        SSH_KEY="$2"; shift 2 ;;
     -p|--luks-password)  LUKS_PASSWORD="$2"; shift 2 ;;
     -y|--yes)            YES=true; shift ;;
     --dry-run)           DRY_RUN=true; shift ;;
-    --post-install-only) POST_INSTALL_ONLY=true; shift ;;
+    --format)            DO_FORMAT=true; shift ;;
+    --install)           DO_INSTALL=true; shift ;;
+    --post-install)      DO_POST_INSTALL=true; shift ;;
     *)
-      echo "Usage: $0 [-h HOST] [-s SSH_KEY] [-p LUKS_PASSWORD] [-y] [--dry-run] [--post-install-only]"
+      echo "Unknown option: $1" >&2
+      echo "Run '$0 --help' for usage information." >&2
       exit 1
       ;;
   esac
 done
+
+# Default: all steps if none specified
+if [[ "$DO_FORMAT" == false && "$DO_INSTALL" == false && "$DO_POST_INSTALL" == false ]]; then
+  DO_FORMAT=true
+  DO_INSTALL=true
+  DO_POST_INSTALL=true
+fi
 
 #===========================
 # Colors & Helpers
@@ -81,19 +117,17 @@ phase_validate() {
   info "NixOS Installer"
   echo ""
 
-  if [[ "$DRY_RUN" == true && "$POST_INSTALL_ONLY" == true ]]; then
-    error "--dry-run and --post-install-only are mutually exclusive."
-  fi
-
   if [[ "$DRY_RUN" == true ]]; then
     warn "Dry-run mode: no changes will be made"
     echo ""
   fi
 
-  if [[ "$POST_INSTALL_ONLY" == true ]]; then
-    warn "Post-install only: skipping partitioning and NixOS install"
-    echo ""
-  fi
+  # shellcheck disable=SC2046
+  echo -e "    Steps: ${BOLD}$(printf '%s ' \
+    $([[ "$DO_FORMAT" == true ]] && echo "format") \
+    $([[ "$DO_INSTALL" == true ]] && echo "install") \
+    $([[ "$DO_POST_INSTALL" == true ]] && echo "post-install"))${RESET}"
+  echo ""
 
   [[ $EUID -eq 0 ]] || error "Must run as root."
 
@@ -170,6 +204,8 @@ FEAT_WM=""
 FEAT_SERVER=false
 CONFIG_USERNAME=""
 CONFIG_PASSWORD_LOCKED=false
+LUKS_DEVICES=()
+TPM_ENROLLED=false
 
 phase_detect_features() {
   info "Reading configuration for $HOST..."
@@ -188,6 +224,7 @@ phase_detect_features() {
       server = cfg.features.server;
       userName = cfg.user.name;
       passwordLocked = cfg.user.hashedPassword == "!";
+      luksDevices = builtins.attrValues (builtins.mapAttrs (name: dev: dev.device) cfg.boot.initrd.luks.devices);
     }
   ') || error "Failed to evaluate configuration. Check flake syntax."
 
@@ -205,6 +242,9 @@ phase_detect_features() {
       .passwordLocked
     ] | @tsv')
 
+  # Parse LUKS device paths into array
+  mapfile -t LUKS_DEVICES < <(echo "$json" | jq -r '.luksDevices[]')
+
   success "Features detected"
   echo ""
   echo -e "    Host:          ${BOLD}$HOST${RESET}"
@@ -219,6 +259,9 @@ phase_detect_features() {
   echo -e "    TOTP 2FA:      $(label_bool "$FEAT_TOTP")"
   echo -e "    YubiKey:       $(label_bool "$FEAT_YUBIKEY")"
   echo -e "    Secure Boot:   $(label_bool "$FEAT_SECURE_BOOT")"
+  if [[ "$FEAT_ENCRYPTION" == "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
+    echo -e "    LUKS devices:  ${DIM}${#LUKS_DEVICES[@]} partition(s)${RESET}"
+  fi
   if [[ "$CONFIG_PASSWORD_LOCKED" == "true" ]]; then
     echo -e "    Password:      ${YELLOW}not set${RESET}"
   else
@@ -235,8 +278,8 @@ AGE_KEY=""
 USER_PASSWORD_HASH=""
 
 phase_collect_inputs() {
-  # --- LUKS Password (not needed for post-install-only) ---
-  if [[ "$FEAT_ENCRYPTION" == "true" && "$POST_INSTALL_ONLY" != true ]]; then
+  # --- LUKS Password (needed for format or post-install with TPM enrollment) ---
+  if [[ "$FEAT_ENCRYPTION" == "true" ]] && [[ "$DO_FORMAT" == true || "$DO_POST_INSTALL" == true ]]; then
     echo ""
     if [[ -f /tmp/luks-password ]]; then
       info "Using existing /tmp/luks-password"
@@ -258,39 +301,41 @@ phase_collect_inputs() {
     fi
   fi
 
-  # --- SSH Key ---
-  echo ""
-  info "SSH Key (required for SOPS secrets)"
-  if [[ -n "$SSH_KEY" ]]; then
-    SSH_KEY_FILE="$SSH_KEY"
-    [[ -f "$SSH_KEY_FILE" ]] || error "SSH key file not found: $SSH_KEY_FILE"
-  elif [[ "$YES" == true ]]; then
-    error "SSH key required. Use -s /path/to/key."
-  else
+  # --- SSH Key (only needed for post-install) ---
+  if [[ "$DO_POST_INSTALL" == true ]]; then
     echo ""
-    echo -e "    ${BOLD}[1]${RESET} Enter file path"
-    echo -e "    ${BOLD}[2]${RESET} Paste key content"
-    echo ""
-    local choice
-    read -rp "    Choice [1-2]: " choice
+    info "SSH Key (required for SOPS secrets)"
+    if [[ -n "$SSH_KEY" ]]; then
+      SSH_KEY_FILE="$SSH_KEY"
+      [[ -f "$SSH_KEY_FILE" ]] || error "SSH key file not found: $SSH_KEY_FILE"
+    elif [[ "$YES" == true ]]; then
+      error "SSH key required. Use -s /path/to/key."
+    else
+      echo ""
+      echo -e "    ${BOLD}[1]${RESET} Enter file path"
+      echo -e "    ${BOLD}[2]${RESET} Paste key content"
+      echo ""
+      local choice
+      read -rp "    Choice [1-2]: " choice
 
-    case "$choice" in
-      1)
-        read -rp "    Path to SSH private key: " SSH_KEY_FILE
-        [[ -f "$SSH_KEY_FILE" ]] || error "File not found: $SSH_KEY_FILE"
-        ;;
-      2)
-        echo "    Paste your ed25519 private key (end with Ctrl+D):"
-        SSH_KEY_FILE="$(mktemp)"
-        cat > "$SSH_KEY_FILE"
-        chmod 600 "$SSH_KEY_FILE"
-        ;;
-      *)
-        error "Invalid choice."
-        ;;
-    esac
+      case "$choice" in
+        1)
+          read -rp "    Path to SSH private key: " SSH_KEY_FILE
+          [[ -f "$SSH_KEY_FILE" ]] || error "File not found: $SSH_KEY_FILE"
+          ;;
+        2)
+          echo "    Paste your ed25519 private key (end with Ctrl+D):"
+          SSH_KEY_FILE="$(mktemp)"
+          cat > "$SSH_KEY_FILE"
+          chmod 600 "$SSH_KEY_FILE"
+          ;;
+        *)
+          error "Invalid choice."
+          ;;
+      esac
+    fi
+    success "SSH key ready"
   fi
-  success "SSH key ready"
 
   # --- User Password ---
   if [[ "$CONFIG_PASSWORD_LOCKED" == "true" ]]; then
@@ -315,8 +360,6 @@ phase_collect_inputs() {
 #===========================
 
 phase_summary() {
-  local host_dir="$REPO_DIR/hosts/$HOST"
-
   echo ""
   echo -e "${BOLD}============================================${RESET}"
   echo -e "${BOLD}  Installation Summary${RESET}"
@@ -324,34 +367,45 @@ phase_summary() {
   echo ""
   echo -e "  Host:           $HOST"
   echo -e "  Username:       $CONFIG_USERNAME"
+  # shellcheck disable=SC2046
+  echo -e "  Steps:          $(printf '%s ' \
+    $([[ "$DO_FORMAT" == true ]] && echo "format") \
+    $([[ "$DO_INSTALL" == true ]] && echo "install") \
+    $([[ "$DO_POST_INSTALL" == true ]] && echo "post-install"))"
   echo ""
-  echo -e "  ${BOLD}Disk Setup:${RESET}"
-  if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
-    echo -e "    Encryption:   LUKS (password set)"
-  else
-    echo -e "    Encryption:   none"
+  if [[ "$DO_FORMAT" == true ]]; then
+    echo -e "  ${BOLD}Disk Setup:${RESET}"
+    if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
+      echo -e "    Encryption:   LUKS (password set)"
+    else
+      echo -e "    Encryption:   none"
+    fi
+    echo -e "    Filesystem:   btrfs with subvolumes"
+    if [[ "$FEAT_IMPERMANENCE" == "true" ]]; then
+      echo -e "    Impermanence: enabled (persist: $PERSIST_PREFIX)"
+    else
+      echo -e "    Impermanence: disabled"
+    fi
+    echo ""
   fi
-  echo -e "    Filesystem:   btrfs with subvolumes"
-  if [[ "$FEAT_IMPERMANENCE" == "true" ]]; then
-    echo -e "    Impermanence: enabled (persist: $PERSIST_PREFIX)"
-  else
-    echo -e "    Impermanence: disabled"
+  if [[ "$DO_POST_INSTALL" == true ]]; then
+    echo -e "  ${BOLD}Post-Install:${RESET}"
+    if [[ -n "$USER_PASSWORD_HASH" ]]; then
+      echo -e "    Password:     will be written to config"
+    fi
+    echo -e "    SSH key:      will be installed"
+    echo -e "    SOPS:         age key from SSH key"
+    if [[ "$FEAT_TOTP" == "true" ]]; then
+      echo -e "    TOTP 2FA:     will be configured"
+    fi
+    if [[ "$FEAT_YUBIKEY" == "true" ]]; then
+      echo -e "    YubiKey:      will be configured"
+    fi
+    echo ""
   fi
-  echo ""
-  echo -e "  ${BOLD}Post-Install:${RESET}"
-  if [[ -n "$USER_PASSWORD_HASH" ]]; then
-    echo -e "    Password:     will be written to config"
+  if [[ "$DO_FORMAT" == true ]]; then
+    echo -e "  ${RED}${BOLD}WARNING: This will ERASE all data on the configured disks!${RESET}"
   fi
-  echo -e "    SSH key:      will be installed"
-  echo -e "    SOPS:         age key from SSH key"
-  if [[ "$FEAT_TOTP" == "true" ]]; then
-    echo -e "    TOTP 2FA:     will be configured"
-  fi
-  if [[ "$FEAT_YUBIKEY" == "true" ]]; then
-    echo -e "    YubiKey:      will be configured"
-  fi
-  echo ""
-  echo -e "  ${RED}${BOLD}WARNING: This will ERASE all data on the configured disks!${RESET}"
   echo ""
 
   if [[ "$DRY_RUN" == true ]]; then
@@ -529,6 +583,38 @@ setup_yubikey() {
   success "YubiKey registered for $CONFIG_USERNAME"
 }
 
+setup_tpm() {
+  # TPM hardware present?
+  [[ -c /dev/tpmrm0 ]] || { warn "No TPM2 device found, skipping."; return 1; }
+
+  # systemd-cryptenroll available?
+  if ! command -v systemd-cryptenroll &>/dev/null; then
+    warn "systemd-cryptenroll not available, skipping TPM enrollment."
+    return 1
+  fi
+
+  # LUKS password: from /tmp/luks-password or interactive prompt
+  local password
+  if [[ -f /tmp/luks-password ]]; then
+    password=$(cat /tmp/luks-password)
+  else
+    read -rsp "    LUKS password for TPM enrollment: " password; echo
+  fi
+
+  local pcrs="0+7"
+  for dev in "${LUKS_DEVICES[@]}"; do
+    info "Enrolling TPM2 on $(basename "$dev")..."
+    if echo "$password" | systemd-cryptenroll "$dev" --tpm2-device=auto --tpm2-pcrs="$pcrs"; then
+      success "$(basename "$dev") enrolled"
+    else
+      warn "$(basename "$dev") failed"
+      return 1
+    fi
+  done
+
+  TPM_ENROLLED=true
+}
+
 copy_config() {
   local dest="/mnt/home/$CONFIG_USERNAME/repos/nix"
   if [[ ! -d "$dest" ]]; then
@@ -554,15 +640,18 @@ phase_post_install() {
     fi
   fi
 
+  if [[ "$FEAT_ENCRYPTION" == "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
+    if ! setup_tpm; then
+      warn "TPM enrollment skipped. Run 'sudo tpm-init' after first boot."
+    fi
+  fi
+
   if ! copy_config; then
     warn "Config copy failed. Clone the repo manually after boot."
   fi
 
   info "Fixing home directory ownership..."
   nixos-enter --root /mnt -c "chown -R $CONFIG_USERNAME:users /home/$CONFIG_USERNAME"
-
-  # Cleanup
-  rm -f /tmp/luks-password
 }
 
 #===========================
@@ -578,6 +667,9 @@ phase_complete() {
 
   if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
     echo "  LUKS: Enter disk encryption password at boot"
+    if [[ "$TPM_ENROLLED" == "true" ]]; then
+      echo "  TPM:  Auto-unlock enrolled (password still works as fallback)"
+    fi
   fi
 
   echo "  Login: Password is set in NixOS config"
@@ -614,33 +706,40 @@ main() {
   phase_select_host
   phase_detect_features
   phase_collect_inputs
+  phase_summary
 
-  if [[ "$POST_INSTALL_ONLY" == true ]]; then
-    [[ -d /mnt/nix ]] || error "/mnt/nix not found. Mount the target system at /mnt first."
+  # /mnt check when skipping format but needing install or post-install
+  if [[ "$DO_FORMAT" != true ]] && [[ "$DO_INSTALL" == true || "$DO_POST_INSTALL" == true ]]; then
+    mountpoint -q /mnt 2>/dev/null || error "/mnt is not mounted. Run with --format or mount manually."
+  fi
 
-    STEP_TOTAL=1
-    step "Post-install setup"
-    phase_post_install
-    phase_complete
-  else
-    phase_summary
+  # Dynamic step count
+  STEP_TOTAL=0
+  [[ "$DO_FORMAT" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
+  [[ "$DO_INSTALL" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 2))  # state version + install
+  [[ "$DO_POST_INSTALL" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
 
-    STEP_TOTAL=4
-
-    step "Detecting NixOS version"
-    phase_state_version
-
+  if [[ "$DO_FORMAT" == true ]]; then
     step "Partitioning disks"
     phase_partition
+  fi
 
+  if [[ "$DO_INSTALL" == true ]]; then
+    step "Detecting NixOS version"
+    phase_state_version
     step "Installing NixOS"
     phase_install
+  fi
 
+  if [[ "$DO_POST_INSTALL" == true ]]; then
     step "Post-install setup"
     phase_post_install
-
-    phase_complete
   fi
+
+  phase_complete
+
+  # Cleanup
+  rm -f /tmp/luks-password
 }
 
 main
