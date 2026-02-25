@@ -36,12 +36,12 @@ features.impermanence.enable = true;  # default
 
 ### Authentication
 
-Multi-factor authentication on all login surfaces (console, SDDM, sudo, polkit, SSH).
+Multi-factor authentication on sudo, SSH, and local login surfaces.
 
 | Method | Where | Setup |
 |--------|-------|-------|
-| TOTP | login, sudo, SSH | `sudo totp-init` |
-| YubiKey (FIDO2) | login, sudo, SSH | `sudo yubikey-init` |
+| TOTP | sudo, SSH | `sudo totp-init` |
+| YubiKey (FIDO2) | login, SDDM, sudo, polkit, SSH | `sudo yubikey-init` |
 | Password | local fallback only | `mkpasswd -m sha-512` |
 
 SSH enforces public-key + second factor (`publickey,keyboard-interactive`). Password-only SSH is disabled.

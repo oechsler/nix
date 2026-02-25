@@ -13,9 +13,19 @@ Both methods work independently or combined. Password serves as a local fallback
 
 ## Auth Flow
 
-### Local (login, SDDM, sudo)
+### Login / SDDM
 
-Each method is tried in order. The first success grants access, on failure the next method is tried. TOTP allows 3 attempts before falling back. SDDM inherits login's PAM configuration.
+Password only (TOTP excluded — SDDM's greeter mishandles multi-prompt PAM). YubiKey works because it only needs touch. SDDM inherits login's PAM configuration.
+
+| Enabled | Auth chain |
+|---------|-----------|
+| TOTP only | Password |
+| YubiKey only | YubiKey → Password |
+| Both | YubiKey → Password |
+
+### sudo
+
+Each method is tried in order. The first success grants access, on failure the next method is tried. TOTP allows 3 attempts before falling back.
 
 | Enabled | Auth chain |
 |---------|-----------|
