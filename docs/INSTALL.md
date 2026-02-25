@@ -2,11 +2,10 @@
 
 ## Quickstart
 
-Boot the NixOS ISO and become root first:
+Boot the NixOS ISO and run:
 
 ```bash
-sudo -i
-curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | bash
+curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | sudo bash
 ```
 
 This clones the repo and launches the interactive installer. It will:
@@ -20,10 +19,10 @@ CLI flags are passed through to `install.sh`:
 
 ```bash
 # Re-run only post-install (e.g. after failed TOTP setup)
-curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | bash -s -- --post-install --host HOST -s /path/to/key
+curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | sudo bash -s -- --post-install --host HOST -s /path/to/key
 ```
 
-To test a different branch: `BRANCH=dev curl -sL ... | bash`
+To test a different branch: `BRANCH=dev curl -sL ... | sudo bash`
 
 ### Manual Install
 

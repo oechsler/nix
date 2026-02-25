@@ -644,17 +644,18 @@ setup_tpm() {
   fi
 
   # LUKS password: from /tmp/luks-password or interactive prompt
-  local password
-  if [[ -f /tmp/luks-password ]]; then
-    password=$(cat /tmp/luks-password)
-  else
+  local password_file="/tmp/luks-password"
+  if [[ ! -f "$password_file" ]]; then
+    local password
     read -rsp "    LUKS password for TPM enrollment: " password; echo
+    echo "$password" > "$password_file"
+    chmod 600 "$password_file"
   fi
 
   local pcrs="0+7"
   for dev in "${LUKS_DEVICES[@]}"; do
     info "Enrolling TPM2 on $(basename "$dev")..."
-    if echo "$password" | systemd-cryptenroll "$dev" --tpm2-device=auto --tpm2-pcrs="$pcrs"; then
+    if systemd-cryptenroll "$dev" --tpm2-device=auto --tpm2-pcrs="$pcrs" --unlock-key-file="$password_file"; then
       success "$(basename "$dev") enrolled"
     else
       warn "$(basename "$dev") failed"

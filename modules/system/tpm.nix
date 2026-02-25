@@ -84,18 +84,22 @@ let
           echo ""
           read -rsp "LUKS password: " PASSWORD
           echo ""
+          PASS_FILE="$(mktemp)"
+          echo "$PASSWORD" > "$PASS_FILE"
+          chmod 600 "$PASS_FILE"
           for dev in "''${DEVICES[@]}"; do
             if systemd-cryptenroll "$dev" 2>/dev/null | grep -q "tpm2"; then
               echo "Wiping existing TPM2 slot on $(basename "$dev")..."
               systemd-cryptenroll "$dev" --wipe-slot=tpm2 || true
             fi
             echo "Enrolling $(basename "$dev")..."
-            if echo "$PASSWORD" | systemd-cryptenroll "$dev" --tpm2-device=auto --tpm2-pcrs="$PCRS"; then
+            if systemd-cryptenroll "$dev" --tpm2-device=auto --tpm2-pcrs="$PCRS" --unlock-key-file="$PASS_FILE"; then
               echo "  OK"
             else
               echo "  FAILED"
             fi
           done
+          rm -f "$PASS_FILE"
           echo ""
           echo "Done."
           ;;
