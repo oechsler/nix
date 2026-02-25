@@ -5,11 +5,16 @@
 #   features.auth.yubikey.enable = false;  # YubiKey authentication (FIDO2, touch only)
 #   features.auth.yubikey.pin = false;    # Require FIDO2 PIN in addition to touch
 #
-# Auth flow (login/sddm/sudo):
+# Auth flow (login/sddm):
+#   TOTP only:            Password only (TOTP excluded — SDDM unreliable)
+#   YubiKey only:         YubiKey → Password
+#   Both:                 YubiKey → Password
+#   Note: sddm uses PAM "substack login", inherits login's config.
+#
+# Auth flow (sudo):
 #   TOTP only:            OTP (3 attempts) → Password
 #   YubiKey only:         YubiKey → Password
 #   Both:                 YubiKey → OTP (3 attempts) → Password
-#   Note: sddm uses PAM "substack login", inherits login's config.
 #
 # Auth flow (polkit):
 #   TOTP only:            Password only (oath excluded — multi-round conversation unreliable)
@@ -68,7 +73,6 @@ let
     name = "totp-init";
     runtimeInputs = with pkgs; [
       coreutils
-      python3
       oath-toolkit
       qrencode
     ];
@@ -107,7 +111,7 @@ let
       SECRET_HEX=$(od -An -tx1 -N20 /dev/urandom | tr -d ' \n')
 
       # Convert to base32 for QR code / authenticator app
-      SECRET_B32=$(python3 -c "import base64; print(base64.b32encode(bytes.fromhex('$SECRET_HEX')).decode())")
+      SECRET_B32=$(printf '%s' "$SECRET_HEX" | sed 's/../\\x&/g' | xargs -0 printf '%b' | base32 | tr -d '\n')
 
       # Write oath usersfile
       # Format: HOTP/T30/6 = TOTP with 30s period and 6 digits
@@ -117,7 +121,7 @@ let
       echo ""
       echo "Scan this QR code with your authenticator app:"
       echo ""
-      qrencode -t ANSIUTF8 "otpauth://totp/''${USERNAME}@''${HOSTNAME}?secret=''${SECRET_B32}&issuer=NixOS"
+      qrencode -t ANSIUTF8 "otpauth://totp/NixOS:''${USERNAME}@''${HOSTNAME}?secret=''${SECRET_B32}&issuer=NixOS"
       echo ""
       echo "Backup secret (base32): $SECRET_B32"
       echo ""
@@ -291,10 +295,11 @@ in
         # digits = 6 (default)
       };
 
-      # Terminal services + SSH: 3 OTP attempts before fallback
+      # sudo + SSH: 3 OTP attempts before fallback
       # [success=done default=ignore] = if correct → done, if wrong → try next
-      # After 3 failures: terminal → password prompt (pam_unix), SSH → denied (pam_deny)
-      security.pam.services = lib.genAttrs (terminalServices ++ [ "sshd" ]) (_: {
+      # After 3 failures: sudo → password prompt (pam_unix), SSH → denied (pam_deny)
+      # login/sddm excluded: TOTP prompts break SDDM's greeter.
+      security.pam.services = lib.genAttrs [ "sudo" "sshd" ] (_: {
         oathAuth = true;
         rules.auth = {
           oath.control = lib.mkForce "[success=done default=ignore]";
@@ -312,9 +317,9 @@ in
           };
         };
       })
-      # Note: sddm uses "substack login" so it inherits login's 3 OTP retries.
       # polkit-1: oath excluded — polkit-agent-helper-1 uses multi-round conversation
       # (PAM_PROMPT_ECHO_OFF per module), but agents handle this unreliably.
+      # login/sddm: oath excluded — SDDM's greeter mishandles multi-prompt PAM.
       ;
     })
 
