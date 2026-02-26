@@ -309,8 +309,8 @@ AGE_KEY=""
 USER_PASSWORD_HASH=""
 
 phase_collect_inputs() {
-  # --- LUKS Password (needed for format or post-install with TPM enrollment) ---
-  if [[ "$FEAT_ENCRYPTION" == "true" ]] && [[ "$DO_FORMAT" == true || "$DO_POST_INSTALL" == true ]]; then
+  # --- LUKS Password (needed for format, mount, or post-install with TPM enrollment) ---
+  if [[ "$FEAT_ENCRYPTION" == "true" ]] && [[ "$DO_FORMAT" == true || "$DO_INSTALL" == true || "$DO_POST_INSTALL" == true ]]; then
     echo ""
     if [[ -f /tmp/luks-password ]]; then
       info "Using existing /tmp/luks-password"
