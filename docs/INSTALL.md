@@ -48,7 +48,7 @@ git clone https://github.com/oechsler/nix.git /tmp/nix-config
 |------|-------------|
 | `--format` | Partition and format disks (disko) |
 | `--install` | Install NixOS (nixos-install) |
-| `--post-install` | Post-install setup (SSH, SOPS, TOTP, YubiKey, TPM) |
+| `--post-install` | Post-install setup (SSH, SOPS, TOTP, YubiKey, TPM/FIDO2) |
 | `--host HOST` | Pre-select host (skip menu) |
 | `-s`, `--ssh-key FILE` | SSH private key path |
 | `-p`, `--luks-password PASSWORD` | LUKS disk encryption password |
@@ -171,24 +171,38 @@ bootctl status
 
 Should show "Secure Boot: enabled".
 
-## TPM Unlock (Optional)
+## LUKS Unlock
 
-TPM-based auto-unlock for LUKS-encrypted disks. Works with or without Secure Boot.
-PCR 0+7 seals to firmware + Secure Boot state. If Secure Boot is enabled later,
-re-run `tpm-init` to re-enroll.
+Two unlock methods are available. The active method is set per host via `features.auth.yubikey.luks.enable`:
 
-### Setup
+| Method | Feature flag | Boot experience |
+|--------|-------------|-----------------|
+| YubiKey FIDO2 | `yubikey.luks.enable = true` (default when `yubikey.enable = true`) | Plug in YubiKey + touch at boot |
+| TPM2 auto-unlock | `yubikey.luks.enable = false` | Fully automatic (sealed to PCR 0+7) |
+
+Password always remains as a fallback (slot 0 is never touched).
+
+### YubiKey FIDO2
 
 ```bash
-sudo tpm-init
+sudo yubikey-luks-init   # choose "enroll"
 ```
 
-Enrolls all LUKS partitions automatically. The password stays as fallback.
+Enrolls all LUKS partitions. At every boot: plug in the YubiKey and touch it when prompted. See [AUTH.md](AUTH.md#yubikey-fido2-luks-unlock) for switching between TPM and YubiKey.
+
+### TPM2 Auto-Unlock
+
+TPM seals the key to PCR 0+7 (firmware + Secure Boot state). If Secure Boot is enabled later, re-enroll:
+
+```bash
+sudo tpm-luks-init   # choose "enroll"
+```
 
 ### Remove
 
 ```bash
-sudo tpm-init   # Choose "wipe"
+sudo tpm-luks-init       # choose "wipe" (TPM)
+sudo yubikey-luks-init   # choose "wipe" (FIDO2)
 ```
 
 ### Manual Reference
@@ -197,9 +211,13 @@ sudo tpm-init   # Choose "wipe"
 # List enrolled key slots
 sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-root
 
-# Enroll single device manually
+# Enroll TPM2 manually
 sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-root --tpm2-device=auto --tpm2-pcrs=0+7
 
-# Remove TPM slot manually
+# Enroll FIDO2 manually
+sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-root --fido2-device=auto
+
+# Remove a slot manually
 sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-root --wipe-slot=tpm2
+sudo systemd-cryptenroll /dev/disk/by-partlabel/disk-main-root --wipe-slot=fido2
 ```
