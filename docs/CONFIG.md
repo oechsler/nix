@@ -37,8 +37,8 @@ features.ssh.enable = true;
 | `features.development.kubernetes.enable` | `true` | Kubernetes tools (kubectl, k9s) with kubeconfig via SOPS |
 | `features.apps.enable` | `true` | Desktop apps (Discord, Spotify, Obsidian, LibreOffice, ...) |
 | `features.apps.winboat.enable` | `false` | WinBoat Windows VM (seamless integration) |
-| `features.auth.totp.enable` | `true` | TOTP for login, sudo, SDDM, polkit, SSH (see [AUTH.md](AUTH.md)) |
-| `features.auth.yubikey.enable` | `false` | YubiKey for login, sudo, SDDM, polkit, SSH (see [AUTH.md](AUTH.md)) |
+| `features.auth.totp.enable` | `true` | TOTP for sudo, SSH (see [AUTH.md](AUTH.md)) |
+| `features.auth.yubikey.enable` | `false` | YubiKey for sudo, SSH (see [AUTH.md](AUTH.md)) |
 | `features.auth.yubikey.pin` | `false` | Require FIDO2 PIN on YubiKey (in addition to touch) |
 | `features.auth.yubikey.luks.enable` | `yubikey.enable` | Use YubiKey FIDO2 to unlock LUKS at boot instead of TPM2 (see [AUTH.md](AUTH.md)) |
 | `features.secureBoot.enable` | `false` | UEFI Secure Boot via lanzaboote |
