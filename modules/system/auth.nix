@@ -164,10 +164,7 @@ let
 
   yubikey-luks-init = pkgs.writeShellApplication {
     name = "yubikey-luks-init";
-    runtimeInputs = with pkgs; [
-      systemd
-      coreutils
-    ];
+    runtimeInputs = with pkgs; [ systemd gawk ];
     text = ''
       if [[ $EUID -ne 0 ]]; then
         exec sudo "$0" "$@"
@@ -180,78 +177,115 @@ let
         exit 1
       fi
 
-      #--- Show status ---
+      # List FIDO2 slot numbers on a device
+      get_fido2_slots() {
+        systemd-cryptenroll "$1" 2>/dev/null | awk '$2=="fido2"{print $1}'
+      }
+
+      # Enroll the currently inserted YubiKey on all devices
+      do_enroll() {
+        echo ""
+        read -rsp "LUKS password: " PASSWORD
+        echo ""
+        PASS_FILE="$(mktemp)"
+        printf '%s' "$PASSWORD" > "$PASS_FILE"
+        chmod 600 "$PASS_FILE"
+        for dev in "''${DEVICES[@]}"; do
+          echo "Insert YubiKey and touch it when the light flashes..."
+          ENROLL_ARGS=(--fido2-device=auto --unlock-key-file="$PASS_FILE")
+          ${lib.optionalString cfg.yubikey.pin ''ENROLL_ARGS+=(--fido2-with-client-pin=yes)''}
+          if systemd-cryptenroll "$dev" "''${ENROLL_ARGS[@]}"; then
+            echo "  $(basename "$dev"): OK"
+          else
+            echo "  $(basename "$dev"): FAILED"
+          fi
+        done
+        rm -f "$PASS_FILE"
+        echo ""
+        echo "Done. Plug in your YubiKey and touch it at the next boot."
+      }
+
+      # Wipe a specific slot number (or "fido2" for all) from all devices
+      do_wipe_slot() {
+        local slot=$1
+        for dev in "''${DEVICES[@]}"; do
+          echo "  $(basename "$dev"): wiping slot $slot..."
+          systemd-cryptenroll "$dev" --wipe-slot="$slot" || true
+        done
+      }
+
+      #--- Status ---
 
       echo "LUKS devices (from NixOS config):"
       echo ""
       for dev in "''${DEVICES[@]}"; do
-        NAME=$(basename "$dev")
-        if systemd-cryptenroll "$dev" 2>/dev/null | grep -q "fido2"; then
-          STATUS="FIDO2 enrolled"
+        mapfile -t SLOTS < <(get_fido2_slots "$dev")
+        COUNT=''${#SLOTS[@]}
+        if [[ $COUNT -gt 0 ]]; then
+          STATUS="$COUNT FIDO2 key(s) enrolled (slots: ''${SLOTS[*]})"
         else
           STATUS="No FIDO2"
         fi
-        echo "  $NAME ($dev) — $STATUS"
+        echo "  $(basename "$dev") ($dev) — $STATUS"
       done
-
-      #--- Menu ---
-
       echo ""
-      echo "  [e] Enroll FIDO2 (wipes existing FIDO2 slots first)"
-      echo "  [w] Wipe FIDO2 slots"
-      echo "  [q] Quit"
-      echo ""
-      read -rp "Choice: " CHOICE
 
-      case "$CHOICE" in
-        e|E)
-          echo ""
-          read -rsp "LUKS password: " PASSWORD
-          echo ""
-          PASS_FILE="$(mktemp)"
-          printf '%s' "$PASSWORD" > "$PASS_FILE"
-          chmod 600 "$PASS_FILE"
-          for dev in "''${DEVICES[@]}"; do
-            if systemd-cryptenroll "$dev" 2>/dev/null | grep -q "fido2"; then
-              echo "Wiping existing FIDO2 slot on $(basename "$dev")..."
-              systemd-cryptenroll "$dev" --wipe-slot=fido2 || true
-            fi
-            echo "Enrolling $(basename "$dev")..."
-            ENROLL_ARGS=(--fido2-device=auto --unlock-key-file="$PASS_FILE")
-            ${lib.optionalString cfg.yubikey.pin ''ENROLL_ARGS+=(--fido2-with-client-pin=yes)''}
-            if systemd-cryptenroll "$dev" "''${ENROLL_ARGS[@]}"; then
-              echo "  OK"
+      # Use first device as reference for slot numbers
+      mapfile -t REF_SLOTS < <(get_fido2_slots "''${DEVICES[0]}")
+      SLOT_COUNT=''${#REF_SLOTS[@]}
+
+      #--- First enrollment or existing-key menu ---
+
+      if [[ $SLOT_COUNT -eq 0 ]]; then
+        echo "No FIDO2 keys enrolled. Insert your YubiKey..."
+        do_enroll
+      else
+        echo "  [a] Add key"
+        echo "  [d] Delete key"
+        echo "  [q] Quit"
+        echo ""
+        read -rp "Choice: " CHOICE
+
+        case "$CHOICE" in
+          a|A)
+            do_enroll
+            ;;
+          d|D)
+            if [[ $SLOT_COUNT -eq 1 ]]; then
+              read -rp "Delete the only enrolled key? [y/N] " CONFIRM
+              if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
+                echo "Aborted."
+                exit 0
+              fi
+              do_wipe_slot fido2
+              echo "FIDO2 key removed."
             else
-              echo "  FAILED"
+              echo ""
+              for i in "''${!REF_SLOTS[@]}"; do
+                echo "  [$((i+1))] slot ''${REF_SLOTS[$i]}"
+              done
+              echo ""
+              read -rp "Delete which key? (1-$SLOT_COUNT, 'a' for all) " DEL_CHOICE
+
+              if [[ "$DEL_CHOICE" == "a" || "$DEL_CHOICE" == "A" ]]; then
+                do_wipe_slot fido2
+                echo "All FIDO2 keys removed."
+              elif [[ "$DEL_CHOICE" =~ ^[0-9]+$ ]] && (( DEL_CHOICE >= 1 && DEL_CHOICE <= SLOT_COUNT )); then
+                SLOT_TO_DEL="''${REF_SLOTS[$((DEL_CHOICE-1))]}"
+                do_wipe_slot "$SLOT_TO_DEL"
+                echo "Key #$DEL_CHOICE (slot $SLOT_TO_DEL) removed. $((SLOT_COUNT-1)) key(s) remaining."
+              else
+                echo "Invalid choice. Aborted."
+                exit 1
+              fi
             fi
-          done
-          rm -f "$PASS_FILE"
-          echo ""
-          echo "Done. Plug in your YubiKey and touch it at the next boot."
-          ;;
-        w|W)
-          echo ""
-          read -rp "Wipe FIDO2 from all devices? [y/N] " CONFIRM
-          if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
+            ;;
+          *)
             echo "Aborted."
             exit 0
-          fi
-          for dev in "''${DEVICES[@]}"; do
-            if systemd-cryptenroll "$dev" 2>/dev/null | grep -q "fido2"; then
-              echo "Wiping FIDO2 slot on $(basename "$dev")..."
-              systemd-cryptenroll "$dev" --wipe-slot=fido2 || true
-            else
-              echo "$(basename "$dev"): no FIDO2 slot, skipping"
-            fi
-          done
-          echo ""
-          echo "Done. FIDO2 slots wiped."
-          ;;
-        *)
-          echo "Aborted."
-          exit 0
-          ;;
-      esac
+            ;;
+        esac
+      fi
     '';
   };
 
@@ -365,12 +399,14 @@ in
     totp.enable = (lib.mkEnableOption "TOTP two-factor authentication") // {
       default = true;
     };
-    yubikey.enable = lib.mkEnableOption "YubiKey authentication";
-    yubikey.pin = lib.mkEnableOption "require FIDO2 PIN on YubiKey (in addition to touch)";
-    yubikey.luks.enable = lib.mkOption {
-      type = lib.types.bool;
-      default = config.features.auth.yubikey.enable;
-      description = "Use YubiKey FIDO2 to unlock LUKS at boot (replaces TPM2). Default: on when yubikey.enable is true.";
+    yubikey = {
+      enable = lib.mkEnableOption "YubiKey authentication";
+      pin = lib.mkEnableOption "require FIDO2 PIN on YubiKey (in addition to touch)";
+      luks.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = config.features.auth.yubikey.enable;
+        description = "Use YubiKey FIDO2 to unlock LUKS at boot (replaces TPM2). Default: on when yubikey.enable is true.";
+      };
     };
   };
 
