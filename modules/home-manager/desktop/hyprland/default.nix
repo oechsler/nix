@@ -119,49 +119,6 @@ let
   '';
 
   # ============================================================================
-  # GNOME KEYRING: SET EMPTY PASSWORD SCRIPT
-  # ============================================================================
-  # Opens GNOME Keyring's native "Change Password" dialog via D-Bus.
-  # Use this once to set the keyring password to empty so the keyring
-  # auto-unlocks on login (via the gnome-keyring-unlock systemd service).
-  #
-  # D-Bus flow:
-  #   ReadAlias('default')         → collection path
-  #   Collection.ChangeWithPrompt  → prompt path
-  #   Prompt.Prompt('')            → opens dialog (managed by gnome-keyring-daemon)
-  #
-  # In the dialog: enter current password, leave new password empty.
-  keyringSetEmptyPassword = pkgs.writeShellApplication {
-    name = "keyring-set-empty-password";
-    runtimeInputs = [ pkgs.glib pkgs.gawk ];
-    text = ''
-      collection=$(gdbus call --session \
-        --dest org.freedesktop.secrets \
-        --object-path /org/freedesktop/secrets \
-        --method org.freedesktop.Secret.Service.ReadAlias \
-        'default' 2>/dev/null | awk -F"'" '{print $2}')
-
-      if [ -z "$collection" ] || [ "$collection" = "/" ]; then
-        collection="/org/freedesktop/secrets/collection/login"
-      fi
-
-      prompt=$(gdbus call --session \
-        --dest org.freedesktop.secrets \
-        --object-path "$collection" \
-        --method org.freedesktop.Secret.Collection.ChangeWithPrompt \
-        2>/dev/null | awk -F"'" '{print $2}')
-
-      if [ -n "$prompt" ] && [ "$prompt" != "/" ]; then
-        gdbus call --session \
-          --dest org.freedesktop.secrets \
-          --object-path "$prompt" \
-          --method org.freedesktop.Secret.Prompt.Prompt \
-          "" 2>/dev/null || true
-      fi
-    '';
-  };
-
-  # ============================================================================
   # BATTERY WARNING SCRIPT
   # ============================================================================
   # Monitor battery level and show warnings/auto-suspend
@@ -281,7 +238,6 @@ in
     # otherwise xdg-desktop-portal won't find gtk.portal and the
     # Settings interface (dark mode, color-scheme) won't work.
     pkgs.xdg-desktop-portal-gtk
-    keyringSetEmptyPassword
   ];
 
   wayland.windowManager.hyprland = {

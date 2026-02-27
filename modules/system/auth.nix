@@ -20,13 +20,9 @@
 #   Both:                 YubiKey → OTP (3 attempts) → Password
 #
 # Auth flow (polkit):
-#   TOTP only:            Password only (oath excluded — multi-round conversation unreliable)
-#   YubiKey only:         YubiKey touch or Password
-#   Both:                 YubiKey touch or Password
-#   polkit-agent-helper-1 sends each PAM prompt individually to the agent and reads
-#   responses from stdin. oath needs a conversation round that most agents mishandle
-#   (race conditions with socket activation, EOF on second prompt). u2f works because
-#   it only needs PAM_TEXT_INFO (no response) + physical touch, no text input.
+#   Password only (TOTP/YubiKey excluded — password needed for keyring auto-unlock)
+#   Note: pam_gnome_keyring captures the SDDM login password to unlock the keyring.
+#   If polkit used YubiKey, apps would prompt for the keyring separately.
 #
 # Auth flow (SSH):
 #   TOTP only:            Public-Key + OTP
@@ -76,8 +72,7 @@ let
     "sudo"
   ];
 
-  # SDDM: single OTP attempt (graphical, but needs 2FA for login)
-  # polkit-1: password only for oath (conversation protocol unreliable), u2f via touch
+  # SDDM/polkit-1/hyprlock: password only (pam_gnome_keyring needs the login password)
 
   #--- CLI Tools ---
 
@@ -463,9 +458,8 @@ in
           };
         };
       })
-      # polkit-1: oath excluded — polkit-agent-helper-1 uses multi-round conversation
-      # (PAM_PROMPT_ECHO_OFF per module), but agents handle this unreliably.
       # login/sddm: oath excluded — SDDM's greeter mishandles multi-prompt PAM.
+      # polkit-1/sddm: also excluded for keyring (see above).
       ;
     })
 
@@ -488,11 +482,11 @@ in
         userVerification = true; # Require FIDO2 PIN (touch alone is not enough)
       };
 
-      # All local services + SSH: YubiKey as sufficient (single touch, no retry needed)
-      # u2f control is already "sufficient" from global security.pam.u2f.control
-      # polkit: u2f works — touch only, no text input needed from the agent
+      # Terminal + SSH: YubiKey required
+      # sddm/polkit/hyprlock use password only — pam_gnome_keyring needs the
+      # password at SDDM login to auto-unlock the keyring.
       security.pam.services =
-        lib.genAttrs (terminalServices ++ [ "sddm" "polkit-1" ]) (_: {
+        lib.genAttrs terminalServices (_: {
           u2fAuth = true;
         })
         // {
