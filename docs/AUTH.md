@@ -7,22 +7,24 @@ Two-factor authentication via TOTP and/or YubiKey. Configured in `modules/system
 | Method | Default | Setup |
 |--------|---------|-------|
 | TOTP (Time-based One-Time Password) | enabled | `sudo totp-init` |
-| YubiKey PAM (login, sudo, SSH, polkit) | disabled | `sudo yubikey-init` |
+| YubiKey PAM (sudo, SSH) | disabled | `sudo yubikey-init` |
 | YubiKey FIDO2 LUKS unlock (boot) | on when `yubikey.enable = true` | `sudo yubikey-luks-init` |
 
 Both PAM methods work independently or combined. Password serves as a local fallback only — it is never accepted over SSH.
+
+> **Note:** SDDM, polkit, and hyprlock always use **password only**, regardless of which 2FA method is enabled. This is required so that `pam_gnome_keyring` can capture the login password at SDDM and auto-unlock the GNOME Keyring. YubiKey login skips `pam_gnome_keyring`'s auth phase, leaving the keyring locked.
 
 ## Auth Flow
 
 ### Login / SDDM
 
-Password only (TOTP excluded — SDDM's greeter mishandles multi-prompt PAM). YubiKey works because it only needs touch. SDDM inherits login's PAM configuration.
+Password only. TOTP is excluded because SDDM's greeter mishandles multi-prompt PAM. YubiKey is excluded so that `pam_gnome_keyring` can capture the password and auto-unlock the GNOME Keyring. SDDM inherits login's PAM configuration.
 
 | Enabled | Auth chain |
 |---------|-----------|
 | TOTP only | Password |
-| YubiKey only | YubiKey → Password |
-| Both | YubiKey → Password |
+| YubiKey only | Password |
+| Both | Password |
 
 ### sudo
 
@@ -36,13 +38,13 @@ Each method is tried in order. The first success grants access, on failure the n
 
 ### Polkit
 
-Polkit uses a different auth flow because `polkit-agent-helper-1` sends each PAM prompt individually — TOTP's multi-round conversation is unreliable with this protocol. YubiKey works because it only needs touch (no text input).
+Password only. TOTP and YubiKey are both excluded — password is required here for the same reason as SDDM: if polkit used a different credential, apps would prompt for the GNOME Keyring password separately on every privileged action.
 
 | Enabled | Auth chain |
 |---------|-----------|
-| TOTP only | Password only (TOTP excluded) |
-| YubiKey only | YubiKey touch or Password |
-| Both | YubiKey touch or Password |
+| TOTP only | Password |
+| YubiKey only | Password |
+| Both | Password |
 
 ### SSH
 

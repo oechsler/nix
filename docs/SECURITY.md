@@ -41,7 +41,7 @@ Multi-factor authentication on sudo, SSH, and local login surfaces.
 | Method | Where | Setup |
 |--------|-------|-------|
 | TOTP | sudo, SSH | `sudo totp-init` |
-| YubiKey (FIDO2) | login, SDDM, sudo, polkit, SSH | `sudo yubikey-init` |
+| YubiKey (FIDO2) | sudo, SSH | `sudo yubikey-init` |
 | Password | local fallback only | `mkpasswd -m sha-512` |
 
 SSH enforces public-key + second factor (`publickey,keyboard-interactive`). Password-only SSH is disabled.
