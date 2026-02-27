@@ -78,28 +78,12 @@ in
     # GNOME Keyring for credential storage
     # Used by: Chrome/Chromium, VSCode, Vesktop, etc.
     # Note: Proton Pass uses kernel keyring instead (via keyutils)
+    # Unlock: pam_gnome_keyring captures the SDDM password at login and
+    # auto-unlocks the keyring. sddm/polkit/hyprlock are password-only for
+    # this reason (YubiKey login skips pam_gnome_keyring's auth phase).
     services.gnome-keyring = {
       enable = true;
       components = [ "secrets" ];
-    };
-
-    # Auto-unlock gnome-keyring with empty password at session start.
-    # OTP login (success=done) skips pam_gnome_keyring's auth phase, so PAM
-    # can't capture the password for keyring unlock.
-    # Setup: set keyring password to empty via seahorse, or delete
-    # ~/.local/share/keyrings/login.keyring to start fresh.
-    systemd.user.services.gnome-keyring-unlock = {
-      Unit = {
-        Description = "Unlock GNOME Keyring";
-        After = [ "gnome-keyring-daemon.service" ];
-      };
-      Service = {
-        Type = "oneshot";
-        ExecStart = toString (pkgs.writeShellScript "gnome-keyring-unlock" ''
-          ${pkgs.gnome-keyring}/bin/gnome-keyring-daemon --start --unlock < /dev/null
-        '');
-      };
-      Install.WantedBy = [ "graphical-session.target" ];
     };
 
     home.packages = with pkgs; [
