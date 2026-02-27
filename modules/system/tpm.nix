@@ -1,22 +1,24 @@
 # TPM Enrollment for LUKS Auto-Unlock
 #
-# Provides `tpm-init` script to enroll/re-enroll/wipe TPM2 keys for all
+# Provides `tpm-luks-init` script to enroll/re-enroll/wipe TPM2 keys for all
 # LUKS-encrypted partitions defined in boot.initrd.luks.devices.
 #
 # Configuration:
-#   features.encryption.enable = true;  # Enables this module (default: true)
+#   features.encryption.enable = true;            # Enables this module (default: true)
+#   features.auth.yubikey.luks.enable = false;    # When true, this script is not installed
+#                                                 # (YubiKey FIDO2 replaces TPM2 — see auth.nix)
 #
 # Usage:
-#   sudo tpm-init
+#   sudo tpm-luks-init
 #
 # The script reads LUKS devices from the NixOS config at build time,
 # so it automatically knows about all encrypted partitions.
 #
 # PCR policy: 0+7 (firmware measurement + Secure Boot state)
 # Works with or without Secure Boot. If Secure Boot is enabled later,
-# re-run `tpm-init` to re-enroll with the new PCR 7 value.
+# re-run `tpm-luks-init` to re-enroll with the new PCR 7 value.
 #
-# See also: docs/INSTALL.md (TPM Unlock section)
+# See also: auth.nix (YubiKey FIDO2 LUKS), hosts/*/luks.nix
 
 {
   config,
@@ -29,8 +31,8 @@ let
   luksDevices = config.boot.initrd.luks.devices;
   deviceList = lib.concatStringsSep " " (map (d: d.device) (lib.attrValues luksDevices));
 
-  tpm-init = pkgs.writeShellApplication {
-    name = "tpm-init";
+  tpm-luks-init = pkgs.writeShellApplication {
+    name = "tpm-luks-init";
     runtimeInputs = with pkgs; [
       systemd
       coreutils
@@ -73,7 +75,7 @@ let
       #--- Menu ---
 
       echo ""
-      echo "  [e] Enroll TPM2 (wipes existing slots first)"
+      echo "  [e] Enroll TPM2 (wipes existing TPM2 slots first)"
       echo "  [w] Wipe TPM2 slots"
       echo "  [q] Quit"
       echo ""
@@ -130,7 +132,7 @@ let
   };
 in
 {
-  config = lib.mkIf config.features.encryption.enable {
-    environment.systemPackages = [ tpm-init ];
+  config = lib.mkIf (config.features.encryption.enable && !config.features.auth.yubikey.luks.enable) {
+    environment.systemPackages = [ tpm-luks-init ];
   };
 }

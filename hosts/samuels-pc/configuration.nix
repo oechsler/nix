@@ -80,6 +80,7 @@
 
   features = {
     secureBoot.enable = true;
+    auth.yubikey.enable = true;
   };
 
   system.stateVersion = "25.11";
