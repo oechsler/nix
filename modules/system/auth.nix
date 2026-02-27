@@ -8,11 +8,8 @@
 #                                                 # Default: on when yubikey.enable = true
 #                                                 # See also: hosts/*/luks.nix, tpm.nix
 #
-# Auth flow (login/sddm):
-#   TOTP only:            Password only (TOTP excluded — SDDM unreliable)
-#   YubiKey only:         YubiKey → Password
-#   Both:                 YubiKey → Password
-#   Note: sddm uses PAM "substack login", inherits login's config.
+# Auth flow (login/sddm/polkit/hyprlock):
+#   All cases:            Password only (pam_gnome_keyring needs password; LUKS+sudo+SSH cover 2FA)
 #
 # Auth flow (sudo):
 #   TOTP only:            OTP (3 attempts) → Password
@@ -68,7 +65,6 @@ let
 
   # Terminal services: support 3 OTP retries before password fallback
   terminalServices = [
-    "login"
     "sudo"
   ];
 
@@ -482,9 +478,10 @@ in
         userVerification = true; # Require FIDO2 PIN (touch alone is not enough)
       };
 
-      # Terminal + SSH: YubiKey required
-      # sddm/polkit/hyprlock use password only — pam_gnome_keyring needs the
-      # password at SDDM login to auto-unlock the keyring.
+      # sudo + SSH: YubiKey required
+      # login/sddm/polkit/hyprlock: password only
+      #   - pam_gnome_keyring needs the password at SDDM login to auto-unlock the keyring
+      #   - LUKS unlock at boot covers the physical access protection
       security.pam.services =
         lib.genAttrs terminalServices (_: {
           u2fAuth = true;
