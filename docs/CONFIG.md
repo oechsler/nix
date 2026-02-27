@@ -40,6 +40,7 @@ features.ssh.enable = true;
 | `features.auth.totp.enable` | `true` | TOTP for login, sudo, SDDM, polkit, SSH (see [AUTH.md](AUTH.md)) |
 | `features.auth.yubikey.enable` | `false` | YubiKey for login, sudo, SDDM, polkit, SSH (see [AUTH.md](AUTH.md)) |
 | `features.auth.yubikey.pin` | `false` | Require FIDO2 PIN on YubiKey (in addition to touch) |
+| `features.auth.yubikey.luks.enable` | `yubikey.enable` | Use YubiKey FIDO2 to unlock LUKS at boot instead of TPM2 (see [AUTH.md](AUTH.md)) |
 | `features.secureBoot.enable` | `false` | UEFI Secure Boot via lanzaboote |
 | `features.ssh.enable` | `false` | OpenSSH server + GitHub key sync (every 15 min) |
 | `features.snapshots.enable` | `true` | Automatic btrfs snapshots (hourly, see [SNAPSHOTS.md](SNAPSHOTS.md)) |
