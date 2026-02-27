@@ -1,9 +1,12 @@
 # 2FA Authentication (TOTP + YubiKey)
 #
 # Configuration:
-#   features.auth.totp.enable = true;     # TOTP two-factor authentication (default: true)
-#   features.auth.yubikey.enable = false;  # YubiKey authentication (FIDO2, touch only)
-#   features.auth.yubikey.pin = false;    # Require FIDO2 PIN in addition to touch
+#   features.auth.totp.enable = true;            # TOTP two-factor authentication (default: true)
+#   features.auth.yubikey.enable = false;         # YubiKey authentication (FIDO2, touch only)
+#   features.auth.yubikey.pin = false;           # Require FIDO2 PIN in addition to touch
+#   features.auth.yubikey.luks.enable = <bool>;  # Use YubiKey FIDO2 to unlock LUKS at boot
+#                                                 # Default: on when yubikey.enable = true
+#                                                 # See also: hosts/*/luks.nix, tpm.nix
 #
 # Auth flow (login/sddm):
 #   TOTP only:            Password only (TOTP excluded — SDDM unreliable)
@@ -31,15 +34,20 @@
 #   Both:                 Public-Key + (YubiKey or OTP)
 #   Password is never allowed over SSH.
 #
+# LUKS unlock at boot:
+#   yubikey.luks.enable = true;   → fido2-device=auto (plug in + touch at boot)
+#   yubikey.luks.enable = false;  → TPM2 handles unlock (see tpm.nix)
+#
 # Setup:
-#   totp-init    — Generate TOTP secret
-#   yubikey-init — Register YubiKey
+#   totp-init         — Generate TOTP secret
+#   yubikey-init      — Register YubiKey for PAM auth
+#   yubikey-luks-init — Enroll YubiKey FIDO2 for LUKS unlock
 #
 # Files (with impermanence: /persist/etc/*, without: /etc/*):
 #   users.oath    — TOTP secrets (pam_oath usersfile)
 #   u2f_mappings  — YubiKey credentials (pam_u2f authfile)
 #
-# See also: ssh.nix (SSH server), impermanence.nix
+# See also: ssh.nix (SSH server), impermanence.nix, tpm.nix, hosts/*/luks.nix
 
 {
   config,
@@ -57,6 +65,10 @@ let
   # bind-mount boundaries. See impermanence-pitfalls in memory.
   oathFile = "${prefix}/etc/users.oath";
   u2fFile = "${prefix}/etc/u2f_mappings";
+
+  # LUKS devices for yubikey-luks-init script (same pattern as tpm.nix)
+  luksDevices = config.boot.initrd.luks.devices;
+  deviceList = lib.concatStringsSep " " (map (d: d.device) (lib.attrValues luksDevices));
 
   # Terminal services: support 3 OTP retries before password fallback
   terminalServices = [
@@ -147,6 +159,99 @@ let
       echo ""
       echo "TOTP configured for $USERNAME."
       echo "Run 'sudo nixos-rebuild switch' to activate PAM changes."
+    '';
+  };
+
+  yubikey-luks-init = pkgs.writeShellApplication {
+    name = "yubikey-luks-init";
+    runtimeInputs = with pkgs; [
+      systemd
+      coreutils
+    ];
+    text = ''
+      if [[ $EUID -ne 0 ]]; then
+        exec sudo "$0" "$@"
+      fi
+
+      DEVICES=(${deviceList})
+
+      if [[ ''${#DEVICES[@]} -eq 0 ]]; then
+        echo "Error: No LUKS devices found in NixOS config."
+        exit 1
+      fi
+
+      #--- Show status ---
+
+      echo "LUKS devices (from NixOS config):"
+      echo ""
+      for dev in "''${DEVICES[@]}"; do
+        NAME=$(basename "$dev")
+        if systemd-cryptenroll "$dev" 2>/dev/null | grep -q "fido2"; then
+          STATUS="FIDO2 enrolled"
+        else
+          STATUS="No FIDO2"
+        fi
+        echo "  $NAME ($dev) — $STATUS"
+      done
+
+      #--- Menu ---
+
+      echo ""
+      echo "  [e] Enroll FIDO2 (wipes existing FIDO2 slots first)"
+      echo "  [w] Wipe FIDO2 slots"
+      echo "  [q] Quit"
+      echo ""
+      read -rp "Choice: " CHOICE
+
+      case "$CHOICE" in
+        e|E)
+          echo ""
+          read -rsp "LUKS password: " PASSWORD
+          echo ""
+          PASS_FILE="$(mktemp)"
+          printf '%s' "$PASSWORD" > "$PASS_FILE"
+          chmod 600 "$PASS_FILE"
+          for dev in "''${DEVICES[@]}"; do
+            if systemd-cryptenroll "$dev" 2>/dev/null | grep -q "fido2"; then
+              echo "Wiping existing FIDO2 slot on $(basename "$dev")..."
+              systemd-cryptenroll "$dev" --wipe-slot=fido2 || true
+            fi
+            echo "Enrolling $(basename "$dev")..."
+            ENROLL_ARGS=(--fido2-device=auto --unlock-key-file="$PASS_FILE")
+            ${lib.optionalString cfg.yubikey.pin ''ENROLL_ARGS+=(--fido2-with-client-pin=yes)''}
+            if systemd-cryptenroll "$dev" "''${ENROLL_ARGS[@]}"; then
+              echo "  OK"
+            else
+              echo "  FAILED"
+            fi
+          done
+          rm -f "$PASS_FILE"
+          echo ""
+          echo "Done. Plug in your YubiKey and touch it at the next boot."
+          ;;
+        w|W)
+          echo ""
+          read -rp "Wipe FIDO2 from all devices? [y/N] " CONFIRM
+          if [[ "$CONFIRM" != "y" && "$CONFIRM" != "Y" ]]; then
+            echo "Aborted."
+            exit 0
+          fi
+          for dev in "''${DEVICES[@]}"; do
+            if systemd-cryptenroll "$dev" 2>/dev/null | grep -q "fido2"; then
+              echo "Wiping FIDO2 slot on $(basename "$dev")..."
+              systemd-cryptenroll "$dev" --wipe-slot=fido2 || true
+            else
+              echo "$(basename "$dev"): no FIDO2 slot, skipping"
+            fi
+          done
+          echo ""
+          echo "Done. FIDO2 slots wiped."
+          ;;
+        *)
+          echo "Aborted."
+          exit 0
+          ;;
+      esac
     '';
   };
 
@@ -262,6 +367,11 @@ in
     };
     yubikey.enable = lib.mkEnableOption "YubiKey authentication";
     yubikey.pin = lib.mkEnableOption "require FIDO2 PIN on YubiKey (in addition to touch)";
+    yubikey.luks.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = config.features.auth.yubikey.enable;
+      description = "Use YubiKey FIDO2 to unlock LUKS at boot (replaces TPM2). Default: on when yubikey.enable is true.";
+    };
   };
 
   config = lib.mkMerge [
@@ -352,6 +462,15 @@ in
         // {
           sshd.u2fAuth = true;
         };
+    })
+
+    #--- YubiKey FIDO2 LUKS unlock ---
+    (lib.mkIf cfg.yubikey.luks.enable {
+      environment.systemPackages = [ yubikey-luks-init ];
+
+      # FIDO2 in initrd requires systemd-based initrd
+      # mkDefault: impermanence.nix can override if both are enabled
+      boot.initrd.systemd.enable = lib.mkDefault true;
     })
 
   ];

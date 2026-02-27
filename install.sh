@@ -15,7 +15,7 @@
 # Steps (combinable, default: all):
 #   --format        Partition and format disks (disko)
 #   --install       Install NixOS (nixos-install)
-#   --post-install  Post-install setup (SSH, SOPS, TOTP, YubiKey, TPM)
+#   --post-install  Post-install setup (SSH, SOPS, TOTP, YubiKey, TPM/FIDO2)
 
 set -euo pipefail
 
@@ -43,7 +43,7 @@ Usage: install.sh [options]
 Steps (combinable, default: all):
   --format           Partition and format disks (disko)
   --install          Install NixOS (nixos-install)
-  --post-install     Post-install setup (SSH, SOPS, TOTP, YubiKey, TPM)
+  --post-install     Post-install setup (SSH, SOPS, TOTP, YubiKey, TPM/FIDO2)
 
 Options:
   --host HOST        Pre-select host configuration
@@ -228,6 +228,7 @@ FEAT_IMPERMANENCE=false
 PERSIST_PREFIX=""
 FEAT_TOTP=false
 FEAT_YUBIKEY=false
+FEAT_YUBIKEY_LUKS=false
 FEAT_SECURE_BOOT=false
 FEAT_DESKTOP=false
 FEAT_WM=""
@@ -236,6 +237,7 @@ CONFIG_USERNAME=""
 CONFIG_PASSWORD_LOCKED=false
 LUKS_DEVICES=()
 TPM_ENROLLED=false
+FIDO2_LUKS_ENROLLED=false
 
 phase_detect_features() {
   echo ""
@@ -249,6 +251,7 @@ phase_detect_features() {
       persistPrefix = cfg.features.impermanence.persistPrefix;
       totp = cfg.features.auth.totp.enable;
       yubikey = cfg.features.auth.yubikey.enable;
+      yubikeyLuks = cfg.features.auth.yubikey.luks.enable;
       secureBoot = cfg.features.secureBoot.enable;
       desktop = cfg.features.desktop.enable;
       wm = cfg.features.desktop.wm;
@@ -265,11 +268,11 @@ phase_detect_features() {
   fi
 
   read -r FEAT_ENCRYPTION FEAT_IMPERMANENCE PERSIST_PREFIX FEAT_TOTP \
-          FEAT_YUBIKEY FEAT_SECURE_BOOT FEAT_DESKTOP FEAT_WM FEAT_SERVER \
+          FEAT_YUBIKEY FEAT_YUBIKEY_LUKS FEAT_SECURE_BOOT FEAT_DESKTOP FEAT_WM FEAT_SERVER \
           CONFIG_USERNAME CONFIG_PASSWORD_LOCKED \
     < <(echo "$json" | jq -r '[
       .encryption, .impermanence, .persistPrefix, .totp,
-      .yubikey, .secureBoot, .desktop, .wm, .server, .userName,
+      .yubikey, .yubikeyLuks, .secureBoot, .desktop, .wm, .server, .userName,
       .passwordLocked
     ] | @tsv')
 
@@ -292,6 +295,7 @@ phase_detect_features() {
   echo -e "    Secure Boot:   $(label_bool "$FEAT_SECURE_BOOT")"
   if [[ "$FEAT_ENCRYPTION" == "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
     echo -e "    LUKS devices:  ${DIM}${#LUKS_DEVICES[@]} partition(s)${RESET}"
+    echo -e "    LUKS Unlock:   $(label_bool "$FEAT_YUBIKEY_LUKS") (YubiKey FIDO2)"
   fi
   if [[ "$CONFIG_PASSWORD_LOCKED" == "true" ]]; then
     echo -e "    Password:      ${YELLOW}not set${RESET}"
@@ -666,6 +670,35 @@ setup_tpm() {
   TPM_ENROLLED=true
 }
 
+setup_yubikey_luks() {
+  # YubiKey must be present
+  if ! command -v systemd-cryptenroll &>/dev/null; then
+    warn "systemd-cryptenroll not available, skipping FIDO2 enrollment."
+    return 1
+  fi
+
+  # LUKS password: from /tmp/luks-password or interactive prompt
+  local password_file="/tmp/luks-password"
+  if [[ ! -f "$password_file" ]]; then
+    local password
+    read -rsp "    LUKS password for FIDO2 enrollment: " password; echo
+    printf '%s' "$password" > "$password_file"
+    chmod 600 "$password_file"
+  fi
+
+  for dev in "${LUKS_DEVICES[@]}"; do
+    info "Enrolling FIDO2 on $(basename "$dev")..."
+    if systemd-cryptenroll "$dev" --fido2-device=auto --unlock-key-file="$password_file"; then
+      success "$(basename "$dev") enrolled"
+    else
+      warn "$(basename "$dev") enrollment failed"
+      return 1
+    fi
+  done
+
+  FIDO2_LUKS_ENROLLED=true
+}
+
 copy_config() {
   local dest="/mnt/home/$CONFIG_USERNAME/repos/nix"
   if [[ ! -d "$dest" ]]; then
@@ -697,9 +730,13 @@ phase_post_install() {
     fi
   fi
 
-  if [[ "$FEAT_ENCRYPTION" == "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
+  if [[ "$FEAT_YUBIKEY_LUKS" == "true" && "$FEAT_ENCRYPTION" == "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
+    if ! setup_yubikey_luks; then
+      warn "FIDO2 LUKS enrollment skipped. Run 'yubikey-luks-init' after first boot."
+    fi
+  elif [[ "$FEAT_ENCRYPTION" == "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
     if ! setup_tpm; then
-      warn "TPM enrollment skipped. Run 'sudo tpm-init' after first boot."
+      warn "TPM enrollment skipped. Run 'sudo tpm-luks-init' after first boot."
     fi
   fi
 
@@ -724,7 +761,9 @@ phase_complete() {
 
   if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
     echo "    LUKS: Enter disk encryption password at boot"
-    if [[ "$TPM_ENROLLED" == "true" ]]; then
+    if [[ "$FIDO2_LUKS_ENROLLED" == "true" ]]; then
+      echo "    FIDO2: YubiKey LUKS enrollment done — plug in and tap at boot"
+    elif [[ "$TPM_ENROLLED" == "true" ]]; then
       echo "    TPM:  Auto-unlock enrolled (password still works as fallback)"
     fi
   fi
