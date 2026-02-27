@@ -7,9 +7,10 @@ Two-factor authentication via TOTP and/or YubiKey. Configured in `modules/system
 | Method | Default | Setup |
 |--------|---------|-------|
 | TOTP (Time-based One-Time Password) | enabled | `sudo totp-init` |
-| YubiKey (FIDO2, touch only) | disabled | `sudo yubikey-init` |
+| YubiKey PAM (login, sudo, SSH, polkit) | disabled | `sudo yubikey-init` |
+| YubiKey FIDO2 LUKS unlock (boot) | on when `yubikey.enable = true` | `sudo yubikey-luks-init` |
 
-Both methods work independently or combined. Password serves as a local fallback only — it is never accepted over SSH.
+Both PAM methods work independently or combined. Password serves as a local fallback only — it is never accepted over SSH.
 
 ## Auth Flow
 
@@ -78,7 +79,7 @@ After setup, activate with:
 sudo nixos-rebuild switch
 ```
 
-### YubiKey
+### YubiKey (PAM)
 
 Enable in your host's `configuration.nix`:
 
@@ -98,6 +99,36 @@ sudo yubikey-init
 This writes credentials to `/etc/u2f_mappings` (or `/persist/etc/u2f_mappings` with impermanence). Rebuild to activate.
 
 To register a backup key, run `sudo yubikey-init` again and choose **Add another key**.
+
+### YubiKey FIDO2 LUKS Unlock
+
+When `features.auth.yubikey.enable = true`, LUKS unlock at boot automatically switches from TPM2 to YubiKey FIDO2 (`yubikey.luks.enable` defaults to `yubikey.enable`). To keep TPM2 while using YubiKey for PAM:
+
+```nix
+features.auth.yubikey.enable = true;
+features.auth.yubikey.luks.enable = false;  # keep TPM2
+```
+
+**Before switching from TPM to YubiKey** — wipe the TPM slot first:
+
+```bash
+sudo tpm-luks-init   # choose "wipe"
+```
+
+Then rebuild and enroll the YubiKey:
+
+```bash
+sudo nixos-rebuild switch --flake .#hostname
+sudo yubikey-luks-init   # choose "enroll"
+```
+
+At every subsequent boot: plug in the YubiKey and touch it when prompted.
+
+To re-enroll or wipe the FIDO2 slot on an existing system:
+
+```bash
+sudo yubikey-luks-init
+```
 
 ### Password
 
