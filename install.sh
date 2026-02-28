@@ -163,7 +163,8 @@ phase_validate() {
 
   command -v nix &>/dev/null || error "Nix is not available."
 
-  export NIX_CONFIG="experimental-features = nix-command flakes"
+  export NIX_CONFIG="experimental-features = nix-command flakes
+warn-dirty = false"
 
   success "Environment OK"
 }
@@ -537,7 +538,6 @@ phase_install() {
   nixos-generate-config --root /mnt --show-hardware-config > "$host_dir/hardware-configuration.generated.nix"
   nix flake lock "$REPO_DIR"
   git -C "$REPO_DIR" add --all
-  git -C "$REPO_DIR" commit -m "install: update hardware config and state version for $HOST" --allow-empty
 
   if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password; then
     error "nixos-install failed. Check the output above."
