@@ -535,7 +535,9 @@ phase_install() {
   local host_dir="$REPO_DIR/hosts/$HOST"
 
   nixos-generate-config --root /mnt --show-hardware-config > "$host_dir/hardware-configuration.generated.nix"
+  nix flake lock "$REPO_DIR"
   git -C "$REPO_DIR" add --all
+  git -C "$REPO_DIR" commit -m "install: update hardware config and state version for $HOST" --allow-empty
 
   if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password; then
     error "nixos-install failed. Check the output above."
