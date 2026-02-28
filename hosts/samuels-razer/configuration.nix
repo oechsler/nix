@@ -56,6 +56,7 @@
   features = {
     desktop.wm = "kde";
     gaming.enable = false;
+    auth.yubikey.enable = true;
   };
 
   fonts.defaults.terminalSize = 10;
