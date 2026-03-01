@@ -72,7 +72,6 @@ in
       ]
       ++ lib.optionals features.apps.enable [
         "vesktop"
-        "nheko"
         "spotify"
       ];
 
