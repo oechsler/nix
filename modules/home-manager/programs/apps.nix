@@ -9,7 +9,7 @@
 #
 # Common apps:
 # - Vesktop - Discord client
-# - Cinny - Matrix client
+# - Fractal - Matrix client (GTK4/GNOME)
 # - Spotify - Music streaming
 # - Nextcloud - Cloud sync
 # - Obsidian - Note taking
@@ -51,7 +51,7 @@ in
   {
     home.packages = with pkgs; [
       alsa-scarlett-gui
-      cinny-desktop
+      fractal
       vesktop
       pkgs-stable.freecad  # Pinned to stable: broken on unstable (Boost 1.89)
       libreoffice
