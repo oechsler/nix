@@ -72,7 +72,7 @@ in
       ]
       ++ lib.optionals features.apps.enable [
         "vesktop"
-        "org.gnome.Fractal"
+        "Fluffychat"
         "spotify"
       ];
 
