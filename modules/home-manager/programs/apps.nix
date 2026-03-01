@@ -9,7 +9,6 @@
 #
 # Common apps:
 # - Vesktop - Discord client
-# - nheko - Matrix client (Qt, system tray)
 # - Spotify - Music streaming
 # - Nextcloud - Cloud sync
 # - Obsidian - Note taking
@@ -51,7 +50,6 @@ in
   {
     home.packages = with pkgs; [
       alsa-scarlett-gui
-      nheko
       vesktop
       pkgs-stable.freecad      # Pinned to stable: broken on unstable (Boost 1.89)
       pkgs-stable.libreoffice  # Pinned to stable: unstable creates broken noto-fonts-subset derivation
