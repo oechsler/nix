@@ -8,6 +8,7 @@
 # - Hyprland: GNOME/GTK utilities
 #
 # Common apps:
+# - Element Desktop - Matrix client (Electron, vodozemac)
 # - Vesktop - Discord client
 # - Spotify - Music streaming
 # - Nextcloud - Cloud sync
@@ -50,6 +51,7 @@ in
   {
     home.packages = with pkgs; [
       alsa-scarlett-gui
+      element-desktop
       vesktop
       pkgs-stable.freecad      # Pinned to stable: broken on unstable (Boost 1.89)
       pkgs-stable.libreoffice  # Pinned to stable: unstable creates broken noto-fonts-subset derivation
