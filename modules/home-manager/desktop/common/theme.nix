@@ -72,6 +72,7 @@ in
       ]
       ++ lib.optionals features.apps.enable [
         "vesktop"
+        "element-desktop"
         "spotify"
       ];
 
