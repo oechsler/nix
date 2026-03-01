@@ -20,7 +20,6 @@
 # - JetBrains Toolbox (if features.development.enable)
 # - Trayscale - Tailscale tray (if features.tailscale.enable)
 # - Steam (if features.gaming.enable)
-# - Beeper - Messaging app (AppImage)
 #
 # Configuration:
 #   autostart.apps = [ { name = "App"; exec = "command"; } ];
@@ -81,9 +80,6 @@ in
       ]
       ++ lib.optionals features.gaming.enable [
         { name = "Steam"; exec = "steam -silent"; }
-      ]
-      ++ [
-        { name = "Beeper"; exec = "bash -c 'f=$(ls ~/Applications/Beeper-*.AppImage 2>/dev/null | head -1) && [ -n \"$f\" ] && exec \"$f\"'"; }
       ];
 
   };
