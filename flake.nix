@@ -140,14 +140,6 @@
             {
               nixpkgs.overlays = [
                 inputs.cachyos-kernel.overlays.pinned
-
-                # WORKAROUND: noto-fonts-subset has a broken buildCommand that
-                # can't handle variable font filenames containing '[' (e.g.
-                # NotoSansArabic[wdth,wght].ttf). Redirect to full noto-fonts
-                # which we already install. Remove when fixed upstream.
-                (final: prev: {
-                  noto-fonts-subset = prev.noto-fonts;
-                })
               ];
             }
           ]

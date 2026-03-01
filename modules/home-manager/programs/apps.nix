@@ -53,8 +53,8 @@ in
       alsa-scarlett-gui
       fluffychat
       vesktop
-      pkgs-stable.freecad  # Pinned to stable: broken on unstable (Boost 1.89)
-      libreoffice
+      pkgs-stable.freecad      # Pinned to stable: broken on unstable (Boost 1.89)
+      pkgs-stable.libreoffice  # Pinned to stable: unstable creates broken noto-fonts-subset derivation
       nextcloud-client
       obsidian
       pika-backup
