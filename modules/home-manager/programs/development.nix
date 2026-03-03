@@ -71,6 +71,8 @@
         kubectl
         kubernetes-helm
         kubectx
+        kubeseal    # Sealed Secrets CLI
+        kubelogin   # kubectl OIDC login plugin (kubectl oidc-login)
       ];
     })
 
