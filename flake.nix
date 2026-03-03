@@ -92,8 +92,11 @@
       # Pinned: rev 65eeb69 (2026-02-26) — later rev (37320fa) includes CachyOS
       # kernel-patches ece737f which breaks linux-src-patched build for 6.19.
       # Remove pin when upstream fixes the 6.19 patches.
+      #
+      # Intentionally does NOT follow nixpkgs — the kernel overlay must use its
+      # own pinned nixpkgs so that nix flake update cannot silently bump the
+      # kernel source version and break the patches.
       url = "github:xddxdd/nix-cachyos-kernel/65eeb695390ffd7dffcee3abaf5068809f90386b";
-      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     firefox-addons = {
