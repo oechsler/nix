@@ -47,6 +47,11 @@
     # Pinned stable nixpkgs for packages broken on unstable
     nixpkgs-stable.url = "github:nixos/nixpkgs/nixos-25.11";
 
+    # Pinned nixpkgs for the CachyOS kernel — must stay in sync with the
+    # kernel patches in the cachyos-kernel input. Bump only together with
+    # cachyos-kernel once upstream patches support the new kernel version.
+    nixpkgs-kernel.url = "github:nixos/nixpkgs/dd9b079222d43e1943b6ebd802f04fd959dc8e61";
+
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -93,10 +98,11 @@
       # kernel-patches ece737f which breaks linux-src-patched build for 6.19.
       # Remove pin when upstream fixes the 6.19 patches.
       #
-      # Intentionally does NOT follow nixpkgs — the kernel overlay must use its
-      # own pinned nixpkgs so that nix flake update cannot silently bump the
-      # kernel source version and break the patches.
+      # Follows nixpkgs-kernel (not nixpkgs) so that nix flake update cannot
+      # silently bump the kernel source version and break patch application.
+      # Bump nixpkgs-kernel together with this input when upgrading the kernel.
       url = "github:xddxdd/nix-cachyos-kernel/65eeb695390ffd7dffcee3abaf5068809f90386b";
+      inputs.nixpkgs.follows = "nixpkgs-kernel";
     };
 
     firefox-addons = {
