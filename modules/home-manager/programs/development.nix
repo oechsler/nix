@@ -35,6 +35,7 @@
         # Development utilities
         cloc          # Count lines of code
         distrobox     # Container environments
+        ansible       # Infrastructure automation
 
         # Languages & Compilers
         go
