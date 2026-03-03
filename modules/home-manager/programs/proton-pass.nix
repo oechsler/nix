@@ -134,6 +134,7 @@
           identityFile = "${config.home.homeDirectory}/.ssh/id_ed25519";
           extraOptions = {
             IdentityAgent = "${config.home.homeDirectory}/.ssh/proton-pass-agent.sock";
+            StrictHostKeyChecking = "accept-new";
           };
         };
       };
