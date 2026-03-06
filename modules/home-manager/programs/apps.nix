@@ -33,7 +33,7 @@
 # - GNOME Keyring - Secret storage for browsers, VSCode, etc.
 # - libsecret - Tools for accessing gnome-keyring (used by Chrome, VSCode, etc.)
 
-{ pkgs, pkgs-stable, features, lib, ... }:
+{ pkgs, features, lib, ... }:
 
 let
   isKde = features.desktop.wm == "kde";
@@ -53,8 +53,8 @@ in
       alsa-scarlett-gui
       element-desktop
       vesktop
-      pkgs-stable.freecad      # Pinned to stable: broken on unstable (Boost 1.89)
-      pkgs-stable.libreoffice  # Pinned to stable: unstable creates broken noto-fonts-subset derivation
+      freecad
+      libreoffice
       nextcloud-client
       obsidian
       pika-backup
