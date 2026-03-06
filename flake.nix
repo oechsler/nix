@@ -44,13 +44,9 @@
     #===========================
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
 
-    # Pinned stable nixpkgs for packages broken on unstable
-    nixpkgs-stable.url = "github:nixos/nixpkgs/nixos-25.11";
-
-    # Pinned nixpkgs for the CachyOS kernel — must stay in sync with the
-    # kernel patches in the cachyos-kernel input. Bump only together with
-    # cachyos-kernel once upstream patches support the new kernel version.
-    nixpkgs-kernel.url = "github:nixos/nixpkgs/dd9b079222d43e1943b6ebd802f04fd959dc8e61";
+    # Pinned nixpkgs for the CachyOS kernel — bump together with cachyos-kernel
+    # when upgrading the kernel version.
+    nixpkgs-kernel.url = "github:nixos/nixpkgs/943ba5b1a58e68eb9a2c284ba6e3b30ebfe45abe";
 
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -94,21 +90,17 @@
     awww.url = "git+https://codeberg.org/LGFae/awww";
 
     cachyos-kernel = {
-      # Pinned: rev 65eeb69 (2026-02-26) — later rev (37320fa) includes CachyOS
-      # kernel-patches ece737f which breaks linux-src-patched build for 6.19.
-      # Remove pin when upstream fixes the 6.19 patches.
-      #
-      # Follows nixpkgs-kernel (not nixpkgs) so that nix flake update cannot
-      # silently bump the kernel source version and break patch application.
-      # Bump nixpkgs-kernel together with this input when upgrading the kernel.
-      url = "github:xddxdd/nix-cachyos-kernel/65eeb695390ffd7dffcee3abaf5068809f90386b";
+      # Pinned: nix flake update must not silently bump the kernel version.
+      # Bump this together with nixpkgs-kernel when upgrading the kernel.
+      # Since rev a3da9122 (2026-03-02) xddxdd uses prepatched CachyOS tarballs
+      # from github.com/CachyOS/linux/releases — version controlled by version.json.
+      # Current: rev aada771f (2026-03-06), kernel 6.19.6.
+      url = "github:xddxdd/nix-cachyos-kernel/aada771f510dbd9ac48614cc7b4b21a292989d3a";
       inputs.nixpkgs.follows = "nixpkgs-kernel";
     };
 
     firefox-addons = {
-      # Pinned: rev d886ec7 (2026-02-19) broke the build — flake.nix passes { fetchurl, lib, stdenv }
-      # but default.nix expects buildMozillaXpiAddon. Upstream bug, remove pin when fixed.
-      url = "gitlab:rycee/nur-expressions/fb51502bcbd21fc84a1aae6a75564a968e6b0c25?dir=pkgs/firefox-addons";
+      url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
@@ -170,9 +162,7 @@
               home-manager = {
                 useGlobalPkgs = true;
                 useUserPackages = true;
-                extraSpecialArgs = {
-                  pkgs-stable = import inputs.nixpkgs-stable { inherit system; };
-                };
+                extraSpecialArgs = { };
                 sharedModules = [
                   (import ./modules/home-manager)
                   inputs.catppuccin.homeModules.catppuccin
