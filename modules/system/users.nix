@@ -149,10 +149,13 @@ in
     #---------------------------
     # 6. Sudo Configuration
     #---------------------------
-    security.sudo.extraConfig = ''
-      Defaults pwfeedback          # Show asterisks when typing password
-      Defaults lecture = never     # Skip the "with great power" lecture
-      Defaults timestamp_timeout=30  # Re-auth every 30 minutes (default: 5)
-    '';
+    # sudo-rs: memory-safe Rust reimplementation of sudo
+    security.sudo.enable = false;
+    security.sudo-rs = {
+      enable = true;
+      extraConfig = ''
+        Defaults timestamp_timeout=30  # Re-auth every 30 minutes (default: 5)
+      '';
+    };
   };
 }

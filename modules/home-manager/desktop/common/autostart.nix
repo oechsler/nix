@@ -17,7 +17,6 @@
 # - Nextcloud - Cloud sync (Hyprland only, KDE uses XDG autostart)
 # - Pika Backup Monitor (if features.apps.enable)
 # - Element - Matrix client (minimized, if features.apps.enable)
-# - Spotify (if features.apps.enable, Hyprland only, minimized)
 # - JetBrains Toolbox (if features.development.enable)
 # - Trayscale - Tailscale tray (if features.tailscale.enable)
 # - Steam (if features.gaming.enable)
@@ -59,7 +58,7 @@ in
     autostart.apps =
       # Core apps (always started)
       [
-        { name = "Proton Pass"; exec = "proton-pass --hidden"; }
+        { name = "Proton Pass"; exec = "proton-pass --hidden --ozone-platform=wayland"; }
         { name = "Vesktop"; exec = "vesktop --start-minimized"; }
         { name = "CoolerControl"; exec = "coolercontrol"; }
       ]
@@ -69,10 +68,7 @@ in
       ]
       ++ lib.optionals features.apps.enable [
         { name = "Pika Backup Monitor"; exec = "pika-backup-monitor"; }
-        { name = "Element"; exec = "element-desktop --hidden"; }
-      ]
-      ++ lib.optionals (features.apps.enable && !isKde) [
-        { name = "Spotify"; exec = "spotify --minimized"; }
+        { name = "Element"; exec = "element-desktop --hidden --ozone-platform=wayland"; }
       ]
       ++ lib.optionals features.development.enable [
         { name = "JetBrains Toolbox"; exec = "jetbrains-toolbox --minimize"; }

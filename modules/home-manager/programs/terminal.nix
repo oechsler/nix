@@ -66,13 +66,7 @@
       bat.enable = true;
       gitui.enable = true;
 
-      htop = {
-        enable = true;
-        settings = {
-          tree_view = true;
-          sort_key = 1;
-        };
-      };
+      bottom.enable = true;
 
       fzf = {
         enable = true;
@@ -89,10 +83,13 @@
 
     home.packages = with pkgs; [
       bluetui
+      dust
       fd
       impala
       jq
+      procs
       ripgrep
+      sd
       wiremix
     ];
   };
