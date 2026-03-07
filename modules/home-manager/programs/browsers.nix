@@ -100,15 +100,16 @@
               "customizableui-special-spring2"
               "downloads-button"
               "78272b6fa58f4a1abaac99321d503a20_proton_me-browser-action"
+              "unified-extensions-button"
             ];
             toolbar-menubar = [ "menubar-items" ];
             TabsToolbar = [ "tabbrowser-tabs" ];
             PersonalToolbar = [ "personal-bookmarks" ];
             widget-overflow-fixed-list = [];
-            unified-extensions-area = [];
+            unified-extensions-area = [ "ublock0_raymondhill_net-browser-action" "newtaboverride_agenedia_com-browser-action" ];
           };
-          seen = [ "developer-button" "profiler-button" "78272b6fa58f4a1abaac99321d503a20_proton_me-browser-action" ];
-          dirtyAreaCache = [ "nav-bar" ];
+          seen = [ "developer-button" "profiler-button" "78272b6fa58f4a1abaac99321d503a20_proton_me-browser-action" "ublock0_raymondhill_net-browser-action" "newtaboverride_agenedia_com-browser-action" ];
+          dirtyAreaCache = [ "nav-bar" "unified-extensions-area" ];
           currentVersion = 21;
           newElementCount = 2;
         };
