@@ -54,6 +54,9 @@ in
         ExecStart = "${pkgs.hypr-dock}/bin/hypr-dock";
         Restart = "on-failure";
         RestartSec = 2;
+        # Electron apps launched from the dock inherit this env var.
+        # nixpkgs wrappers then automatically add --ozone-platform=wayland.
+        Environment = "NIXOS_OZONE_WL=1";
       };
       Install.WantedBy = [ "graphical-session.target" ];
     };

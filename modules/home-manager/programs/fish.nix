@@ -32,6 +32,10 @@
 
   programs.fish = {
     enable = true;
+    shellInit = ''
+      # Electron apps: native Wayland (NIXOS_OZONE_WL not available via sessionVariables in NixOS module mode)
+      set -gx NIXOS_OZONE_WL 1
+    '';
     interactiveShellInit = ''
       set fish_greeting
       fzf_configure_bindings --directory=\co --history=\cr --processes= --variables= --git_status= --git_log=

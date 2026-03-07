@@ -81,6 +81,18 @@ in
     #---------------------------
     # GTK, cursor, catppuccin, session variables
 
+    # Override element-desktop to force native Wayland so hypr-dock can match windows.
+    # Without --ozone-platform=wayland the app_id is "Element" (XWayland class) instead
+    # of "element-desktop" (which matches the pinned dock entry).
+    xdg.desktopEntries.element-desktop = lib.mkIf features.apps.enable {
+      name = "Element";
+      exec = "element-desktop --ozone-platform=wayland %u";
+      icon = "element-desktop";
+      categories = [ "Network" "InstantMessaging" "Chat" ];
+      genericName = "Matrix Client";
+      settings.StartupWMClass = "element-desktop";
+    };
+
     # Override vesktop desktop entry to show Discord branding
     # (Vesktop is a Discord client, but we want to call it "Discord")
     xdg.desktopEntries.vesktop = lib.mkIf features.apps.enable {
@@ -112,8 +124,6 @@ in
         x11.enable = true;
       };
 
-      # Electron apps (Discord, VS Code, …) natively on Wayland
-      sessionVariables.NIXOS_OZONE_WL = "1";
     };
 
     gtk = {
