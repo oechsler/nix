@@ -9,8 +9,6 @@
 #
 # 2. Kubernetes Tools (features.development.kubernetes.enable = true)
 #    - kubectl, helm, k9s
-#    - Kubeconfig via SOPS secrets
-#    - Optional, requires SOPS setup
 #
 # 3. GUI Tools (features.development.gui.enable = true)
 #    - VS Code
@@ -21,7 +19,7 @@
 #
 # Server mode automatically disables GUI tools but keeps CLI tools.
 
-{ config, pkgs, features, lib, ... }:
+{ pkgs, features, lib, ... }:
 
 {
   #===========================
@@ -46,16 +44,8 @@
       ];
     })
 
-    # Kubernetes Tools (optional, requires SOPS)
+    # Kubernetes Tools (optional)
     (lib.mkIf (features.development.enable && features.development.kubernetes.enable) {
-      # Kubernetes config from sops (uses system-level defaultSopsFile)
-      sops.secrets."kubernetes/kubeconfig" = {
-        path = "${config.home.homeDirectory}/.kube/config";
-        mode = "0600";  # kubectl/kubectx need read+write permissions
-      };
-
-      home.file.".kube/.keep".text = "";
-
       catppuccin.k9s.transparent = true;
 
       programs.k9s = {
