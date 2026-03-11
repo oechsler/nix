@@ -58,7 +58,7 @@ git commit -m "Update secrets"
 |--------|---------|
 | `wifi.home.ssid/psk` | NetworkManager WiFi profiles |
 | `smb.personal-drive.*` | SMB mount credentials |
-| `kubernetes.kubeconfig` | kubectl configuration |
+
 
 ## Security Notes
 

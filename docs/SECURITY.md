@@ -64,7 +64,7 @@ SSH server is off by default (`features.ssh.enable = false`). When enabled:
 
 ### Secrets Management
 
-All secrets (WiFi passwords, SMB credentials, kubeconfig) are encrypted with SOPS + age. The age key is derived from the SSH ed25519 key. Secrets are never stored in plain text in the repository.
+All secrets (WiFi passwords, SMB credentials) are encrypted with SOPS + age. The age key is derived from the SSH ed25519 key. Secrets are never stored in plain text in the repository.
 
 ## Summary
 
