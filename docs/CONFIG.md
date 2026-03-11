@@ -34,7 +34,7 @@ features.ssh.enable = true;
 | `features.wifi.networks` | `["home"]` | WiFi network names to manage — each needs `wifi/<name>/ssid` + `wifi/<name>/psk` SOPS secrets |
 | `features.development.enable` | `true` | IDEs, languages (Go, Rust, Node, Java) |
 | `features.development.gui.enable` | `true` | GUI dev tools (VS Code, JetBrains, DBeaver) |
-| `features.development.kubernetes.enable` | `true` | Kubernetes tools (kubectl, k9s) with kubeconfig via SOPS |
+| `features.development.kubernetes.enable` | `true` | Kubernetes tools (kubectl, k9s) |
 | `features.apps.enable` | `true` | Desktop apps (Discord, Spotify, Obsidian, LibreOffice, ...) |
 | `features.apps.winboat.enable` | `false` | WinBoat Windows VM (seamless integration) |
 | `features.auth.totp.enable` | `true` | TOTP for sudo, SSH (see [AUTH.md](AUTH.md)) |

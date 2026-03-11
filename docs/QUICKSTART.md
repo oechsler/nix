@@ -61,9 +61,9 @@ nix build .#nixosConfigurations.my-host.config.system.build.toplevel
 
 **Desktop mode:** Everything from server + Hyprland/KDE, Firefox, Audio, Development tools, Docker (`features.virtualisation.enable`)
 
-## SOPS Secrets (WiFi/SMB/Kubernetes)
+## SOPS Secrets (WiFi/SMB)
 
-WiFi, SMB, and Kubernetes require encrypted secrets via SOPS.
+WiFi and SMB require encrypted secrets via SOPS.
 
 ```nix
 # Point to your SOPS file:
