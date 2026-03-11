@@ -58,6 +58,11 @@
   # Allow unfree packages (e.g., Discord, Spotify, proprietary drivers)
   nixpkgs.config.allowUnfree = true;
 
+  # nheko depends on libolm which is deprecated but has no maintained replacement yet
+  nixpkgs.config.permittedInsecurePackages = [
+    "olm-3.2.16"
+  ];
+
   #---------------------------
   # 4. Automatic System Upgrades
   #---------------------------
