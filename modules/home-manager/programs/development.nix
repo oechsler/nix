@@ -36,6 +36,7 @@
         cloc          # Count lines of code
         distrobox     # Container environments
         ansible       # Infrastructure automation
+        opentofu      # Terraform alternative (open-source)
 
         # Languages & Compilers
         go

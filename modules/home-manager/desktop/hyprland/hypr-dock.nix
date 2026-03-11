@@ -54,6 +54,8 @@ in
         ExecStart = "${pkgs.hypr-dock}/bin/hypr-dock";
         Restart = "on-failure";
         RestartSec = 2;
+        # Only kill the dock process, not apps launched from it
+        KillMode = "process";
         # Electron apps launched from the dock inherit this env var.
         # nixpkgs wrappers then automatically add --ozone-platform=wayland.
         Environment = "NIXOS_OZONE_WL=1";
