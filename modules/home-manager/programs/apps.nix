@@ -8,7 +8,8 @@
 # - Hyprland: GNOME/GTK utilities
 #
 # Common apps:
-# - Element Desktop - Matrix client (Electron, vodozemac)
+# - Nheko - Matrix client (native Qt, E2EE)
+# - Mumble - Voice chat (low-latency)
 # - Vesktop - Discord client
 # - Spotify - Music streaming
 # - Nextcloud - Cloud sync
@@ -33,10 +34,11 @@
 # - GNOME Keyring - Secret storage for browsers, VSCode, etc.
 # - libsecret - Tools for accessing gnome-keyring (used by Chrome, VSCode, etc.)
 
-{ pkgs, features, lib, ... }:
+{ pkgs, features, lib, theme, fonts, ... }:
 
 let
   isKde = features.desktop.wm == "kde";
+  isLight = theme.catppuccin.flavor == "latte";
 in
 {
   #===========================
@@ -51,7 +53,8 @@ in
   {
     home.packages = with pkgs; [
       alsa-scarlett-gui
-      element-desktop
+      mumble
+      nheko
       vesktop
       freecad
       libreoffice
@@ -61,6 +64,24 @@ in
       prusa-slicer
       spotify
     ] ++ lib.optional features.apps.winboat.enable winboat;
+
+    # Mumble theme: don't set explicitly — uses system Qt theme (Catppuccin via Kvantum)
+
+    # Nheko theme: Qt "system" detection doesn't work reliably with Kvantum,
+    # so we set the theme explicitly based on Catppuccin flavor
+    home.activation.nhekoTheme = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      conf="$HOME/.config/nheko/nheko.conf"
+      theme="${if isLight then "light" else "dark"}"
+      if [ -f "$conf" ]; then
+        ${pkgs.gnused}/bin/sed -i \
+          -e "s/^theme=.*/theme=$theme/" \
+          -e 's/^window\\start_in_tray=.*/window\\start_in_tray=true/' \
+          -e 's/^window\\tray=.*/window\\tray=true/' \
+          -e 's/^font_family=.*/font_family=${fonts.ui}/' \
+          -e 's/^font_size=.*/font_size=${toString fonts.size}/' \
+          "$conf"
+      fi
+    '';
   }
 
   #---------------------------
