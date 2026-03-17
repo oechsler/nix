@@ -68,7 +68,7 @@ in
       ]
       ++ lib.optionals features.apps.enable [
         { name = "Pika Backup Monitor"; exec = "pika-backup-monitor"; }
-        { name = "Nheko"; exec = "nheko --tray"; }
+        { name = "Nheko"; exec = "nheko"; }
         { name = "Mumble"; exec = "mumble --hidden"; }
       ]
       ++ lib.optionals features.development.enable [
