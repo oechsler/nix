@@ -33,9 +33,6 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
-
       - name: Run custom convention linter
         run: nix build .#checks.x86_64-linux.lint --show-trace
 
@@ -64,9 +61,6 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
-
-      - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: Build ${{ matrix.host }} configuration
         run: |
