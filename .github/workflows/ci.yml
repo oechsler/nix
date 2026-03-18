@@ -46,7 +46,7 @@ jobs:
   # Job 2: Build Validation
   #===========================================================================
   build:
-    name: Build ${{ matrix.host }}
+    name: "Build ${{ matrix.host }}"
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -62,7 +62,7 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Build ${{ matrix.host }} configuration
+      - name: "Build ${{ matrix.host }} configuration"
         run: |
           nix build \
             .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel \
