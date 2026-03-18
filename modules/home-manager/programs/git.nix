@@ -10,6 +10,11 @@
 # - Main as default branch
 # - Global gitignore for common files
 #
+# Credential providers:
+#   GitHub:  OAuth via GCM
+#   Forgejo: generic provider — PAT stored in system keyring after first push
+#            Token: https://git.at.oechsler.it/user/settings/applications
+#
 # Diff/Merge:
 #   Tool: nvimdiff
 #   Conflict style: diff3 (shows base, ours, theirs)
@@ -55,6 +60,10 @@
 
       # GitHub OAuth support
       "credential.https://github.com".provider = "github";
+
+      # Forgejo instance (git.at.oechsler.it) — use generic provider with PAT
+      "credential.https://git.at.oechsler.it".provider = "generic";
+      "credential.https://git.at.oechsler.it".username = "samuel";
     };
 
     ignores = [
