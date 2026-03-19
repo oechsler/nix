@@ -24,7 +24,7 @@
 # Configuration:
 #   autostart.apps = [ { name = "App"; exec = "command"; } ];
 
-{ config, lib, features, ... }:
+{ config, lib, pkgs, features, ... }:
 
 let
   cfg = config.autostart;
@@ -50,7 +50,8 @@ in
   # Configuration
   #===========================
 
-  config = {
+  config = lib.mkMerge [
+  {
 
     #---------------------------
     # Default Autostart Apps
@@ -74,12 +75,32 @@ in
       ++ lib.optionals features.development.enable [
         { name = "JetBrains Toolbox"; exec = "jetbrains-toolbox --minimize"; }
       ]
-      ++ lib.optionals features.tailscale.enable [
-        { name = "Trayscale"; exec = "bash -c 'sleep 3 && trayscale --hide-window'"; }
-      ]
+      # Trayscale is handled via systemd user service below (reliable tray detection)
       ++ lib.optionals features.gaming.enable [
         { name = "Steam"; exec = "steam -silent"; }
       ];
 
-  };
+  }
+
+  #---------------------------
+  # Trayscale systemd service
+  # (reliable: waits for graphical-session.target, restarts on failure)
+  #---------------------------
+  (lib.mkIf features.tailscale.enable {
+    systemd.user.services.trayscale = {
+      Unit = {
+        Description = "Trayscale - Tailscale tray applet";
+        After = [ "graphical-session.target" ];
+        PartOf = [ "graphical-session.target" ];
+      };
+      Service = {
+        ExecStart = "${pkgs.trayscale}/bin/trayscale --hide-window";
+        Restart = "on-failure";
+        RestartSec = 3;
+      };
+      Install.WantedBy = [ "graphical-session.target" ];
+    };
+  })
+
+  ]; # end mkMerge
 }
