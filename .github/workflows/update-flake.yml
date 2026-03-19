@@ -47,9 +47,6 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Setup Nix cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
-
       #-----------------------------------------------------------------------
       # Update flake.lock
       #-----------------------------------------------------------------------
