@@ -92,10 +92,9 @@
     cachyos-kernel = {
       # Pinned: nix flake update must not silently bump the kernel version.
       # Bump this together with nixpkgs-kernel when upgrading the kernel.
-      # Since rev a3da9122 (2026-03-02) xddxdd uses prepatched CachyOS tarballs
-      # from github.com/CachyOS/linux/releases — version controlled by version.json.
-      # Current: rev aada771f (2026-03-06), kernel 6.19.6.
-      url = "github:xddxdd/nix-cachyos-kernel/aada771f510dbd9ac48614cc7b4b21a292989d3a";
+      # See: github.com/xddxdd/nix-cachyos-kernel (version.json tracks kernel versions)
+      # Current: rev 46d37ddf (2026-03-21), kernel 6.19.9.
+      url = "github:xddxdd/nix-cachyos-kernel/46d37ddfe759b09e722567d3a0d2c5d77017fddc";
       inputs.nixpkgs.follows = "nixpkgs-kernel";
     };
 
