@@ -130,7 +130,10 @@ in
       };
       # WebKitGTK/Tauri apps (CoolerControl) need this to detect dark mode
       gtk3.extraConfig.gtk-application-prefer-dark-theme = !isLight;
-      gtk4.extraConfig.gtk-application-prefer-dark-theme = !isLight;
+      gtk4 = {
+        extraConfig.gtk-application-prefer-dark-theme = !isLight;
+        theme = null;
+      };
     };
 
     dconf.settings."org/gnome/desktop/interface".color-scheme =
