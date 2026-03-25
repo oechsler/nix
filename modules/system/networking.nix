@@ -225,6 +225,9 @@ in
     (lib.mkIf tailscaleCfg.enable {
       services.tailscale.enable = true;
 
+      # Trust tailscale0 interface so forwarded LAN traffic (via subnet router) is not blocked
+      networking.firewall.trustedInterfaces = [ "tailscale0" ];
+
       environment.systemPackages = [
         # Helper script for initial Tailscale setup
         (pkgs.writeShellScriptBin "tailscale-init" ''
