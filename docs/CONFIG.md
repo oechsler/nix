@@ -65,7 +65,7 @@ Set in `configuration.nix`:
 | `user.email` | `"samuel@oechsler.it"` | Email address |
 | `user.github` | `"oechsler"` | GitHub username (for SSH key import) |
 | `user.icon` | `pictures/sam-memoji.png` | Profile picture (SDDM) |
-| `user.hashedPassword` | `"!"` (locked) | Password hash — generate with `mkpasswd -m sha-512`. Default locks the account (TOTP-only). |
+| `user.hashedPassword` | `"!"` (locked) | Password is set at boot from sops (`user/password`). Can be overridden per-host with a hash (`mkpasswd -m yescrypt`). |
 | `user.directories` | `[]` | Extra directories to create in `~` |
 
 ## Theme Options

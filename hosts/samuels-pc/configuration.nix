@@ -74,10 +74,6 @@
     }
   ];
 
-  # Fallback password (TOTP is primary auth — see auth.nix)
-  # Change with: mkpasswd -m sha-512
-  user.hashedPassword = "$6$P1igUfSBc.///vJD$g.8f4tpbqwZAOpu9tMyD06fDuJ/trn6QVUgLapJ8.F8EPVMEFGXJ9wpB8nTTpblw4ueFTm4S.2oCLsXtuBzpB0";
-
   features = {
     secureBoot.enable = true;
     auth.yubikey.enable = true;

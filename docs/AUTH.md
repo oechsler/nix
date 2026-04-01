@@ -134,12 +134,7 @@ sudo yubikey-luks-init
 
 ### Password
 
-Password is the fallback for local services. Default is locked (`"!"`). Each host sets its own hash:
-
-```nix
-# Generate: mkpasswd -m sha-512
-user.hashedPassword = "$6$...";
-```
+Password is the fallback for local services. Stored as plain text in sops (`user/password`), hashed to yescrypt at boot by `user-passwd.service`. No per-host configuration needed.
 
 ## Files
 
