@@ -17,9 +17,11 @@
 # Authentication:
 #   - TOTP is the primary auth method (see auth.nix)
 #   - Password is a fallback for local services (login, sudo, SDDM)
-#   - Default: account locked ("!") — hosts MUST set user.hashedPassword
-#   - Generate hash: mkpasswd -m sha-512
+#   - Plain password in sops (user/password), hashed to yescrypt at boot
+#     by user-passwd.service via chpasswd (after sops-install-secrets)
+#   - Fallback: "!" (locked) if sops key is missing (e.g. fresh install)
 #   - Root account is locked (only sudo access via user account)
+#   - Hosts do NOT need to set user.hashedPassword
 #
 # Security:
 #   - Root login disabled (hashedPassword = "!")
@@ -80,8 +82,8 @@ in
     # Authentication
     hashedPassword = lib.mkOption {
       type = lib.types.str;
-      default = "!";  # Locked — hosts must set a password for fallback auth
-      description = "Hashed password (generate with: mkpasswd -m sha-512). Default '!' = locked.";
+      default = "!";  # Locked by default — user-passwd.service sets real password at boot
+      description = "Hashed password fallback. Usually left at '!' (locked); runtime service overrides it.";
     };
   };
 
@@ -105,6 +107,10 @@ in
       # Why: NixOS should be the single source of truth for user accounts
       # Prevents manual changes via passwd/useradd commands
       mutableUsers = false;
+
+      # Declarative password is "!" (locked) — user-passwd.service sets the
+      # real password at boot via chpasswd. Tell NixOS this is intentional.
+      allowNoPasswordLogin = true;
 
       #---------------------------
       # 3. Primary User Account
@@ -145,6 +151,29 @@ in
     systemd.tmpfiles.rules = map (dir:
       "d ${user.home}/${dir} 0755 ${user.name} ${user.group} -"
     ) cfg.directories;
+
+    #---------------------------
+    # 5b. Runtime Password via sops
+    #---------------------------
+    # Why: Plain password stored encrypted in sops, hashed dynamically at boot.
+    # Avoids storing any hash in the Nix store or git repo.
+    # Falls back to "!" (locked) if sops key is missing (e.g. fresh install).
+    sops.secrets."user/password" = {};
+
+    systemd.services.user-passwd = {
+      description = "Set user password from sops secret";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "sops-install-secrets.service" ];
+      unitConfig.ConditionPathExists = config.sops.age.keyFile;
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+      script = ''
+        echo "${cfg.name}:$(cat ${config.sops.secrets."user/password".path})" \
+          | ${pkgs.shadow}/bin/chpasswd
+      '';
+    };
 
     #---------------------------
     # 6. Sudo Configuration
