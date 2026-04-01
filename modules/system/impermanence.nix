@@ -96,6 +96,9 @@ in
       ++ lib.optionals config.features.desktop.enable [
         "/var/lib/sddm"               # SDDM state
       ]
+      ++ lib.optionals config.programs.coolercontrol.enable [
+        "/etc/coolercontrol"          # CoolerControl config & password
+      ]
       ++ lib.optionals config.features.secureBoot.enable [
         "/var/lib/sbctl"              # Secure Boot keys
       ]
