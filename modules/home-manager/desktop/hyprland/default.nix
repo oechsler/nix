@@ -367,6 +367,12 @@ in
         vrr = if lib.any (m: m.vrr) displays.monitors then 1 else 0;
       };
 
+      render = {
+        direct_scanout = 0;
+        cm_fs_passthrough = 0;
+        non_shader_cm = 0;
+      };
+
       windowrule = [
         # System authentication
         "match:class ^(org\\.freedesktop\\.impl\\.portal\\.desktop\\.hyprland)$, float on"
