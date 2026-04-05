@@ -95,7 +95,7 @@ let
     fileName = baseNameOf (toString file);
     # Skip files with application settings (Firefox, etc.) where quoted keys are required
     # Also skip lint.nix itself (contains example code in comments)
-    isAppSettings = builtins.elem fileName [ "browsers.nix" "lint.nix" ];
+    isAppSettings = builtins.elem fileName [ "browsers.nix" "lint.nix" "gaming.nix" ];
     # Regex pattern: matches "word.word" = (quoted string with dot followed by equals)
     hasQuotedAttrs = builtins.match ".*\"[a-z][a-z0-9]*\\.[a-z][a-z0-9.]*\"[[:space:]]*=.*" content != null;
   in {
