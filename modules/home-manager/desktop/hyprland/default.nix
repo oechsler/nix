@@ -364,6 +364,7 @@ in
       misc = {
         force_default_wallpaper = 0;
         disable_hyprland_logo = true;
+        vrr = if lib.any (m: m.vrr) displays.monitors then 1 else 0;
       };
 
       windowrule = [

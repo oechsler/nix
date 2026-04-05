@@ -13,7 +13,8 @@
 #       x = 0;
 #       y = 0;
 #       scale = 1.0;
-#       workspaces = [ 1 2 3 4 5 ];  # Hyprland: bind workspaces to this monitor
+#       vrr = true;                   # VRR/FreeSync — Hyprland: misc.vrr, KDE: vrrpolicy.always
+#       workspaces = [ 1 2 3 4 5 ];  # Hyprland only: bind workspaces to this monitor
 #     }
 #   ];
 
@@ -76,6 +77,11 @@
             type = lib.types.listOf lib.types.int;
             default = [];
             description = "Workspace IDs to bind to this monitor (Hyprland only, e.g. [1 2 3 4 5])";
+          };
+          vrr = lib.mkOption {
+            type = lib.types.bool;
+            default = false;
+            description = "Enable Variable Refresh Rate (VRR/FreeSync/G-Sync) for this monitor";
           };
         };
       });
