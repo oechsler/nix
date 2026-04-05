@@ -140,6 +140,20 @@
             {
               nixpkgs.overlays = [
                 inputs.cachyos-kernel.overlays.pinned
+
+                # Workaround: nixpkgs 2.1.88 tarball was yanked from npm and GCS.
+                # Override with 2.1.92 binary until nixpkgs is updated.
+                # TODO: remove once nixpkgs ships a working claude-code version.
+                (final: prev: {
+                  claude-code = prev.claude-code-bin.overrideAttrs (_: {
+                    pname = "claude-code";
+                    version = "2.1.92";
+                    src = prev.fetchurl {
+                      url = "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/2.1.92/linux-x64/claude";
+                      sha256 = "e22324514967ff2d5e9f91f0ee37e4675bf8b6dfec27fafb19cb25cc5b23fcaf";
+                    };
+                  });
+                })
               ];
             }
           ]
