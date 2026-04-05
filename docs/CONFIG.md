@@ -22,7 +22,8 @@ features.ssh.enable = true;
 | `features.desktop.dock.enable` | `true` | Application dock for Hyprland (hypr-dock) |
 | `features.audio.enable` | `true` | PipeWire audio (ALSA, PulseAudio compat) |
 | `features.bluetooth.enable` | `true` | Bluetooth support (power on boot) |
-| `features.gaming.enable` | `true` | Steam, GameMode, Gamescope |
+| `features.gaming.enable` | `true` | Steam + Proton-GE, GameMode, Gamescope, MangoHud, ProtonUp-Qt |
+| `features.gaming.gpu` | `null` | GPU vendor for VA-API hardware encoding (`"amd"` / `"intel"`) — enables Remote Play hardware encoding + LIBVA driver |
 | `features.virtualisation.enable` | `true` | Docker daemon + user group |
 | `features.virtualisation.waydroid.enable` | `false` | Waydroid Android container |
 | `features.smb.enable` | `true` | SMB network share mounts (auto-mount with retry) |
