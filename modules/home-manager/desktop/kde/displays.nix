@@ -13,6 +13,7 @@
 # - Position: x,y coordinates
 # - Scale: DPI scaling factor
 # - Rotation: normal, 90, 180, 270
+# - VRR: vrr = true → vrrpolicy.always
 #
 # Note: Only active when features.desktop.wm == "kde" and displays.monitors is not empty
 
@@ -30,12 +31,12 @@ let
   }.${rot};
 
   monitorArgs = lib.concatMapStringsSep " " (m:
-    lib.concatStringsSep " " [
+    lib.concatStringsSep " " ([
       "output.${m.name}.scale.${toString m.scale}"
       "output.${m.name}.mode.${toString m.width}x${toString m.height}@${toString m.refreshRate}"
       "output.${m.name}.position.${toString m.x},${toString m.y}"
       "output.${m.name}.rotation.${kscreenRotation m.rotation}"
-    ]
+    ] ++ lib.optional m.vrr "output.${m.name}.vrrpolicy.always")
   ) displays.monitors;
 
   kscreenDoctor = "${pkgs.kdePackages.libkscreen}/bin/kscreen-doctor";
