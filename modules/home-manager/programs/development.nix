@@ -72,7 +72,7 @@
     (lib.mkIf (features.development.enable && features.development.gui.enable) {
       home.packages = with pkgs; [
         dbeaver-bin        # Database GUI
-        jetbrains-toolbox  # IntelliJ IDEA, etc.
+        jetbrains.goland   # Go IDE
         claude-code        # AI-powered editor
       ];
 
