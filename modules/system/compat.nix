@@ -30,6 +30,10 @@
       curl
       libGL
       libx11
+      xorg.libXext
+      xorg.libXrender
+      xorg.libXtst
+      xorg.libXi
       fontconfig
       freetype
     ];
