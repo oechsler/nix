@@ -3,25 +3,23 @@
 
 buildGoModule rec {
   pname = "hypr-dock";
-  version = "1.1.1";
+  version = "1.2.1";
 
   src = fetchFromGitHub {
     owner = "lotos-linux";
     repo = "hypr-dock";
     rev = "v${version}";
-    hash = "sha256-6YfjfSx26d1FSVHapoGqm6Yc1Wf/6e11IKR46pUTg5k=";
+    hash = "sha256-78vecDP4Bx9974C5+iFzI1L7na3wFaGSYWe8YsfRIzs=";
   };
 
-  vendorHash = "sha256-X/0dJzJQ9xaS+oXOqltvMXh8eSS7MAkINBxf22+jUDg=";
+  vendorHash = "sha256-amBAJW9oyCU53bxHh8MHR4Fj64VBUTzcEnWnvPlcZ7g=";
 
   nativeBuildInputs = [ pkg-config wrapGAppsHook3 shared-mime-info ];
   buildInputs = [ gtk3 gtk-layer-shell librsvg ];
 
-  subPackages = [ "main" ];
+  subPackages = [ "cmd/hypr-dock" ];
 
   postInstall = ''
-    mv $out/bin/main $out/bin/hypr-dock
-
     mkdir -p $out/share/hypr-dock
     cp -r $src/configs/* $out/share/hypr-dock/
   '';
