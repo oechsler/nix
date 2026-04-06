@@ -17,7 +17,6 @@
 # - Nextcloud - Cloud sync (Hyprland only, KDE uses XDG autostart)
 # - Pika Backup Monitor (if features.apps.enable)
 # - Nheko - Matrix client (tray, if features.apps.enable)
-# - JetBrains Toolbox (if features.development.enable)
 # - Trayscale - Tailscale tray (if features.tailscale.enable)
 # - Steam (if features.gaming.enable)
 #
@@ -71,9 +70,6 @@ in
         { name = "Pika Backup Monitor"; exec = "pika-backup-monitor"; }
         { name = "Nheko"; exec = "nheko"; }
         { name = "Mumble"; exec = "mumble --hidden"; }
-      ]
-      ++ lib.optionals features.development.enable [
-        { name = "JetBrains Toolbox"; exec = "jetbrains-toolbox --minimize"; }
       ]
       # Trayscale is handled via systemd user service below (reliable tray detection)
       ++ lib.optionals features.gaming.enable [
