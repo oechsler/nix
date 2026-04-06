@@ -67,39 +67,39 @@ in
     # 3. Dock Configuration
     #---------------------------
     # Main dock settings (position, size, margins)
+    # Format changed in v1.2.1: config.jsonc (JSON) → hypr-dock.conf (INI)
+    # Layer "exclusive-bottom" split into Layer + Exclusive options
     xdg.configFile = {
-      "hypr-dock/config.jsonc".text = builtins.toJSON {
-        CurrentTheme = "catppuccin";
-        IconSize = 36;
-        Layer = "exclusive-bottom";
-        Position = "bottom";
-        SystemGapUsed = "true";
-        Margin = theme.gaps.outer;
-        ContextPos = 5;
-        Preview = "none";  # Disable window previews
-      };
+      "hypr-dock/hypr-dock.conf".text = ''
+        [General]
+        CurrentTheme = catppuccin
+        IconSize = 36
+        Layer = bottom
+        Exclusive = true
+        Position = bottom
+        SystemGapUsed = true
+        Margin = ${toString theme.gaps.outer}
+        ContextPos = 5
 
-      #---------------------------
-      # 4. Pinned Applications
-      #---------------------------
-      # Apps shown in dock (from desktop.pinnedApps)
-      "hypr-dock/pinned.json".text = builtins.toJSON {
-        Pinned = config.desktop.pinnedApps;
-      };
+        [General.preview]
+        Mode = none
+      '';
 
       #---------------------------
       # 5. Catppuccin Theme
       #---------------------------
       # Theme configuration (generated from Catppuccin palette)
-      "hypr-dock/themes/catppuccin/catppuccin.jsonc".text = builtins.toJSON {
-        Blur = "true";
-        Spacing = 5;
-        PreviewStyle = {
-          Size = 120;
-          BorderRadius = theme.radius.small;
-          Padding = 10;
-        };
-      };
+      # Format changed in v1.2.1: catppuccin.jsonc (JSON) → theme.conf (INI)
+      "hypr-dock/themes/catppuccin/theme.conf".text = ''
+        [Theme]
+        Blur = true
+        Spacing = 5
+
+        [Theme.preview]
+        Size = 120
+        BorderRadius = ${toString theme.radius.small}
+        Padding = 10
+      '';
       "hypr-dock/themes/catppuccin/style.css".text = ''
       window {
         background-color: transparent;
@@ -189,5 +189,19 @@ in
         </svg>
       '';
     };
+
+    #---------------------------
+    # 4. Pinned Applications
+    #---------------------------
+    # v1.2.1: pins moved to ~/.local/share/hypr-dock/pinned (plain text, one per line)
+    # Use activation script (not xdg.dataFile) so the dock can write to the file.
+    # Only creates the file if it doesn't exist yet — user's UI changes are preserved.
+    home.activation.hyprDockPins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      _pinned_file="${config.xdg.dataHome}/hypr-dock/pinned"
+      if [ ! -f "$_pinned_file" ]; then
+        mkdir -p "$(dirname "$_pinned_file")"
+        printf '%s\n' ${lib.escapeShellArgs config.desktop.pinnedApps} > "$_pinned_file"
+      fi
+    '';
   };
 }
