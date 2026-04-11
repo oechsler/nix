@@ -137,7 +137,7 @@ in
     };
     wifi.enterpriseNetworks = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [ "home" ];
+      default = [ ];
       description = "WPA2 Enterprise (EAP-PEAP/MSCHAPv2) network names — each needs wifi/<name>/ssid, wifi/<name>/identity, wifi/<name>/password SOPS secrets";
     };
     tailscale.enable = (lib.mkEnableOption "Tailscale VPN") // {

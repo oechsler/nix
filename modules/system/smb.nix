@@ -8,7 +8,7 @@
 #
 # Configuration options:
 #   features.smb.enable = true;                      # Enable SMB mounts (default: true)
-#   features.smb.shares = [ "personal-drive" ];      # SMB shares to mount (default: ["personal-drive"])
+#   features.smb.shares = [ "personal-drive" "pika" ]; # SMB shares to mount (default: [])
 #
 # Required SOPS secrets for each share:
 #   smb/<name>/label    - Display name (e.g., "Personal Drive")
@@ -169,7 +169,7 @@ in
     enable = (lib.mkEnableOption "SMB network share mounts") // { default = true; };
     shares = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [ "personal-drive" ];
+      default = [ ];
       description = "SMB share names to mount — each needs smb/<name>/{label,path,username,password} SOPS secrets";
     };
   };

@@ -53,6 +53,8 @@
     desktop.wm = "kde";
     gaming.enable = false;
     auth.yubikey.enable = true;
+    smb.shares = [ "personal-drive" "pika" ];
+    wifi.enterpriseNetworks = [ "home" ];
   };
 
   fonts.defaults.terminalSize = 10;
