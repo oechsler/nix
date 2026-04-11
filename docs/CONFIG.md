@@ -27,12 +27,13 @@ features.ssh.enable = true;
 | `features.virtualisation.enable` | `true` | Docker daemon + user group |
 | `features.virtualisation.waydroid.enable` | `false` | Waydroid Android container |
 | `features.smb.enable` | `true` | SMB network share mounts (auto-mount with retry) |
-| `features.smb.shares` | `["personal-drive"]` | SMB share names (via SOPS secrets) |
+| `features.smb.shares` | `[]` | SMB share names to mount — each needs `smb/<name>/{label,path,username,password}` SOPS secrets |
 | `features.flatpak.enable` | `true` | Flatpak + Flathub (Flatseal, Flatsweep) |
 | `features.appimage.enable` | `true` | AppImage support + auto-watcher in ~/Applications |
 | `features.tailscale.enable` | `true` | Tailscale VPN (+ trayscale tray icon on desktop) |
 | `features.wifi.enable` | `true` | WiFi profiles via SOPS secrets |
-| `features.wifi.networks` | `["home"]` | WiFi network names to manage — each needs `wifi/<name>/ssid` + `wifi/<name>/psk` SOPS secrets |
+| `features.wifi.networks` | `[]` | WPA2-PSK network names — each needs `wifi/<name>/ssid` + `wifi/<name>/psk` SOPS secrets |
+| `features.wifi.enterpriseNetworks` | `[]` | WPA2 Enterprise (EAP-PEAP) network names — each needs `wifi/<name>/ssid`, `wifi/<name>/identity`, `wifi/<name>/password` SOPS secrets |
 | `features.development.enable` | `true` | IDEs, languages (Go, Rust, Node, Java) |
 | `features.development.gui.enable` | `true` | GUI dev tools (VS Code, JetBrains, DBeaver) |
 | `features.development.kubernetes.enable` | `true` | Kubernetes tools (kubectl, k9s) |
