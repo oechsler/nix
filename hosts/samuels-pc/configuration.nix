@@ -80,6 +80,8 @@
     secureBoot.enable = true;
     auth.yubikey.enable = true;
     gaming.gpu = "amd"; # RX 7900 XT (RDNA3) — enables VA-API hardware encoding
+    smb.shares = [ "personal-drive" "pika" ];
+    wifi.enterpriseNetworks = [ "home" ];
   };
 
   system.stateVersion = "25.11";
