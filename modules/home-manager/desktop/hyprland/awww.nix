@@ -72,8 +72,13 @@ in
 
     # Automatically reload wallpaper on home-manager activation
     # (e.g., after changing theme.wallpaper or monitor config)
+    #
+    # Why explicit env vars: home-manager-samuel.service runs without WAYLAND_DISPLAY,
+    # so awww can't connect to the compositor unless we set it manually.
     home.activation.setWallpaper = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       if ${pkgs.procps}/bin/pgrep -x "awww-daemon" > /dev/null 2>&1; then
+        export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+        export WAYLAND_DISPLAY="''${WAYLAND_DISPLAY:-wayland-1}"
         run ${setWallpaperScript}
       fi
     '';
