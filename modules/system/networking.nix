@@ -127,18 +127,20 @@ in
   #===========================
 
   options.features = {
-    wifi.enable = (lib.mkEnableOption "WiFi with managed network profiles") // {
-      default = true;
-    };
-    wifi.networks = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      description = "WPA2-PSK network names — each needs wifi/<name>/ssid and wifi/<name>/psk SOPS secrets";
-    };
-    wifi.enterpriseNetworks = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      description = "WPA2 Enterprise (EAP-PEAP/MSCHAPv2) network names — each needs wifi/<name>/ssid, wifi/<name>/identity, wifi/<name>/password SOPS secrets";
+    wifi = {
+      enable = (lib.mkEnableOption "WiFi with managed network profiles") // {
+        default = true;
+      };
+      networks = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "WPA2-PSK network names — each needs wifi/<name>/ssid and wifi/<name>/psk SOPS secrets";
+      };
+      enterpriseNetworks = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "WPA2 Enterprise (EAP-PEAP/MSCHAPv2) network names — each needs wifi/<name>/ssid, wifi/<name>/identity, wifi/<name>/password SOPS secrets";
+      };
     };
     tailscale.enable = (lib.mkEnableOption "Tailscale VPN") // {
       default = true;
