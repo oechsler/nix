@@ -8,13 +8,15 @@
 # 5. Tailscale VPN (optional)
 #
 # Configuration options:
-#   features.wifi.enable = true;              # Enable WiFi (default: true)
-#   features.wifi.networks = [ "home" ];      # WiFi networks to manage (default: ["home"])
-#   features.tailscale.enable = true;         # Enable Tailscale VPN (default: true)
+#   features.wifi.enable = true;                        # Enable WiFi (default: true)
+#   features.wifi.networks = [ "home" ];                # WPA2-PSK networks (default: ["home"])
+#   features.wifi.enterpriseNetworks = [ "uni" ];       # WPA2 Enterprise networks (default: [])
+#   features.tailscale.enable = true;                   # Enable Tailscale VPN (default: true)
 #
 # WiFi credentials are stored in SOPS secrets:
-#   wifi/<name>/ssid - SSID of the network
-#   wifi/<name>/psk  - Pre-shared key (password)
+#   WPA2-PSK:        wifi/<name>/ssid, wifi/<name>/psk
+#   WPA2 Enterprise: wifi/<name>/ssid, wifi/<name>/identity, wifi/<name>/password
+#                    (EAP-PEAP with MSCHAPv2 inner auth)
 
 {
   config,
@@ -58,24 +60,64 @@ let
     }) cfg.networks
   );
 
-  # Environment file with WiFi credentials for NetworkManager
-  wifiEnvContent = lib.concatMapStringsSep "\n" (name: ''
-    WIFI_${lib.toUpper name}_SSID=${config.sops.placeholder."wifi/${name}/ssid"}
-    WIFI_${lib.toUpper name}_PSK=${config.sops.placeholder."wifi/${name}/psk"}'') cfg.networks;
+  # Environment file with WiFi credentials for NetworkManager (PSK + Enterprise)
+  wifiEnvContent =
+    lib.concatMapStringsSep "\n" (name: ''
+      WIFI_${lib.toUpper name}_SSID=${config.sops.placeholder."wifi/${name}/ssid"}
+      WIFI_${lib.toUpper name}_PSK=${config.sops.placeholder."wifi/${name}/psk"}'') cfg.networks
+    + lib.optionalString (cfg.enterpriseNetworks != []) "\n"
+    + lib.concatMapStringsSep "\n" (name: ''
+      WIFI_${lib.toUpper name}_SSID=${config.sops.placeholder."wifi/${name}/ssid"}
+      WIFI_${lib.toUpper name}_IDENTITY=${config.sops.placeholder."wifi/${name}/identity"}
+      WIFI_${lib.toUpper name}_PASSWORD=${config.sops.placeholder."wifi/${name}/password"}'') cfg.enterpriseNetworks;
 
-  # SOPS secrets for WiFi credentials
+  # WPA2 Enterprise (EAP-PEAP/MSCHAPv2) NetworkManager profiles
+  enterpriseWifiProfiles = lib.listToAttrs (
+    map (name: {
+      name = "wifi-${name}";
+      value = {
+        connection = {
+          id = "\${WIFI_${lib.toUpper name}_SSID}";
+          type = "wifi";
+          autoconnect = true;
+        };
+        wifi = {
+          mode = "infrastructure";
+          ssid = "\${WIFI_${lib.toUpper name}_SSID}";
+        };
+        wifi-security = {
+          key-mgmt = "wpa-eap";
+        };
+        "802-1x" = {
+          eap = "peap;";
+          identity = "\${WIFI_${lib.toUpper name}_IDENTITY}";
+          password = "\${WIFI_${lib.toUpper name}_PASSWORD}";
+          phase2-auth = "mschapv2";
+        };
+        ipv4 = {
+          method = "auto";
+          route-metric = 600;
+        };
+        ipv6 = {
+          method = "auto";
+          route-metric = 600;
+        };
+      };
+    }) cfg.enterpriseNetworks
+  );
+
+  # SOPS secrets for all WiFi credentials
   wifiSecrets = lib.listToAttrs (
     lib.flatten (
       map (name: [
-        {
-          name = "wifi/${name}/ssid";
-          value = { };
-        }
-        {
-          name = "wifi/${name}/psk";
-          value = { };
-        }
+        { name = "wifi/${name}/ssid"; value = { }; }
+        { name = "wifi/${name}/psk"; value = { }; }
       ]) cfg.networks
+      ++ map (name: [
+        { name = "wifi/${name}/ssid"; value = { }; }
+        { name = "wifi/${name}/identity"; value = { }; }
+        { name = "wifi/${name}/password"; value = { }; }
+      ]) cfg.enterpriseNetworks
     )
   );
 in
@@ -90,8 +132,13 @@ in
     };
     wifi.networks = lib.mkOption {
       type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "WPA2-PSK network names — each needs wifi/<name>/ssid and wifi/<name>/psk SOPS secrets";
+    };
+    wifi.enterpriseNetworks = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
       default = [ "home" ];
-      description = "WiFi network names to manage — each needs wifi/<name>/ssid and wifi/<name>/psk SOPS secrets";
+      description = "WPA2 Enterprise (EAP-PEAP/MSCHAPv2) network names — each needs wifi/<name>/ssid, wifi/<name>/identity, wifi/<name>/password SOPS secrets";
     };
     tailscale.enable = (lib.mkEnableOption "Tailscale VPN") // {
       default = true;
@@ -252,7 +299,7 @@ in
       # Create NetworkManager connection profiles for configured WiFi networks
       networking.networkmanager.ensureProfiles = {
         environmentFiles = [ config.sops.templates."wifi-env".path ];
-        profiles = wifiProfiles;
+        profiles = wifiProfiles // enterpriseWifiProfiles;
       };
 
       # Don't fail if SOPS key doesn't exist (e.g., fresh install without secrets)
@@ -274,27 +321,46 @@ in
           Type = "oneshot";
           RemainAfterExit = true;
         };
-        script = lib.concatMapStringsSep "\n" (
-          name:
-          let
-            ssidPath = config.sops.secrets."wifi/${name}/ssid".path;
-            pskPath = config.sops.secrets."wifi/${name}/psk".path;
-          in
-          ''
-            # Read SSID and convert to hex for filename
-            ssid=$(cat ${ssidPath})
-            ssid_hex=$(printf '%s' "$ssid" | od -An -tx1 | tr -d ' \n')
-            mkdir -p /var/lib/iwd
+        script =
+          lib.concatMapStringsSep "\n" (
+            name:
+            let
+              ssidPath = config.sops.secrets."wifi/${name}/ssid".path;
+              pskPath = config.sops.secrets."wifi/${name}/psk".path;
+            in
+            ''
+              # Read SSID and convert to hex for filename
+              ssid=$(cat ${ssidPath})
+              ssid_hex=$(printf '%s' "$ssid" | od -An -tx1 | tr -d ' \n')
+              mkdir -p /var/lib/iwd
 
-            # Remove old non-hex-encoded files (from before we fixed the encoding)
-            rm -f "/var/lib/iwd/$ssid.psk"
+              # Remove old non-hex-encoded files (from before we fixed the encoding)
+              rm -f "/var/lib/iwd/$ssid.psk"
 
-            # Write iwd profile with hex-encoded filename
-            printf '[Security]\nPassphrase=%s\n' "$(cat ${pskPath})" \
-              > "/var/lib/iwd/=$ssid_hex.psk"
-            chmod 0600 "/var/lib/iwd/=$ssid_hex.psk"
-          ''
-        ) cfg.networks;
+              # Write iwd profile with hex-encoded filename
+              printf '[Security]\nPassphrase=%s\n' "$(cat ${pskPath})" \
+                > "/var/lib/iwd/=$ssid_hex.psk"
+              chmod 0600 "/var/lib/iwd/=$ssid_hex.psk"
+            ''
+          ) cfg.networks
+          + lib.concatMapStringsSep "\n" (
+            name:
+            let
+              ssidPath = config.sops.secrets."wifi/${name}/ssid".path;
+              identityPath = config.sops.secrets."wifi/${name}/identity".path;
+              passwordPath = config.sops.secrets."wifi/${name}/password".path;
+            in
+            ''
+              # Enterprise network — write iwd .8021x profile (EAP-PEAP/MSCHAPv2)
+              ssid=$(cat ${ssidPath})
+              ssid_hex=$(printf '%s' "$ssid" | od -An -tx1 | tr -d ' \n')
+              mkdir -p /var/lib/iwd
+              printf '[Security]\nEAP-Method=PEAP\nEAP-Identity=%s\nEAP-PEAP-Phase2-Method=MSCHAPV2\nEAP-PEAP-Phase2-Password=%s\n' \
+                "$(cat ${identityPath})" "$(cat ${passwordPath})" \
+                > "/var/lib/iwd/=$ssid_hex.8021x"
+              chmod 0600 "/var/lib/iwd/=$ssid_hex.8021x"
+            ''
+          ) cfg.enterpriseNetworks;
       };
 
       # SOPS secrets for WiFi credentials
