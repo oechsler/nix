@@ -158,8 +158,29 @@ in
     # Why: Plain password stored encrypted in sops, hashed dynamically at boot.
     # Avoids storing any hash in the Nix store or git repo.
     # Falls back to "!" (locked) if sops key is missing (e.g. fresh install).
+    #
+    # Two mechanisms:
+    # 1. Activation script (nixos-rebuild switch): mutableUsers=false regenerates
+    #    /etc/shadow with "!" on every switch. The activation script re-applies the
+    #    password immediately (sops secrets already available on a live system).
+    # 2. Systemd service (fresh boot): sops secrets not yet available during
+    #    activation, so the service sets the password after sops-install-secrets.
     sops.secrets."user/password" = {};
 
+    # 1. Activation script — re-applies password after every nixos-rebuild switch.
+    # Runs after "users" (which regenerates /etc/shadow with "!").
+    # Guard: skipped on fresh boot where sops secret isn't available yet.
+    system.activationScripts.user-passwd = {
+      deps = [ "users" ];
+      text = ''
+        if [ -f ${config.sops.secrets."user/password".path} ]; then
+          echo "${cfg.name}:$(cat ${config.sops.secrets."user/password".path})" \
+            | ${pkgs.shadow}/bin/chpasswd
+        fi
+      '';
+    };
+
+    # 2. Systemd service — sets password on fresh boot (after sops secrets are ready).
     systemd.services.user-passwd = {
       description = "Set user password from sops secret";
       wantedBy = [ "multi-user.target" ];

@@ -21,23 +21,32 @@
 #   vi, vim → nvim
 #   EDITOR → nvim
 
-{ pkgs, ... }:
+{ pkgs, theme, ... }:
 
 {
   #===========================
   # Configuration
   #===========================
 
+  # Catppuccin-nix auto-integration disabled — plugin managed manually below
+  # (avoids the viml/lua type warning since we use pure Lua setup)
+  catppuccin.nvim.enable = false;
+
   programs.neovim = {
     enable = true;
     defaultEditor = true;  # Set as $EDITOR
     viAlias = true;        # vi → nvim
     vimAlias = true;       # vim → nvim
+    withRuby = false;
+    withPython3 = false;
 
     #---------------------------
     # Plugins
     #---------------------------
     plugins = with pkgs.vimPlugins; [
+      # Colorscheme
+      { plugin = catppuccin-nvim; type = "lua"; }
+
       # UI
       lualine-nvim
       bufferline-nvim
@@ -108,6 +117,20 @@
     # Inline Lua config (executed before LazyVim)
     # Full config loaded from ~/.config/nvim (LazyVim)
     initLua = ''
+        --------------------------------------------------------
+        -- Colorscheme (Catppuccin)
+        --------------------------------------------------------
+        do
+          local compile_path = vim.fn.stdpath("cache") .. "/catppuccin-nvim"
+          vim.fn.mkdir(compile_path, "p")
+          vim.opt.runtimepath:append(compile_path)
+          require("catppuccin").setup({
+            flavour = "${theme.catppuccin.flavor}",
+            compile_path = compile_path,
+          })
+          vim.cmd.colorscheme("catppuccin")
+        end
+
         vim.g.mapleader = " "
         vim.g.maplocalleader = " "
 
