@@ -102,12 +102,12 @@
   # Problem: Users don't know when upgrades succeed/fail or when reboot is needed.
   #
   # Solution: Customize nixos-upgrade service to:
-  # - Update flake.lock before upgrading (get latest packages)
+  # - Pull remote (including CI-tested flake.lock) before upgrading
   # - Notify user on success with reboot recommendation
   # - Notify user on failure with error details
   #
   # How it works:
-  # - ExecStartPre: Run updateFlake script (git pull + nix flake update)
+  # - ExecStartPre: Run updateFlake script (git pull — uses CI-tested flake.lock)
   # - ExecStart: Run nixos-rebuild boot (default behavior)
   # - ExecStartPost: Check if reboot is needed and notify
   # - OnFailure: Trigger failure notification service
@@ -125,18 +125,17 @@
         ${pkgs.libnotify}/bin/notify-send "$@"
     '';
 
-    # Pre-upgrade script: Update flake.lock
+    # Pre-upgrade script: Sync with remote
     # Steps:
-    # 1. Reset flake.lock to git HEAD (discard local changes)
+    # 1. Reset flake.lock to git HEAD (discard local experimental changes)
     # 2. Pull latest changes from remote (git pull --ff-only)
-    # 3. Update flake.lock (nix flake update)
+    #    This includes the CI-tested flake.lock — no local flake update needed.
     #
     # Note: All operations run as user (sudo -u) not root, to preserve git ownership
     updateFlake = pkgs.writeShellScript "nixos-upgrade-update-flake" ''
       cd ${flakeDir}
       ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git checkout flake.lock
       ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git pull --ff-only
-      ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.nix}/bin/nix flake update
     '';
 
     # Post-upgrade success script
