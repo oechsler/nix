@@ -7,7 +7,7 @@
 # - Silent boot (minimal boot messages)
 #
 # Configuration:
-#   features.kernel = "cachyos";        # Options: cachyos, cachyos-lts, cachyos-server, default
+#   features.kernel = "cachyos";        # Options: cachyos, cachyos-v3, cachyos-lts, cachyos-server, default
 #
 # Boot behavior:
 # - Configuration limit: Keep last 10 boot entries
@@ -21,6 +21,7 @@ let
   cfg = config.features.kernel;
   kernelMap = {
     "cachyos" = pkgs.cachyosKernels.linuxPackages-cachyos-latest;
+    "cachyos-v3" = pkgs.cachyosKernels.linuxPackages-cachyos-latest-x86_64-v3;
     "cachyos-lts" = pkgs.cachyosKernels.linuxPackages-cachyos-lts;
     "cachyos-server" = pkgs.cachyosKernels.linuxPackages-cachyos-server;
     "default" = pkgs.linuxPackages;
@@ -28,7 +29,7 @@ let
 in
 {
   options.features.kernel = lib.mkOption {
-    type = lib.types.enum [ "cachyos" "cachyos-lts" "cachyos-server" "default" ];
+    type = lib.types.enum [ "cachyos" "cachyos-v3" "cachyos-lts" "cachyos-server" "default" ];
     default = "cachyos";
     description = "Kernel variant (cachyos, cachyos-lts, cachyos-server, or default NixOS kernel)";
   };
