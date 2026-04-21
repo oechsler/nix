@@ -140,6 +140,7 @@ in
     # without sudo. Only executable by sddm-session group.
     (lib.mkIf cfg.gamescope.sessionSwitcher.enable {
       features.desktop.autoLogin.enable = lib.mkForce true;
+      services.displayManager.defaultSession = lib.mkForce "steam";
 
       users.groups.sddm-session = { };
       users.users.${config.user.name}.extraGroups = [ "sddm-session" ];
