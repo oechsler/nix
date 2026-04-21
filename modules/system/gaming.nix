@@ -5,6 +5,8 @@
 # Configuration:
 #   features.gaming.enable = true;       # Enable gaming support (default: true)
 #   features.gaming.gpu = "amd";         # GPU vendor for hardware encoding (null | "amd" | "intel")
+#   features.gaming.gamescope.enable = true;  # Steam as standalone Wayland session (media PC / Big Picture)
+#   features.gaming.gamescope.args = [];      # Extra gamescope args (e.g. ["-W 1920" "-H 1080" "-r 60"])
 #
 # Installed:
 # - Steam + Proton-GE - Gaming platform with enhanced Windows compatibility
@@ -18,6 +20,8 @@
 # - Gamemode: CPU performance governor + realtime scheduling + renice when game runs
 # - Steam Remote Play firewall ports opened automatically
 # - Network + VM tuning for low-latency gaming and streaming
+# - Gamescope Session: registers a "Steam" Wayland session in SDDM — selectable at login
+#   alongside the regular desktop (Hyprland/KDE). Ideal for media PCs / Big Picture Mode.
 #
 # GPU-specific (features.gaming.gpu):
 #   "amd"   — VA-API via Mesa radeonsi (VCN encoder on RDNA2+)
@@ -35,6 +39,15 @@ in
       type = lib.types.nullOr (lib.types.enum [ "amd" "intel" ]);
       default = null;
       description = "GPU vendor — enables VA-API hardware encoding for Steam Remote Play";
+    };
+    gamescope = {
+      enable = lib.mkEnableOption "Steam gamescope session (standalone Wayland session selectable in SDDM — ideal for media PCs / Big Picture Mode)";
+      args = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "Extra arguments passed to gamescope in the Steam session";
+        example = [ "-W 1920" "-H 1080" "-r 60" "--hdr-enabled" ];
+      };
     };
   };
 
@@ -105,6 +118,23 @@ in
         libvdpau-va-gl
       ];
       environment.sessionVariables.LIBVA_DRIVER_NAME = "iHD";
+    })
+
+    #---------------------------
+    # Gamescope Session
+    #---------------------------
+    # Registers a standalone "Steam" Wayland session in SDDM.
+    # At login the user can pick between the regular desktop and this session.
+    # Inside the session: gamescope runs as the Wayland compositor with Steam in
+    # Big Picture Mode — ideal for media PCs / living room setups.
+    #
+    # Automatically disabled when features.gaming.enable = false (this whole
+    # block is guarded by lib.mkIf cfg.enable above).
+    (lib.mkIf cfg.gamescope.enable {
+      programs.steam.gamescopeSession = {
+        enable = true;
+        args = cfg.gamescope.args;
+      };
     })
 
   ]);

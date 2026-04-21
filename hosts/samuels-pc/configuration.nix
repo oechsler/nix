@@ -81,6 +81,15 @@
     secureBoot.enable = true;
     auth.yubikey.enable = true;
     gaming.gpu = "amd"; # RX 7900 XT (RDNA3) — enables VA-API hardware encoding
+    gaming.gamescope = {
+      enable = true;
+      args = [
+        "-W 2560" "-H 1440" # DP-1 native resolution
+        "-r 165"            # 165Hz
+        "--fullscreen"
+        "--hdr-enabled"     # RDNA3 HDR support
+      ];
+    };
     smb.shares = [ "personal-drive" "pika" ];
     wifi.networks = [ "home" ];
   };
