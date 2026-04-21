@@ -123,7 +123,7 @@ in
     (lib.mkIf cfg.gamescope.enable {
       programs.steam.gamescopeSession = {
         enable = true;
-        args = cfg.gamescope.args;
+        inherit (cfg.gamescope) args;
       };
     })
 

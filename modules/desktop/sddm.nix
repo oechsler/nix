@@ -82,25 +82,33 @@ let
 in
 {
   config = lib.mkIf config.features.desktop.enable {
-    services.xserver.xkb = {
-      layout = config.locale.keyboard;
-      variant = "";
-    };
-
-    services.displayManager.sddm = {
-      enable = true;
-      wayland.enable = true;
-      settings = {
-        General = {
-          GreeterEnvironment =
-            if isKde
-            then "XCURSOR_THEME=${cursorTheme},XCURSOR_SIZE=${toString cursorSize}"
-            else "QT_FONT_DPI=${toString scaledDpi},XCURSOR_THEME=${cursorTheme},XCURSOR_SIZE=${toString scaledCursorSize}";
+    services = {
+      xserver.xkb = {
+        layout = config.locale.keyboard;
+        variant = "";
+      };
+      displayManager = {
+        sddm = {
+          enable = true;
+          wayland.enable = true;
+          settings = {
+            General.GreeterEnvironment =
+              if isKde
+              then "XCURSOR_THEME=${cursorTheme},XCURSOR_SIZE=${toString cursorSize}"
+              else "QT_FONT_DPI=${toString scaledDpi},XCURSOR_THEME=${cursorTheme},XCURSOR_SIZE=${toString scaledCursorSize}";
+            Theme = {
+              CursorTheme = cursorTheme;
+              CursorSize = if isKde then cursorSize else scaledCursorSize;
+            };
+          };
         };
-        Theme = {
-          CursorTheme = cursorTheme;
-          CursorSize = if isKde then cursorSize else scaledCursorSize;
+        autoLogin = lib.mkIf config.features.desktop.autoLogin.enable {
+          enable = true;
+          user = config.user.name;
         };
+        # Always pre-select the configured WM so the login screen highlights
+        # the correct session. gamescope.sessionSwitcher overrides this to "steam".
+        defaultSession = lib.mkDefault (if isKde then "plasma" else "hyprland");
       };
     };
 
@@ -109,14 +117,6 @@ in
       "d /var/lib/sddm/.config 0755 sddm sddm -"
       "C+ /var/lib/sddm/.config/kwinoutputconfig.json 0644 sddm sddm - ${sddmDisplayConfigFile}"
     ];
-
-    services.displayManager.autoLogin = lib.mkIf config.features.desktop.autoLogin.enable {
-      enable = true;
-      user = config.user.name;
-    };
-
-    services.displayManager.defaultSession = lib.mkIf config.features.desktop.autoLogin.enable
-      (if isKde then "plasma" else "hyprland");
 
     catppuccin.sddm = {
       enable = true;
