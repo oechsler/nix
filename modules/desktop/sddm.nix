@@ -115,6 +115,9 @@ in
       user = config.user.name;
     };
 
+    services.displayManager.defaultSession = lib.mkIf config.features.desktop.autoLogin.enable
+      (if isKde then "plasma" else "hyprland");
+
     catppuccin.sddm = {
       enable = true;
       font = uiFont;
