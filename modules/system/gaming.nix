@@ -133,11 +133,12 @@ in
     #---------------------------
     # Session Switcher
     #---------------------------
-    # WHY setuid wrapper: auto-login uses [Autologin] Session= from
+    # WHY systemd service + polkit: auto-login uses [Autologin] Session= from
     # /etc/sddm.conf.d/ (NixOS-managed, root-only). state.conf only affects
-    # greeter pre-selection — it doesn't influence auto-login. The setuid
-    # helper writes a runtime override and restarts display-manager as root,
-    # without sudo. Only executable by sddm-session group.
+    # greeter pre-selection. A setuid shell script doesn't work — bash drops
+    # EUID when EUID≠UID. Instead: a systemd oneshot service runs as root and
+    # does the actual work; a polkit rule lets sddm-session group members start
+    # it without a password. The desired session is passed via /run/sddm-next-session.
     (lib.mkIf cfg.gamescope.sessionSwitcher.enable {
       features.desktop.autoLogin.enable = lib.mkForce true;
       services.displayManager.defaultSession = lib.mkForce "steam";
@@ -145,22 +146,40 @@ in
       users.groups.sddm-session = { };
       users.users.${config.user.name}.extraGroups = [ "sddm-session" ];
 
-      security.wrappers.sddm-session-switch = {
-        setuid = true;
-        owner = "root";
-        group = "sddm-session";
-        permissions = "u+rx,g+rx,o-rx";
-        source = pkgs.writeShellScript "sddm-session-switch-inner" ''
-          SESSION="$1"
-          case "$SESSION" in
-            ${if config.features.desktop.wm == "kde" then "plasma" else "hyprland-uwsm"}|steam) ;;
-            *) echo "Invalid session: $SESSION" >&2; exit 1 ;;
-          esac
-          printf '[Autologin]\nSession=%s.desktop\n' "$SESSION" \
-            > /etc/sddm.conf.d/99-session-switch.conf
-          exec ${pkgs.systemd}/bin/systemctl restart display-manager.service
-        '';
+      # /run/sddm-next-session: user writes target session name here
+      systemd.tmpfiles.rules = [
+        "f /run/sddm-next-session 0664 root sddm-session -"
+      ];
+
+      # Runs as root: reads /run/sddm-next-session, writes SDDM override, restarts DM
+      systemd.services.sddm-session-switch = {
+        description = "Switch SDDM autologin session";
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = pkgs.writeShellScript "sddm-session-switch-exec" ''
+            SESSION=$(cat /run/sddm-next-session 2>/dev/null)
+            case "$SESSION" in
+              ${if config.features.desktop.wm == "kde" then "plasma" else "hyprland-uwsm"}|steam) ;;
+              *) echo "Invalid session: $SESSION" >&2; exit 1 ;;
+            esac
+            printf '[Autologin]\nSession=%s.desktop\n' "$SESSION" \
+              > /etc/sddm.conf.d/99-session-switch.conf
+            exec ${pkgs.systemd}/bin/systemctl restart display-manager.service
+          '';
+        };
       };
+
+      # Allow sddm-session group to start the switch service without a password
+      security.polkit.extraConfig = ''
+        polkit.addRule(function(action, subject) {
+          if (action.id === "org.freedesktop.systemd1.manage-units" &&
+              action.lookup("unit") === "sddm-session-switch.service" &&
+              action.lookup("verb") === "start" &&
+              subject.isInGroup("sddm-session")) {
+            return polkit.Result.YES;
+          }
+        });
+      '';
 
       environment.systemPackages = [
         (pkgs.writeShellScriptBin "steamos-session-select" ''
@@ -170,9 +189,10 @@ in
             gamescope|steam) SESSION="steam" ;;
             *) echo "Usage: steamos-session-select [desktop|gamescope]" >&2; exit 1 ;;
           esac
-          # setsid: display-manager restart must happen after this script returns,
+          echo "$SESSION" > /run/sddm-next-session
+          # setsid: systemctl start must happen after this script returns,
           # otherwise Steam is killed mid-call and the switch appears to hang.
-          setsid sh -c "sleep 0.5; /run/wrappers/bin/sddm-session-switch $SESSION" &
+          setsid sh -c 'sleep 0.5; systemctl start sddm-session-switch.service' &
         '')
       ];
     })
