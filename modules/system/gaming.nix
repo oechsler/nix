@@ -133,51 +133,45 @@ in
     #---------------------------
     # Session Switcher
     #---------------------------
-    # steamos-session-select: writes target session to /var/lib/sddm/state.conf
-    # and terminates the current session so SDDM auto-login picks it up.
-    # sddm-session group makes state.conf group-writable — no sudo needed.
+    # WHY setuid wrapper: auto-login uses [Autologin] Session= from
+    # /etc/sddm.conf.d/ (NixOS-managed, root-only). state.conf only affects
+    # greeter pre-selection — it doesn't influence auto-login. The setuid
+    # helper writes a runtime override and restarts display-manager as root,
+    # without sudo. Only executable by sddm-session group.
     (lib.mkIf cfg.gamescope.sessionSwitcher.enable {
       features.desktop.autoLogin.enable = lib.mkForce true;
-      # Default to the Steam session so auto-login lands in gamescope on first boot.
-      # steamos-session-select overwrites state.conf on every switch, so after the
-      # first login SDDM uses the last-selected session instead of this default.
-      services.displayManager.defaultSession = "steam";
 
       users.groups.sddm-session = { };
       users.users.${config.user.name}.extraGroups = [ "sddm-session" ];
 
-      systemd.tmpfiles.rules = [
-        # Make the directory traversable by sddm-session group members.
-        # /var/lib/sddm is 700 sddm by default — without this the user
-        # can't reach state.conf even with correct file permissions.
-        "z /var/lib/sddm         0750 sddm sddm-session -"
-        "f /var/lib/sddm/state.conf 0664 sddm sddm-session -"
-        "z /var/lib/sddm/state.conf 0664 sddm sddm-session -"
-      ];
+      security.wrappers.sddm-session-switch = {
+        setuid = true;
+        owner = "root";
+        group = "sddm-session";
+        permissions = "u+rx,g+rx,o-rx";
+        source = pkgs.writeShellScript "sddm-session-switch-inner" ''
+          SESSION="$1"
+          case "$SESSION" in
+            ${if config.features.desktop.wm == "kde" then "plasma" else "hyprland"}|steam) ;;
+            *) echo "Invalid session: $SESSION" >&2; exit 1 ;;
+          esac
+          printf '[Autologin]\nSession=%s.desktop\n' "$SESSION" \
+            > /etc/sddm.conf.d/99-session-switch.conf
+          exec ${pkgs.systemd}/bin/systemctl restart display-manager.service
+        '';
+      };
 
       environment.systemPackages = [
         (pkgs.writeShellScriptBin "steamos-session-select" ''
           set -euo pipefail
-          SDDM_STATE="/var/lib/sddm/state.conf"
           case "''${1:-desktop}" in
-            desktop)   SESSION="${if config.features.desktop.wm == "kde" then "plasma" else "hyprland"}" ;;
+            desktop)         SESSION="${if config.features.desktop.wm == "kde" then "plasma" else "hyprland"}" ;;
             gamescope|steam) SESSION="steam" ;;
             *) echo "Usage: steamos-session-select [desktop|gamescope]" >&2; exit 1 ;;
           esac
-          if [ -f "$SDDM_STATE" ] && grep -q "^Session=" "$SDDM_STATE"; then
-            ${pkgs.gnused}/bin/sed -i "s|^Session=.*|Session=$SESSION.desktop|" "$SDDM_STATE"
-          elif [ -f "$SDDM_STATE" ] && grep -q "^\[Last\]" "$SDDM_STATE"; then
-            ${pkgs.gnused}/bin/sed -i "/^\[Last\]/a Session=$SESSION.desktop" "$SDDM_STATE"
-          else
-            printf '[Last]\nSession=%s.desktop\n' "$SESSION" > "$SDDM_STATE"
-          fi
-
-          # WHY setsid + nohup: Steam calls this script and waits for it to return.
-          # Killing gamescope synchronously terminates Steam mid-call → hang.
-          # setsid detaches the kill from the calling process so the script returns
-          # cleanly, then gamescope is killed 0.5s later.
-          # disown is unreliable in non-interactive shells (Steam), setsid is not.
-          setsid sh -c 'sleep 0.5; pkill gamescope || loginctl terminate-session "'"''${XDG_SESSION_ID}"'"' &
+          # setsid: display-manager restart must happen after this script returns,
+          # otherwise Steam is killed mid-call and the switch appears to hang.
+          setsid sh -c "sleep 0.5; /run/wrappers/bin/sddm-session-switch $SESSION" &
         '')
       ];
     })
