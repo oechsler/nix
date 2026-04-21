@@ -135,6 +135,10 @@ in
     # sddm-session group makes state.conf group-writable — no sudo needed.
     (lib.mkIf cfg.gamescope.sessionSwitcher.enable {
       features.desktop.autoLogin.enable = lib.mkForce true;
+      # Default to the Steam session so auto-login lands in gamescope on first boot.
+      # steamos-session-select overwrites state.conf on every switch, so after the
+      # first login SDDM uses the last-selected session instead of this default.
+      services.displayManager.defaultSession = "steam";
 
       users.groups.sddm-session = { };
       users.users.${config.user.name}.extraGroups = [ "sddm-session" ];
