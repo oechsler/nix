@@ -8,6 +8,7 @@
 # - Multi-monitor configuration (via kwinoutputconfig.json)
 # - DPI scaling for Hyprland (calculated from primary monitor)
 # - Cursor theme and size (scaled for HiDPI)
+# - Auto-login (features.desktop.autoLogin.enable)
 #
 # Why SDDM:
 # - Native Wayland support
@@ -108,6 +109,11 @@ in
       "d /var/lib/sddm/.config 0755 sddm sddm -"
       "C+ /var/lib/sddm/.config/kwinoutputconfig.json 0644 sddm sddm - ${sddmDisplayConfigFile}"
     ];
+
+    services.displayManager.autoLogin = lib.mkIf config.features.desktop.autoLogin.enable {
+      enable = true;
+      user = config.user.name;
+    };
 
     catppuccin.sddm = {
       enable = true;
