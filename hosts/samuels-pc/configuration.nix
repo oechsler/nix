@@ -85,8 +85,9 @@
       enable = true;
       sessionSwitcher.enable = true;
       args = [
-        "-W 2560" "-H 1440" # DP-1 native resolution
-        "-r 165"            # 165Hz
+        "-W 2560" "-H 1440"    # DP-1 native resolution
+        "-r 165"               # 165Hz
+        "--prefer-output DP-1" # explicitly target right monitor
         "--fullscreen"
         "--adaptive-sync"
       ];

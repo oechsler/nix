@@ -164,7 +164,12 @@ in
           else
             printf '[Last]\nSession=%s.desktop\n' "$SESSION" > "$SDDM_STATE"
           fi
-          loginctl terminate-session "''${XDG_SESSION_ID:-self}"
+
+          # WHY async: Steam calls this script and waits for it to return.
+          # Killing gamescope synchronously terminates Steam mid-call → hang.
+          # Backgrounding with a short delay lets the call return cleanly first.
+          { sleep 0.5; pkill -u "$USER" -x gamescope || loginctl terminate-session "''${XDG_SESSION_ID:-self}"; } &
+          disown
         '')
       ];
     })
