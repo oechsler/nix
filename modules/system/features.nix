@@ -114,6 +114,9 @@ in
       dock = {
         enable = (lib.mkEnableOption "hypr-dock (application dock for Hyprland)") // { default = true; };
       };
+      autoLogin = {
+        enable = lib.mkEnableOption "automatic login via SDDM";
+      };
     };
     development = {
       enable = (lib.mkEnableOption "development tools (languages, CLI tools)") // { default = true; };

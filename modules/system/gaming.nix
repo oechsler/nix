@@ -1,31 +1,15 @@
 # Gaming Configuration
 #
-# This module enables gaming support with Steam and performance tools.
+# Packages: Steam + Proton-GE, Gamemode, Gamescope, MangoHud, ProtonUp-Qt
 #
-# Configuration:
-#   features.gaming.enable = true;       # Enable gaming support (default: true)
-#   features.gaming.gpu = "amd";         # GPU vendor for hardware encoding (null | "amd" | "intel")
-#   features.gaming.gamescope.enable = true;  # Steam as standalone Wayland session (media PC / Big Picture)
-#   features.gaming.gamescope.args = [];      # Extra gamescope args (e.g. ["-W 1920" "-H 1080" "-r 60"])
+# features.gaming.gpu:
+#   "amd"   — VA-API via Mesa radeonsi (RDNA2+)
+#   "intel" — VA-API via intel-media-driver (Gen 9+)
 #
-# Installed:
-# - Steam + Proton-GE - Gaming platform with enhanced Windows compatibility
-# - Gamemode - Automatic performance optimizations for games
-# - Gamescope - Wayland compositor for gaming (frame limiting, upscaling)
-# - MangoHud - In-game FPS/GPU/CPU overlay
-# - ProtonUp-Qt - GUI to manage Proton-GE versions
-#
-# Features:
-# - Proton-GE in Steam as extra compatibility tool (better game support than stock Proton)
-# - Gamemode: CPU performance governor + realtime scheduling + renice when game runs
-# - Steam Remote Play firewall ports opened automatically
-# - Network + VM tuning for low-latency gaming and streaming
-# - Gamescope Session: registers a "Steam" Wayland session in SDDM — selectable at login
-#   alongside the regular desktop (Hyprland/KDE). Ideal for media PCs / Big Picture Mode.
-#
-# GPU-specific (features.gaming.gpu):
-#   "amd"   — VA-API via Mesa radeonsi (VCN encoder on RDNA2+)
-#   "intel" — VA-API via intel-media-driver (iHD, Gen 9 / Broadwell+)
+# features.gaming.gamescope.enable:
+#   Registers a standalone "Steam" Wayland session in SDDM (Big Picture Mode).
+#   gamescope.sessionSwitcher.enable installs steamos-session-select for
+#   seamless switching between gamescope and desktop (forces autoLogin).
 
 { pkgs, lib, config, ... }:
 
@@ -41,12 +25,15 @@ in
       description = "GPU vendor — enables VA-API hardware encoding for Steam Remote Play";
     };
     gamescope = {
-      enable = lib.mkEnableOption "Steam gamescope session (standalone Wayland session selectable in SDDM — ideal for media PCs / Big Picture Mode)";
+      enable = lib.mkEnableOption "standalone Steam Wayland session in SDDM (Big Picture Mode)";
       args = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        description = "Extra arguments passed to gamescope in the Steam session";
+        description = "Extra gamescope arguments";
         example = [ "-W 1920" "-H 1080" "-r 60" "--hdr-enabled" ];
+      };
+      sessionSwitcher = {
+        enable = lib.mkEnableOption "steamos-session-select — Steam Deck-style session switching (forces autoLogin)";
       };
     };
   };
@@ -123,18 +110,49 @@ in
     #---------------------------
     # Gamescope Session
     #---------------------------
-    # Registers a standalone "Steam" Wayland session in SDDM.
-    # At login the user can pick between the regular desktop and this session.
-    # Inside the session: gamescope runs as the Wayland compositor with Steam in
-    # Big Picture Mode — ideal for media PCs / living room setups.
-    #
-    # Automatically disabled when features.gaming.enable = false (this whole
-    # block is guarded by lib.mkIf cfg.enable above).
     (lib.mkIf cfg.gamescope.enable {
       programs.steam.gamescopeSession = {
         enable = true;
         args = cfg.gamescope.args;
       };
+    })
+
+    #---------------------------
+    # Session Switcher
+    #---------------------------
+    # steamos-session-select: writes target session to /var/lib/sddm/state.conf
+    # and terminates the current session so SDDM auto-login picks it up.
+    # sddm-session group makes state.conf group-writable — no sudo needed.
+    (lib.mkIf cfg.gamescope.sessionSwitcher.enable {
+      features.desktop.autoLogin.enable = lib.mkForce true;
+
+      users.groups.sddm-session = { };
+      users.users.${config.user.name}.extraGroups = [ "sddm-session" ];
+
+      systemd.tmpfiles.rules = [
+        "f /var/lib/sddm/state.conf 0664 sddm sddm-session -"
+        "Z /var/lib/sddm/state.conf 0664 sddm sddm-session -"
+      ];
+
+      environment.systemPackages = [
+        (pkgs.writeShellScriptBin "steamos-session-select" ''
+          set -euo pipefail
+          SDDM_STATE="/var/lib/sddm/state.conf"
+          case "''${1:-desktop}" in
+            desktop)   SESSION="${if config.features.desktop.wm == "kde" then "plasma" else "hyprland"}" ;;
+            gamescope|steam) SESSION="steam" ;;
+            *) echo "Usage: steamos-session-select [desktop|gamescope]" >&2; exit 1 ;;
+          esac
+          if [ -f "$SDDM_STATE" ] && grep -q "^Session=" "$SDDM_STATE"; then
+            ${pkgs.gnused}/bin/sed -i "s|^Session=.*|Session=$SESSION.desktop|" "$SDDM_STATE"
+          elif [ -f "$SDDM_STATE" ] && grep -q "^\[Last\]" "$SDDM_STATE"; then
+            ${pkgs.gnused}/bin/sed -i "/^\[Last\]/a Session=$SESSION.desktop" "$SDDM_STATE"
+          else
+            printf '[Last]\nSession=%s.desktop\n' "$SESSION" > "$SDDM_STATE"
+          fi
+          loginctl terminate-session "''${XDG_SESSION_ID:-self}"
+        '')
+      ];
     })
 
   ]);
