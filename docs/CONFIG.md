@@ -24,6 +24,8 @@ features.ssh.enable = true;
 | `features.bluetooth.enable` | `true` | Bluetooth support (power on boot) |
 | `features.gaming.enable` | `true` | Steam + Proton-GE, GameMode, Gamescope, MangoHud, ProtonUp-Qt |
 | `features.gaming.gpu` | `null` | GPU vendor for VA-API hardware encoding (`"amd"` / `"intel"`) — enables Remote Play hardware encoding + LIBVA driver |
+| `features.gaming.gamescope.enable` | `false` | Registers a standalone "Steam" Wayland session in SDDM — selectable at login alongside the normal desktop. Ideal for media PCs / Big Picture Mode. Automatically disabled when `features.gaming.enable = false`. |
+| `features.gaming.gamescope.args` | `[]` | Extra arguments passed to gamescope in the Steam session (e.g. `["-W 1920" "-H 1080" "-r 60" "--hdr-enabled"]`) |
 | `features.virtualisation.enable` | `true` | Docker daemon + user group |
 | `features.virtualisation.waydroid.enable` | `false` | Waydroid Android container |
 | `features.smb.enable` | `true` | SMB network share mounts (auto-mount with retry) |
