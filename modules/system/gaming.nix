@@ -147,8 +147,12 @@ in
       users.users.${config.user.name}.extraGroups = [ "sddm-session" ];
 
       systemd.tmpfiles.rules = [
+        # Make the directory traversable by sddm-session group members.
+        # /var/lib/sddm is 700 sddm by default — without this the user
+        # can't reach state.conf even with correct file permissions.
+        "z /var/lib/sddm         0750 sddm sddm-session -"
         "f /var/lib/sddm/state.conf 0664 sddm sddm-session -"
-        "Z /var/lib/sddm/state.conf 0664 sddm sddm-session -"
+        "z /var/lib/sddm/state.conf 0664 sddm sddm-session -"
       ];
 
       environment.systemPackages = [
