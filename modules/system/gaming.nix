@@ -153,7 +153,7 @@ in
         source = pkgs.writeShellScript "sddm-session-switch-inner" ''
           SESSION="$1"
           case "$SESSION" in
-            ${if config.features.desktop.wm == "kde" then "plasma" else "hyprland"}|steam) ;;
+            ${if config.features.desktop.wm == "kde" then "plasma" else "hyprland-uwsm"}|steam) ;;
             *) echo "Invalid session: $SESSION" >&2; exit 1 ;;
           esac
           printf '[Autologin]\nSession=%s.desktop\n' "$SESSION" \
@@ -166,7 +166,7 @@ in
         (pkgs.writeShellScriptBin "steamos-session-select" ''
           set -euo pipefail
           case "''${1:-desktop}" in
-            desktop)         SESSION="${if config.features.desktop.wm == "kde" then "plasma" else "hyprland"}" ;;
+            desktop)         SESSION="${if config.features.desktop.wm == "kde" then "plasma" else "hyprland-uwsm"}" ;;
             gamescope|steam) SESSION="steam" ;;
             *) echo "Usage: steamos-session-select [desktop|gamescope]" >&2; exit 1 ;;
           esac
