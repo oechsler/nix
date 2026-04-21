@@ -124,6 +124,9 @@ in
       programs.steam.gamescopeSession = {
         enable = true;
         inherit (cfg.gamescope) args;
+        # SteamOS=1 tells Steam it's running in a gamescope kiosk session.
+        # Without this Steam doesn't call steamos-session-select on "Switch to Desktop".
+        env.SteamOS = "1";
       };
     })
 
@@ -165,11 +168,12 @@ in
             printf '[Last]\nSession=%s.desktop\n' "$SESSION" > "$SDDM_STATE"
           fi
 
-          # WHY async: Steam calls this script and waits for it to return.
+          # WHY setsid + nohup: Steam calls this script and waits for it to return.
           # Killing gamescope synchronously terminates Steam mid-call → hang.
-          # Backgrounding with a short delay lets the call return cleanly first.
-          { sleep 0.5; pkill -u "$USER" -x gamescope || loginctl terminate-session "''${XDG_SESSION_ID:-self}"; } &
-          disown
+          # setsid detaches the kill from the calling process so the script returns
+          # cleanly, then gamescope is killed 0.5s later.
+          # disown is unreliable in non-interactive shells (Steam), setsid is not.
+          setsid sh -c 'sleep 0.5; pkill gamescope || loginctl terminate-session "'"''${XDG_SESSION_ID}"'"' &
         '')
       ];
     })
