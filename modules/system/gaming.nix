@@ -150,11 +150,6 @@ in
       # Required for seamless switching — without it SDDM shows the login screen.
       services.displayManager.sddm.settings.Autologin.Relogin = true;
 
-      # /run/sddm-next-session: user writes target session name here
-      systemd.tmpfiles.rules = [
-        "f /run/sddm-next-session 0664 root sddm-session -"
-      ];
-
       # Runs as root: writes SDDM autologin override, then kills gamescope.
       # SDDM sees the session end (Relogin=true) and auto-logins to new session.
       # WHY kill gamescope instead of restarting display-manager:
@@ -188,17 +183,23 @@ in
         });
       '';
 
+      # /usr/bin/steamos-session-select: Steam may call this via hardcoded path
+      systemd.tmpfiles.rules = [
+        "f /run/sddm-next-session 0664 root sddm-session -"
+        "L /usr/bin/steamos-session-select - - - - /run/current-system/sw/bin/steamos-session-select"
+      ];
+
       environment.systemPackages = [
         (pkgs.writeShellScriptBin "steamos-session-select" ''
           set -euo pipefail
+          logger -t steamos-session-select "called with: $*"
           case "''${1:-desktop}" in
             desktop)         SESSION="${if config.features.desktop.wm == "kde" then "plasma" else "hyprland-uwsm"}" ;;
             gamescope|steam) SESSION="steam" ;;
             *) echo "Usage: steamos-session-select [desktop|gamescope]" >&2; exit 1 ;;
           esac
           echo "$SESSION" > /run/sddm-next-session
-          # setsid: systemctl start must happen after this script returns,
-          # otherwise Steam is killed mid-call and the switch appears to hang.
+          logger -t steamos-session-select "switching to $SESSION, starting service"
           setsid sh -c 'sleep 0.5; systemctl start sddm-session-switch.service' &
         '')
       ];
