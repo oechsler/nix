@@ -83,11 +83,12 @@
     gaming.gpu = "amd"; # RX 7900 XT (RDNA3) — enables VA-API hardware encoding
     gaming.gamescope = {
       enable = true;
+      sessionSwitcher.enable = true;
       args = [
         "-W 2560" "-H 1440" # DP-1 native resolution
         "-r 165"            # 165Hz
         "--fullscreen"
-        "--hdr-enabled"     # RDNA3 HDR support
+        "--adaptive-sync"
       ];
     };
     smb.shares = [ "personal-drive" "pika" ];
