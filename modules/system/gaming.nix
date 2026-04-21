@@ -1,15 +1,23 @@
 # Gaming Configuration
 #
-# Packages: Steam + Proton-GE, Gamemode, Gamescope, MangoHud, ProtonUp-Qt
+# Installed:
+# - Steam + Proton-GE     — gaming platform with enhanced Windows compatibility
+# - Gamemode              — CPU governor + realtime scheduling when a game runs
+# - Gamescope             — Wayland compositor for gaming (frame limiting, upscaling)
+# - MangoHud              — in-game FPS/GPU/CPU overlay
+# - ProtonUp-Qt           — GUI to manage Proton-GE versions
 #
 # features.gaming.gpu:
 #   "amd"   — VA-API via Mesa radeonsi (RDNA2+)
-#   "intel" — VA-API via intel-media-driver (Gen 9+)
+#   "intel" — VA-API via intel-media-driver (iHD, Gen 9+)
 #
 # features.gaming.gamescope.enable:
 #   Registers a standalone "Steam" Wayland session in SDDM (Big Picture Mode).
-#   gamescope.sessionSwitcher.enable installs steamos-session-select for
-#   seamless switching between gamescope and desktop (forces autoLogin).
+#   Still allows booting to the normal desktop — both sessions appear at login.
+#
+# features.gaming.gamescope.sessionSwitcher.enable:
+#   Installs steamos-session-select for Steam Deck-style switching between
+#   gamescope and desktop. Forces features.desktop.autoLogin.enable.
 
 { pkgs, lib, config, ... }:
 
@@ -29,7 +37,7 @@ in
       args = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ ];
-        description = "Extra gamescope arguments";
+        description = "Extra arguments passed to gamescope in the Steam session";
         example = [ "-W 1920" "-H 1080" "-r 60" "--hdr-enabled" ];
       };
       sessionSwitcher = {
@@ -110,6 +118,8 @@ in
     #---------------------------
     # Gamescope Session
     #---------------------------
+    # Registers a "Steam" Wayland session in SDDM alongside the normal desktop.
+    # Disabled automatically when features.gaming.enable = false.
     (lib.mkIf cfg.gamescope.enable {
       programs.steam.gamescopeSession = {
         enable = true;
