@@ -146,12 +146,19 @@ in
       users.groups.sddm-session = { };
       users.users.${config.user.name}.extraGroups = [ "sddm-session" ];
 
+      # Relogin=true: after session ends SDDM auto-logins again without greeter.
+      # Required for seamless switching — without it SDDM shows the login screen.
+      services.displayManager.sddm.settings.Autologin.Relogin = true;
+
       # /run/sddm-next-session: user writes target session name here
       systemd.tmpfiles.rules = [
         "f /run/sddm-next-session 0664 root sddm-session -"
       ];
 
-      # Runs as root: reads /run/sddm-next-session, writes SDDM override, restarts DM
+      # Runs as root: writes SDDM autologin override, then kills gamescope.
+      # SDDM sees the session end (Relogin=true) and auto-logins to new session.
+      # WHY kill gamescope instead of restarting display-manager:
+      # restarting DM starts a new session on a new VT while gamescope keeps running.
       systemd.services.sddm-session-switch = {
         description = "Switch SDDM autologin session";
         serviceConfig = {
@@ -164,7 +171,7 @@ in
             esac
             printf '[Autologin]\nSession=%s.desktop\n' "$SESSION" \
               > /etc/sddm.conf.d/99-session-switch.conf
-            exec ${pkgs.systemd}/bin/systemctl restart display-manager.service
+            pkill -u ${config.user.name} gamescope || true
           '';
         };
       };
