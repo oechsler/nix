@@ -10,14 +10,6 @@
 # features.gaming.gpu:
 #   "amd"   — VA-API via Mesa radeonsi (RDNA2+)
 #   "intel" — VA-API via intel-media-driver (iHD, Gen 9+)
-#
-# features.gaming.gamescope.enable:
-#   Registers a standalone "Steam" Wayland session in SDDM (Big Picture Mode).
-#   Still allows booting to the normal desktop — both sessions appear at login.
-#
-# features.gaming.gamescope.sessionSwitcher.enable:
-#   Installs steamos-session-select for Steam Deck-style switching between
-#   gamescope and desktop. Forces features.desktop.autoLogin.enable.
 
 { pkgs, lib, config, ... }:
 
@@ -31,18 +23,6 @@ in
       type = lib.types.nullOr (lib.types.enum [ "amd" "intel" ]);
       default = null;
       description = "GPU vendor — enables VA-API hardware encoding for Steam Remote Play";
-    };
-    gamescope = {
-      enable = lib.mkEnableOption "standalone Steam Wayland session in SDDM (Big Picture Mode)";
-      args = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [ ];
-        description = "Extra arguments passed to gamescope in the Steam session";
-        example = [ "-W 1920" "-H 1080" "-r 60" "--hdr-enabled" ];
-      };
-      sessionSwitcher = {
-        enable = lib.mkEnableOption "steamos-session-select — Steam Deck-style session switching (forces autoLogin)";
-      };
     };
   };
 
@@ -115,95 +95,6 @@ in
       environment.sessionVariables.LIBVA_DRIVER_NAME = "iHD";
     })
 
-    #---------------------------
-    # Gamescope Session
-    #---------------------------
-    # Registers a "Steam" Wayland session in SDDM alongside the normal desktop.
-    # Disabled automatically when features.gaming.enable = false.
-    (lib.mkIf cfg.gamescope.enable {
-      programs.steam.gamescopeSession = {
-        enable = true;
-        inherit (cfg.gamescope) args;
-        # SteamOS=1 tells Steam it's running in a gamescope kiosk session.
-        # Without this Steam doesn't call steamos-session-select on "Switch to Desktop".
-        env.SteamOS = "1";
-      };
-    })
-
-    #---------------------------
-    # Session Switcher
-    #---------------------------
-    # WHY systemd service + polkit: auto-login uses [Autologin] Session= from
-    # /etc/sddm.conf.d/ (NixOS-managed, root-only). state.conf only affects
-    # greeter pre-selection. A setuid shell script doesn't work — bash drops
-    # EUID when EUID≠UID. Instead: a systemd oneshot service runs as root and
-    # does the actual work; a polkit rule lets sddm-session group members start
-    # it without a password. The desired session is passed via /run/sddm-next-session.
-    (lib.mkIf cfg.gamescope.sessionSwitcher.enable {
-      features.desktop.autoLogin.enable = lib.mkForce true;
-      services.displayManager.defaultSession = lib.mkForce "steam";
-
-      users.groups.sddm-session = { };
-      users.users.${config.user.name}.extraGroups = [ "sddm-session" ];
-
-      # Relogin=true: after session ends SDDM auto-logins again without greeter.
-      # Required for seamless switching — without it SDDM shows the login screen.
-      services.displayManager.sddm.settings.Autologin.Relogin = true;
-
-      # Runs as root: writes SDDM autologin override, then kills gamescope.
-      # SDDM sees the session end (Relogin=true) and auto-logins to new session.
-      # WHY kill gamescope instead of restarting display-manager:
-      # restarting DM starts a new session on a new VT while gamescope keeps running.
-      systemd.services.sddm-session-switch = {
-        description = "Switch SDDM autologin session";
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = pkgs.writeShellScript "sddm-session-switch-exec" ''
-            SESSION=$(cat /run/sddm-next-session 2>/dev/null)
-            case "$SESSION" in
-              ${if config.features.desktop.wm == "kde" then "plasma" else "hyprland-uwsm"}|steam) ;;
-              *) echo "Invalid session: $SESSION" >&2; exit 1 ;;
-            esac
-            printf '[Autologin]\nSession=%s.desktop\n' "$SESSION" \
-              > /etc/sddm.conf.d/99-session-switch.conf
-            pkill -u ${config.user.name} gamescope || true
-          '';
-        };
-      };
-
-      # Allow sddm-session group to start the switch service without a password
-      security.polkit.extraConfig = ''
-        polkit.addRule(function(action, subject) {
-          if (action.id === "org.freedesktop.systemd1.manage-units" &&
-              action.lookup("unit") === "sddm-session-switch.service" &&
-              action.lookup("verb") === "start" &&
-              subject.isInGroup("sddm-session")) {
-            return polkit.Result.YES;
-          }
-        });
-      '';
-
-      # /usr/bin/steamos-session-select: Steam may call this via hardcoded path
-      systemd.tmpfiles.rules = [
-        "f /run/sddm-next-session 0664 root sddm-session -"
-        "L /usr/bin/steamos-session-select - - - - /run/current-system/sw/bin/steamos-session-select"
-      ];
-
-      environment.systemPackages = [
-        (pkgs.writeShellScriptBin "steamos-session-select" ''
-          set -euo pipefail
-          logger -t steamos-session-select "called with: $*"
-          case "''${1:-desktop}" in
-            desktop)         SESSION="${if config.features.desktop.wm == "kde" then "plasma" else "hyprland-uwsm"}" ;;
-            gamescope|steam) SESSION="steam" ;;
-            *) echo "Usage: steamos-session-select [desktop|gamescope]" >&2; exit 1 ;;
-          esac
-          echo "$SESSION" > /run/sddm-next-session
-          logger -t steamos-session-select "switching to $SESSION, starting service"
-          setsid sh -c 'sleep 0.5; systemctl start sddm-session-switch.service' &
-        '')
-      ];
-    })
-
   ]);
+
 }
