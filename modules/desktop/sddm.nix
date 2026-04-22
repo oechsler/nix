@@ -106,8 +106,6 @@ in
           enable = true;
           user = config.user.name;
         };
-        # Always pre-select the configured WM so the login screen highlights
-        # the correct session. gamescope.sessionSwitcher overrides this to "steam".
         defaultSession = lib.mkDefault (if isKde then "plasma" else "hyprland-uwsm");
       };
     };
