@@ -25,7 +25,7 @@
 # Toolbar layout:
 #   Back | Forward | Reload | Spacer | URL bar | Spacer | Downloads | Proton Pass
 
-{ pkgs, inputs, features, fonts, lib, ... }:
+{ pkgs, inputs, features, fonts, lib, config, ... }:
 
 {
   #===========================
@@ -39,6 +39,7 @@
 
     programs.firefox = {
     enable = true;
+    configPath = "${config.xdg.configHome}/mozilla/firefox";
 
     # KDE Plasma integration (media controls, downloads, tabs)
     nativeMessagingHosts = lib.optionals (features.desktop.wm == "kde") [
