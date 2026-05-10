@@ -8,7 +8,7 @@
 #
 # Jobs:
 # 1. Lint: Code quality checks (conventions, anti-patterns, dead code)
-# 2. Build: Validate both host configurations build successfully
+# 2. Build: Validate both host configurations build successfully (sequentially)
 
 name: CI
 
@@ -33,9 +33,6 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Nix Store Cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
-
       - name: Run custom convention linter
         run: nix build .#checks.x86_64-linux.lint --show-trace
 
@@ -49,14 +46,8 @@ jobs:
   # Job 2: Build Validation
   #===========================================================================
   build:
-    name: "Build ${{ matrix.host }}"
+    name: Build NixOS configurations
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        host:
-          - samuels-pc
-          - samuels-razer
 
     steps:
       - name: Checkout repository
@@ -65,13 +56,16 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Nix Store Cache
-        uses: DeterminateSystems/magic-nix-cache-action@main
-
-      - name: Build NixOS configuration
+      - name: Build samuels-pc
         run: |
           nix build \
-            .#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel \
+            .#nixosConfigurations.samuels-pc.config.system.build.toplevel \
             --dry-run \
             --show-trace
 
+      - name: Build samuels-razer
+        run: |
+          nix build \
+            .#nixosConfigurations.samuels-razer.config.system.build.toplevel \
+            --dry-run \
+            --show-trace
