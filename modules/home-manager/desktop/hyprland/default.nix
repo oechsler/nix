@@ -354,7 +354,6 @@ in
       };
 
       dwindle = {
-        pseudotile = true;
         preserve_split = true;
       };
 
@@ -368,9 +367,12 @@ in
         vrr = if lib.any (m: m.vrr) displays.monitors then 1 else 0;
       };
 
+      ecosystem = {
+        no_update_news = true;
+      };
+
       render = {
         direct_scanout = 0;
-        cm_fs_passthrough = 0;
         non_shader_cm = 0;
       };
 
@@ -406,7 +408,7 @@ in
         "$mainMod, R, exec, ${config.rofi.toggle}"
         "$mainMod, W, exec, ${config.rofi.windowList}"
         "$mainMod, P, pseudo,"
-        "$mainMod, Space, togglesplit,"
+        "$mainMod, Space, layoutmsg, togglesplit"
         "$mainMod, F, fullscreen,"
 
         ", Print, exec, hyprshot -m output --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
