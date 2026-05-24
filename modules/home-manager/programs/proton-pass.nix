@@ -130,12 +130,10 @@
       programs.ssh = {
         enable = true;
         enableDefaultConfig = false;
-        matchBlocks."*" = {
-          identityFile = "${config.home.homeDirectory}/.ssh/id_ed25519";
-          extraOptions = {
-            IdentityAgent = "${config.home.homeDirectory}/.ssh/proton-pass-agent.sock";
-            StrictHostKeyChecking = "accept-new";
-          };
+        settings."*" = {
+          IdentityFile = "${config.home.homeDirectory}/.ssh/id_ed25519";
+          IdentityAgent = "${config.home.homeDirectory}/.ssh/proton-pass-agent.sock";
+          StrictHostKeyChecking = "accept-new";
         };
       };
     }
