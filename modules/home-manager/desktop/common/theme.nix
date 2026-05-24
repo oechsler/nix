@@ -81,15 +81,23 @@ in
     #---------------------------
     # GTK, cursor, catppuccin, session variables
 
-    # Override vesktop desktop entry to show Discord branding
-    # (Vesktop is a Discord client, but we want to call it "Discord")
-    xdg.desktopEntries.vesktop = lib.mkIf features.apps.enable {
-      name = "Discord";
-      exec = "vesktop %U";
-      icon = "discord";
-      categories = [ "Network" "InstantMessaging" "Chat" ];
-      genericName = "Internet Messenger";
-      settings.StartupWMClass = "Vesktop";
+    xdg = {
+      # Override vesktop desktop entry to show Discord branding
+      # (Vesktop is a Discord client, but we want to call it "Discord")
+      desktopEntries.vesktop = lib.mkIf features.apps.enable {
+        name = "Discord";
+        exec = "vesktop %U";
+        icon = "discord";
+        categories = [ "Network" "InstantMessaging" "Chat" ];
+        genericName = "Internet Messenger";
+        settings.StartupWMClass = "Vesktop";
+      };
+
+      # GTK4 ignores the theme package — it loads CSS from ~/.config/gtk-4.0/ directly
+      configFile."gtk-4.0/gtk.css".source =
+        "${catppuccinGtk}/share/themes/${themeName}/gtk-4.0/gtk.css";
+      configFile."gtk-4.0/gtk-dark.css".source =
+        "${catppuccinGtk}/share/themes/${themeName}/gtk-4.0/gtk-dark.css";
     };
 
     catppuccin = {
@@ -135,12 +143,6 @@ in
         theme = null;
       };
     };
-
-    # GTK4 ignores the theme package — it loads CSS from ~/.config/gtk-4.0/ directly
-    xdg.configFile."gtk-4.0/gtk.css".source =
-      "${catppuccinGtk}/share/themes/${themeName}/gtk-4.0/gtk.css";
-    xdg.configFile."gtk-4.0/gtk-dark.css".source =
-      "${catppuccinGtk}/share/themes/${themeName}/gtk-4.0/gtk-dark.css";
 
     dconf.settings."org/gnome/desktop/interface".color-scheme =
       if isLight then "prefer-light" else "prefer-dark";
