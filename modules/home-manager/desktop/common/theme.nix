@@ -136,6 +136,12 @@ in
       };
     };
 
+    # GTK4 ignores the theme package — it loads CSS from ~/.config/gtk-4.0/ directly
+    xdg.configFile."gtk-4.0/gtk.css".source =
+      "${catppuccinGtk}/share/themes/${themeName}/gtk-4.0/gtk.css";
+    xdg.configFile."gtk-4.0/gtk-dark.css".source =
+      "${catppuccinGtk}/share/themes/${themeName}/gtk-4.0/gtk-dark.css";
+
     dconf.settings."org/gnome/desktop/interface".color-scheme =
       if isLight then "prefer-light" else "prefer-dark";
   };
