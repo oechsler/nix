@@ -204,7 +204,7 @@ in
           Service = {
             # Full bash path so systemd always finds it; exec replaces the shell
             # with the app process so systemd tracks the right PID.
-            ExecStart = "${pkgs.bash}/bin/sh -c 'exec ${app.exec}'";
+            ExecStart = "${pkgs.bash}/bin/sh -c 'sleep 3; exec ${app.exec}'";
             Environment = "PATH=/etc/profiles/per-user/${config.home.username}/bin:/run/current-system/sw/bin";
             Type = "exec";
             Restart = "on-failure";
