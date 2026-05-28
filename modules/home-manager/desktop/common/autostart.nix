@@ -59,7 +59,7 @@ in
         { name = "Proton Pass"; exec = "proton-pass --hidden --ozone-platform=wayland"; }
         { name = "Vesktop";    exec = "vesktop --start-minimized"; }
         { name = "Nheko";     exec = "nheko"; }
-        { name = "Mumble";    exec = "mumble --hidden"; }
+        { name = "Mumble";    exec = "mumble"; }
       ]
       # Trayscale/CoolerControl are explicit systemd services (portal ordering, tray detection)
       ++ lib.optionals features.gaming.enable [
