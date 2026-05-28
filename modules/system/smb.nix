@@ -247,9 +247,9 @@ in
     # A 2-second delay lets Tailscale finish routing setup before mounting.
     systemd.services.smb-tailscale-remount = lib.mkIf config.features.tailscale.enable {
       description = "Remount SMB shares when Tailscale connects";
-      bindsTo = [ "sys-subsystem-net-devices-ts0.device" ];
-      after    = [ "sys-subsystem-net-devices-ts0.device" "smb-mount.service" ];
-      wantedBy = [ "sys-subsystem-net-devices-ts0.device" ];
+      bindsTo = [ "sys-subsystem-net-devices-tailscale0.device" ];
+      after    = [ "sys-subsystem-net-devices-tailscale0.device" "smb-mount.service" ];
+      wantedBy = [ "sys-subsystem-net-devices-tailscale0.device" ];
       serviceConfig = {
         Type = "oneshot";
         RemainAfterExit = true;
