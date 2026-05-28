@@ -36,6 +36,10 @@ in
       style.name = "kvantum";
     };
 
+    # WORKAROUND: catppuccin-nix injects a `colors { _var { _type=lua-inline } }` block
+    # that Hyprland removed in 0.47+. Colors are defined manually below via palette.json.
+    # Remove once catppuccin/nix#hyprland is updated for current Hyprland.
+    catppuccin.hyprland.enable = false;
     catppuccin.kvantum.enable = true;
 
     # gnome platform theme reads color-scheme from portal (dark mode detection)

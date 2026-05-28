@@ -87,8 +87,6 @@
     #===========================
     # External Packages
     #===========================
-    awww.url = "git+https://codeberg.org/LGFae/awww";
-
     cachyos-kernel = {
       # Pinned: nix flake update must not silently bump the kernel version.
       # Bump this together with nixpkgs-kernel when upgrading the kernel.
