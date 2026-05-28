@@ -1,0 +1,18 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "dependencyDashboard": false,
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "matchManagers": ["nix"],
+      "groupName": "flake inputs"
+    },
+    {
+      "matchDepTypes": ["action"],
+      "groupName": "Forgejo Actions"
+    }
+  ]
+}
