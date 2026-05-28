@@ -33,9 +33,25 @@
 #   Super+W          - Window list
 #   Super+B          - Power profile switcher
 
-{ config, pkgs, lib, theme, fonts, locale, displays, input, ... }:
+{ config, pkgs, lib, theme, fonts, locale, displays, input, features, ... }:
 
 let
+  # Convert "App Name" → "app-name" for systemd service names / slugs
+  slug = name: builtins.replaceStrings [ " " ] [ "-" ] (lib.toLower name);
+
+  # Wrapper for apps that live in the system tray: tries hyprctl to raise the
+  # existing window first; falls back to launching the binary which triggers
+  # Qt SingleApplication to signal the running instance to show itself.
+  mkRaiseOrLaunch = { name, exec }: pkgs.writeShellScript "raise-or-launch-${slug name}" ''
+    svc="${slug name}.service"
+    if systemctl --user is-active "$svc" > /dev/null 2>&1; then
+      ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "class:^(${lib.toLower name})$" 2>/dev/null \
+        || ${exec}
+    else
+      systemctl --user start "$svc"
+    fi
+  '';
+
   # Replaces catppuccin.hyprland color injection (disabled, see theme.nix)
   palette = (lib.importJSON "${config.catppuccin.sources.palette}/palette.json").${config.catppuccin.flavor}.colors;
   stripHash = hex: lib.removePrefix "#" hex;
@@ -185,8 +201,36 @@ in
   #===========================
 
   config = {
-    # Battery warning as systemd service instead of exec-once
-    systemd.user.services = {
+    # All systemd user services: autostart apps + internal services.
+    # Autostart apps: proper lifecycle (start on login, stop on logout, no
+    # duplicates on re-login). Internal services: battery-warning, clipboard.
+    systemd.user.services =
+      # Generate one service per autostart app
+      builtins.listToAttrs (map (app: {
+        name = slug app.name;
+        value = {
+          Unit = {
+            Description = app.name;
+            After = [ "graphical-session.target" ];
+            PartOf = [ "graphical-session.target" ];
+          };
+          Service = {
+            # Full bash path so systemd always finds it; exec replaces the shell
+            # with the app process so systemd tracks the right PID.
+            ExecStart = "${pkgs.bash}/bin/sh -c 'exec ${app.exec}'";
+            Environment = "PATH=/etc/profiles/per-user/${config.home.username}/bin:/run/current-system/sw/bin";
+            Type = "exec";
+            Restart = "on-failure";
+            # Exit code 1 often means another instance is already running — not a real crash.
+            RestartPreventExitStatus = 1;
+            RestartSec = 3;
+            TimeoutStopSec = 5;
+          };
+          Install.WantedBy = [ "graphical-session.target" ];
+        };
+      }) config.autostart.apps)
+      // {
+
       battery-warning = {
         Unit = {
           Description = "Battery warning notifications";
@@ -228,6 +272,16 @@ in
       };
     };
 
+    # Override nheko desktop entry exec so clicking the dock raises the existing
+    # tray window instead of starting a second instance.
+    xdg.desktopEntries.nheko = lib.mkIf features.apps.enable {
+      name = "Nheko";
+      exec = "${mkRaiseOrLaunch { name = "Nheko"; exec = "${pkgs.nheko}/bin/nheko"; }} %u";
+      icon = "nheko";
+      categories = [ "Network" "InstantMessaging" "Chat" ];
+      settings.StartupWMClass = "nheko";
+    };
+
     # Reduce default stop timeout for user session
     xdg.configFile."systemd/user.conf".text = ''
       [Manager]
@@ -265,7 +319,7 @@ in
       exec-once = [
         "hyprctl dispatch workspace 1"
         "uwsm-app -- ${config.awww.start}"
-      ] ++ (map (app: "uwsm-app -- ${app.exec}") config.autostart.apps);
+      ];
 
       env = [
         "XCURSOR_THEME,${theme.cursor.name}"
