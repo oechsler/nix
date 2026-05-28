@@ -1,0 +1,71 @@
+# NixOS Configuration CI/CD Pipeline
+#
+# Comprehensive quality checks and build validation.
+#
+# Runs on:
+# - Push to main
+# - Pull requests against main
+#
+# Jobs:
+# 1. Lint: Code quality checks (conventions, anti-patterns, dead code)
+# 2. Build: Validate both host configurations build successfully (sequentially)
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  #===========================================================================
+  # Job 1: Code Quality Checks
+  #===========================================================================
+  lint:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Run custom convention linter
+        run: nix build .#checks.x86_64-linux.lint --show-trace
+
+      - name: Run statix (anti-patterns)
+        run: nix build .#checks.x86_64-linux.statix --show-trace
+
+      - name: Run deadnix (dead code detection)
+        run: nix build .#checks.x86_64-linux.deadnix --show-trace
+
+  #===========================================================================
+  # Job 2: Build Validation
+  #===========================================================================
+  build:
+    name: Build NixOS configurations
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Build samuels-pc
+        run: |
+          nix build \
+            .#nixosConfigurations.samuels-pc.config.system.build.toplevel \
+            --dry-run \
+            --show-trace
+
+      - name: Build samuels-razer
+        run: |
+          nix build \
+            .#nixosConfigurations.samuels-razer.config.system.build.toplevel \
+            --dry-run \
+            --show-trace
