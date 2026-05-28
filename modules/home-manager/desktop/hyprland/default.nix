@@ -39,19 +39,6 @@ let
   # Convert "App Name" → "app-name" for systemd service names / slugs
   slug = name: builtins.replaceStrings [ " " ] [ "-" ] (lib.toLower name);
 
-  # Wrapper for apps that live in the system tray: tries hyprctl to raise the
-  # existing window first; falls back to launching the binary which triggers
-  # Qt SingleApplication to signal the running instance to show itself.
-  mkRaiseOrLaunch = { name, exec }: pkgs.writeShellScript "raise-or-launch-${slug name}" ''
-    svc="${slug name}.service"
-    if systemctl --user is-active "$svc" > /dev/null 2>&1; then
-      ${pkgs.hyprland}/bin/hyprctl dispatch focuswindow "class:^(${lib.toLower name})$" 2>/dev/null \
-        || ${exec}
-    else
-      systemctl --user start "$svc"
-    fi
-  '';
-
   # Replaces catppuccin.hyprland color injection (disabled, see theme.nix)
   palette = (lib.importJSON "${config.catppuccin.sources.palette}/palette.json").${config.catppuccin.flavor}.colors;
   stripHash = hex: lib.removePrefix "#" hex;
@@ -270,16 +257,6 @@ in
         };
         Install.WantedBy = [ "graphical-session.target" ];
       };
-    };
-
-    # Override nheko desktop entry exec so clicking the dock raises the existing
-    # tray window instead of starting a second instance.
-    xdg.desktopEntries.nheko = lib.mkIf features.apps.enable {
-      name = "Nheko";
-      exec = "${mkRaiseOrLaunch { name = "Nheko"; exec = "${pkgs.nheko}/bin/nheko"; }} %u";
-      icon = "nheko";
-      categories = [ "Network" "InstantMessaging" "Chat" ];
-      settings.StartupWMClass = "nheko";
     };
 
     # Reduce default stop timeout for user session
