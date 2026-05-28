@@ -218,7 +218,29 @@ in
     };
 
     #---------------------------
-    # 4. SMB Mount Service
+    # 4. Network Dispatcher (remount on any routing change)
+    #---------------------------
+    # Any interface up/down (Tailscale, WiFi switch, Ethernet unplug) changes
+    # the routing table and breaks existing CIFS mounts. Restart smb-mount so
+    # it unmounts and remounts cleanly with the new routing.
+    networking.networkmanager.dispatcherScripts = [{
+      source = pkgs.writeShellScript "smb-network-remount" ''
+        INTERFACE="$1"
+        EVENT="$2"
+        # Skip loopback — routing changes don't affect CIFS
+        [ "$INTERFACE" = "lo" ] && exit 0
+        case "$EVENT" in
+          up|down)
+            echo "Network $EVENT on $INTERFACE — remounting SMB shares"
+            ${pkgs.systemd}/bin/systemctl restart smb-mount.service
+            ;;
+        esac
+      '';
+      type = "basic";
+    }];
+
+    #---------------------------
+    # 5. SMB Mount Service
     #---------------------------
     # Runs at boot after network is ready
     # Mounts all configured SMB shares
