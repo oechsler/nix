@@ -55,28 +55,57 @@ in
     #---------------------------
     # Default Autostart Apps
     #---------------------------
-    autostart.apps =
-      # Core apps (always started)
-      [
+    autostart.apps = lib.optionals features.apps.enable [
         { name = "Proton Pass"; exec = "proton-pass --hidden --ozone-platform=wayland"; }
-        { name = "Vesktop"; exec = "vesktop --start-minimized"; }
-        { name = "CoolerControl"; exec = "coolercontrol"; }
+        { name = "Vesktop";    exec = "vesktop --start-minimized"; }
+        { name = "Nheko";     exec = "nheko"; }
+        { name = "Mumble";    exec = "mumble --hidden"; }
       ]
-      # Nextcloud manages its own XDG autostart under KDE; Hyprland needs exec-once
-      ++ lib.optionals (!isKde) [
-        { name = "Nextcloud"; exec = "nextcloud --background"; }
-      ]
-      ++ lib.optionals features.apps.enable [
-        { name = "Pika Backup Monitor"; exec = "pika-backup-monitor"; }
-        { name = "Nheko"; exec = "nheko"; }
-        { name = "Mumble"; exec = "mumble --hidden"; }
-      ]
-      # Trayscale is handled via systemd user service below (reliable tray detection)
+      # Trayscale/CoolerControl are explicit systemd services (portal ordering, tray detection)
       ++ lib.optionals features.gaming.enable [
         { name = "Steam"; exec = "steam -silent"; }
       ];
 
+    #---------------------------
+    # Nextcloud XDG Autostart (declarative)
+    #---------------------------
+    # Nextcloud creates ~/.config/autostart/Nextcloud.desktop at runtime — not
+    # declarative. We own the file so it exists on fresh installs and the
+    # systemd-xdg-autostart-generator picks it up on both Hyprland and KDE.
+    # Pika Backup: the package ships its own autostart .desktop, no entry needed.
+    xdg.configFile."autostart/Nextcloud.desktop" = lib.mkIf features.apps.enable {
+      text = ''
+        [Desktop Entry]
+        Type=Application
+        Name=Nextcloud
+        Exec=nextcloud --background
+      '';
+    };
+
   }
+
+  #---------------------------
+  # CoolerControl systemd service
+  # (must start after portal so Tauri/WebKitGTK picks up prefer-dark)
+  #---------------------------
+  (lib.mkIf (!isKde) {
+    systemd.user.services.coolercontrol = {
+      Unit = {
+        Description = "CoolerControl - Fan control";
+        After = [ "graphical-session.target" "xdg-desktop-portal-gtk.service" ];
+        PartOf = [ "graphical-session.target" ];
+      };
+      Service = {
+        ExecStart = "${pkgs.coolercontrol.coolercontrol-gui}/bin/coolercontrol";
+        Restart = "on-failure";
+        RestartSec = 3;
+        # Exit code 1 = another instance already running (single-instance detection).
+        # Don't restart in that case — it's not a real crash.
+        RestartPreventExitStatus = 1;
+      };
+      Install.WantedBy = [ "graphical-session.target" ];
+    };
+  })
 
   #---------------------------
   # Trayscale systemd service

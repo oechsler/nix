@@ -194,14 +194,13 @@ in
     # 4. Pinned Applications
     #---------------------------
     # v1.2.1: pins moved to ~/.local/share/hypr-dock/pinned (plain text, one per line)
-    # Use activation script (not xdg.dataFile) so the dock can write to the file.
-    # Only creates the file if it doesn't exist yet — user's UI changes are preserved.
+    # Use activation script (not xdg.dataFile) so the dock can write to the file
+    # while we manage the canonical list. Config is source of truth — written on
+    # every switch so additions and removals take effect immediately.
     home.activation.hyprDockPins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       _pinned_file="${config.xdg.dataHome}/hypr-dock/pinned"
-      if [ ! -f "$_pinned_file" ]; then
-        mkdir -p "$(dirname "$_pinned_file")"
-        printf '%s\n' ${lib.escapeShellArgs config.desktop.pinnedApps} > "$_pinned_file"
-      fi
+      mkdir -p "$(dirname "$_pinned_file")"
+      printf '%s\n' ${lib.escapeShellArgs config.desktop.pinnedApps} > "$_pinned_file"
     '';
   };
 }
