@@ -189,9 +189,74 @@ in
     # 2. Mount Directory
     #---------------------------
     # Create ~/smb/ directory with correct ownership
-    systemd.tmpfiles.rules = [
-      "d ${user.home}/smb 0755 ${user.name} ${user.group} -"
-    ];
+    systemd = {
+      tmpfiles.rules = [
+        "d ${user.home}/smb 0755 ${user.name} ${user.group} -"
+      ];
+
+      services = {
+
+        #---------------------------
+        # 4b. Tailscale Watcher (remount when tailscale0 appears)
+        #---------------------------
+        # tailscale0 is a TUN device created by tailscaled, invisible to NetworkManager.
+        # systemd exposes every network interface as a device unit, so we bind to
+        # sys-subsystem-net-devices-tailscale0.device and restart smb-mount when it fires.
+        # A 2-second delay lets Tailscale finish routing setup before mounting.
+        smb-tailscale-remount = lib.mkIf config.features.tailscale.enable {
+          description = "Remount SMB shares when Tailscale connects";
+          bindsTo = [ "sys-subsystem-net-devices-tailscale0.device" ];
+          after    = [ "sys-subsystem-net-devices-tailscale0.device" "smb-mount.service" ];
+          wantedBy = [ "sys-subsystem-net-devices-tailscale0.device" ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            ExecStartPre = "${pkgs.coreutils}/bin/sleep 2";
+            ExecStart = "${pkgs.systemd}/bin/systemctl restart smb-mount.service";
+          };
+        };
+
+        #---------------------------
+        # 5. SMB Mount Service
+        #---------------------------
+        # Runs at boot after network is ready
+        # Mounts all configured SMB shares
+        smb-mount = {
+          description = "Mount SMB Shares";
+
+          # Wait for network, DNS, GUI session, and SOPS secrets
+          after = [ "network-online.target" "systemd-resolved.service" "graphical.target" "sops-install-secrets.service" ]
+            ++ lib.optionals config.features.tailscale.enable [ "tailscaled.service" ];
+          wants = [ "network-online.target" "systemd-resolved.service" ]
+            ++ lib.optionals config.features.tailscale.enable [ "tailscaled.service" ];
+
+          # Start when GUI is ready (so notifications work)
+          wantedBy = [ "graphical.target" ];
+
+          # Skip gracefully if SOPS key doesn't exist (fresh install without secrets)
+          unitConfig.ConditionPathExists = config.sops.age.keyFile;
+
+          # Required tools for mount script
+          path = [ pkgs.cifs-utils pkgs.util-linux pkgs.sudo pkgs.libnotify pkgs.iproute2 pkgs.systemd ]
+            ++ lib.optionals config.features.tailscale.enable [ config.services.tailscale.package ];
+
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;  # Consider service active after mount completes
+
+            # Pre-start: Wait for network and DNS
+            ExecStartPre = "${waitForNetwork}";
+
+            # Start: Mount all shares
+            ExecStart = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-mount.sh".path}";
+
+            # Stop: Unmount all shares (on shutdown)
+            ExecStop = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-umount.sh".path}";
+          };
+        };
+
+      }; # end services
+    }; # end systemd
 
     #---------------------------
     # 3. SOPS Secrets and Templates
@@ -222,7 +287,7 @@ in
     #---------------------------
     # WiFi switches and Ethernet unplug/replug are managed by NetworkManager,
     # so the dispatcher script covers those events.
-    # NOTE: Tailscale's ts0 is NOT managed by NM — see smb-tailscale-remount below.
+    # NOTE: Tailscale's tailscale0 is NOT managed by NM — see smb-tailscale-remount above.
     networking.networkmanager.dispatcherScripts = [{
       source = pkgs.writeShellScript "smb-network-remount" ''
         INTERFACE="$1"
@@ -237,64 +302,5 @@ in
       '';
       type = "basic";
     }];
-
-    #---------------------------
-    # 4b. Tailscale Watcher (remount when ts0 appears)
-    #---------------------------
-    # ts0 is a TUN device created by tailscaled, invisible to NetworkManager.
-    # systemd exposes every network interface as a device unit, so we bind to
-    # sys-subsystem-net-devices-ts0.device and restart smb-mount when it fires.
-    # A 2-second delay lets Tailscale finish routing setup before mounting.
-    systemd.services.smb-tailscale-remount = lib.mkIf config.features.tailscale.enable {
-      description = "Remount SMB shares when Tailscale connects";
-      bindsTo = [ "sys-subsystem-net-devices-tailscale0.device" ];
-      after    = [ "sys-subsystem-net-devices-tailscale0.device" "smb-mount.service" ];
-      wantedBy = [ "sys-subsystem-net-devices-tailscale0.device" ];
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;
-        ExecStartPre = "${pkgs.coreutils}/bin/sleep 2";
-        ExecStart = "${pkgs.systemd}/bin/systemctl restart smb-mount.service";
-      };
-    };
-
-    #---------------------------
-    # 5. SMB Mount Service
-    #---------------------------
-    # Runs at boot after network is ready
-    # Mounts all configured SMB shares
-    systemd.services.smb-mount = {
-      description = "Mount SMB Shares";
-
-      # Wait for network, DNS, GUI session, and SOPS secrets
-      after = [ "network-online.target" "systemd-resolved.service" "graphical.target" "sops-install-secrets.service" ]
-        ++ lib.optionals config.features.tailscale.enable [ "tailscaled.service" ];
-      wants = [ "network-online.target" "systemd-resolved.service" ]
-        ++ lib.optionals config.features.tailscale.enable [ "tailscaled.service" ];
-
-      # Start when GUI is ready (so notifications work)
-      wantedBy = [ "graphical.target" ];
-
-      # Skip gracefully if SOPS key doesn't exist (fresh install without secrets)
-      unitConfig.ConditionPathExists = config.sops.age.keyFile;
-
-      # Required tools for mount script
-      path = [ pkgs.cifs-utils pkgs.util-linux pkgs.sudo pkgs.libnotify pkgs.iproute2 pkgs.systemd ]
-        ++ lib.optionals config.features.tailscale.enable [ config.services.tailscale.package ];
-
-      serviceConfig = {
-        Type = "oneshot";
-        RemainAfterExit = true;  # Consider service active after mount completes
-
-        # Pre-start: Wait for network and DNS
-        ExecStartPre = "${waitForNetwork}";
-
-        # Start: Mount all shares
-        ExecStart = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-mount.sh".path}";
-
-        # Stop: Unmount all shares (on shutdown)
-        ExecStop = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-umount.sh".path}";
-      };
-    };
   };
 }
