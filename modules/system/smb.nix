@@ -218,16 +218,15 @@ in
     };
 
     #---------------------------
-    # 4. Network Dispatcher (remount on any routing change)
+    # 4. Network Dispatcher (remount on NM interface changes)
     #---------------------------
-    # Any interface up/down (Tailscale, WiFi switch, Ethernet unplug) changes
-    # the routing table and breaks existing CIFS mounts. Restart smb-mount so
-    # it unmounts and remounts cleanly with the new routing.
+    # WiFi switches and Ethernet unplug/replug are managed by NetworkManager,
+    # so the dispatcher script covers those events.
+    # NOTE: Tailscale's ts0 is NOT managed by NM — see smb-tailscale-remount below.
     networking.networkmanager.dispatcherScripts = [{
       source = pkgs.writeShellScript "smb-network-remount" ''
         INTERFACE="$1"
         EVENT="$2"
-        # Skip loopback — routing changes don't affect CIFS
         [ "$INTERFACE" = "lo" ] && exit 0
         case "$EVENT" in
           up|down)
@@ -238,6 +237,26 @@ in
       '';
       type = "basic";
     }];
+
+    #---------------------------
+    # 4b. Tailscale Watcher (remount when ts0 appears)
+    #---------------------------
+    # ts0 is a TUN device created by tailscaled, invisible to NetworkManager.
+    # systemd exposes every network interface as a device unit, so we bind to
+    # sys-subsystem-net-devices-ts0.device and restart smb-mount when it fires.
+    # A 2-second delay lets Tailscale finish routing setup before mounting.
+    systemd.services.smb-tailscale-remount = lib.mkIf config.features.tailscale.enable {
+      description = "Remount SMB shares when Tailscale connects";
+      bindsTo = [ "sys-subsystem-net-devices-ts0.device" ];
+      after    = [ "sys-subsystem-net-devices-ts0.device" "smb-mount.service" ];
+      wantedBy = [ "sys-subsystem-net-devices-ts0.device" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStartPre = "${pkgs.coreutils}/bin/sleep 2";
+        ExecStart = "${pkgs.systemd}/bin/systemctl restart smb-mount.service";
+      };
+    };
 
     #---------------------------
     # 5. SMB Mount Service
