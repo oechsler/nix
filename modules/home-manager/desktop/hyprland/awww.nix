@@ -18,11 +18,10 @@
 # Scripts exposed:
 #   config.awww.start - Start daemon and set wallpaper (used by hyprland.nix)
 
-{ config, pkgs, inputs, lib, theme, displays, ... }:
+{ config, pkgs, lib, theme, displays, ... }:
 
 let
-  # Awww package from flake input
-  awwwPkg = inputs.awww.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  awwwPkg = pkgs.awww;
 
   # Generate wallpaper set commands
   # - Per-monitor: Set specific wallpaper for each monitor

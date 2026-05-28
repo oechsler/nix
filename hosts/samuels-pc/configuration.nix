@@ -13,7 +13,7 @@
 #
 # Theme:
 # - Catppuccin Lavender accent
-# - Lake 4.png wallpaper
+# - Wasserfall_6k_7.jpg wallpaper
 #
 # Monitor layout:
 # - DP-1 (right): Workspaces 1-4
@@ -36,7 +36,7 @@
   # Host-specific Overrides
   #===========================
   theme.catppuccin.accent = "lavender";
-  theme.wallpaper = "Forma_6k_6.png";
+  theme.wallpaper = "Wasserfall_6k_7.jpg";
 
   # Ensure samuel owns /mnt/games (mounted by disko)
   systemd.tmpfiles.rules = [

@@ -36,6 +36,12 @@
 { config, pkgs, lib, theme, fonts, locale, displays, input, ... }:
 
 let
+  # Replaces catppuccin.hyprland color injection (disabled, see theme.nix)
+  palette = (lib.importJSON "${config.catppuccin.sources.palette}/palette.json").${config.catppuccin.flavor}.colors;
+  stripHash = hex: lib.removePrefix "#" hex;
+  accentColor = "rgba(${stripHash palette.${config.catppuccin.accent}.hex}ff)";
+  surface0Color = "rgba(${stripHash palette.surface0.hex}ff)";
+
   # ============================================================================
   # MONITOR CONFIGURATION
   # ============================================================================
@@ -249,6 +255,9 @@ in
     systemd.enable = false;  # UWSM handles session management
 
     settings = {
+      "$accent" = accentColor;
+      "$surface0" = surface0Color;
+
       monitor = monitorLines;
       workspace = workspaceRules;
       wsbind = workspaceBindings;
