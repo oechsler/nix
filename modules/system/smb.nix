@@ -225,7 +225,13 @@ in
               while read -r line; do
                 case "$line" in
                   Deleted*tailscale0*)
-                    echo "Tailscale route removed — skipping remount"
+                    now=$(date +%s)
+                    last=$(cat "$stamp")
+                    if [ $((now - last)) -gt 60 ]; then
+                      echo "$now" > "$stamp"
+                      echo "Tailscale route removed — unmounting SMB shares"
+                      systemctl stop smb-mount.service
+                    fi
                     ;;
                   *tailscale0*)
                     now=$(date +%s)
