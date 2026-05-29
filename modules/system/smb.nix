@@ -224,12 +224,15 @@ in
               trap 'rm -f "$stamp"' EXIT
               while read -r line; do
                 case "$line" in
+                  Deleted*tailscale0*)
+                    echo "Tailscale route removed — skipping remount"
+                    ;;
                   *tailscale0*)
                     now=$(date +%s)
                     last=$(cat "$stamp")
                     if [ $((now - last)) -gt 60 ]; then
                       echo "$now" > "$stamp"
-                      echo "Tailscale route change — waiting for tunnel to be ready"
+                      echo "Tailscale route added — waiting for tunnel to be ready"
                       for i in $(seq 1 30); do
                         if tailscale status 2>/dev/null | grep -q '^100\.'; then
                           echo "Tailscale ready (attempt $i) — waiting 30s for routing to settle"
