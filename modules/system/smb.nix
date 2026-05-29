@@ -232,8 +232,8 @@ in
                       echo "Tailscale route change — waiting for tunnel to be ready"
                       for i in $(seq 1 30); do
                         if tailscale status 2>/dev/null | grep -q '^100\.'; then
-                          echo "Tailscale ready (attempt $i) — waiting 10s for routing to settle"
-                          sleep 10
+                          echo "Tailscale ready (attempt $i) — waiting 30s for routing to settle"
+                          sleep 30
                           systemctl restart smb-mount.service
                           break
                         fi
