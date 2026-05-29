@@ -229,8 +229,8 @@ in
                     last=$(cat "$stamp")
                     if [ $((now - last)) -gt 60 ]; then
                       echo "$now" > "$stamp"
-                      echo "Tailscale route removed — unmounting SMB shares"
-                      systemctl stop smb-mount.service
+                      echo "Tailscale route removed — restarting SMB mount"
+                      systemctl restart smb-mount.service
                     fi
                     ;;
                   *tailscale0*)
