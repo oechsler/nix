@@ -208,13 +208,16 @@ in
           description = "Remount SMB shares on Tailscale route changes";
           after    = [ "tailscaled.service" "smb-mount.service" ];
           wantedBy = [ "multi-user.target" ];
-          path     = [ pkgs.iproute2 pkgs.systemd pkgs.coreutils ];
+          path     = [ pkgs.iproute2 pkgs.systemd pkgs.coreutils config.services.tailscale.package ];
           serviceConfig = {
             Type = "simple";
             Restart = "always";
             RestartSec = 5;
             # Process substitution avoids a subshell so the debounce stamp persists.
-            # We only trigger once per 10-second window to absorb route bursts.
+            # Debounce window (60s): Tailscale adds many routes in bursts; ignore
+            # subsequent changes until the window expires.
+            # After detecting a change, poll `tailscale status` until the tunnel
+            # has active peers (100.x.x.x lines) instead of using a fixed delay.
             ExecStart = pkgs.writeShellScript "smb-tailscale-watch" ''
               stamp=$(mktemp)
               echo 0 > "$stamp"
@@ -224,11 +227,17 @@ in
                   *tailscale0*)
                     now=$(date +%s)
                     last=$(cat "$stamp")
-                    if [ $((now - last)) -gt 10 ]; then
+                    if [ $((now - last)) -gt 60 ]; then
                       echo "$now" > "$stamp"
-                      echo "Tailscale route change — remounting SMB shares"
-                      sleep 3
-                      systemctl restart smb-mount.service
+                      echo "Tailscale route change — waiting for tunnel to be ready"
+                      for i in $(seq 1 30); do
+                        if tailscale status 2>/dev/null | grep -q '^100\.'; then
+                          echo "Tailscale ready (attempt $i) — remounting SMB shares"
+                          systemctl restart smb-mount.service
+                          break
+                        fi
+                        sleep 3
+                      done
                     fi
                     ;;
                 esac
