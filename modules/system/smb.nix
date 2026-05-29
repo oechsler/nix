@@ -197,22 +197,43 @@ in
       services = {
 
         #---------------------------
-        # 4b. Tailscale Watcher (remount when tailscale0 appears)
+        # 4b. Tailscale Watcher (remount on route changes)
         #---------------------------
-        # tailscale0 is a TUN device created by tailscaled, invisible to NetworkManager.
-        # systemd exposes every network interface as a device unit, so we bind to
-        # sys-subsystem-net-devices-tailscale0.device and restart smb-mount when it fires.
-        # A 2-second delay lets Tailscale finish routing setup before mounting.
+        # tailscale0 exists as long as tailscaled runs — the device unit never
+        # changes state on connect/disconnect, only the routing table does.
+        # This service watches `ip monitor route` for tailscale0 changes and
+        # restarts smb-mount with a 3-second debounce so rapid route updates
+        # (Tailscale adds several routes on connect) only trigger one remount.
         smb-tailscale-remount = lib.mkIf config.features.tailscale.enable {
-          description = "Remount SMB shares when Tailscale connects";
-          bindsTo = [ "sys-subsystem-net-devices-tailscale0.device" ];
-          after    = [ "sys-subsystem-net-devices-tailscale0.device" "smb-mount.service" ];
-          wantedBy = [ "sys-subsystem-net-devices-tailscale0.device" ];
+          description = "Remount SMB shares on Tailscale route changes";
+          after    = [ "tailscaled.service" "smb-mount.service" ];
+          wantedBy = [ "multi-user.target" ];
+          path     = [ pkgs.iproute2 pkgs.systemd pkgs.coreutils ];
           serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            ExecStartPre = "${pkgs.coreutils}/bin/sleep 2";
-            ExecStart = "${pkgs.systemd}/bin/systemctl restart smb-mount.service";
+            Type = "simple";
+            Restart = "always";
+            RestartSec = 5;
+            # Process substitution avoids a subshell so the debounce stamp persists.
+            # We only trigger once per 10-second window to absorb route bursts.
+            ExecStart = pkgs.writeShellScript "smb-tailscale-watch" ''
+              stamp=$(mktemp)
+              echo 0 > "$stamp"
+              trap 'rm -f "$stamp"' EXIT
+              while read -r line; do
+                case "$line" in
+                  *tailscale0*)
+                    now=$(date +%s)
+                    last=$(cat "$stamp")
+                    if [ $((now - last)) -gt 10 ]; then
+                      echo "$now" > "$stamp"
+                      echo "Tailscale route change — remounting SMB shares"
+                      sleep 3
+                      systemctl restart smb-mount.service
+                    fi
+                    ;;
+                esac
+              done < <(ip monitor route)
+            '';
           };
         };
 
