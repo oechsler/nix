@@ -120,7 +120,7 @@ let
         for i in $(seq 1 5); do
           # Timeout after 10 seconds to prevent hanging
           if timeout 10 mount -t cifs "${path}" "${user.home}/smb/$LABEL" \
-            -o credentials=${creds},uid=$MOUNT_UID,gid=$MOUNT_GID,forceuid,forcegid,soft,file_mode=0644,dir_mode=0755; then
+            -o credentials=${creds},uid=$MOUNT_UID,gid=$MOUNT_GID,forceuid,forcegid,hard,file_mode=0644,dir_mode=0755; then
             MOUNTED=true
             break
           fi
@@ -197,96 +197,22 @@ in
       services = {
 
         #---------------------------
-        # 4b. Tailscale Watcher (remount on route changes)
+        # 4. SMB Mount Service
         #---------------------------
-        # tailscale0 exists as long as tailscaled runs — the device unit never
-        # changes state on connect/disconnect, only the routing table does.
-        # This service watches `ip monitor route` for tailscale0 changes and
-        # restarts smb-mount with a 3-second debounce so rapid route updates
-        # (Tailscale adds several routes on connect) only trigger one remount.
-        smb-tailscale-remount = lib.mkIf config.features.tailscale.enable {
-          description = "Remount SMB shares on Tailscale route changes";
-          after    = [ "tailscaled.service" "smb-mount.service" ];
-          wantedBy = [ "multi-user.target" ];
-          path     = [ pkgs.iproute2 pkgs.systemd pkgs.coreutils config.services.tailscale.package ];
-          serviceConfig = {
-            Type = "simple";
-            Restart = "always";
-            RestartSec = 5;
-            # Process substitution avoids a subshell so the debounce stamp persists.
-            # Debounce window (60s): Tailscale adds many routes in bursts; ignore
-            # subsequent changes until the window expires.
-            # After detecting a change, poll `tailscale status` until the tunnel
-            # has active peers (100.x.x.x lines) instead of using a fixed delay.
-            ExecStart = pkgs.writeShellScript "smb-tailscale-watch" ''
-              stamp=$(mktemp)
-              echo 0 > "$stamp"
-              trap 'rm -f "$stamp"' EXIT
-              while read -r line; do
-                case "$line" in
-                  Deleted*tailscale0*)
-                    now=$(date +%s)
-                    last=$(cat "$stamp")
-                    if [ $((now - last)) -gt 60 ]; then
-                      echo "$now" > "$stamp"
-                      echo "Tailscale route removed — restarting SMB mount"
-                      systemctl restart smb-mount.service
-                    fi
-                    ;;
-                  *tailscale0*)
-                    now=$(date +%s)
-                    last=$(cat "$stamp")
-                    if [ $((now - last)) -gt 60 ]; then
-                      echo "$now" > "$stamp"
-                      echo "Tailscale route added — waiting for tunnel to be ready"
-                      for i in $(seq 1 30); do
-                        if tailscale status 2>/dev/null | grep -q '^100\.'; then
-                          echo "Tailscale ready (attempt $i) — waiting 30s for routing to settle"
-                          sleep 30
-                          for attempt in $(seq 1 3); do
-                            echo "SMB remount attempt $attempt/3"
-                            if systemctl restart smb-mount.service; then
-                              echo "SMB remount successful"
-                              break
-                            fi
-                            echo "SMB remount failed, retrying in 30s"
-                            sleep 30
-                          done
-                          break
-                        fi
-                        sleep 3
-                      done
-                    fi
-                    ;;
-                esac
-              done < <(ip monitor route)
-            '';
-          };
-        };
-
-        #---------------------------
-        # 5. SMB Mount Service
-        #---------------------------
-        # Runs at boot after network is ready
-        # Mounts all configured SMB shares
+        # Runs at boot after network is ready. Uses hard mounts so the CIFS
+        # kernel client retries indefinitely on connection loss and reconnects
+        # automatically (re-resolving DNS) when the network comes back —
+        # no external watcher needed.
         smb-mount = {
           description = "Mount SMB Shares";
 
-          # Wait for network, DNS, GUI session, and SOPS secrets
-          after = [ "network-online.target" "systemd-resolved.service" "graphical.target" "sops-install-secrets.service" ]
-            ++ lib.optionals config.features.tailscale.enable [ "tailscaled.service" ];
-          wants = [ "network-online.target" "systemd-resolved.service" ]
-            ++ lib.optionals config.features.tailscale.enable [ "tailscaled.service" ];
-
-          # Start when GUI is ready (so notifications work)
+          after  = [ "network-online.target" "systemd-resolved.service" "graphical.target" "sops-install-secrets.service" ];
+          wants  = [ "network-online.target" "systemd-resolved.service" ];
           wantedBy = [ "graphical.target" ];
 
-          # Skip gracefully if SOPS key doesn't exist (fresh install without secrets)
           unitConfig.ConditionPathExists = config.sops.age.keyFile;
 
-          # Required tools for mount script
-          path = [ pkgs.cifs-utils pkgs.util-linux pkgs.sudo pkgs.libnotify pkgs.iproute2 pkgs.systemd ]
-            ++ lib.optionals config.features.tailscale.enable [ config.services.tailscale.package ];
+          path = [ pkgs.cifs-utils pkgs.util-linux pkgs.sudo pkgs.libnotify pkgs.iproute2 pkgs.systemd ];
 
           serviceConfig = {
             Type = "oneshot";
@@ -330,25 +256,5 @@ in
       secrets = smbSecrets;
     };
 
-    #---------------------------
-    # 4. Network Dispatcher (remount on NM interface changes)
-    #---------------------------
-    # WiFi switches and Ethernet unplug/replug are managed by NetworkManager,
-    # so the dispatcher script covers those events.
-    # NOTE: Tailscale's tailscale0 is NOT managed by NM — see smb-tailscale-remount above.
-    networking.networkmanager.dispatcherScripts = [{
-      source = pkgs.writeShellScript "smb-network-remount" ''
-        INTERFACE="$1"
-        EVENT="$2"
-        [ "$INTERFACE" = "lo" ] && exit 0
-        case "$EVENT" in
-          up|down)
-            echo "Network $EVENT on $INTERFACE — remounting SMB shares"
-            ${pkgs.systemd}/bin/systemctl restart smb-mount.service
-            ;;
-        esac
-      '';
-      type = "basic";
-    }];
   };
 }
