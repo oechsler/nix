@@ -234,7 +234,15 @@ in
                         if tailscale status 2>/dev/null | grep -q '^100\.'; then
                           echo "Tailscale ready (attempt $i) — waiting 30s for routing to settle"
                           sleep 30
-                          systemctl restart smb-mount.service
+                          for attempt in $(seq 1 3); do
+                            echo "SMB remount attempt $attempt/3"
+                            if systemctl restart smb-mount.service; then
+                              echo "SMB remount successful"
+                              break
+                            fi
+                            echo "SMB remount failed, retrying in 30s"
+                            sleep 30
+                          done
                           break
                         fi
                         sleep 3
