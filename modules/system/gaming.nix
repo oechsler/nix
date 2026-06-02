@@ -75,9 +75,13 @@ in
     #---------------------------
     # Mesa radeonsi provides VAAPI via VCN encoder (RDNA2+).
     # Without this, Steam falls back to software encoding → stream freezes.
+    # enable32Bit: Steam's streaming encoder is 32-bit and requires 32-bit GPU drivers.
     (lib.mkIf (cfg.gpu == "amd") {
       environment.systemPackages = [ pkgs.libva-utils ]; # vainfo: verify encoding works
-      hardware.graphics.extraPackages = [ pkgs.libvdpau-va-gl ];
+      hardware.graphics = {
+        enable32Bit = true;
+        extraPackages = [ pkgs.libvdpau-va-gl ];
+      };
       # Wayland sessions sometimes fail to auto-detect the VA-API driver
       environment.sessionVariables.LIBVA_DRIVER_NAME = "radeonsi";
     })

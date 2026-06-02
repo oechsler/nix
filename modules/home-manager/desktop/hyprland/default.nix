@@ -405,7 +405,9 @@ in
       misc = {
         force_default_wallpaper = 0;
         disable_hyprland_logo = true;
-        vrr = if lib.any (m: m.vrr) displays.monitors then 1 else 0;
+        # vrr=2: fullscreen-only VRR — global vrr=1 destabilizes compositing and
+        # breaks Steam Remote Play frame timing (variable refresh confuses the encoder).
+        vrr = if lib.any (m: m.vrr) displays.monitors then 2 else 0;
       };
 
       ecosystem = {

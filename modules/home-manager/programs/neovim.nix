@@ -15,7 +15,7 @@
 # - Navigation: nvim-tree, telescope, flash
 # - Editing: treesitter, mini.nvim, gitsigns, todo-comments, which-key
 # - LSP: blink-cmp (completion), conform (formatting)
-# - Tools: claudecode, grug-far (search/replace)
+# - Tools: grug-far (search/replace)
 #
 # Aliases:
 #   vi, vim → nvim
@@ -89,8 +89,9 @@
       conform-nvim
 
       # Tools
-      claudecode-nvim
       grug-far-nvim
+      opencode-nvim
+      claudecode-nvim
     ];
 
     #---------------------------
@@ -168,7 +169,12 @@
         --------------------------------------------------------
         -- UI
         --------------------------------------------------------
-        require("lualine").setup({ options = { theme = "catppuccin" } })
+        require("lualine").setup({
+          options = { theme = "auto" },
+          sections = {
+            lualine_z = { function() return require("opencode").statusline() end },
+          },
+        })
 
         require("bufferline").setup({
           options = {
@@ -255,10 +261,25 @@
 
         require("grug-far").setup()
 
+        --------------------------------------------------------
+        -- Claude Code
+        --------------------------------------------------------
+        require("claudecode").setup({
+          terminal = { split_side = "right", split_width_percentage = 0.33 },
+          diff_opts = { auto_close_on_accept = true, open_in_current_tab = true },
+        })
+
+        --------------------------------------------------------
+        -- opencode
+        --------------------------------------------------------
+        vim.o.autoread = true  -- required for buffer reload after edits
+        vim.g.opencode_opts = {}
+
         require("which-key").setup()
         require("which-key").add({
           { "<leader>a", group = "Claude Code", icon = "󰚩" },
           { "<leader>b", group = "Buffers", icon = "󰓩" },
+          { "<leader>o", group = "Open Code" },
           { "<leader>c", group = "Code" },
           { "<leader>f", group = "Find" },
           { "<leader>g", group = "Git" },
@@ -326,17 +347,6 @@
             java = { "google-java-format" },
           },
           format_on_save = { timeout_ms = 500, lsp_format = "fallback" },
-        })
-
-        --------------------------------------------------------
-        -- Claude Code
-        --------------------------------------------------------
-        require("claudecode").setup({
-          terminal = { split_side = "right", split_width_percentage = 0.33 },
-          diff_opts = {
-            auto_close_on_accept = true,
-            open_in_current_tab = true,
-          },
         })
 
         --------------------------------------------------------
@@ -416,14 +426,22 @@
         end, { desc = "Format" })
 
         -- Claude Code
-        vim.keymap.set("n", "<leader>ac", "<cmd>ClaudeCode<cr>", { desc = "Toggle Claude" })
-        vim.keymap.set("n", "<leader>af", "<cmd>ClaudeCodeFocus<cr>", { desc = "Focus Claude" })
-        vim.keymap.set("n", "<leader>ar", "<cmd>ClaudeCode --resume<cr>", { desc = "Resume session" })
-        vim.keymap.set("n", "<leader>aR", "<cmd>ClaudeCode --continue<cr>", { desc = "Continue session" })
-        vim.keymap.set("n", "<leader>ab", "<cmd>ClaudeCodeAdd %<cr>", { desc = "Add buffer to context" })
-        vim.keymap.set("v", "<leader>as", "<cmd>ClaudeCodeSend<cr>", { desc = "Send selection" })
+        vim.keymap.set("n", "<leader>at", "<cmd>ClaudeCode<cr>",           { desc = "Toggle" })
+        vim.keymap.set("n", "<leader>af", "<cmd>ClaudeCodeFocus<cr>",      { desc = "Focus" })
+        vim.keymap.set("n", "<leader>an", "<cmd>ClaudeCode --resume<cr>",  { desc = "New/resume session" })
+        vim.keymap.set("n", "<leader>ab", "<cmd>ClaudeCodeAdd %<cr>",      { desc = "Add buffer" })
+        vim.keymap.set("v", "<leader>as", "<cmd>ClaudeCodeSend<cr>",       { desc = "Send selection" })
         vim.keymap.set("n", "<leader>aa", "<cmd>ClaudeCodeDiffAccept<cr>", { desc = "Accept diff" })
         vim.keymap.set("n", "<leader>ad", "<cmd>ClaudeCodeDiffReject<cr>", { desc = "Reject diff" })
+
+        -- Open Code
+        vim.keymap.set({ "n", "t" }, "<leader>ot", function() require("opencode").toggle() end,                                        { desc = "Toggle" })
+        vim.keymap.set({ "n", "x" }, "<leader>os", function() require("opencode").ask("@this: ") end,                                  { desc = "Ask @this" })
+        vim.keymap.set({ "n", "x" }, "<leader>of", function() require("opencode").prompt("Fix @diagnostics") end,                      { desc = "Fix diagnostics" })
+        vim.keymap.set({ "n", "x" }, "<leader>or", function() require("opencode").prompt("Review @this for correctness") end,          { desc = "Review" })
+        vim.keymap.set({ "n", "x" }, "<leader>op", function() require("opencode").select() end,                                        { desc = "Select prompt" })
+        vim.keymap.set("n",          "<leader>on", function() require("opencode").command("session.new") end,                           { desc = "New session" })
+        vim.keymap.set("n",          "<leader>ou", function() require("opencode").command("session.undo") end,                          { desc = "Undo last" })
 
         -- LSP (attached per buffer)
         vim.api.nvim_create_autocmd("LspAttach", {
