@@ -428,7 +428,8 @@
         -- Claude Code
         vim.keymap.set("n", "<leader>at", "<cmd>ClaudeCode<cr>",           { desc = "Toggle" })
         vim.keymap.set("n", "<leader>af", "<cmd>ClaudeCodeFocus<cr>",      { desc = "Focus" })
-        vim.keymap.set("n", "<leader>an", "<cmd>ClaudeCode --resume<cr>",  { desc = "New/resume session" })
+        vim.keymap.set("n", "<leader>an", "<cmd>ClaudeCode<cr>",           { desc = "New session" })
+        vim.keymap.set("n", "<leader>ar", "<cmd>ClaudeCode --resume<cr>",  { desc = "Resume session" })
         vim.keymap.set("n", "<leader>ab", "<cmd>ClaudeCodeAdd %<cr>",      { desc = "Add buffer" })
         vim.keymap.set("v", "<leader>as", "<cmd>ClaudeCodeSend<cr>",       { desc = "Send selection" })
         vim.keymap.set("n", "<leader>aa", "<cmd>ClaudeCodeDiffAccept<cr>", { desc = "Accept diff" })
