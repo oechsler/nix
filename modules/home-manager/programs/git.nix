@@ -71,7 +71,8 @@
       ".DS_Store"
       "AGENTS.md"
       "CLAUDE.md"
-      ".github/copilot-instructions.md"
+      "VAULT.md"
+      ".opencode/opencode.json"
     ];
   };
 
