@@ -69,6 +69,7 @@
     ignores = [
       "*~"
       ".DS_Store"
+      "AGENTS.md"
       "CLAUDE.md"
       ".github/copilot-instructions.md"
     ];
