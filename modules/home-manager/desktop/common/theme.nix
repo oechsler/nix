@@ -101,9 +101,13 @@ in
 
     catppuccin = {
       enable = true;
+      # autoEnable must match enable to suppress catppuccin/nix migration warning
+      autoEnable = true;
       flavor = lib.mkDefault flavor;
       accent = lib.mkDefault accent;
     };
+
+    home.enableNixpkgsReleaseCheck = false;
 
     home = {
       # Clean up stale .bak files before home-manager checks for conflicts

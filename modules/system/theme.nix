@@ -153,6 +153,8 @@
     {
       catppuccin = {
         enable = true;
+        # autoEnable must match enable to suppress catppuccin/nix migration warning
+        autoEnable = true;
         inherit (config.theme.catppuccin) flavor accent;
       };
     }

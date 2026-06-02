@@ -91,8 +91,8 @@
       # Pinned: nix flake update must not silently bump the kernel version.
       # Bump this together with nixpkgs-kernel when upgrading the kernel.
       # See: github.com/xddxdd/nix-cachyos-kernel (version.json tracks kernel versions)
-      # Current: rev de4bf344 (2026-05-09), kernel 7.0.5.
-      url = "github:xddxdd/nix-cachyos-kernel/de4bf344b26f355b5d92071503f7a8fd18bc7f6b";
+      # Current: rev b240fa59 (2026-06-01), kernel 7.0.10.
+      url = "github:xddxdd/nix-cachyos-kernel/b240fa5983f987f516b150662aedfbf6d7e3b7c8";
       inputs.nixpkgs.follows = "nixpkgs-kernel";
     };
 

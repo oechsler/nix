@@ -11,16 +11,68 @@
 
 {
   xdg = {
-    # Hide CUPS from application launchers
-    desktopEntries.cups = {
-      name = "CUPS";
-      noDisplay = true;
+    desktopEntries = {
+      # Hide CUPS from application launchers
+      cups = {
+        name = "CUPS";
+        noDisplay = true;
+      };
+
+      # Neovim wrapper for GUI file managers (opens in Kitty)
+      nvim = {
+        name = "Neovim";
+        genericName = "Text Editor";
+        exec = "kitty nvim %F";
+        icon = "nvim";
+        terminal = false;
+        categories = [ "Utility" "TextEditor" ];
+        mimeType = [
+          "text/plain"
+          "text/markdown"
+          "text/x-script.python"
+          "text/x-shellscript"
+          "text/x-nix"
+          "text/x-lua"
+          "text/x-c"
+          "text/x-c++"
+          "text/x-go"
+          "text/x-rust"
+          "text/x-java"
+          "text/x-javascript"
+          "text/x-typescript"
+          "text/css"
+          "text/html"
+          "text/xml"
+          "application/json"
+          "application/x-yaml"
+          "application/toml"
+        ];
+      };
     };
 
     mimeApps = {
       enable = true;
       defaultApplications = {
-        "application/pdf" = [ "firefox.desktop" ];
+        "application/pdf"            = [ "firefox.desktop" ];
+        "text/plain"                 = [ "nvim.desktop" ];
+        "text/markdown"              = [ "nvim.desktop" ];
+        "text/x-script.python"       = [ "nvim.desktop" ];
+        "text/x-shellscript"         = [ "nvim.desktop" ];
+        "text/x-nix"                 = [ "nvim.desktop" ];
+        "text/x-lua"                 = [ "nvim.desktop" ];
+        "text/x-c"                   = [ "nvim.desktop" ];
+        "text/x-c++"                 = [ "nvim.desktop" ];
+        "text/x-go"                  = [ "nvim.desktop" ];
+        "text/x-rust"                = [ "nvim.desktop" ];
+        "text/x-java"                = [ "nvim.desktop" ];
+        "text/x-javascript"          = [ "nvim.desktop" ];
+        "text/x-typescript"          = [ "nvim.desktop" ];
+        "text/css"                   = [ "nvim.desktop" ];
+        "text/html"                  = [ "nvim.desktop" ];
+        "text/xml"                   = [ "nvim.desktop" ];
+        "application/json"           = [ "nvim.desktop" ];
+        "application/x-yaml"         = [ "nvim.desktop" ];
+        "application/toml"           = [ "nvim.desktop" ];
       };
     };
 
