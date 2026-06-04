@@ -81,7 +81,7 @@
           # Fallback: OpenAI (ChatGPT Plus), Anthropic (Claude Code Auth)
           enabled_providers = [ "mistral" "opencode-go" "openai" "anthropic" ];
 
-          model = "mistral/codestral-latest";
+          model = "mistral/mistral-medium-latest";
           small_model = "mistral/mistral-small-latest";
 
           # Other models switchable via /models:
