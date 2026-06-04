@@ -76,16 +76,18 @@
         enable = true;
 
         settings = {
-          # Nur Go (Sparpreis) + OpenAI/Anthropic direkt (Notnagel)
-          enabled_providers = [ "opencode-go" "openai" "anthropic" ];
+          # Primary: Mistral (Codestral for code, Mistral Small for light tasks)
+          # Budget: OpenCode Go (DeepSeek)
+          # Fallback: OpenAI (ChatGPT Plus), Anthropic (Claude Code Auth)
+          enabled_providers = [ "mistral" "opencode-go" "openai" "anthropic" ];
 
-          model = "opencode-go/deepseek-v4-pro";
-          small_model = "opencode-go/deepseek-v4-flash";
+          model = "mistral/codestral-latest";
+          small_model = "mistral/mistral-small-latest";
 
-          # Notnagel (per /models umschaltbar):
-          #   openai/gpt-5.3-codex      (ChatGPT Plus/Pro)
-          #   anthropic/claude-haiku-4-6  (Claude Code Auth)
-          #   anthropic/claude-sonnet-4-6 (Claude Code Auth)
+          # Other models switchable via /models:
+          #   opencode-go/deepseek-v4-pro
+          #   openai/gpt-5.3-codex
+          #   anthropic/claude-sonnet-4-6
 
           plugin = [
             "opencode-claude-auth"
@@ -96,6 +98,7 @@
             opencode-go.options.timeout = 600000;
             openai.options.timeout = 600000;
             anthropic.options.timeout = 600000;
+            mistral.options.timeout = 600000;
           };
         };
       };
