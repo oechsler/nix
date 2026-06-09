@@ -242,21 +242,19 @@ in
               exit 0
             fi
 
-            # Only physical Ethernet should trigger WiFi disconnects.
-            if [[ ! -d "/sys/class/net/$INTERFACE/device" || -d "/sys/class/net/$INTERFACE/wireless" ]]; then
+            # Only physical network devices should trigger WiFi enforcement.
+            if [[ ! -d "/sys/class/net/$INTERFACE/device" ]]; then
               exit 0
             fi
 
-            if [ "$ACTION" = "up" ]; then
-              logger "NetworkManager dispatcher: $INTERFACE is up, waiting for Docker interfaces to settle"
+            if [[ "$ACTION" = "up" || "$ACTION" = "connectivity-change" || "$ACTION" = "dhcp4-change" ]]; then
+              ACTIVE_ETHERNET=$(${pkgs.networkmanager}/bin/nmcli -t -f TYPE,DEVICE connection show --active | grep '^802-3-ethernet:' | cut -d: -f2)
 
-              for i in {1..10}; do
-                if ${pkgs.iproute2}/bin/ip link show docker0 >/dev/null 2>&1; then
-                  sleep 1
-                  break
-                fi
-                sleep 0.5
-              done
+              if [ -z "$ACTIVE_ETHERNET" ]; then
+                exit 0
+              fi
+
+              logger "NetworkManager dispatcher: active Ethernet found ($ACTIVE_ETHERNET), disconnecting WiFi"
 
               # Get all active WiFi connections (type is "802-11-wireless")
               WIFI_CONNECTIONS=$(${pkgs.networkmanager}/bin/nmcli -t -f NAME,TYPE,DEVICE connection show --active | grep ':802-11-wireless:' | cut -d: -f1)
