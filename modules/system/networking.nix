@@ -161,6 +161,12 @@ in
         networkmanager = {
           enable = true;
           wifi.backend = "iwd";
+          unmanaged = [
+            "interface-name:docker*"
+            "interface-name:br-*"
+            "interface-name:veth*"
+            "interface-name:tailscale*"
+          ];
         };
         wireless.iwd.enable = true;
       };
@@ -232,14 +238,25 @@ in
             INTERFACE=$1
             ACTION=$2
 
-            # Only act on Ethernet interfaces
-            if [[ "$INTERFACE" != enp* && "$INTERFACE" != eth* && "$INTERFACE" != en* ]]; then
+            if [[ "$INTERFACE" == docker* || "$INTERFACE" == br-* || "$INTERFACE" == veth* || "$INTERFACE" == virbr* || "$INTERFACE" == wg* || "$INTERFACE" == tailscale* ]]; then
               exit 0
             fi
 
-            # When Ethernet comes up, disconnect all active WiFi connections
+            # Only physical Ethernet should trigger WiFi disconnects.
+            if [[ ! -d "/sys/class/net/$INTERFACE/device" || -d "/sys/class/net/$INTERFACE/wireless" ]]; then
+              exit 0
+            fi
+
             if [ "$ACTION" = "up" ]; then
-              logger "NetworkManager dispatcher: Ethernet $INTERFACE is up, disconnecting WiFi"
+              logger "NetworkManager dispatcher: $INTERFACE is up, waiting for Docker interfaces to settle"
+
+              for i in {1..10}; do
+                if ${pkgs.iproute2}/bin/ip link show docker0 >/dev/null 2>&1; then
+                  sleep 1
+                  break
+                fi
+                sleep 0.5
+              done
 
               # Get all active WiFi connections (type is "802-11-wireless")
               WIFI_CONNECTIONS=$(${pkgs.networkmanager}/bin/nmcli -t -f NAME,TYPE,DEVICE connection show --active | grep ':802-11-wireless:' | cut -d: -f1)

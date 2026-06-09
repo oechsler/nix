@@ -46,6 +46,24 @@ let
     pkill waybar
     uwsm-app -- waybar &
   '';
+
+  # Script to detect physical Ethernet interface (ignores virtual interfaces like docker0, br-*, etc.)
+  getEthernetInterface = pkgs.writeShellScriptBin "get-ethernet-interface" ''
+    for iface in /sys/class/net/*; do
+      iface_name=$(basename "$iface")
+
+      # Skip virtual interfaces (Docker, bridges, loopback, etc.)
+      if [[ "$iface_name" != docker* && "$iface_name" != br-* && "$iface_name" != lo* && "$iface_name" != veth* && "$iface_name" != wg* ]]; then
+        # Check if it's a physical Ethernet interface (not WiFi)
+        if [[ -d "$iface/device" && ! -d "$iface/wireless" ]]; then
+          echo "$iface_name"
+          exit 0
+        fi
+      fi
+    done
+    echo "none"  # No Ethernet interface found
+  '';
+
 in
 {
   #===========================
@@ -57,6 +75,13 @@ in
     default = reload;
     readOnly = true;
     description = "Script to reload waybar (pkill + restart)";
+  };
+
+  options.waybar.getEthernetInterface = lib.mkOption {
+    type = lib.types.path;
+    default = getEthernetInterface;
+    readOnly = true;
+    description = "Script to detect the physical Ethernet interface name";
   };
 
   #===========================
@@ -118,9 +143,10 @@ in
       "network" = {
         format-wifi = "{icon}";
         format-ethernet = "<span size='large'>󰈀</span>";
+        format-linked = "<span size='large'>󰈀</span>";
         format-disconnected = "<span size='large'>󰤭</span>";
         format-icons = [ "<span size='large'>󰤯</span>" "<span size='large'>󰤟</span>" "<span size='large'>󰤢</span>" "<span size='large'>󰤥</span>" "<span size='large'>󰤨</span>" ];
-        tooltip-format = "{ifname} via {gwaddr}";
+        tooltip-format = "{gwaddr}";
         tooltip-format-wifi = "{essid} ({signalStrength}%)";
         on-click = "${config.terminal.exec} impala -e impala";
       };
