@@ -65,6 +65,8 @@ in
           "fs.inotify.max_user_instances" = 512;
         };
       };
+
+      systemd.settings.Manager.DefaultMemoryInotifyMax = "524288";
     }
 
     (lib.mkIf config.features.desktop.enable {
