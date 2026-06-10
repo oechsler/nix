@@ -90,12 +90,11 @@ in
       if ${pkgs.procps}/bin/pgrep -x "awww-daemon" > /dev/null 2>&1; then
         export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
-        # Detect the actual Wayland socket instead of hardcoding wayland-1
-        WAYLAND_SOCKET=$(${pkgs.coreutils}/bin/ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | head -1)
+        WAYLAND_SOCKET=$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | grep -v '\.lock$' | grep -v '\-awww-daemon\.sock$' | head -1)
         if [ -n "$WAYLAND_SOCKET" ]; then
           export WAYLAND_DISPLAY=$(${pkgs.coreutils}/bin/basename "$WAYLAND_SOCKET")
         else
-          export WAYLAND_DISPLAY="''${WAYLAND_DISPLAY:-wayland-1}"
+          export WAYLAND_DISPLAY="wayland-1"
         fi
 
         run ${setWallpaperScript}
