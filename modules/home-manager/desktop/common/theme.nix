@@ -132,9 +132,14 @@ in
 
     home = {
       # Clean up stale .bak files before home-manager checks for conflicts
+      # (copied-from-Nix files are read-only; chmod first)
       activation.cleanupBackups = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
         rm -f ~/.gtkrc-2.0.bak
-        rm -rf ~/.local/share/themes/*.bak 2>/dev/null || true
+        for f in ~/.local/share/themes/*.bak; do
+          [ -e "$f" ] || continue
+          chmod -R u+w "$f" 2>/dev/null || true
+          rm -rf "$f"
+        done
       '';
 
       pointerCursor = {
