@@ -22,9 +22,9 @@ sops/           # Encrypted secrets
 - **Configuration reference:** [docs/CONFIG.md](docs/CONFIG.md)
 - **Security overview:** [docs/SECURITY.md](docs/SECURITY.md)
 
-## Features
+## Host Overrides
 
-All features are toggleable per host:
+Common per-host overrides:
 
 ```nix
 features.server = true;               # Minimal server (no desktop, optimized kernel)

@@ -2,7 +2,7 @@
 
 Encrypted secrets for NixOS configuration using [SOPS](https://github.com/getsops/sops) with [age](https://github.com/FiloSottile/age) encryption.
 
-## How it Works
+## Key Flow
 
 ```
 SSH Key (id_ed25519)
@@ -62,9 +62,9 @@ git commit -m "Update secrets"
 
 ## Security Notes
 
-- **Public key** (`age1...` in `.sops.yaml`) - safe to commit
-- **Private key** (`~/.config/sops/age/keys.txt`) - never commit!
-- **Decrypted file** (`sops.decrypted.yaml`) - gitignored, delete after use
+- Public key (`age1...` in `.sops.yaml`) is safe to commit.
+- Private key (`~/.config/sops/age/keys.txt`) must never be committed.
+- Decrypted file (`sops.decrypted.yaml`) is gitignored; delete it after use.
 
 ## Recovery
 

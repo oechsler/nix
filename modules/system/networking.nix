@@ -8,6 +8,7 @@
 # 5. Tailscale VPN (optional)
 #
 # Configuration options:
+#   features.networking.ipv6PrivacyExtensions.enable = true; # IPv6 temporary addresses (default: !server)
 #   features.wifi.enable = true;                        # Enable WiFi (default: true)
 #   features.wifi.networks = [ "home" ];                # WPA2-PSK networks (default: ["home"])
 #   features.wifi.enterpriseNetworks = [ "uni" ];       # WPA2 Enterprise networks (default: [])
@@ -27,8 +28,10 @@
 }:
 
 let
+  networkCfg = config.features.networking;
   cfg = config.features.wifi;
   tailscaleCfg = config.features.tailscale;
+  ip6Privacy = if networkCfg.ipv6PrivacyExtensions.enable then 2 else 0;
 
   # WiFi connection profiles with credentials from SOPS
   wifiProfiles = lib.listToAttrs (
@@ -55,6 +58,7 @@ let
         };
         ipv6 = {
           method = "auto";
+          ip6-privacy = ip6Privacy;
           route-metric = 600;
         };
       };
@@ -101,6 +105,7 @@ let
         };
         ipv6 = {
           method = "auto";
+          ip6-privacy = ip6Privacy;
           route-metric = 600;
         };
       };
@@ -186,6 +191,11 @@ in
   #===========================
 
   options.features = {
+    networking.ipv6PrivacyExtensions.enable =
+      (lib.mkEnableOption "IPv6 privacy extensions for NetworkManager profiles")
+      // {
+        default = !config.features.server;
+      };
     wifi = {
       enable = (lib.mkEnableOption "WiFi with managed network profiles") // {
         default = true;
@@ -229,6 +239,23 @@ in
             "interface-name:veth*"
             "interface-name:tailscale*"
           ];
+          ensureProfiles.profiles.ethernet-default = {
+            connection = {
+              id = "Ethernet";
+              type = "ethernet";
+              autoconnect = true;
+              autoconnect-priority = 999;
+            };
+            ipv4 = {
+              method = "auto";
+              route-metric = 100; # Higher priority (lower number = higher priority)
+            };
+            ipv6 = {
+              method = "auto";
+              ip6-privacy = ip6Privacy;
+              route-metric = 100;
+            };
+          };
         };
         wireless.iwd = {
           enable = true;
@@ -243,6 +270,7 @@ in
         settings.Resolve = {
           DNSSEC = "allow-downgrade";
           Domains = [ "~." ];
+          LLMNR = false;
           MulticastDNS = false;
         };
       };
@@ -270,24 +298,6 @@ in
     # Strategy: Ethernet carrier controls WiFi autoconnect.
     # This avoids dual-interface routing complexity without reacting to virtual Docker/Tailscale links.
     (lib.mkIf (config.features.desktop.enable && cfg.enable && cfg.disableOnEthernet.enable) {
-
-      # Ethernet connection profile with basic priority settings
-      networking.networkmanager.ensureProfiles.profiles.ethernet-default = {
-        connection = {
-          id = "Ethernet";
-          type = "ethernet";
-          autoconnect = true;
-          autoconnect-priority = 999;
-        };
-        ipv4 = {
-          method = "auto";
-          route-metric = 100; # Higher priority (lower number = higher priority)
-        };
-        ipv6 = {
-          method = "auto";
-          route-metric = 100;
-        };
-      };
 
       # NetworkManager dispatcher script: disable WiFi autoconnect while Ethernet has carrier.
       # Dispatcher scripts run on interface state changes (up, down, connectivity-change, etc.)
