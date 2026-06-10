@@ -144,6 +144,34 @@ in
         x11.enable = true;
       };
 
+      # Make GTK theme available to Flatpak apps
+      # Flatpak sandbox can't follow symlinks to the Nix store.
+      # Replace theme dir symlink AND gtk-4.0 CSS symlinks with real files.
+      activation.copyGtkThemeForFlatpak = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        THEME_DIR="$HOME/.local/share/themes/${themeName}"
+        SOURCE_DIR="${catppuccinGtk}/share/themes/${themeName}"
+        GTK4_DIR="$HOME/.config/gtk-4.0"
+
+        if [ -d "$SOURCE_DIR" ]; then
+          [ -e "$THEME_DIR" ] && chmod -R u+w "$THEME_DIR" 2>/dev/null || true
+          rm -rf "$THEME_DIR"
+          mkdir -p "$(dirname "$THEME_DIR")"
+          cp -rL "$SOURCE_DIR" "$THEME_DIR"
+        fi
+
+        # Replace gtk-4.0 CSS symlinks with real files (flatpak can't follow Nix store symlinks)
+        for css in gtk.css gtk-dark.css; do
+          CSS_FILE="$GTK4_DIR/$css"
+          if [ -L "$CSS_FILE" ]; then
+            CONTENT=$(cat "$CSS_FILE" 2>/dev/null)
+            if [ -n "$CONTENT" ]; then
+              rm -f "$CSS_FILE"
+              printf '%s\n' "$CONTENT" > "$CSS_FILE"
+            fi
+          fi
+        done
+      '';
+
     };
 
     gtk = {

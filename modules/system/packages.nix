@@ -46,17 +46,47 @@
         # Pre-installed Flatpaks
         packages = [
           "com.github.tchx84.Flatseal"        # Flatpak permission manager
-          "io.github.giantpinkrobots.flatsweep"  # Flatpak cleanup tool
+          "io.github.flattool.Warehouse"       # Flatpak manager with cleanup (replaces flatsweep)
         ];
       };
+
+      # Theme integration: flatpak apps are sandboxed and don't see the host's
+      # theme files or environment variables. Set env vars and grant filesystem
+      # access globally for all flatpak apps via flatpak override --system.
+      # Qt overrides only on non-KDE — KDE Plasma manages Qt theming natively.
+      system.activationScripts.flatpakThemeOverrides = ''
+        THEME="catppuccin-${config.theme.catppuccin.flavor}-${config.theme.catppuccin.accent}-standard"
+        FLATPAK="${pkgs.flatpak}/bin/flatpak"
+
+        if [ -x "$FLATPAK" ]; then
+          $FLATPAK override --system --env=GTK_THEME="$THEME"
+          $FLATPAK override --system --filesystem=xdg-config/gtk-4.0:ro
+          $FLATPAK override --system --filesystem=xdg-data/themes:ro
+          $FLATPAK override --system --filesystem=xdg-config/qt5ct:ro
+          $FLATPAK override --system --filesystem=xdg-config/qt6ct:ro
+          $FLATPAK override --system --filesystem=xdg-config/Kvantum:ro
+        fi
+      ''
+      + lib.optionalString (config.features.desktop.wm != "kde") ''
+        if [ -x "$FLATPAK" ]; then
+          # Kvantum style plugin must be installed in the sandbox for QT_STYLE_OVERRIDE to work.
+          # Auto-detect KDE runtime branch and install the matching extension version.
+          KDE_BRANCH=$($FLATPAK list --system --runtime 2>/dev/null \
+            | grep 'org\.kde\.Platform' | head -1 \
+            | grep -oP '\b\d+\.\d+(-\d+\.\d+)?\b' | head -1)
+          if [ -n "$KDE_BRANCH" ]; then
+            $FLATPAK install --system --noninteractive flathub "org.kde.KStyle.Kvantum//$KDE_BRANCH" 2>/dev/null || true
+          fi
+          $FLATPAK override --system --env=QT_STYLE_OVERRIDE=kvantum
+        fi
+      '';
 
       # Make Flatpak apps visible in application launchers
       environment.sessionVariables.XDG_DATA_DIRS = [ "/var/lib/flatpak/exports/share" ];
 
-      # Flatpak GUI managers (KDE uses Discover, others use GNOME Software/Warehouse)
+      # Flatpak GUI managers (KDE uses Discover, others use GNOME Software)
       environment.systemPackages = lib.mkIf (config.features.desktop.wm != "kde") (with pkgs; [
-        gnome-software  # GTK Flatpak manager
-        warehouse       # Modern GTK4 Flatpak manager
+        gnome-software
       ]);
     })
 
