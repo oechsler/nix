@@ -222,8 +222,9 @@
       --------------------------------------------------------
       -- Navigation
       --------------------------------------------------------
-      require("nvim-tree").setup({
-        filesystem_watchers = { enable = false },
+        require("nvim-tree").setup({
+          -- Disabled: btrfs + libuv causes ENOSPC on fs_event watchers
+          filesystem_watchers = { enable = false },
         sync_root_with_cwd = true,
         reload_on_bufenter = true,
         view = { adaptive_size = false },
