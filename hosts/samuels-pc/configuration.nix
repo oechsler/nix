@@ -36,6 +36,7 @@
   # Host-specific Overrides
   #===========================
   theme.catppuccin.accent = "lavender";
+  theme.wallpaper = "Wasserfall_6k_7.jpg";
 
   # Ensure samuel owns /mnt/games (mounted by disko)
   systemd.tmpfiles.rules = [
