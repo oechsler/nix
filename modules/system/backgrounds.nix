@@ -121,6 +121,10 @@ let
 
     # Set world-readable permissions (needed for display manager)
     chmod 644 "$CURRENT" "$BLURRED"
+
+    # Signal user-level awww to reload (see awww.nix path unit)
+    touch "/var/lib/backgrounds/.reload"
+    chmod 666 "/var/lib/backgrounds/.reload"
   '';
 in
 {

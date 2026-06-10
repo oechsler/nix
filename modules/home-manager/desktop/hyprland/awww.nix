@@ -100,5 +100,23 @@ in
         run ${setWallpaperScript}
       fi
     '';
+
+    # Path unit: reload wallpaper whenever the extraction service signals a change
+    systemd.user.services.awww-reload = {
+      Unit.Description = "Reload wallpaper on background change";
+      Service = {
+        Type = "oneshot";
+        ExecStart = setWallpaperScript;
+        Environment = [
+          "XDG_RUNTIME_DIR=%t"
+          "WAYLAND_DISPLAY=wayland-1"
+        ];
+      };
+    };
+    systemd.user.paths.awww-reload = {
+      Unit.Description = "Watch for wallpaper changes";
+      Install.WantedBy = [ "graphical-session.target" ];
+      Path.PathChanged = [ "/var/lib/backgrounds/.reload" ];
+    };
   };
 }
