@@ -59,6 +59,11 @@ in
     # Desktop Docker is used for local development. Keep host IPv6 enabled, but
     # avoid IPv6 link-local route churn on Docker bridge/veth interfaces.
     (lib.mkIf config.features.desktop.enable {
+      virtualisation.docker.daemon.settings = {
+        ipv6 = false;
+        ip6tables = false;
+      };
+
       services.udev.extraRules = ''
         ACTION=="add", SUBSYSTEM=="net", KERNEL=="docker0|br-*|veth*", RUN+="${disableDockerInterfaceIPv6} %k"
       '';
