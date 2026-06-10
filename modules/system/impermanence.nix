@@ -45,7 +45,7 @@ let
 
   # Convert device path to systemd device unit name
   # Example: /dev/mapper/cryptroot → dev-mapper-cryptroot.device
-  systemdDevice = lib.replaceStrings ["/"] ["-"] (lib.removePrefix "/" rootDevice) + ".device";
+  systemdDevice = lib.replaceStrings [ "/" ] [ "-" ] (lib.removePrefix "/" rootDevice) + ".device";
 in
 {
   #===========================
@@ -62,50 +62,47 @@ in
     #
     # Directories are added conditionally based on enabled features
     environment.persistence."/persist" = {
-      hideMounts = true;  # Don't show bind mounts in df/mount output
+      hideMounts = true; # Don't show bind mounts in df/mount output
 
       directories = [
         # Network (conditional)
-        "/var/lib/NetworkManager"   # Network connections (always, needed for ethernet too)
+        "/var/lib/NetworkManager" # Network connections (always, needed for ethernet too)
 
         # System State (always)
-        "/var/lib/nixos"              # NixOS state (users, groups, etc.)
-        "/var/lib/sops"               # SOPS secrets
-        "/var/lib/systemd/rfkill"     # Radio kill switch state
-        "/var/lib/systemd/timers"     # Systemd timer state
-        "/var/lib/systemd/coredump"   # Core dumps
+        "/var/lib/nixos" # NixOS state (users, groups, etc.)
+        "/var/lib/sops" # SOPS secrets
+        "/var/lib/systemd/rfkill" # Radio kill switch state
+        "/var/lib/systemd/timers" # Systemd timer state
+        "/var/lib/systemd/coredump" # Core dumps
       ]
       ++ lib.optionals config.features.wifi.enable [
-        "/var/lib/iwd"                # WiFi credentials
+        "/var/lib/iwd" # WiFi credentials
       ]
       ++ lib.optionals config.features.bluetooth.enable [
-        "/var/lib/bluetooth"          # Bluetooth pairings
+        "/var/lib/bluetooth" # Bluetooth pairings
       ]
       ++ lib.optionals config.features.tailscale.enable [
-        "/var/lib/tailscale"          # Tailscale VPN identity
+        "/var/lib/tailscale" # Tailscale VPN identity
       ]
       ++ lib.optionals config.features.virtualisation.enable [
-        "/var/lib/docker"             # Docker containers/images
-      ]
-      ++ lib.optionals config.features.virtualisation.waydroid.enable [
-        "/var/lib/waydroid"           # Waydroid Android images
+        "/var/lib/docker" # Docker containers/images
       ]
       ++ lib.optionals config.features.flatpak.enable [
-        "/var/lib/flatpak"            # Flatpak apps
+        "/var/lib/flatpak" # Flatpak apps
       ]
       ++ lib.optionals config.features.desktop.enable [
-        "/var/lib/sddm"               # SDDM state
+        "/var/lib/sddm" # SDDM state
       ]
       ++ lib.optionals config.programs.coolercontrol.enable [
-        "/etc/coolercontrol"          # CoolerControl config & password
+        "/etc/coolercontrol" # CoolerControl config & password
       ]
       ++ lib.optionals config.features.secureBoot.enable [
-        "/var/lib/sbctl"              # Secure Boot keys
+        "/var/lib/sbctl" # Secure Boot keys
       ]
       ++ config.features.impermanence.extraPaths;
 
       files = [
-        "/etc/machine-id"  # Unique machine identifier
+        "/etc/machine-id" # Unique machine identifier
       ];
       # Note: auth files (users.oath, u2f_mappings) are NOT listed here.
       # pam_oath/pam_u2f update via temp + rename(), which fails across
@@ -156,8 +153,8 @@ in
     boot.initrd.systemd.services.rollback = {
       description = "Rollback btrfs root to empty snapshot";
       wantedBy = [ "initrd.target" ];
-      after = lib.mkIf config.features.encryption.enable [ systemdDevice ];  # Wait for LUKS unlock if encrypted
-      before = [ "sysroot.mount" ];  # Must complete before mounting root
+      after = lib.mkIf config.features.encryption.enable [ systemdDevice ]; # Wait for LUKS unlock if encrypted
+      before = [ "sysroot.mount" ]; # Must complete before mounting root
       unitConfig.DefaultDependencies = "no";
       serviceConfig.Type = "oneshot";
       script = ''

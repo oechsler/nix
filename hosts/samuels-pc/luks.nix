@@ -5,8 +5,9 @@
 # - cryptgames: Games partition (Steam library)
 #
 # Unlock method:
-#   features.auth.yubikey.luks.enable = true;  → fido2-device=auto (YubiKey FIDO2 touch at boot)
-#   features.auth.yubikey.luks.enable = false; → tpm2-device=auto  (TPM2 auto-unlock, default)
+#   features.encryption.unlockMethod = "yubikey"  → fido2-device=auto (YubiKey FIDO2 touch at boot)
+#   features.encryption.unlockMethod = "tpm2"     → tpm2-device=auto  (TPM2 auto-unlock, default)
+#   features.encryption.unlockMethod = "password" → prompt for LUKS passphrase
 #
 # Setup:
 #   YubiKey: yubikey-luks-init
@@ -20,20 +21,23 @@
 { config, ... }:
 
 let
-  unlockOpt = if config.features.auth.yubikey.luks.enable
-    then "fido2-device=auto"
-    else "tpm2-device=auto";
-in {
+  unlockOpts = {
+    yubikey = [ "fido2-device=auto" ];
+    tpm2 = [ "tpm2-device=auto" ];
+    password = [ ];
+  };
+in
+{
   boot.initrd.luks.devices = {
     "cryptroot" = {
       device = "/dev/disk/by-partlabel/disk-main-root";
       allowDiscards = true;
-      crypttabExtraOpts = [ unlockOpt ];
+      crypttabExtraOpts = unlockOpts.${config.features.encryption.unlockMethod};
     };
     "cryptgames" = {
       device = "/dev/disk/by-partlabel/disk-games-games";
       allowDiscards = true;
-      crypttabExtraOpts = [ unlockOpt ];
+      crypttabExtraOpts = unlockOpts.${config.features.encryption.unlockMethod};
     };
   };
 

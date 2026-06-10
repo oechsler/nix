@@ -1,46 +1,58 @@
-# 2FA Authentication (TOTP + YubiKey)
+# Authentication & 2FA Configuration (PAM, LUKS, YubiKey, TOTP)
 #
-# Configuration:
-#   features.auth.totp.enable = true;            # TOTP two-factor authentication (default: true)
-#   features.auth.yubikey.enable = false;         # YubiKey authentication (FIDO2, touch only)
-#   features.auth.yubikey.pin = false;           # Require FIDO2 PIN in addition to touch
-#   features.auth.yubikey.luks.enable = <bool>;  # Use YubiKey FIDO2 to unlock LUKS at boot
-#                                                 # Default: on when yubikey.enable = true
-#                                                 # See also: hosts/*/luks.nix, tpm.nix
+# This module configures all authentication layers: LUKS boot unlock, PAM services
+# (login, sddm, sudo, sshd, etc.), and optionally YubiKey/TOTP.
 #
-# Auth flow (login/sddm/polkit/hyprlock):
-#   All cases:            Password only (pam_gnome_keyring needs password; LUKS+sudo+SSH cover 2FA)
+# --- FLOWS ---
 #
-# Auth flow (sudo):
-#   TOTP only:            OTP (3 attempts) → Password
-#   YubiKey only:         YubiKey → Password
-#   Both:                 YubiKey → OTP (3 attempts) → Password
+# The primary control is features.encryption.unlockMethod (see features.nix).
+# YubiKey PAM/Tools are auto-enabled when unlockMethod = "yubikey".
+# TOTP is always on by default and acts as fallback when YubiKey is also active.
 #
-# Auth flow (polkit):
-#   Password only (TOTP/YubiKey excluded — password needed for keyring auto-unlock)
-#   Note: pam_gnome_keyring captures the SDDM login password to unlock the keyring.
-#   If polkit used YubiKey, apps would prompt for the keyring separately.
+#   unlockMethod = "yubikey";
+#   → YubiKey FIDO2 LUKS unlock. YubiKey on sudo. TOTP fallback on sudo.
+#     SDDM: password only (pam_gnome_keyring needs the login password).
+#     SSH: YubiKey only (no password), publickey required.
 #
-# Auth flow (SSH):
-#   TOTP only:            Public-Key + OTP
-#   YubiKey only:         Public-Key + YubiKey
-#   Both:                 Public-Key + (YubiKey or OTP)
-#   Password is never allowed over SSH.
+#   unlockMethod = "tpm2";
+#   → TPM2 LUKS auto-unlock. No YubiKey PAM unless auth.yubikey.enable overridden.
+#     TOTP on sudo (primary). SDDM: password only. SSH: TOTP only.
 #
-# LUKS unlock at boot:
-#   yubikey.luks.enable = true;   → fido2-device=auto (plug in + touch at boot)
-#   yubikey.luks.enable = false;  → TPM2 handles unlock (see tpm.nix)
+#   unlockMethod = "password";
+#   → Manual LUKS passphrase prompt at boot. Same as tpm2 for PAM flow.
+#     Can be combined with desktop.login = "autologin" for password-autologin flow.
 #
-# Setup:
+# --- PAM SERVICE SUMMARY ---
+#
+# login/sddm/polkit/hyprlock:
+#   Password only — pam_gnome_keyring captures the SDDM password to unlock the keyring.
+#
+# sudo:
+#   YubiKey only:      YubiKey → Password
+#   TOTP only:         OTP (3 attempts) → Password
+#   Both:              YubiKey → OTP (3 attempts) → Password
+#
+# polkit:
+#   Password only — TOTP/YubiKey excluded to allow keyring auto-unlock.
+#
+# SSH:
+#   TOTP only:         Public-Key + OTP
+#   YubiKey only:      Public-Key + YubiKey
+#   Both:              Public-Key + (YubiKey or OTP)
+#   Password never allowed over SSH.
+#
+# --- SETUP SCRIPTS ---
+#
 #   totp-init         — Generate TOTP secret
 #   yubikey-init      — Register YubiKey for PAM auth
 #   yubikey-luks-init — Enroll YubiKey FIDO2 for LUKS unlock
+#   tpm-luks-init     — Enroll TPM2 for LUKS auto-unlock
 #
-# Files (with impermanence: /persist/etc/*, without: /etc/*):
+# Files (with impermanence: /persist/etc/*):
 #   users.oath    — TOTP secrets (pam_oath usersfile)
 #   u2f_mappings  — YubiKey credentials (pam_u2f authfile)
 #
-# See also: ssh.nix (SSH server), impermanence.nix, tpm.nix, hosts/*/luks.nix
+# See also: ssh.nix, impermanence.nix, tpm.nix, hosts/*/luks.nix
 
 {
   config,
@@ -155,7 +167,10 @@ let
 
   yubikey-luks-init = pkgs.writeShellApplication {
     name = "yubikey-luks-init";
-    runtimeInputs = with pkgs; [ systemd gawk ];
+    runtimeInputs = with pkgs; [
+      systemd
+      gawk
+    ];
     text = ''
       if [[ $EUID -ne 0 ]]; then
         exec sudo "$0" "$@"
@@ -184,7 +199,7 @@ let
         for dev in "''${DEVICES[@]}"; do
           echo "Insert YubiKey and touch it when the light flashes..."
           ENROLL_ARGS=(--fido2-device=auto --unlock-key-file="$PASS_FILE")
-          ${lib.optionalString cfg.yubikey.pin ''ENROLL_ARGS+=(--fido2-with-client-pin=yes)''}
+          ${lib.optionalString cfg.yubikey.pin "ENROLL_ARGS+=(--fido2-with-client-pin=yes)"}
           if systemd-cryptenroll "$dev" "''${ENROLL_ARGS[@]}"; then
             echo "  $(basename "$dev"): OK"
           else
@@ -391,13 +406,12 @@ in
       default = true;
     };
     yubikey = {
-      enable = lib.mkEnableOption "YubiKey authentication";
-      pin = lib.mkEnableOption "require FIDO2 PIN on YubiKey (in addition to touch)";
-      luks.enable = lib.mkOption {
+      enable = lib.mkOption {
         type = lib.types.bool;
-        default = config.features.auth.yubikey.enable;
-        description = "Use YubiKey FIDO2 to unlock LUKS at boot (replaces TPM2). Default: on when yubikey.enable is true.";
+        default = config.features.encryption.unlockMethod == "yubikey";
+        description = "Enable YubiKey authentication tools and PAM integration.";
       };
+      pin = lib.mkEnableOption "require FIDO2 PIN on YubiKey (in addition to touch)";
     };
   };
 
@@ -444,13 +458,21 @@ in
             order = 11120;
             control = "[success=done default=ignore]";
             modulePath = "${pkgs.oath-toolkit}/lib/security/pam_oath.so";
-            args = [ "usersfile=${oathFile}" "window=3" "digits=6" ];
+            args = [
+              "usersfile=${oathFile}"
+              "window=3"
+              "digits=6"
+            ];
           };
           oath_retry3 = {
             order = 11140;
             control = "[success=done default=ignore]";
             modulePath = "${pkgs.oath-toolkit}/lib/security/pam_oath.so";
-            args = [ "usersfile=${oathFile}" "window=3" "digits=6" ];
+            args = [
+              "usersfile=${oathFile}"
+              "window=3"
+              "digits=6"
+            ];
           };
         };
       })
@@ -492,7 +514,7 @@ in
     })
 
     #--- YubiKey FIDO2 LUKS unlock ---
-    (lib.mkIf cfg.yubikey.luks.enable {
+    (lib.mkIf (config.features.encryption.unlockMethod == "yubikey") {
       environment.systemPackages = [ yubikey-luks-init ];
 
       # FIDO2 in initrd requires systemd-based initrd

@@ -1,24 +1,10 @@
 # TPM Enrollment for LUKS Auto-Unlock
 #
-# Provides `tpm-luks-init` script to enroll/re-enroll/wipe TPM2 keys for all
-# LUKS-encrypted partitions defined in boot.initrd.luks.devices.
+# Provides `tpm-luks-init` script to enroll/re-enroll/wipe TPM2 keys
+# for all LUKS partitions. Active when features.encryption.unlockMethod = "tpm2".
 #
-# Configuration:
-#   features.encryption.enable = true;            # Enables this module (default: true)
-#   features.auth.yubikey.luks.enable = false;    # When true, this script is not installed
-#                                                 # (YubiKey FIDO2 replaces TPM2 — see auth.nix)
-#
-# Usage:
-#   sudo tpm-luks-init
-#
-# The script reads LUKS devices from the NixOS config at build time,
-# so it automatically knows about all encrypted partitions.
-#
-# PCR policy: 0+7 (firmware measurement + Secure Boot state)
-# Works with or without Secure Boot. If Secure Boot is enabled later,
-# re-run `tpm-luks-init` to re-enroll with the new PCR 7 value.
-#
-# See also: auth.nix (YubiKey FIDO2 LUKS), hosts/*/luks.nix
+# Usage: sudo tpm-luks-init
+# PCR policy: 0+7 (firmware + Secure Boot state).
 
 {
   config,
@@ -132,7 +118,9 @@ let
   };
 in
 {
-  config = lib.mkIf (config.features.encryption.enable && !config.features.auth.yubikey.luks.enable) {
-    environment.systemPackages = [ tpm-luks-init ];
-  };
+  config =
+    lib.mkIf (config.features.encryption.enable && config.features.encryption.unlockMethod == "tpm2")
+      {
+        environment.systemPackages = [ tpm-luks-init ];
+      };
 }

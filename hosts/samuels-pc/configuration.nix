@@ -79,9 +79,13 @@
   features = {
     kernel = "cachyos-v3"; # Ryzen 9 5950X (Zen 3) — x86_64-v3 optimized build
     secureBoot.enable = true;
-    auth.yubikey.enable = true;
+    encryption.unlockMethod = "yubikey";
+    desktop.login = "greeter";
     gaming.gpu = "amd"; # RX 7900 XT (RDNA3) — enables VA-API hardware encoding
-    smb.shares = [ "personal-drive" "pika" ];
+    smb.shares = [
+      "personal-drive"
+      "pika"
+    ];
     wifi.networks = [ "home" ];
   };
 

@@ -6,13 +6,17 @@ Summary of the security layers in this NixOS configuration.
 
 ### Disk Encryption
 
-LUKS2 full disk encryption on all partitions. Optional TPM2 auto-unlock (PCR 0+7) seals to firmware and Secure Boot state — falls back to password if either changes.
+LUKS2 full disk encryption on all partitions. The unlock method is configured per host:
 
-```nix
-features.encryption.enable = true;  # default
-```
+| Method | Feature flag | Behavior |
+|--------|-------------|----------|
+| TPM2 | `features.encryption.unlockMethod = "tpm2"` (default) | Auto-unlock, sealed to PCR 0+7 |
+| YubiKey | `features.encryption.unlockMethod = "yubikey"` | FIDO2 touch at boot |
+| Password | `features.encryption.unlockMethod = "password"` | LUKS passphrase prompt |
 
-Setup: automatic during install. TPM enrollment via `sudo tpm-init` after first boot.
+To disable encryption entirely: `features.encryption.enable = false;`
+
+Setup: TPM enrollment via `sudo tpm-luks-init`, YubiKey via `sudo yubikey-luks-init`.
 
 ### Secure Boot
 

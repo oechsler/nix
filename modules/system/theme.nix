@@ -18,7 +18,12 @@
 # - Configures GTK dark preference for root apps (gparted, etc.)
 # - Configures Qt theming for root apps (Hyprland only; KDE manages Qt itself)
 
-{ pkgs, config, lib, ... }:
+{
+  pkgs,
+  config,
+  lib,
+  ...
+}:
 
 {
   #===========================
@@ -29,14 +34,31 @@
     # Catppuccin Color Scheme
     catppuccin = {
       flavor = lib.mkOption {
-        type = lib.types.enum [ "latte" "frappe" "macchiato" "mocha" ];
+        type = lib.types.enum [
+          "latte"
+          "frappe"
+          "macchiato"
+          "mocha"
+        ];
         default = "mocha";
         description = "Catppuccin flavor (latte = light, others = dark)";
       };
       accent = lib.mkOption {
         type = lib.types.enum [
-          "blue" "flamingo" "green" "lavender" "maroon" "mauve"
-          "peach" "pink" "red" "rosewater" "sapphire" "sky" "teal" "yellow"
+          "blue"
+          "flamingo"
+          "green"
+          "lavender"
+          "maroon"
+          "mauve"
+          "peach"
+          "pink"
+          "red"
+          "rosewater"
+          "sapphire"
+          "sky"
+          "teal"
+          "yellow"
         ];
         default = "mauve";
         description = "Catppuccin accent color";
@@ -47,9 +69,7 @@
     icons = {
       name = lib.mkOption {
         type = lib.types.str;
-        default = if config.theme.catppuccin.flavor == "latte"
-                  then "Papirus-Light"
-                  else "Papirus-Dark";
+        default = if config.theme.catppuccin.flavor == "latte" then "Papirus-Light" else "Papirus-Dark";
         description = "Icon theme name (automatically switches light/dark based on flavor)";
       };
       package = lib.mkOption {
@@ -65,9 +85,7 @@
     cursor = {
       name = lib.mkOption {
         type = lib.types.str;
-        default = if config.theme.catppuccin.flavor == "latte"
-                  then "Breeze_Light"
-                  else "breeze_cursors";
+        default = if config.theme.catppuccin.flavor == "latte" then "Breeze_Light" else "breeze_cursors";
         description = "Cursor theme name (automatically switches light/dark based on flavor)";
       };
       package = lib.mkOption {
@@ -139,6 +157,18 @@
       type = lib.types.str;
       description = "Runtime path to blurred wallpaper for SDDM login screen (set by backgrounds module)";
     };
+
+    qtConfig = lib.mkOption {
+      type = lib.types.lines;
+      readOnly = true;
+      default = ''
+        [Appearance]
+        style=kvantum
+        icon_theme=${config.theme.icons.name}
+        color_scheme_path=
+        custom_palette=false
+      '';
+    };
   };
 
   #===========================
@@ -196,36 +226,42 @@
       # dconf system database for GNOME apps
       programs.dconf = {
         enable = true;
-        profiles.user.databases = [{
-          settings."org/gnome/desktop/interface" = {
-            color-scheme = "prefer-dark";
-          };
-        }];
+        profiles.user.databases = [
+          {
+            settings."org/gnome/desktop/interface" = {
+              color-scheme = "prefer-dark";
+            };
+          }
+        ];
       };
 
       # Write dark theme settings directly into root's home directory
       # This is the most reliable method for pkexec apps
-      system.activationScripts.rootGtkDark.text = let
-        settingsIni = pkgs.writeText "gtk-dark-settings" ''
-          [Settings]
-          gtk-application-prefer-dark-theme=1
+      system.activationScripts.rootGtkDark.text =
+        let
+          settingsIni = pkgs.writeText "gtk-dark-settings" ''
+            [Settings]
+            gtk-application-prefer-dark-theme=1
+          '';
+        in
+        ''
+          mkdir -p /root/.config/gtk-3.0 /root/.config/gtk-4.0
+          cp ${settingsIni} /root/.config/gtk-3.0/settings.ini
+          cp ${settingsIni} /root/.config/gtk-4.0/settings.ini
         '';
-      in ''
-        mkdir -p /root/.config/gtk-3.0 /root/.config/gtk-4.0
-        cp ${settingsIni} /root/.config/gtk-3.0/settings.ini
-        cp ${settingsIni} /root/.config/gtk-4.0/settings.ini
-      '';
     })
 
     # Light theme: Remove root GTK dark settings
     (lib.mkIf (config.theme.catppuccin.flavor == "latte") {
       programs.dconf = {
         enable = true;
-        profiles.user.databases = [{
-          settings."org/gnome/desktop/interface" = {
-            color-scheme = "prefer-light";
-          };
-        }];
+        profiles.user.databases = [
+          {
+            settings."org/gnome/desktop/interface" = {
+              color-scheme = "prefer-light";
+            };
+          }
+        ];
       };
 
       system.activationScripts.rootGtkDark.text = ''
@@ -260,62 +296,39 @@
 
       # Qt theming packages
       environment.systemPackages = with pkgs; [
-        libsForQt5.qt5ct                    # Qt5 configuration tool
-        kdePackages.qt6ct                   # Qt6 configuration tool
-        libsForQt5.qtstyleplugin-kvantum    # Kvantum style for Qt5
-        kdePackages.qtstyleplugin-kvantum   # Kvantum style for Qt6
+        libsForQt5.qt5ct # Qt5 configuration tool
+        kdePackages.qt6ct # Qt6 configuration tool
+        libsForQt5.qtstyleplugin-kvantum # Kvantum style for Qt5
+        kdePackages.qtstyleplugin-kvantum # Kvantum style for Qt6
       ];
 
       # Write Qt/Kvantum configuration to root's home directory
       system.activationScripts.rootQtDark = {
         deps = [ ];
-        text = let
-          inherit (config.theme.catppuccin) flavor;
-          inherit (config.theme.icons) name;
-          kvantumTheme = "catppuccin-${flavor}-${config.theme.catppuccin.accent}";
+        text =
+          let
+            inherit (config.theme.catppuccin) flavor accent;
+            kvantumTheme = "catppuccin-${flavor}-${accent}";
 
-          # Qt5 configuration: Use Kvantum style + icon theme
-          qt5ctConf = pkgs.writeText "qt5ct.conf" ''
-            [Appearance]
-            style=kvantum
-            icon_theme=${name}
-            color_scheme_path=
-            custom_palette=false
+            kvantumConf = pkgs.writeText "kvantum.kvconfig" ''
+              [General]
+              theme=${kvantumTheme}
+            '';
+
+            catppuccinKvantum = pkgs.catppuccin-kvantum.override {
+              inherit accent;
+              variant = flavor;
+            };
+          in
+          ''
+            mkdir -p /root/.config/qt5ct /root/.config/qt6ct /root/.config/Kvantum
+
+            printf '%s' ${lib.escapeShellArg config.theme.qtConfig} > /root/.config/qt5ct/qt5ct.conf
+            printf '%s' ${lib.escapeShellArg config.theme.qtConfig} > /root/.config/qt6ct/qt6ct.conf
+            cp ${kvantumConf} /root/.config/Kvantum/kvantum.kvconfig
+
+            ln -sfn ${catppuccinKvantum}/share/Kvantum/${kvantumTheme} /root/.config/Kvantum/${kvantumTheme}
           '';
-
-          # Qt6 configuration: Use Kvantum style + icon theme
-          qt6ctConf = pkgs.writeText "qt6ct.conf" ''
-            [Appearance]
-            style=kvantum
-            icon_theme=${name}
-            color_scheme_path=
-            custom_palette=false
-          '';
-
-          # Kvantum configuration: Select Catppuccin theme
-          # Example: "catppuccin-mocha-mauve"
-          kvantumConf = pkgs.writeText "kvantum.kvconfig" ''
-            [General]
-            theme=${kvantumTheme}
-          '';
-
-          # Catppuccin Kvantum theme package
-          catppuccinKvantum = pkgs.catppuccin-kvantum.override {
-            inherit (config.theme.catppuccin) accent;
-            variant = flavor;
-          };
-        in ''
-          mkdir -p /root/.config/qt5ct /root/.config/qt6ct /root/.config/Kvantum
-
-          # Copy configuration files
-          cp ${qt5ctConf} /root/.config/qt5ct/qt5ct.conf
-          cp ${qt6ctConf} /root/.config/qt6ct/qt6ct.conf
-          cp ${kvantumConf} /root/.config/Kvantum/kvantum.kvconfig
-
-          # Link Kvantum theme from Nix store
-          # Example: /nix/store/.../share/Kvantum/catppuccin-mocha-mauve
-          ln -sfn ${catppuccinKvantum}/share/Kvantum/${kvantumTheme} /root/.config/Kvantum/${kvantumTheme}
-        '';
       };
     })
   ];
