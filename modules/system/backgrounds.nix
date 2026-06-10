@@ -31,7 +31,12 @@
 # - Convert to JPG and create blurred version
 # - No encryption/decryption involved
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   cfg = config.backgrounds;
@@ -168,24 +173,29 @@ in
     #---------------------------
     # 2. Encrypted Archive Mode
     #---------------------------
-    # Extract wallpaper from encrypted archive before display manager starts
     (lib.mkIf cfg.enable {
-      # SOPS secret for archive decryption password (uses system defaultSopsFile)
       sops.secrets."backgrounds/password" = { };
 
+      # Activation script: runs on every nixos-rebuild switch (and at boot)
+      # to immediately reflect theme.wallpaper changes without reboot.
+      system.activationScripts.backgrounds = {
+        deps = [ ]; # SOPS secrets handled internally via fallback
+        text = ''
+          ${extractScript}
+        '';
+      };
+
+      # Systemd service: ensures wallpapers are ready before SDDM at boot
       systemd.services.extract-backgrounds = {
         description = "Extract encrypted wallpapers";
         wantedBy = [ "multi-user.target" ];
-        before = [ "display-manager.service" ];  # Must complete before SDDM starts
-        after = [ "sops-install-secrets.service" ];  # Wait for SOPS secrets
-
-        # Skip gracefully if SOPS key doesn't exist (fresh install without age key)
+        before = [ "display-manager.service" ];
+        after = [ "sops-install-secrets.service" ];
         unitConfig.ConditionPathExists = config.sops.age.keyFile;
-
         serviceConfig = {
           Type = "oneshot";
           ExecStart = extractScript;
-          RemainAfterExit = true;  # Don't restart if service is stopped
+          RemainAfterExit = true;
         };
       };
     })
@@ -199,7 +209,7 @@ in
       systemd.services.prepare-backgrounds = {
         description = "Prepare wallpapers from store";
         wantedBy = [ "multi-user.target" ];
-        before = [ "display-manager.service" ];  # Must complete before SDDM starts
+        before = [ "display-manager.service" ]; # Must complete before SDDM starts
 
         serviceConfig = {
           Type = "oneshot";
