@@ -19,7 +19,6 @@ features.ssh.enable = true;
 | `features.encryption.enable` | `true` | LUKS full disk encryption |
 | `features.desktop.enable` | `true` | Desktop environment (SDDM, Firefox, theming) |
 | `features.desktop.wm` | `"hyprland"` | Window manager (`"hyprland"` / `"kde"`) |
-| `features.desktop.dock.enable` | `desktop.enable && wm == "hyprland"` | Application dock for Hyprland (hypr-dock) |
 | `features.audio.enable` | `true` | PipeWire audio (ALSA, PulseAudio compat) |
 | `features.bluetooth.enable` | `true` | Bluetooth support (power on boot) |
 | `features.gaming.enable` | `true` | Steam + Proton-GE, GameMode, Gamescope, MangoHud, ProtonUp-Qt |
@@ -36,10 +35,7 @@ features.ssh.enable = true;
 | `features.wifi.enable` | `true` | WiFi profiles via SOPS secrets |
 | `features.wifi.networks` | `[]` | WPA2-PSK network names — each needs `wifi/<name>/ssid` + `wifi/<name>/psk` SOPS secrets |
 | `features.wifi.enterpriseNetworks` | `[]` | WPA2 Enterprise (EAP-PEAP) network names — each needs `wifi/<name>/ssid`, `wifi/<name>/identity`, `wifi/<name>/password` SOPS secrets |
-| `features.wifi.disableOnEthernet.enable` | `wifi.enable` | Disable WiFi autoconnect while Ethernet is active to avoid same-subnet dual uplinks |
-| `features.development.enable` | `true` | IDEs, languages (Go, Rust, Node, Java) |
-| `features.development.gui.enable` | `development.enable` | GUI dev tools (VS Code, JetBrains, DBeaver) |
-| `features.development.kubernetes.enable` | `development.enable` | Kubernetes tools (kubectl, k9s) |
+| `features.development.enable` | `true` | Languages, CLI dev tools, Kubernetes tools, desktop IDEs on desktop hosts |
 | `features.apps.enable` | `true` | Desktop apps (Discord, Spotify, Obsidian, LibreOffice, ...) |
 | `features.apps.winboat.enable` | `false` | WinBoat Windows VM (seamless integration) |
 | `features.auth.totp.enable` | `true` | TOTP for sudo, SSH (see [AUTH.md](AUTH.md)) |
@@ -64,6 +60,7 @@ Set in `configuration.nix`:
 - NetworkManager owns IP configuration and routing.
 - `iwd` handles WiFi authentication only.
 - Docker/Tailscale interfaces are unmanaged in NetworkManager: `docker0`, `br-*`, `veth*`, `tailscale0`.
+- Desktop hosts disable IPv6 only on Docker bridge/veth interfaces to reduce local development link churn; server hosts leave Docker untouched.
 - LLMNR is disabled in `systemd-resolved` to avoid resolver scopes on Docker/veth links.
 - Desktop Ethernet disables WiFi autoconnect while active.
 - IPv6 privacy extensions default to enabled, except in server mode.
