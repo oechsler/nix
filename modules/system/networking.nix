@@ -130,6 +130,14 @@ let
     INTERFACE=''${1:-}
     ACTION=''${2:-up}
 
+    # The oneshot service calls this script without arguments at boot/switch.
+    # NetworkManager dispatcher events should always include an interface; ignore
+    # generic connectivity-change events so Docker bridge churn cannot re-apply
+    # the WiFi policy unnecessarily.
+    if [ -z "$INTERFACE" ] && [ $# -gt 0 ]; then
+      exit 0
+    fi
+
     case "$ACTION" in
       up|down|connectivity-change|dhcp4-change|dhcp6-change) ;;
       *) exit 0 ;;
