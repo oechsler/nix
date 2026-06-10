@@ -28,7 +28,12 @@
 #   - Mutable users disabled (passwords managed by NixOS, not passwd command)
 #   - User is in wheel group (sudo access)
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   cfg = config.user;
@@ -75,14 +80,14 @@ in
     # Home Directory
     directories = lib.mkOption {
       type = lib.types.listOf lib.types.str;
-      default = [];
+      default = [ ];
       description = "Extra directories to create in home (relative to ~, e.g. 'repos')";
     };
 
     # Authentication
     hashedPassword = lib.mkOption {
       type = lib.types.str;
-      default = "!";  # Locked by default — user-passwd.service sets real password at boot
+      default = "!"; # Locked by default — user-passwd.service sets real password at boot
       description = "Hashed password fallback. Usually left at '!' (locked); runtime service overrides it.";
     };
   };
@@ -99,7 +104,7 @@ in
       #---------------------------
       # Why: Disable direct root login for security
       # Users must use sudo via their personal account (audit trail)
-      users.root.hashedPassword = "!";  # "!" = account locked
+      users.root.hashedPassword = "!"; # "!" = account locked
 
       #---------------------------
       # 2. Declarative User Management
@@ -116,18 +121,18 @@ in
       # 3. Primary User Account
       #---------------------------
       users.${cfg.name} = {
-      isNormalUser = true;
-      description = cfg.fullName;
+        isNormalUser = true;
+        description = cfg.fullName;
 
-      # Groups
-      extraGroups = [
-        "networkmanager"  # Manage network connections
-        "wheel"           # Sudo access
-      ];
+        # Groups
+        extraGroups = [
+          "networkmanager" # Manage network connections
+          "wheel" # Sudo access
+        ];
 
-      shell = pkgs.fish;
-      inherit (cfg) hashedPassword;
-    };
+        shell = pkgs.fish;
+        inherit (cfg) hashedPassword;
+      };
     };
 
     #---------------------------
@@ -148,8 +153,8 @@ in
     user.directories = lib.optionals (!config.features.server) [ "repos" ];
 
     # Create directories via tmpfiles (runs on boot)
-    systemd.tmpfiles.rules = map (dir:
-      "d ${user.home}/${dir} 0755 ${user.name} ${user.group} -"
+    systemd.tmpfiles.rules = map (
+      dir: "d ${user.home}/${dir} 0755 ${user.name} ${user.group} -"
     ) cfg.directories;
 
     #---------------------------
@@ -165,7 +170,7 @@ in
     #    password immediately (sops secrets already available on a live system).
     # 2. Systemd service (fresh boot): sops secrets not yet available during
     #    activation, so the service sets the password after sops-install-secrets.
-    sops.secrets."user/password" = {};
+    sops.secrets."user/password" = { };
 
     # 1. Activation script — re-applies password after every nixos-rebuild switch.
     # Runs after "users" (which regenerates /etc/shadow with "!").
@@ -199,13 +204,13 @@ in
     #---------------------------
     # 6. Sudo Configuration
     #---------------------------
-    # sudo-rs: memory-safe Rust reimplementation of sudo
-    security.sudo.enable = false;
-    security.sudo-rs = {
+    # Sudo with 30-min timestamp timeout
+    security.sudo = {
       enable = true;
       extraConfig = ''
-        Defaults timestamp_timeout=30  # Re-auth every 30 minutes (default: 5)
+        Defaults timestamp_timeout=30
       '';
     };
+    security.sudo-rs.enable = false;
   };
 }
