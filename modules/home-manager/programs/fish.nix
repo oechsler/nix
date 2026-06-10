@@ -10,7 +10,7 @@
 # - Trash-cli for safe file deletion
 #
 # Aliases:
-#   cat → bat (syntax highlighting)
+#   cat → bat, Kitty image preview for images
 #   ll → eza --long (better ls)
 #   lt → eza --tree --level 1 (tree view)
 #   rm → trash-put (move to trash)
@@ -28,7 +28,10 @@
 { pkgs, ... }:
 
 {
-  home.packages = [ pkgs.trash-cli ];
+  home.packages = with pkgs; [
+    file
+    trash-cli
+  ];
 
   programs.fish = {
     enable = true;
@@ -52,7 +55,6 @@
       end
     '';
     shellAliases = {
-      cat = "bat";
       ll = "eza --long";
       lt = "eza --tree --level 1";
       rm = "trash-put";
@@ -71,9 +73,40 @@
         wraps = "zi";
         body = "__zoxide_zi $argv";
       };
+      cat = {
+        wraps = "bat";
+        body = ''
+          if test (count $argv) -eq 0
+            command bat
+            return
+          end
+
+          for arg in $argv
+            if string match -q -- '-*' $arg
+              command bat $argv
+              return
+            end
+          end
+
+          for arg in $argv
+            if set -q KITTY_WINDOW_ID; and test -f "$arg"
+              set mime (${pkgs.file}/bin/file --brief --mime-type -- "$arg")
+              if string match -q 'image/*' "$mime"
+                command kitty +kitten icat -- "$arg"
+                continue
+              end
+            end
+
+            command bat "$arg"
+          end
+        '';
+      };
     };
     plugins = [
-      { name = "fzf.fish"; inherit (pkgs.fishPlugins.fzf-fish) src; }
+      {
+        name = "fzf.fish";
+        inherit (pkgs.fishPlugins.fzf-fish) src;
+      }
     ];
   };
 

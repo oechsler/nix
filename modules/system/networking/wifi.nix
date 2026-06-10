@@ -1,38 +1,19 @@
-# Network Configuration
+# WiFi Configuration
 #
-# This module configures:
-# 1. Base networking (NetworkManager, DNS, mDNS)
-# 2. WiFi profiles with iwd backend
-# 3. Ethernet connection profile
-# 4. Ethernet-controlled WiFi autoconnect for desktop systems
-# 5. Tailscale VPN (optional)
-#
-# Configuration options:
-#   features.networking.ipv6PrivacyExtensions.enable = true; # IPv6 temporary addresses (default: !server)
-#   features.wifi.enable = true;                        # Enable WiFi (default: true)
-#   features.wifi.networks = [ "home" ];                # WPA2-PSK networks (default: ["home"])
-#   features.wifi.enterpriseNetworks = [ "uni" ];       # WPA2 Enterprise networks (default: [])
-#   features.tailscale.enable = true;                   # Enable Tailscale VPN (default: true)
+# WiFi connection profiles (PSK + Enterprise) with SOPS credentials,
+# ethernet/WiFi autoconnect switching for desktops, and iwd profiles.
 #
 # WiFi credentials are stored in SOPS secrets:
 #   WPA2-PSK:        wifi/<name>/ssid, wifi/<name>/psk
 #   WPA2 Enterprise: wifi/<name>/ssid, wifi/<name>/identity, wifi/<name>/password
 #                    (EAP-PEAP with MSCHAPv2 inner auth)
 
-{
-  config,
-  pkgs,
-  lib,
-  ...
-}:
+{ config, pkgs, lib, ... }:
 
 let
-  networkCfg = config.features.networking;
   cfg = config.features.wifi;
-  tailscaleCfg = config.features.tailscale;
-  ip6Privacy = if networkCfg.ipv6PrivacyExtensions.enable then 2 else 0;
+  ip6Privacy = if config.features.ipv6PrivacyExtensions.enable then 2 else 0;
 
-  # WiFi connection profiles with credentials from SOPS
   wifiProfiles = lib.listToAttrs (
     map (name: {
       name = "wifi-${name}";
@@ -53,7 +34,7 @@ let
         };
         ipv4 = {
           method = "auto";
-          route-metric = 600; # Lower priority than Ethernet (600 > 100)
+          route-metric = 600;
         };
         ipv6 = {
           method = "auto";
@@ -64,18 +45,18 @@ let
     }) cfg.networks
   );
 
-  # Environment file with WiFi credentials for NetworkManager (PSK + Enterprise)
   wifiEnvContent =
     lib.concatMapStringsSep "\n" (name: ''
       WIFI_${lib.toUpper name}_SSID=${config.sops.placeholder."wifi/${name}/ssid"}
       WIFI_${lib.toUpper name}_PSK=${config.sops.placeholder."wifi/${name}/psk"}'') cfg.networks
-    + lib.optionalString (cfg.enterpriseNetworks != []) "\n"
+    + lib.optionalString (cfg.enterpriseNetworks != [ ]) "\n"
     + lib.concatMapStringsSep "\n" (name: ''
       WIFI_${lib.toUpper name}_SSID=${config.sops.placeholder."wifi/${name}/ssid"}
       WIFI_${lib.toUpper name}_IDENTITY=${config.sops.placeholder."wifi/${name}/identity"}
-      WIFI_${lib.toUpper name}_PASSWORD=${config.sops.placeholder."wifi/${name}/password"}'') cfg.enterpriseNetworks;
+      WIFI_${lib.toUpper name}_PASSWORD=${
+        config.sops.placeholder."wifi/${name}/password"
+      }'') cfg.enterpriseNetworks;
 
-  # WPA2 Enterprise (EAP-PEAP/MSCHAPv2) NetworkManager profiles
   enterpriseWifiProfiles = lib.listToAttrs (
     map (name: {
       name = "wifi-${name}";
@@ -111,33 +92,39 @@ let
     }) cfg.enterpriseNetworks
   );
 
-  # SOPS secrets for all WiFi credentials
   wifiSecrets = lib.listToAttrs (
     lib.flatten (
       map (name: [
-        { name = "wifi/${name}/ssid"; value = { }; }
-        { name = "wifi/${name}/psk"; value = { }; }
+        {
+          name = "wifi/${name}/ssid";
+          value = { };
+        }
+        {
+          name = "wifi/${name}/psk";
+          value = { };
+        }
       ]) cfg.networks
       ++ map (name: [
-        { name = "wifi/${name}/ssid"; value = { }; }
-        { name = "wifi/${name}/identity"; value = { }; }
-        { name = "wifi/${name}/password"; value = { }; }
+        {
+          name = "wifi/${name}/ssid";
+          value = { };
+        }
+        {
+          name = "wifi/${name}/identity";
+          value = { };
+        }
+        {
+          name = "wifi/${name}/password";
+          value = { };
+        }
       ]) cfg.enterpriseNetworks
     )
   );
 
   ethernetWifiSwitch = pkgs.writeShellScript "ethernet-wifi-switch" ''
-    # Arguments from NetworkManager dispatcher:
-    # $1 = interface name (e.g., "enp5s0")
-    # $2 = action (up, down, connectivity-change, etc.)
-
     INTERFACE=''${1:-}
     ACTION=''${2:-up}
 
-    # The oneshot service calls this script without arguments at boot/switch.
-    # NetworkManager dispatcher events should always include an interface; ignore
-    # generic connectivity-change events so Docker bridge churn cannot re-apply
-    # the WiFi policy unnecessarily.
     if [ -z "$INTERFACE" ] && [ $# -gt 0 ]; then
       exit 0
     fi
@@ -185,119 +172,10 @@ let
   '';
 in
 {
-  #===========================
-  # Options
-  #===========================
-
-  options.features = {
-    networking.ipv6PrivacyExtensions.enable =
-      (lib.mkEnableOption "IPv6 privacy extensions for NetworkManager profiles")
-      // {
-        default = !config.features.server;
-      };
-    wifi = {
-      enable = (lib.mkEnableOption "WiFi with managed network profiles") // {
-        default = true;
-      };
-      networks = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [ ];
-        description = "WPA2-PSK network names — each needs wifi/<name>/ssid and wifi/<name>/psk SOPS secrets";
-      };
-      enterpriseNetworks = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [ ];
-        description = "WPA2 Enterprise (EAP-PEAP/MSCHAPv2) network names — each needs wifi/<name>/ssid, wifi/<name>/identity, wifi/<name>/password SOPS secrets";
-      };
-    };
-    tailscale.enable = (lib.mkEnableOption "Tailscale VPN") // {
-      default = true;
-    };
-  };
-
-  #===========================
-  # Configuration
-  #===========================
-
   config = lib.mkMerge [
 
-    #---------------------------
-    # 1. Base Networking
-    #---------------------------
-    {
-      networking = {
-        networkmanager = {
-          enable = true;
-          wifi.backend = "iwd";
-          unmanaged = [
-            "interface-name:docker*"
-            "interface-name:br-*"
-            "interface-name:veth*"
-            "interface-name:tailscale*"
-          ];
-          ensureProfiles.profiles.ethernet-default = {
-            connection = {
-              id = "Ethernet";
-              type = "ethernet";
-              autoconnect = true;
-              autoconnect-priority = 999;
-            };
-            ipv4 = {
-              method = "auto";
-              route-metric = 100; # Higher priority (lower number = higher priority)
-            };
-            ipv6 = {
-              method = "auto";
-              ip6-privacy = ip6Privacy;
-              route-metric = 100;
-            };
-          };
-        };
-        wireless.iwd = {
-          enable = true;
-          # NetworkManager owns IP configuration and routing; iwd only handles WiFi auth.
-          settings.General.EnableNetworkConfiguration = false;
-        };
-      };
-
-      # systemd-resolved for DNS
-      services.resolved = {
-        enable = true;
-        settings.Resolve = {
-          DNSSEC = "allow-downgrade";
-          Domains = [ "~." ];
-          LLMNR = false;
-          MulticastDNS = false;
-        };
-      };
-
-      # Avahi for mDNS (.local domain resolution)
-      services.avahi = {
-        enable = true;
-        nssmdns4 = true;
-        openFirewall = true;
-        publish = {
-          enable = true;
-          addresses = true;
-        };
-      };
-
-      environment.systemPackages = with pkgs; [
-        avahi # mDNS tools (avahi-browse, etc.)
-        iwd # WiFi management CLI (iwctl)
-      ];
-    }
-
-    #---------------------------
-    # 2. Ethernet/WiFi Switching (desktop only)
-    #---------------------------
-    # Strategy: Ethernet carrier controls WiFi autoconnect.
-    # This avoids dual-interface routing complexity without reacting to virtual Docker/Tailscale links.
+    # Ethernet/WiFi switching (desktop only)
     (lib.mkIf (config.features.desktop.enable && cfg.enable) {
-
-      # NetworkManager dispatcher script: disable WiFi autoconnect while Ethernet has carrier.
-      # Dispatcher scripts run on interface state changes (up, down, connectivity-change, etc.)
-      # This ensures instant response and works correctly after suspend/resume
       networking.networkmanager.dispatcherScripts = [
         {
           source = ethernetWifiSwitch;
@@ -318,7 +196,10 @@ in
       systemd.services.networkmanager-cleanup-ethernet-profiles = {
         description = "Remove unmanaged Ethernet connection profiles";
         wantedBy = [ "multi-user.target" ];
-        after = [ "NetworkManager.service" "NetworkManager-ensure-profiles.service" ];
+        after = [
+          "NetworkManager.service"
+          "NetworkManager-ensure-profiles.service"
+        ];
         serviceConfig = {
           Type = "oneshot";
         };
@@ -334,60 +215,24 @@ in
       };
     })
 
-    #---------------------------
-    # 3. WiFi Disabled
-    #---------------------------
+    # WiFi disabled
     (lib.mkIf (!cfg.enable) {
       networking.networkmanager.wifi.powersave = false;
       networking.networkmanager.unmanaged = [ "type:wifi" ];
     })
 
-    #---------------------------
-    # 4. Tailscale VPN
-    #---------------------------
-    (lib.mkIf tailscaleCfg.enable {
-      services.tailscale.enable = true;
-
-      # Trust tailscale0 interface so forwarded LAN traffic (via subnet router) is not blocked
-      networking.firewall.trustedInterfaces = [ "tailscale0" ];
-
-      environment.systemPackages = [
-        # Helper script for initial Tailscale setup
-        (pkgs.writeShellScriptBin "tailscale-init" ''
-          set -e
-          echo "Starting Tailscale login..."
-          sudo tailscale up --accept-routes --accept-dns
-          echo "Setting operator to ${config.user.name}..."
-          sudo tailscale set --operator=${config.user.name}
-          echo "Done! Tailscale is ready."
-          tailscale status
-        '')
-      ]
-      ++ lib.optionals config.features.desktop.enable [
-        pkgs.trayscale # System tray applet for Tailscale
-      ];
-    })
-
-    #---------------------------
-    # 5. WiFi Profiles
-    #---------------------------
+    # WiFi profiles + iwd
     (lib.mkIf cfg.enable {
-      # Create NetworkManager connection profiles for configured WiFi networks
       networking.networkmanager.ensureProfiles = {
         environmentFiles = [ config.sops.templates."wifi-env".path ];
         profiles = wifiProfiles // enterpriseWifiProfiles;
       };
 
-      # Don't fail if SOPS key doesn't exist (e.g., fresh install without secrets)
       systemd.services.NetworkManager-ensure-profiles = {
         after = [ "sops-install-secrets.service" ];
         unitConfig.ConditionPathExists = config.sops.age.keyFile;
       };
 
-      # Write iwd profile files for known networks
-      # Why: iwd profiles make networks visible in tools like impala
-      # Note: iwd requires hex-encoded filenames for SSIDs with special characters
-      #       Format: =<hex>.psk (e.g., =4f656368736c657221426f78.psk for "Oechsler!Box")
       systemd.services.iwd-profiles = {
         wantedBy = [ "network-pre.target" ];
         after = [ "sops-install-secrets.service" ];
@@ -405,15 +250,10 @@ in
               pskPath = config.sops.secrets."wifi/${name}/psk".path;
             in
             ''
-              # Read SSID and convert to hex for filename
               ssid=$(cat ${ssidPath})
               ssid_hex=$(printf '%s' "$ssid" | od -An -tx1 | tr -d ' \n')
               mkdir -p /var/lib/iwd
-
-              # Remove old non-hex-encoded files (from before we fixed the encoding)
               rm -f "/var/lib/iwd/$ssid.psk"
-
-              # Write iwd profile with hex-encoded filename
               printf '[Security]\nPassphrase=%s\n' "$(cat ${pskPath})" \
                 > "/var/lib/iwd/=$ssid_hex.psk"
               chmod 0600 "/var/lib/iwd/=$ssid_hex.psk"
@@ -427,7 +267,6 @@ in
               passwordPath = config.sops.secrets."wifi/${name}/password".path;
             in
             ''
-              # Enterprise network — write iwd .8021x profile (EAP-PEAP/MSCHAPv2)
               ssid=$(cat ${ssidPath})
               ssid_hex=$(printf '%s' "$ssid" | od -An -tx1 | tr -d ' \n')
               mkdir -p /var/lib/iwd
@@ -439,7 +278,6 @@ in
           ) cfg.enterpriseNetworks;
       };
 
-      # SOPS secrets for WiFi credentials
       sops = {
         templates."wifi-env".content = wifiEnvContent;
         secrets = wifiSecrets;

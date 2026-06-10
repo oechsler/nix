@@ -19,7 +19,9 @@
     ./boot.nix
     ./secure-boot.nix
     ./compat.nix
-    ./networking.nix
+    ./networking/base.nix
+    ./networking/wifi.nix
+    ./networking/tailscale.nix
     ./locale.nix
     ./users.nix
     ./audio.nix

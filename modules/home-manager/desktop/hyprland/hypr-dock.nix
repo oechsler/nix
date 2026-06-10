@@ -16,11 +16,18 @@
 # - Border radius: theme.radius.default
 # - Border: 2px accent color
 
-{ config, pkgs, lib, theme, features, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  theme,
+  features,
+  ...
+}:
 
 let
-  # Extract Catppuccin palette colors for theme
-  palette = (lib.importJSON "${config.catppuccin.sources.palette}/palette.json").${config.catppuccin.flavor}.colors;
+  # Catppuccin palette (shared via common/theme.nix)
+  palette = config.theme.catppuccinPalette;
   accentHex = palette.${config.catppuccin.accent}.hex;
   baseHex = palette.base.hex;
   surfaceHex = palette.surface0.hex;
@@ -98,78 +105,78 @@ in
         Padding = 10
       '';
       "hypr-dock/themes/catppuccin/style.css".text = ''
-      window {
-        background-color: transparent;
-      }
+        window {
+          background-color: transparent;
+        }
 
-      #app {
-        background-color: alpha(${baseHex}, 0.85);
-        border-radius: ${toString theme.radius.default}px;
-        border: 2px solid ${accentHex};
-        padding: 6px;
-      }
+        #app {
+          background-color: alpha(${baseHex}, 0.85);
+          border-radius: ${toString theme.radius.default}px;
+          border: 2px solid ${accentHex};
+          padding: 6px;
+        }
 
-      button {
-        background-color: rgba(0, 0, 0, 0);
-        padding: 5px;
-        margin: 1px;
-        border-radius: ${toString theme.radius.default}px;
-        border: none;
-        transition: all 50ms ease;
-      }
+        button {
+          background-color: rgba(0, 0, 0, 0);
+          padding: 5px;
+          margin: 1px;
+          border-radius: ${toString theme.radius.default}px;
+          border: none;
+          transition: all 50ms ease;
+        }
 
-      button:hover {
-        background-color: alpha(${accentHex}, 0.15);
-      }
+        button:hover {
+          background-color: alpha(${accentHex}, 0.15);
+        }
 
-      button:active {
-        background-color: alpha(${accentHex}, 0.3);
-      }
+        button:active {
+          background-color: alpha(${accentHex}, 0.3);
+        }
 
-      #menu-item {
-        padding: 3px;
-        padding-left: 0;
-      }
+        #menu-item {
+          padding: 3px;
+          padding-left: 0;
+        }
 
-      menu {
-        background-color: alpha(${baseHex}, 0.92);
-        border: 2px solid alpha(${accentHex}, 0.5);
-        border-radius: ${toString theme.radius.small}px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-        outline: none;
-        background-image: none;
-        padding: 4px;
-      }
+        menu {
+          background-color: alpha(${baseHex}, 0.92);
+          border: 2px solid alpha(${accentHex}, 0.5);
+          border-radius: ${toString theme.radius.small}px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+          outline: none;
+          background-image: none;
+          padding: 4px;
+        }
 
-      menuitem {
-        color: ${textHex};
-        padding: 4px 8px;
-        border-radius: ${toString theme.radius.small}px;
-        transition: all 0.15s ease;
-      }
+        menuitem {
+          color: ${textHex};
+          padding: 4px 8px;
+          border-radius: ${toString theme.radius.small}px;
+          transition: all 0.15s ease;
+        }
 
-      menuitem:hover {
-        background-color: alpha(${accentHex}, 0.2);
-        color: ${accentHex};
-      }
+        menuitem:hover {
+          background-color: alpha(${accentHex}, 0.2);
+          color: ${accentHex};
+        }
 
-      #pv-item {
-        background-color: alpha(${surfaceHex}, 0.8);
-        transition: all 0.2s ease-out;
-        border-radius: ${toString theme.radius.small}px;
-        border: 1px solid alpha(${accentHex}, 0.2);
-      }
+        #pv-item {
+          background-color: alpha(${surfaceHex}, 0.8);
+          transition: all 0.2s ease-out;
+          border-radius: ${toString theme.radius.small}px;
+          border: 1px solid alpha(${accentHex}, 0.2);
+        }
 
-      #pv-item.hover {
-        background-color: alpha(${accentHex}, 0.15);
-        border-color: alpha(${accentHex}, 0.5);
-      }
-    '';
+        #pv-item.hover {
+          background-color: alpha(${accentHex}, 0.15);
+          border-color: alpha(${accentHex}, 0.5);
+        }
+      '';
 
       # Point indicators (dots under icons) in accent color
       "hypr-dock/themes/catppuccin/point/0.svg".text = ''
-      <svg width="48" height="8" viewBox="0 0 12.7 2.1167" xmlns="http://www.w3.org/2000/svg"></svg>
-    '';
+        <svg width="48" height="8" viewBox="0 0 12.7 2.1167" xmlns="http://www.w3.org/2000/svg"></svg>
+      '';
       "hypr-dock/themes/catppuccin/point/1.svg".text = ''
         <svg width="48" height="9" viewBox="0 0 12.7 2.3812" xmlns="http://www.w3.org/2000/svg">
           <circle cx="6.35" cy="1.0583" r=".9388" fill="${accentHex}"/>

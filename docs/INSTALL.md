@@ -88,7 +88,7 @@ samuels-pc has an additional encrypted games disk:
 
 Root (`@`) is wiped on every boot. Persistent data goes in `/persist`:
 - `/var/lib/NetworkManager`, `/var/lib/bluetooth`
-- `/var/lib/docker`, `/var/lib/waydroid`
+- `/var/lib/docker`
 - `/var/lib/nixos`, `/var/lib/sops`
 - `/persist/etc/ssh/*` (SSH host keys)
 - See `modules/system/impermanence.nix` for the full path list.
@@ -169,12 +169,13 @@ Should show "Secure Boot: enabled".
 
 ## LUKS Unlock
 
-Two unlock methods are available. The active method is set per host via `features.auth.yubikey.luks.enable`:
+Three unlock methods are available. The active method is set per host via `features.encryption.unlockMethod`:
 
 | Method | Feature flag | Boot experience |
 |--------|-------------|-----------------|
-| YubiKey FIDO2 | `yubikey.luks.enable = true` (default when `yubikey.enable = true`) | Plug in YubiKey + touch at boot |
-| TPM2 auto-unlock | `yubikey.luks.enable = false` | Fully automatic (sealed to PCR 0+7) |
+| TPM2 auto-unlock | `unlockMethod = "tpm2"` (default) | Fully automatic (sealed to PCR 0+7) |
+| YubiKey FIDO2 | `unlockMethod = "yubikey"` | Plug in YubiKey + touch at boot |
+| Password | `unlockMethod = "password"` | Enter LUKS passphrase at boot |
 
 Password always remains as a fallback (slot 0 is never touched).
 

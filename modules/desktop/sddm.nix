@@ -8,7 +8,7 @@
 # - Multi-monitor configuration (via kwinoutputconfig.json)
 # - DPI scaling for Hyprland (calculated from primary monitor)
 # - Cursor theme and size (scaled for HiDPI)
-# - Auto-login (features.desktop.autoLogin.enable)
+# - Login mode (features.desktop.login: "greeter" shows login, "autologin" skips it)
 #
 # Why SDDM:
 # - Native Wayland support
@@ -26,7 +26,12 @@
 #
 # Active when: features.desktop.enable = true
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   inherit (config.displays) monitors;
@@ -37,46 +42,53 @@ let
   cursorSize = config.theme.cursor.size;
   uiFont = config.fonts.defaults.ui;
 
-  primaryScale = if monitors != [] then (builtins.head monitors).scale else config.theme.scale;
+  primaryScale = if monitors != [ ] then (builtins.head monitors).scale else config.theme.scale;
   scaledDpi = builtins.floor (96 * primaryScale);
   scaledCursorSize = builtins.floor (cursorSize * primaryScale);
 
-  kdeTransform = rot: {
-    "normal" = "Normal";
-    "90"     = "Rotated90";
-    "180"    = "Rotated180";
-    "270"    = "Rotated270";
-  }.${rot};
+  kdeTransform =
+    rot:
+    {
+      "normal" = "Normal";
+      "90" = "Rotated90";
+      "180" = "Rotated180";
+      "270" = "Rotated270";
+    }
+    .${rot};
 
-  sddmDisplayConfigFile = pkgs.writeText "kwinoutputconfig.json" (builtins.toJSON [
-    {
-      name = "outputs";
-      data = map (m: {
-        connectorName = m.name;
-        mode = {
-          inherit (m) width height;
-          refreshRate = m.refreshRate * 1000;
-        };
-        inherit (m) scale;
-        transform = kdeTransform m.rotation;
-        overscan = 0;
-        rgbRange = "Automatic";
-        vrrPolicy = "Automatic";
-      }) monitors;
-    }
-    {
-      name = "setups";
-      data = [{
-        lidClosed = false;
-        outputs = lib.imap0 (i: m: {
-          enabled = true;
-          outputIndex = i;
-          position = { inherit (m) x y; };
-          priority = i;
+  sddmDisplayConfigFile = pkgs.writeText "kwinoutputconfig.json" (
+    builtins.toJSON [
+      {
+        name = "outputs";
+        data = map (m: {
+          connectorName = m.name;
+          mode = {
+            inherit (m) width height;
+            refreshRate = m.refreshRate * 1000;
+          };
+          inherit (m) scale;
+          transform = kdeTransform m.rotation;
+          overscan = 0;
+          rgbRange = "Automatic";
+          vrrPolicy = "Automatic";
         }) monitors;
-      }];
-    }
-  ]);
+      }
+      {
+        name = "setups";
+        data = [
+          {
+            lidClosed = false;
+            outputs = lib.imap0 (i: m: {
+              enabled = true;
+              outputIndex = i;
+              position = { inherit (m) x y; };
+              priority = i;
+            }) monitors;
+          }
+        ];
+      }
+    ]
+  );
 
   isKde = config.features.desktop.wm == "kde";
 in
@@ -93,16 +105,17 @@ in
           wayland.enable = true;
           settings = {
             General.GreeterEnvironment =
-              if isKde
-              then "XCURSOR_THEME=${cursorTheme},XCURSOR_SIZE=${toString cursorSize}"
-              else "QT_FONT_DPI=${toString scaledDpi},XCURSOR_THEME=${cursorTheme},XCURSOR_SIZE=${toString scaledCursorSize}";
+              if isKde then
+                "XCURSOR_THEME=${cursorTheme},XCURSOR_SIZE=${toString cursorSize}"
+              else
+                "QT_FONT_DPI=${toString scaledDpi},XCURSOR_THEME=${cursorTheme},XCURSOR_SIZE=${toString scaledCursorSize}";
             Theme = {
               CursorTheme = cursorTheme;
               CursorSize = if isKde then cursorSize else scaledCursorSize;
             };
           };
         };
-        autoLogin = lib.mkIf config.features.desktop.autoLogin.enable {
+        autoLogin = lib.mkIf (config.features.desktop.login == "autologin") {
           enable = true;
           user = config.user.name;
         };
@@ -111,7 +124,7 @@ in
     };
 
     # SDDM uses kwin_wayland — copy kscreen config so monitors are positioned correctly.
-    systemd.tmpfiles.rules = lib.mkIf (monitors != []) [
+    systemd.tmpfiles.rules = lib.mkIf (monitors != [ ]) [
       "d /var/lib/sddm/.config 0755 sddm sddm -"
       "C+ /var/lib/sddm/.config/kwinoutputconfig.json 0644 sddm sddm - ${sddmDisplayConfigFile}"
     ];

@@ -17,16 +17,16 @@ features.ssh.enable = true;
 | `features.impermanence.enable` | `true` | Impermanent root with btrfs rollback on boot — see [System Requirements](#system-requirements) |
 | `features.impermanence.extraPaths` | `[]` | Additional paths to persist (beyond feature-based defaults) |
 | `features.encryption.enable` | `true` | LUKS full disk encryption |
+| `features.encryption.unlockMethod` | `"tpm2"` | How LUKS is unlocked at boot: `"tpm2"`, `"yubikey"`, `"password"`. `"yubikey"` auto-enables `auth.yubikey.enable`. |
 | `features.desktop.enable` | `true` | Desktop environment (SDDM, Firefox, theming) |
 | `features.desktop.wm` | `"hyprland"` | Window manager (`"hyprland"` / `"kde"`) |
+| `features.desktop.login` | `"greeter"` | How the desktop session is entered: `"greeter"` (SDDM login) or `"autologin"`. Autologin only auto-unlocks the keyring with `unlockMethod = "password"`. |
 | `features.audio.enable` | `true` | PipeWire audio (ALSA, PulseAudio compat) |
 | `features.bluetooth.enable` | `true` | Bluetooth support (power on boot) |
 | `features.gaming.enable` | `true` | Steam + Proton-GE, GameMode, Gamescope, MangoHud, ProtonUp-Qt |
 | `features.gaming.gpu` | `null` | GPU vendor for VA-API hardware encoding (`"amd"` / `"intel"`) — enables Remote Play hardware encoding + LIBVA driver |
-| `features.desktop.autoLogin.enable` | `false` | Auto-login via SDDM, skips login screen. |
-| `features.networking.ipv6PrivacyExtensions.enable` | `!server` | IPv6 privacy extensions for NetworkManager profiles |
+| `features.ipv6PrivacyExtensions.enable` | `!server` | IPv6 privacy extensions for NetworkManager profiles |
 | `features.virtualisation.enable` | `true` | Docker daemon + user group |
-| `features.virtualisation.waydroid.enable` | `false` | Waydroid Android container |
 | `features.smb.enable` | `true` | SMB network share mounts (auto-mount with retry) |
 | `features.smb.shares` | `[]` | SMB share names to mount — each needs `smb/<name>/{label,path,username,password}` SOPS secrets |
 | `features.flatpak.enable` | `true` | Flatpak + Flathub (Flatseal, Flatsweep) |
@@ -39,9 +39,8 @@ features.ssh.enable = true;
 | `features.apps.enable` | `true` | Desktop apps (Discord, Spotify, Obsidian, LibreOffice, ...) |
 | `features.apps.winboat.enable` | `false` | WinBoat Windows VM (seamless integration) |
 | `features.auth.totp.enable` | `true` | TOTP for sudo, SSH (see [AUTH.md](AUTH.md)) |
-| `features.auth.yubikey.enable` | `false` | YubiKey for sudo, SSH (see [AUTH.md](AUTH.md)) |
+| `features.auth.yubikey.enable` | `unlockMethod == "yubikey"` | YubiKey for sudo, SSH (see [AUTH.md](AUTH.md)). Auto-enabled when `encryption.unlockMethod = "yubikey"`. |
 | `features.auth.yubikey.pin` | `false` | Require FIDO2 PIN on YubiKey (in addition to touch) |
-| `features.auth.yubikey.luks.enable` | `yubikey.enable` | Use YubiKey FIDO2 to unlock LUKS at boot instead of TPM2 (see [AUTH.md](AUTH.md)) |
 | `features.secureBoot.enable` | `false` | UEFI Secure Boot via lanzaboote |
 | `features.ssh.enable` | `false` | OpenSSH server + GitHub key sync (every 15 min) |
 | `features.snapshots.enable` | `true` | Automatic btrfs snapshots (hourly, see [SNAPSHOTS.md](SNAPSHOTS.md)) |

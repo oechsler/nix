@@ -7,8 +7,9 @@ Two-factor authentication via TOTP and/or YubiKey. Configured in `modules/system
 | Method | Default | Setup |
 |--------|---------|-------|
 | TOTP (Time-based One-Time Password) | enabled | `sudo totp-init` |
-| YubiKey PAM (sudo, SSH) | disabled | `sudo yubikey-init` |
-| YubiKey FIDO2 LUKS unlock (boot) | on when `yubikey.enable = true` | `sudo yubikey-luks-init` |
+| YubiKey PAM (sudo, SSH) | on when `unlockMethod = "yubikey"` | `sudo yubikey-init` |
+| YubiKey FIDO2 LUKS unlock (boot) | via `features.encryption.unlockMethod` | `sudo yubikey-luks-init` |
+| TPM2 LUKS unlock (boot) | via `features.encryption.unlockMethod` | `sudo tpm-luks-init` |
 
 Both PAM methods work independently or combined. Password serves as a local fallback only — it is never accepted over SSH.
 
@@ -67,23 +68,34 @@ Requires `features.ssh.enable = true` on the host for the SSH server to run.
 
 ### TOTP
 
-TOTP is set up automatically during installation (`install.sh`). To reconfigure on an existing system:
+TOTP is **enabled by default** (`features.auth.totp.enable = true`). It serves as the primary
+2FA method on sudo when no YubiKey is active, and as fallback when YubiKey **is** active.
 
-```bash
-sudo totp-init
+```text
+sudo with TOTP only:   OTP (3 attempts) → Password
+sudo with both:        YubiKey → OTP (3 attempts) → Password
 ```
 
-This generates a new secret, writes it to `/etc/users.oath`, and displays a QR code to scan with an authenticator app (Google Authenticator, Aegis, etc.).
+**Setup**: run `sudo totp-init`, scan the QR code with your authenticator app,
+then `sudo nixos-rebuild switch`.
 
-After setup, activate with:
+**Adding a second device**: run `sudo totp-init` again and choose "Re-enroll".
+Scan the QR code on both devices. The old secret is replaced — previous device
+codes stop working after the rebuild.
 
+**Manual verification** (e.g. to check clock drift):
 ```bash
-sudo nixos-rebuild switch
+oathtool --totp -d 6 "$(sudo cat /persist/etc/users.oath | awk '{print $NF}')"
+```
+
+**Disable** (not recommended):
+```nix
+features.auth.totp.enable = false;
 ```
 
 ### YubiKey (PAM)
 
-Enable in your host's `configuration.nix`:
+YubiKey PAM is enabled automatically when `encryption.unlockMethod = "yubikey"`. To enable PAM independently:
 
 ```nix
 features.auth.yubikey.enable = true;
@@ -104,11 +116,17 @@ To register a backup key, run `sudo yubikey-init` again and choose **Add another
 
 ### YubiKey FIDO2 LUKS Unlock
 
-When `features.auth.yubikey.enable = true`, LUKS unlock at boot automatically switches from TPM2 to YubiKey FIDO2 (`yubikey.luks.enable` defaults to `yubikey.enable`). To keep TPM2 while using YubiKey for PAM:
+Set the unlock method in your host's `configuration.nix`:
 
 ```nix
+features.encryption.unlockMethod = "yubikey";
+```
+
+This automatically enables YubiKey PAM (`auth.yubikey.enable`) and installs everything needed. For YubiKey PAM without YubiKey LUKS:
+
+```nix
+features.encryption.unlockMethod = "tpm2";
 features.auth.yubikey.enable = true;
-features.auth.yubikey.luks.enable = false;  # keep TPM2
 ```
 
 **Before switching from TPM to YubiKey** — wipe the TPM slot first:

@@ -9,6 +9,7 @@
 #   - lib.mkDisko: Helper for importing disko configurations (optional)
 #   - nixosConfigurations: Local host configurations (samuels-pc, samuels-razer)
 #   - diskoConfigurations: Disk layouts for local hosts
+#   - formatter: nixfmt for `nix fmt`
 #   - checks: CI/CD linters (custom conventions, statix, deadnix)
 #
 # Local Hosts:
@@ -228,6 +229,11 @@
         mkHost = mkHostExternal;
         mkDisko = mkDiskoExternal;
       };
+
+      #===========================
+      # Formatter
+      #===========================
+      formatter.${system} = pkgs.nixfmt;
 
       #===========================
       # CI/CD Checks

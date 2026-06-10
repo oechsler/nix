@@ -102,6 +102,7 @@
       bind -T move 0 join-pane -t :10
 
       set -g mouse on
+      set -g allow-passthrough on
 
       # Status (after catppuccin plugin)
       set -g status-right " #{=/30/…:#{s|$HOME|~|:pane_current_path}}  #h "

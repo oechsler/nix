@@ -8,7 +8,13 @@
 # Common theming (GTK, cursor, icons):
 # - See common/theme.nix
 
-{ pkgs, lib, fonts, theme, ... }:
+{
+  pkgs,
+  lib,
+  fonts,
+  theme,
+  ...
+}:
 
 let
   iconName = theme.icons.name;

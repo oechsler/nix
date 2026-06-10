@@ -11,12 +11,23 @@
 # - Hyprland: See hyprland/theme.nix (Qt/Kvantum, hidden window buttons)
 # - KDE: See kde/theme.nix (Plasma integration, window decorations)
 
-{ config, pkgs, lib, fonts, theme, features, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  fonts,
+  theme,
+  features,
+  ...
+}:
 
 let
   # Theme colors and packages
   inherit (theme.catppuccin) flavor accent;
   isLight = flavor == "latte";
+
+  # Catppuccin palette loaded once, shared across modules
+  palette = (lib.importJSON "${config.catppuccin.sources.palette}/palette.json").${flavor}.colors;
   iconName = theme.icons.name;
   iconPackage = theme.icons.package;
   cursorName = theme.cursor.name;
@@ -43,8 +54,15 @@ in
   # See: https://github.com/nix-community/plasma-manager/issues/376
   options.desktop.pinnedApps = lib.mkOption {
     type = lib.types.listOf lib.types.str;
-    default = [];
+    default = [ ];
     description = "Pinned dock/taskbar apps as desktop file names (without .desktop suffix)";
+  };
+
+  options.theme.catppuccinPalette = lib.mkOption {
+    type = lib.types.attrs;
+    readOnly = true;
+    default = palette;
+    internal = true;
   };
 
   #===========================
@@ -56,24 +74,24 @@ in
     # Default Pinned Apps
     #---------------------------
     # Apps shown in KDE taskbar / Hyprland dock
-    desktop.pinnedApps =
-      [ "firefox"
-        (if isKde then "org.kde.dolphin" else "org.gnome.Nautilus")
-        "kitty"
-      ]
-      ++ lib.optionals features.development.enable [
-        "code"
-      ]
-      ++ lib.optionals features.apps.enable [
-        "obsidian"
-      ]
-      ++ lib.optionals features.gaming.enable [
-        "steam"
-      ]
-      ++ lib.optionals features.apps.enable [
-        "vesktop"
-        "spotify"
-      ];
+    desktop.pinnedApps = [
+      "firefox"
+      (if isKde then "org.kde.dolphin" else "org.gnome.Nautilus")
+      "kitty"
+    ]
+    ++ lib.optionals features.development.enable [
+      "code"
+    ]
+    ++ lib.optionals features.apps.enable [
+      "obsidian"
+    ]
+    ++ lib.optionals features.gaming.enable [
+      "steam"
+    ]
+    ++ lib.optionals features.apps.enable [
+      "vesktop"
+      "spotify"
+    ];
 
     #---------------------------
     # Generic Theme
@@ -87,14 +105,17 @@ in
         name = "Discord";
         exec = "vesktop %U";
         icon = "discord";
-        categories = [ "Network" "InstantMessaging" "Chat" ];
+        categories = [
+          "Network"
+          "InstantMessaging"
+          "Chat"
+        ];
         genericName = "Internet Messenger";
         settings.StartupWMClass = "Vesktop";
       };
 
       # GTK4 ignores the theme package — it loads CSS from ~/.config/gtk-4.0/ directly
-      configFile."gtk-4.0/gtk.css".source =
-        "${catppuccinGtk}/share/themes/${themeName}/gtk-4.0/gtk.css";
+      configFile."gtk-4.0/gtk.css".source = "${catppuccinGtk}/share/themes/${themeName}/gtk-4.0/gtk.css";
       configFile."gtk-4.0/gtk-dark.css".source =
         "${catppuccinGtk}/share/themes/${themeName}/gtk-4.0/gtk-dark.css";
     };
