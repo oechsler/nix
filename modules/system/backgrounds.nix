@@ -185,7 +185,6 @@ in
         serviceConfig = {
           Type = "oneshot";
           ExecStart = extractScript;
-          RemainAfterExit = true;
         };
       };
     })
