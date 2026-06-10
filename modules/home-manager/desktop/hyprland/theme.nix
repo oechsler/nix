@@ -53,6 +53,33 @@ in
     # mkForce overrides the value set by qt.platformTheme.name = "qtct"
     home.sessionVariables.QT_QPA_PLATFORMTHEME = lib.mkForce "gnome";
 
+    # Flatpak Qt apps can't follow symlinks to /nix/store.
+    # The catppuccin Kvantum module creates symlinks via xdg.configFile.
+    # Replace both the theme directory AND kvantum.kvconfig with real files.
+    home.activation.copyKvantumForFlatpak = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+      KVANTUM_THEME="catppuccin-${theme.catppuccin.flavor}-${theme.catppuccin.accent}"
+      KVANTUM_DIR="$HOME/.config/Kvantum/$KVANTUM_THEME"
+      KVANTUM_CONF="$HOME/.config/Kvantum/kvantum.kvconfig"
+
+      # Replace theme dir symlink with real files
+      if [ -L "$KVANTUM_DIR" ]; then
+        SRC=$(readlink -f "$KVANTUM_DIR")
+        if [ -d "$SRC" ]; then
+          rm -f "$KVANTUM_DIR"
+          cp -rL "$SRC" "$KVANTUM_DIR"
+        fi
+      fi
+
+      # Replace kvantum.kvconfig symlink with real file
+      if [ -L "$KVANTUM_CONF" ]; then
+        CONTENT=$(cat "$KVANTUM_CONF" 2>/dev/null)
+        if [ -n "$CONTENT" ]; then
+          rm -f "$KVANTUM_CONF"
+          printf '%s\n' "$CONTENT" > "$KVANTUM_CONF"
+        fi
+      fi
+    '';
+
     home.packages = with pkgs; [
       libsForQt5.qt5ct
       kdePackages.qt6ct
