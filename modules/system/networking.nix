@@ -4,13 +4,14 @@
 # 1. Base networking (NetworkManager, DNS, mDNS)
 # 2. WiFi profiles with iwd backend
 # 3. Ethernet connection profile
-# 4. Policy-based routing for dual interfaces (Hyprland only)
+# 4. Ethernet-controlled WiFi autoconnect for desktop systems
 # 5. Tailscale VPN (optional)
 #
 # Configuration options:
 #   features.wifi.enable = true;                        # Enable WiFi (default: true)
 #   features.wifi.networks = [ "home" ];                # WPA2-PSK networks (default: ["home"])
 #   features.wifi.enterpriseNetworks = [ "uni" ];       # WPA2 Enterprise networks (default: [])
+#   features.wifi.disableOnEthernet.enable = true;      # Keep WiFi autoconnect off while Ethernet is active (default: wifi.enable)
 #   features.tailscale.enable = true;                   # Enable Tailscale VPN (default: true)
 #
 # WiFi credentials are stored in SOPS secrets:
@@ -120,6 +121,56 @@ let
       ]) cfg.enterpriseNetworks
     )
   );
+
+  ethernetWifiSwitch = pkgs.writeShellScript "ethernet-wifi-switch" ''
+    # Arguments from NetworkManager dispatcher:
+    # $1 = interface name (e.g., "enp5s0")
+    # $2 = action (up, down, connectivity-change, etc.)
+
+    INTERFACE=''${1:-}
+    ACTION=''${2:-up}
+
+    case "$ACTION" in
+      up|down|connectivity-change|dhcp4-change|dhcp6-change) ;;
+      *) exit 0 ;;
+    esac
+
+    if [ -n "$INTERFACE" ] && [ ! -d "/sys/class/net/$INTERFACE/device" ]; then
+      exit 0
+    fi
+
+    WIFI_CONNECTIONS=$(${pkgs.networkmanager}/bin/nmcli -t -f NAME,TYPE connection show | ${pkgs.gnugrep}/bin/grep ':802-11-wireless$' | ${pkgs.coreutils}/bin/cut -d: -f1)
+
+    if [ -z "$WIFI_CONNECTIONS" ]; then
+      exit 0
+    fi
+
+    ACTIVE_ETHERNET=$(${pkgs.networkmanager}/bin/nmcli -t -f TYPE,DEVICE connection show --active | ${pkgs.gnugrep}/bin/grep '^802-3-ethernet:' | ${pkgs.coreutils}/bin/cut -d: -f2 || true)
+
+    if [ -n "$ACTIVE_ETHERNET" ]; then
+      ${pkgs.util-linux}/bin/logger "NetworkManager dispatcher: active Ethernet found ($ACTIVE_ETHERNET), disabling WiFi autoconnect"
+
+      while IFS= read -r conn; do
+        ${pkgs.networkmanager}/bin/nmcli connection modify "$conn" connection.autoconnect no || true
+        ${pkgs.networkmanager}/bin/nmcli connection down "$conn" || true
+      done <<< "$WIFI_CONNECTIONS"
+
+      exit 0
+    fi
+
+    ${pkgs.util-linux}/bin/logger "NetworkManager dispatcher: no active Ethernet found, enabling WiFi autoconnect"
+
+    while IFS= read -r conn; do
+      ${pkgs.networkmanager}/bin/nmcli connection modify "$conn" connection.autoconnect yes || true
+    done <<< "$WIFI_CONNECTIONS"
+
+    WIFI_DEVICE=$(${pkgs.networkmanager}/bin/nmcli -t -f DEVICE,TYPE device status | ${pkgs.gnugrep}/bin/grep ':wifi$' | ${pkgs.coreutils}/bin/cut -d: -f1 | ${pkgs.coreutils}/bin/head -n1)
+
+    if [ -n "$WIFI_DEVICE" ]; then
+      ${pkgs.networkmanager}/bin/nmcli radio wifi on || true
+      ${pkgs.networkmanager}/bin/nmcli device connect "$WIFI_DEVICE" || true
+    fi
+  '';
 in
 {
   #===========================
@@ -140,6 +191,9 @@ in
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "WPA2 Enterprise (EAP-PEAP/MSCHAPv2) network names — each needs wifi/<name>/ssid, wifi/<name>/identity, wifi/<name>/password SOPS secrets";
+      };
+      disableOnEthernet.enable = (lib.mkEnableOption "disabling WiFi autoconnect while Ethernet is active") // {
+        default = cfg.enable;
       };
     };
     tailscale.enable = (lib.mkEnableOption "Tailscale VPN") // {
@@ -168,7 +222,11 @@ in
             "interface-name:tailscale*"
           ];
         };
-        wireless.iwd.enable = true;
+        wireless.iwd = {
+          enable = true;
+          # NetworkManager owns IP configuration and routing; iwd only handles WiFi auth.
+          settings.General.EnableNetworkConfiguration = false;
+        };
       };
 
       # systemd-resolved for DNS
@@ -199,13 +257,11 @@ in
     }
 
     #---------------------------
-    # 2. WiFi Auto-Disconnect (Hyprland only)
+    # 2. Ethernet/WiFi Switching (desktop only)
     #---------------------------
-    # KDE Plasma handles network priority via plasma-nm, so we only configure this for Hyprland
-    #
-    # Strategy: When Ethernet comes up, disconnect WiFi immediately
-    # This avoids dual-interface routing complexity and ensures consistent network behavior
-    (lib.mkIf (config.features.desktop.enable && config.features.desktop.wm == "hyprland") {
+    # Strategy: Ethernet carrier controls WiFi autoconnect.
+    # This avoids dual-interface routing complexity without reacting to virtual Docker/Tailscale links.
+    (lib.mkIf (config.features.desktop.enable && cfg.enable && cfg.disableOnEthernet.enable) {
 
       # Ethernet connection profile with basic priority settings
       networking.networkmanager.ensureProfiles.profiles.ethernet-default = {
@@ -225,54 +281,43 @@ in
         };
       };
 
-      # NetworkManager dispatcher script: Disconnect WiFi when Ethernet comes up
+      # NetworkManager dispatcher script: disable WiFi autoconnect while Ethernet has carrier.
       # Dispatcher scripts run on interface state changes (up, down, connectivity-change, etc.)
       # This ensures instant response and works correctly after suspend/resume
       networking.networkmanager.dispatcherScripts = [
         {
-          source = pkgs.writeShellScript "wifi-auto-disconnect" ''
-            # Arguments from NetworkManager dispatcher:
-            # $1 = interface name (e.g., "enp5s0")
-            # $2 = action (up, down, connectivity-change, etc.)
-
-            INTERFACE=$1
-            ACTION=$2
-
-            if [[ "$INTERFACE" == docker* || "$INTERFACE" == br-* || "$INTERFACE" == veth* || "$INTERFACE" == virbr* || "$INTERFACE" == wg* || "$INTERFACE" == tailscale* ]]; then
-              exit 0
-            fi
-
-            # Only physical network devices should trigger WiFi enforcement.
-            if [[ ! -d "/sys/class/net/$INTERFACE/device" ]]; then
-              exit 0
-            fi
-
-            if [[ "$ACTION" = "up" || "$ACTION" = "connectivity-change" || "$ACTION" = "dhcp4-change" ]]; then
-              ACTIVE_ETHERNET=$(${pkgs.networkmanager}/bin/nmcli -t -f TYPE,DEVICE connection show --active | grep '^802-3-ethernet:' | cut -d: -f2)
-
-              if [ -z "$ACTIVE_ETHERNET" ]; then
-                exit 0
-              fi
-
-              logger "NetworkManager dispatcher: active Ethernet found ($ACTIVE_ETHERNET), disconnecting WiFi"
-
-              # Get all active WiFi connections (type is "802-11-wireless")
-              WIFI_CONNECTIONS=$(${pkgs.networkmanager}/bin/nmcli -t -f NAME,TYPE,DEVICE connection show --active | grep ':802-11-wireless:' | cut -d: -f1)
-
-              # Disconnect each WiFi connection
-              if [ -n "$WIFI_CONNECTIONS" ]; then
-                while IFS= read -r conn; do
-                  logger "NetworkManager dispatcher: Disconnecting WiFi connection '$conn'"
-                  ${pkgs.networkmanager}/bin/nmcli connection down "$conn" || true
-                done <<< "$WIFI_CONNECTIONS"
-              else
-                logger "NetworkManager dispatcher: No active WiFi connections found"
-              fi
-            fi
-          '';
+          source = ethernetWifiSwitch;
           type = "basic";
         }
       ];
+
+      systemd.services.ethernet-wifi-switch = {
+        description = "Apply Ethernet/WiFi autoconnect policy";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "NetworkManager.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = ethernetWifiSwitch;
+        };
+      };
+
+      systemd.services.networkmanager-cleanup-ethernet-profiles = {
+        description = "Remove unmanaged Ethernet connection profiles";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "NetworkManager.service" "NetworkManager-ensure-profiles.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+        };
+        script = ''
+          ${pkgs.networkmanager}/bin/nmcli -t -f NAME,TYPE connection show \
+            | while IFS=: read -r name type; do
+                if [ "$type" = "802-3-ethernet" ] && [ "$name" != "Ethernet" ]; then
+                  ${pkgs.util-linux}/bin/logger "NetworkManager cleanup: deleting unmanaged Ethernet profile '$name'"
+                  ${pkgs.networkmanager}/bin/nmcli connection delete "$name" || true
+                fi
+              done
+        '';
+      };
     })
 
     #---------------------------

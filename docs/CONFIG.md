@@ -2,7 +2,7 @@
 
 ## Feature Toggles
 
-All features default to `true` (except Secure Boot, SSH, and server mode). Override per host in `configuration.nix`:
+Most desktop-oriented features default to enabled. Some toggles inherit their parent feature, and opt-in features default to disabled. Override per host in `configuration.nix`:
 
 ```nix
 features.server = true;          # Disables all desktop-related features at once
@@ -19,7 +19,7 @@ features.ssh.enable = true;
 | `features.encryption.enable` | `true` | LUKS full disk encryption |
 | `features.desktop.enable` | `true` | Desktop environment (SDDM, Firefox, theming) |
 | `features.desktop.wm` | `"hyprland"` | Window manager (`"hyprland"` / `"kde"`) |
-| `features.desktop.dock.enable` | `true` | Application dock for Hyprland (hypr-dock) |
+| `features.desktop.dock.enable` | `desktop.enable && wm == "hyprland"` | Application dock for Hyprland (hypr-dock) |
 | `features.audio.enable` | `true` | PipeWire audio (ALSA, PulseAudio compat) |
 | `features.bluetooth.enable` | `true` | Bluetooth support (power on boot) |
 | `features.gaming.enable` | `true` | Steam + Proton-GE, GameMode, Gamescope, MangoHud, ProtonUp-Qt |
@@ -35,9 +35,10 @@ features.ssh.enable = true;
 | `features.wifi.enable` | `true` | WiFi profiles via SOPS secrets |
 | `features.wifi.networks` | `[]` | WPA2-PSK network names — each needs `wifi/<name>/ssid` + `wifi/<name>/psk` SOPS secrets |
 | `features.wifi.enterpriseNetworks` | `[]` | WPA2 Enterprise (EAP-PEAP) network names — each needs `wifi/<name>/ssid`, `wifi/<name>/identity`, `wifi/<name>/password` SOPS secrets |
+| `features.wifi.disableOnEthernet.enable` | `wifi.enable` | Disable WiFi autoconnect while Ethernet is active to avoid same-subnet dual uplinks |
 | `features.development.enable` | `true` | IDEs, languages (Go, Rust, Node, Java) |
-| `features.development.gui.enable` | `true` | GUI dev tools (VS Code, JetBrains, DBeaver) |
-| `features.development.kubernetes.enable` | `true` | Kubernetes tools (kubectl, k9s) |
+| `features.development.gui.enable` | `development.enable` | GUI dev tools (VS Code, JetBrains, DBeaver) |
+| `features.development.kubernetes.enable` | `development.enable` | Kubernetes tools (kubectl, k9s) |
 | `features.apps.enable` | `true` | Desktop apps (Discord, Spotify, Obsidian, LibreOffice, ...) |
 | `features.apps.winboat.enable` | `false` | WinBoat Windows VM (seamless integration) |
 | `features.auth.totp.enable` | `true` | TOTP for sudo, SSH (see [AUTH.md](AUTH.md)) |
@@ -56,6 +57,14 @@ Set in `configuration.nix`:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `sops.secretsFile` | `../../sops/sops.encrypted.yaml` | Path to encrypted SOPS secrets file (override for external repos) |
+
+## Networking Policy
+
+NetworkManager owns IP configuration and routing. The `iwd` service is used only as the WiFi authentication backend.
+
+Docker and Tailscale interfaces are marked unmanaged in NetworkManager because those services create and configure their own virtual interfaces (`docker0`, `br-*`, `veth*`, `tailscale0`).
+
+On desktop systems, `features.wifi.disableOnEthernet.enable` keeps WiFi autoconnect disabled while Ethernet is active. This avoids unstable dual uplinks when Ethernet and WiFi are connected to the same subnet. When Ethernet is disconnected, WiFi autoconnect is re-enabled.
 
 ## User Options
 
