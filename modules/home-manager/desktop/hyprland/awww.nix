@@ -18,7 +18,14 @@
 # Scripts exposed:
 #   config.awww.start - Start daemon and set wallpaper (used by hyprland.nix)
 
-{ config, pkgs, lib, theme, displays, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  theme,
+  displays,
+  ...
+}:
 
 let
   awwwPkg = pkgs.awww;
@@ -27,15 +34,20 @@ let
   # - Per-monitor: Set specific wallpaper for each monitor
   # - Fallback: Set wallpaper on all monitors
   wallpaperCommands =
-    if displays.monitors == [] then
+    if displays.monitors == [ ] then
       # No monitor config: Set on all monitors
       "${awwwPkg}/bin/awww img ${theme.wallpaperPath} --transition-type fade --transition-duration 1"
     else
       # Per-monitor: Set specific wallpaper for each monitor
-      lib.concatStringsSep "\n" (map (m:
-        let wp = if m.wallpaper != null then m.wallpaper else theme.wallpaperPath;
-        in "${awwwPkg}/bin/awww img ${wp} --outputs ${m.name} --transition-type fade --transition-duration 1"
-      ) displays.monitors);
+      lib.concatStringsSep "\n" (
+        map (
+          m:
+          let
+            wp = if m.wallpaper != null then m.wallpaper else theme.wallpaperPath;
+          in
+          "${awwwPkg}/bin/awww img ${wp} --outputs ${m.name} --transition-type fade --transition-duration 1"
+        ) displays.monitors
+      );
 
   # Start script: Launch daemon and set wallpaper
   startScript = pkgs.writeShellScript "awww-start" ''
@@ -77,7 +89,15 @@ in
     home.activation.setWallpaper = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       if ${pkgs.procps}/bin/pgrep -x "awww-daemon" > /dev/null 2>&1; then
         export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-        export WAYLAND_DISPLAY="''${WAYLAND_DISPLAY:-wayland-1}"
+
+        # Detect the actual Wayland socket instead of hardcoding wayland-1
+        WAYLAND_SOCKET=$(${pkgs.coreutils}/bin/ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | head -1)
+        if [ -n "$WAYLAND_SOCKET" ]; then
+          export WAYLAND_DISPLAY=$(${pkgs.coreutils}/bin/basename "$WAYLAND_SOCKET")
+        else
+          export WAYLAND_DISPLAY="''${WAYLAND_DISPLAY:-wayland-1}"
+        fi
+
         run ${setWallpaperScript}
       fi
     '';
