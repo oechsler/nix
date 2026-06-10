@@ -12,7 +12,6 @@
 #   features.wifi.enable = true;                        # Enable WiFi (default: true)
 #   features.wifi.networks = [ "home" ];                # WPA2-PSK networks (default: ["home"])
 #   features.wifi.enterpriseNetworks = [ "uni" ];       # WPA2 Enterprise networks (default: [])
-#   features.wifi.disableOnEthernet.enable = true;      # Keep WiFi autoconnect off while Ethernet is active (default: wifi.enable)
 #   features.tailscale.enable = true;                   # Enable Tailscale VPN (default: true)
 #
 # WiFi credentials are stored in SOPS secrets:
@@ -210,9 +209,6 @@ in
         default = [ ];
         description = "WPA2 Enterprise (EAP-PEAP/MSCHAPv2) network names — each needs wifi/<name>/ssid, wifi/<name>/identity, wifi/<name>/password SOPS secrets";
       };
-      disableOnEthernet.enable = (lib.mkEnableOption "disabling WiFi autoconnect while Ethernet is active") // {
-        default = cfg.enable;
-      };
     };
     tailscale.enable = (lib.mkEnableOption "Tailscale VPN") // {
       default = true;
@@ -297,7 +293,7 @@ in
     #---------------------------
     # Strategy: Ethernet carrier controls WiFi autoconnect.
     # This avoids dual-interface routing complexity without reacting to virtual Docker/Tailscale links.
-    (lib.mkIf (config.features.desktop.enable && cfg.enable && cfg.disableOnEthernet.enable) {
+    (lib.mkIf (config.features.desktop.enable && cfg.enable) {
 
       # NetworkManager dispatcher script: disable WiFi autoconnect while Ethernet has carrier.
       # Dispatcher scripts run on interface state changes (up, down, connectivity-change, etc.)

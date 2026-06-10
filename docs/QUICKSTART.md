@@ -81,7 +81,6 @@ Or disable features that need secrets:
 ```nix
 features.wifi.enable = false;
 features.smb.enable = false;
-features.development.kubernetes.enable = false;
 ```
 
 ## Defaults To Review

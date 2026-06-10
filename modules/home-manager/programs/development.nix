@@ -6,18 +6,18 @@
 #    - Languages: Go, Rust, Java, Node.js
 #    - Utilities: cloc, distrobox
 #    - opencode (AI coding agent)
-#    - Useful on servers and desktops
+#    - Useful on development machines
 #
-# 2. Kubernetes Tools (features.development.kubernetes.enable = true)
+# 2. Kubernetes Tools (features.development.enable = true)
 #    - kubectl, helm, k9s
 #
-# 3. GUI Tools (features.development.gui.enable = true)
+# 3. GUI Tools (features.development.enable && features.desktop.enable)
 #    - VS Code
 #    - JetBrains Toolbox (IntelliJ IDEA, etc.)
 #    - DBeaver (Database GUI)
 #    - Only useful on desktops
 #
-# Server mode automatically disables GUI tools but keeps CLI tools.
+# Server mode disables development tools.
 
 { pkgs, features, lib, ... }:
 
@@ -44,8 +44,8 @@
       ];
     })
 
-    # Kubernetes Tools (optional)
-    (lib.mkIf (features.development.enable && features.development.kubernetes.enable) {
+    # Kubernetes Tools
+    (lib.mkIf features.development.enable {
       catppuccin.k9s.transparent = true;
 
       programs.k9s = {
@@ -105,7 +105,7 @@
     })
 
     # GUI Development Tools (only for desktop)
-    (lib.mkIf (features.development.enable && features.development.gui.enable) {
+    (lib.mkIf (features.development.enable && features.desktop.enable) {
       home.packages = with pkgs; [
         dbeaver-bin        # Database GUI
         jetbrains.goland   # Go IDE

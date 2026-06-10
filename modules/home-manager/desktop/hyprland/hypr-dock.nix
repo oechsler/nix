@@ -15,9 +15,6 @@
 # - Margin: theme.gaps.outer (matches waybar)
 # - Border radius: theme.radius.default
 # - Border: 2px accent color
-#
-# Toggle:
-#   features.desktop.dock.enable = true;  (default: true)
 
 { config, pkgs, lib, theme, features, ... }:
 
@@ -34,7 +31,7 @@ in
   # Configuration
   #===========================
 
-  config = lib.mkIf features.desktop.dock.enable {
+  config = lib.mkIf (features.desktop.enable && features.desktop.wm == "hyprland") {
 
     #---------------------------
     # 1. Package

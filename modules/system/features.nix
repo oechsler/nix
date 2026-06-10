@@ -8,11 +8,9 @@
 # Desktop:
 #   features.desktop.enable = true;         # Desktop environment (default: true)
 #   features.desktop.wm = "hyprland";       # Window manager: hyprland or kde
-#   features.desktop.dock.enable = true;    # hypr-dock (default: desktop.enable && Hyprland)
 #
 # Development:
-#   features.development.enable = true;     # Dev tools & languages (default: true)
-#   features.development.gui.enable = true; # GUI dev tools (default: development.enable)
+#   features.development.enable = true;     # Dev tools, languages, Kubernetes tools (default: true)
 #
 # Apps:
 #   features.apps.enable = true;            # Desktop apps (Discord, Spotify, etc.)
@@ -26,7 +24,7 @@
 # - Audio, Bluetooth, WiFi
 # - Gaming (Steam)
 # - GUI apps (Discord, Spotify, etc.)
-# - Development tools (languages, kubectl, VS Code, JetBrains, etc.)
+# - Development tools (languages, Kubernetes tools, VS Code, JetBrains, etc.)
 # - Flatpak, AppImage
 #
 # Server mode enables:
@@ -111,24 +109,11 @@ in
         default = "hyprland";
         description = "Window manager / desktop environment";
       };
-      dock = {
-        enable = (lib.mkEnableOption "hypr-dock (application dock for Hyprland)") // {
-          default = config.features.desktop.enable && config.features.desktop.wm == "hyprland";
-        };
-      };
       autoLogin = {
         enable = lib.mkEnableOption "automatic login via SDDM";
       };
     };
-    development = {
-      enable = (lib.mkEnableOption "development tools (languages, CLI tools)") // { default = true; };
-      gui.enable = (lib.mkEnableOption "GUI development tools (VS Code, JetBrains, DBeaver)") // {
-        default = config.features.development.enable;
-      };
-      kubernetes.enable = (lib.mkEnableOption "Kubernetes tools (kubectl, k9s)") // {
-        default = config.features.development.enable;
-      };
-    };
+    development.enable = (lib.mkEnableOption "development tools") // { default = true; };
     apps = {
       enable = (lib.mkEnableOption "desktop applications (Discord, Spotify, etc.)") // { default = true; };
       winboat.enable = lib.mkEnableOption "WinBoat (Windows VM with seamless integration)";
