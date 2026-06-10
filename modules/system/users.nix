@@ -204,13 +204,14 @@ in
     #---------------------------
     # 6. Sudo Configuration
     #---------------------------
-    # Sudo with 30-min timestamp timeout
-    security.sudo = {
+    # sudo-rs: memory-safe Rust reimplementation of sudo
+    security.sudo.enable = false;
+    security.sudo-rs = {
       enable = true;
       extraConfig = ''
         Defaults timestamp_timeout=30
+        Defaults !use_pty
       '';
     };
-    security.sudo-rs.enable = false;
   };
 }
