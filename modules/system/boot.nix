@@ -47,23 +47,23 @@ in
 
   config = lib.mkMerge [
     {
-      boot.kernelPackages = kernelMap.${cfg};
+      boot = {
+        kernelPackages = kernelMap.${cfg};
 
-      boot.loader = {
-        systemd-boot = {
-          enable = true;
-          editor = false;
-          configurationLimit = 10;
+        loader = {
+          systemd-boot = {
+            enable = true;
+            editor = false;
+            configurationLimit = 10;
+          };
+          efi.canTouchEfiVariables = true;
+          timeout = 0;
         };
-        efi.canTouchEfiVariables = true;
-        timeout = 0;
-      };
 
-      # Bump inotify watch limit for Neovim LSP/file watchers and other tools.
-      # Default 8192 is far too low for modern development workloads.
-      boot.kernel.sysctl = {
-        "fs.inotify.max_user_watches" = 524288;
-        "fs.inotify.max_user_instances" = 512;
+        kernel.sysctl = {
+          "fs.inotify.max_user_watches" = 524288;
+          "fs.inotify.max_user_instances" = 512;
+        };
       };
     }
 
