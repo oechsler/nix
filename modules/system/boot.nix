@@ -61,7 +61,10 @@ in
 
       # Bump inotify watch limit for Neovim LSP/file watchers and other tools.
       # Default 8192 is far too low for modern development workloads.
-      boot.kernel.sysctl."fs.inotify.max_user_watches" = 524288;
+      boot.kernel.sysctl = {
+        "fs.inotify.max_user_watches" = 524288;
+        "fs.inotify.max_user_instances" = 512;
+      };
     }
 
     (lib.mkIf config.features.desktop.enable {
