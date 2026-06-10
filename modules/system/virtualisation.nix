@@ -1,23 +1,9 @@
 # Virtualisation Configuration
 #
-# This module enables virtualisation and containerisation support.
+# Docker container runtime with IPv6 fixups for desktop hosts.
 #
 # Configuration:
-#   features.virtualisation.enable = true;          # Enable Docker (default: true)
-#   features.virtualisation.waydroid.enable = true; # Android container (requires virtualisation.enable)
-#
-# Docker:
-# - Docker daemon starts on boot
-# - User added to docker group (run containers without sudo)
-#
-# Waydroid:
-# - Android container runtime for Wayland
-# - Runs Android apps natively on Linux
-# - Requires Wayland (KDE/Hyprland)
-#
-# Usage:
-#   docker run hello-world
-#   waydroid show-full-ui  # Launch Android UI
+#   features.virtualisation.enable = true;  # Enable Docker (default: true)
 
 {
   lib,
