@@ -56,7 +56,7 @@ git clone https://github.com/oechsler/nix.git /tmp/nix-config
 | `--dry-run` | Show summary and exit without making changes |
 | `-h`, `--help` | Show help |
 
-Steps are combinable. If none specified, all three run. The installer reads each host's configuration via `nix eval` to determine which features are enabled (encryption, impermanence, TOTP, etc.) and only asks relevant questions.
+Steps are combinable. Without step flags, all three run. The installer reads host feature flags with `nix eval` and only asks relevant questions.
 
 ## Disk Layout
 
@@ -86,16 +86,12 @@ samuels-pc has an additional encrypted games disk:
 
 ## Impermanence
 
-> **⚠️ Optional Feature**: Impermanence is enabled by default but can be disabled with `features.impermanence.enable = false;`.
->
-> **Requires**: BTRFS filesystem with `@` and `@persist` subvolumes.
-
 Root (`@`) is wiped on every boot. Persistent data goes in `/persist`:
 - `/var/lib/NetworkManager`, `/var/lib/bluetooth`
 - `/var/lib/docker`, `/var/lib/waydroid`
 - `/var/lib/nixos`, `/var/lib/sops`
 - `/persist/etc/ssh/*` (SSH host keys)
-- etc. (see `modules/system/impermanence.nix` for full list)
+- See `modules/system/impermanence.nix` for the full path list.
 
 User password is declarative in `modules/system/users.nix`.
 

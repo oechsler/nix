@@ -6,7 +6,7 @@ Some wallpapers in this collection are copyrighted images I don't have
 redistribution rights for. To keep this repo public while still using these
 images locally, they're stored in an encrypted archive.
 
-## How it works
+## Archive Flow
 
 1. `blob.tar.gz.enc` contains all wallpapers (AES-256 encrypted)
 2. The password is stored in `sops/sops.encrypted.yaml` under `backgrounds/password`

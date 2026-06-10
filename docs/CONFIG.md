@@ -25,6 +25,7 @@ features.ssh.enable = true;
 | `features.gaming.enable` | `true` | Steam + Proton-GE, GameMode, Gamescope, MangoHud, ProtonUp-Qt |
 | `features.gaming.gpu` | `null` | GPU vendor for VA-API hardware encoding (`"amd"` / `"intel"`) — enables Remote Play hardware encoding + LIBVA driver |
 | `features.desktop.autoLogin.enable` | `false` | Auto-login via SDDM, skips login screen. |
+| `features.networking.ipv6PrivacyExtensions.enable` | `!server` | IPv6 privacy extensions for NetworkManager profiles |
 | `features.virtualisation.enable` | `true` | Docker daemon + user group |
 | `features.virtualisation.waydroid.enable` | `false` | Waydroid Android container |
 | `features.smb.enable` | `true` | SMB network share mounts (auto-mount with retry) |
@@ -60,11 +61,12 @@ Set in `configuration.nix`:
 
 ## Networking Policy
 
-NetworkManager owns IP configuration and routing. The `iwd` service is used only as the WiFi authentication backend.
-
-Docker and Tailscale interfaces are marked unmanaged in NetworkManager because those services create and configure their own virtual interfaces (`docker0`, `br-*`, `veth*`, `tailscale0`).
-
-On desktop systems, `features.wifi.disableOnEthernet.enable` keeps WiFi autoconnect disabled while Ethernet is active. This avoids unstable dual uplinks when Ethernet and WiFi are connected to the same subnet. When Ethernet is disconnected, WiFi autoconnect is re-enabled.
+- NetworkManager owns IP configuration and routing.
+- `iwd` handles WiFi authentication only.
+- Docker/Tailscale interfaces are unmanaged in NetworkManager: `docker0`, `br-*`, `veth*`, `tailscale0`.
+- LLMNR is disabled in `systemd-resolved` to avoid resolver scopes on Docker/veth links.
+- Desktop Ethernet disables WiFi autoconnect while active.
+- IPv6 privacy extensions default to enabled, except in server mode.
 
 ## User Options
 
@@ -239,9 +241,7 @@ Set in `home.nix`. Works on both Hyprland (via hypridle) and KDE (via PowerDevil
 
 ## Impermanence
 
-> **⚠️ Optional Feature**: Impermanence is enabled by default but can be disabled with `features.impermanence.enable = false;`.
-
-Root filesystem (`/`) is wiped on every boot. Only explicitly declared paths in `/persist` survive. See [INSTALL.md](INSTALL.md#impermanence) for details.
+Root (`/`) is wiped on every boot when `features.impermanence.enable = true`. Only declared `/persist` paths survive. See [INSTALL.md](INSTALL.md#impermanence).
 
 ## Snapshots
 
@@ -249,14 +249,12 @@ See [SNAPSHOTS.md](SNAPSHOTS.md) for snapshot management (restore, browse, clean
 
 ## System Requirements
 
-### Default Configuration (Opinionated)
+### Defaults
 
-This config is opinionated and assumes:
-- **Filesystem**: BTRFS with subvolume layout
-  - Required: `@`, `@home`, `@nix`, `@snapshots`
-  - Optional: `@persist` (only needed when impermanence enabled)
-- **Encryption**: LUKS2 full disk encryption
-- **Impermanence**: Root filesystem wiped on boot
+- BTRFS subvolumes: `@`, `@home`, `@nix`, `@snapshots`
+- Optional subvolume: `@persist` when impermanence is enabled
+- LUKS2 full disk encryption
+- Impermanent root filesystem
 
 ### Disabling Features
 
@@ -270,9 +268,7 @@ features.impermanence.enable = false;
 features.encryption.enable = false;
 ```
 
-**Note**:
-- Disabling impermanence: Root stays persistent (state accumulates normally). The `/persist` subvolume and mount become unnecessary.
-- Disabling encryption: Requires removing LUKS from `disko.nix` or creating a new disk layout.
+Disabling encryption requires a matching non-LUKS disk layout.
 
 ### Partition Layout Requirements
 

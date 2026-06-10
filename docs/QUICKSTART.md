@@ -1,6 +1,6 @@
-# Quickstart: Using this Config as Base
+# Quickstart
 
-Use this NixOS configuration as foundation for your own systems.
+Use this flake as a base NixOS configuration.
 
 ## 1. Create Flake
 
@@ -55,49 +55,48 @@ nixos-generate-config --show-hardware-config > hosts/my-host/hardware-configurat
 nix build .#nixosConfigurations.my-host.config.system.build.toplevel
 ```
 
-## What You Get
+## Modes
 
-**Server mode:** Fish, Git, Neovim, SSH (optional), Tailscale (optional)
+- Server: Fish, Git, Neovim, optional SSH/Tailscale.
+- Desktop: server base plus Hyprland/KDE, Firefox, audio, development tools, Docker.
 
-**Desktop mode:** Everything from server + Hyprland/KDE, Firefox, Audio, Development tools, Docker (`features.virtualisation.enable`)
+## SOPS Secrets
 
-## SOPS Secrets (WiFi/SMB)
-
-WiFi and SMB require encrypted secrets via SOPS.
+WiFi and SMB need SOPS secrets. Point the host at your encrypted file:
 
 ```nix
-# Point to your SOPS file:
 sops.secretsFile = ./sops/sops.encrypted.yaml;
 ```
 
+Create the age key and install it on the target machine:
+
 ```bash
-# Setup:
 age-keygen -o sops/age.key
-# Create sops/sops.encrypted.yaml with your credentials
-sudo mkdir -p /var/lib/sops/age && sudo cp sops/age.key /var/lib/sops/age/keys.txt
+sudo mkdir -p /var/lib/sops/age
+sudo cp sops/age.key /var/lib/sops/age/keys.txt
 ```
 
+Or disable features that need secrets:
+
 ```nix
-# Or disable features:
 features.wifi.enable = false;
 features.smb.enable = false;
 features.development.kubernetes.enable = false;
 ```
 
-## Optional Features
+## Defaults To Review
 
-By default, the config is opinionated:
-- **Impermanence:** Root is wiped on boot (`features.impermanence.enable = true`)
-- **LUKS encryption:** Full disk encryption (`features.encryption.enable = true`)
-- **BTRFS required:** With subvolumes `@`, `@home`, `@nix`, `@persist`, `@snapshots`
+- Impermanence: `features.impermanence.enable = true`
+- LUKS encryption: `features.encryption.enable = true`
+- BTRFS subvolumes: `@`, `@home`, `@nix`, `@persist`, `@snapshots`
 
 To disable:
 
 ```nix
 # hosts/my-host/configuration.nix
 {
-  features.impermanence.enable = false;  # Keep traditional persistent root
-  features.encryption.enable = false;    # Skip LUKS (requires custom disk layout)
+  features.impermanence.enable = false;
+  features.encryption.enable = false;
 }
 ```
 
