@@ -176,16 +176,6 @@ in
     (lib.mkIf cfg.enable {
       sops.secrets."backgrounds/password" = { };
 
-      # Activation script: runs on every nixos-rebuild switch (and at boot)
-      # to immediately reflect theme.wallpaper changes without reboot.
-      system.activationScripts.backgrounds = {
-        deps = [ ]; # SOPS secrets handled internally via fallback
-        text = ''
-          ${extractScript}
-        '';
-      };
-
-      # Systemd service: ensures wallpapers are ready before SDDM at boot
       systemd.services.extract-backgrounds = {
         description = "Extract encrypted wallpapers";
         wantedBy = [ "multi-user.target" ];

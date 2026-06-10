@@ -32,6 +32,9 @@ let
   hasHostHomeNix = builtins.pathExists hostHomeNix;
 in
 {
+  # Ensure wallpaper is extracted before home-manager activation applies it
+  systemd.services."home-manager-${config.user.name}".after = [ "extract-backgrounds.service" ];
+
   home-manager = {
     useGlobalPkgs = true;
     extraSpecialArgs = {
