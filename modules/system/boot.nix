@@ -15,7 +15,12 @@
 # - Desktop mode: Silent boot with Plymouth splash screen
 # - No bootloader editor access (security)
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   cfg = config.features.kernel;
@@ -29,7 +34,13 @@ let
 in
 {
   options.features.kernel = lib.mkOption {
-    type = lib.types.enum [ "cachyos" "cachyos-v3" "cachyos-lts" "cachyos-server" "default" ];
+    type = lib.types.enum [
+      "cachyos"
+      "cachyos-v3"
+      "cachyos-lts"
+      "cachyos-server"
+      "default"
+    ];
     default = "cachyos";
     description = "Kernel variant (cachyos, cachyos-lts, cachyos-server, or default NixOS kernel)";
   };
@@ -47,6 +58,10 @@ in
         efi.canTouchEfiVariables = true;
         timeout = 0;
       };
+
+      # Bump inotify watch limit for Neovim LSP/file watchers and other tools.
+      # Default 8192 is far too low for modern development workloads.
+      boot.kernel.sysctl."fs.inotify.max_user_watches" = 524288;
     }
 
     (lib.mkIf config.features.desktop.enable {
@@ -57,14 +72,14 @@ in
         consoleLogLevel = 0;
         initrd.verbose = false;
         kernelParams = [
-        "quiet"
-        "splash"
-        "boot.shell_on_fail"
-        "loglevel=3"
-        "rd.systemd.show_status=false"
-        "rd.udev.log_level=3"
-        "udev.log_priority=3"
-      ];
+          "quiet"
+          "splash"
+          "boot.shell_on_fail"
+          "loglevel=3"
+          "rd.systemd.show_status=false"
+          "rd.udev.log_level=3"
+          "udev.log_priority=3"
+        ];
       };
       catppuccin.plymouth.enable = false;
     })
