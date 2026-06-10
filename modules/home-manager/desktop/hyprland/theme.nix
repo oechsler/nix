@@ -58,7 +58,12 @@ in
     # Replace both the theme directory AND kvantum.kvconfig with real files.
     # Also clean stale .bak files before home-manager checks for conflicts.
     home.activation.cleanupKvantumBak = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-      rm -rf "$HOME/.config/Kvantum/"*.bak 2>/dev/null || true
+      KVANTUM_DIR="$HOME/.config/Kvantum"
+      for f in "$KVANTUM_DIR"/*.bak; do
+        [ -e "$f" ] || continue
+        chmod -R u+w "$f" 2>/dev/null || true
+        rm -rf "$f"
+      done
     '';
 
     home.activation.copyKvantumForFlatpak = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
