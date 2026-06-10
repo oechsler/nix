@@ -56,6 +56,11 @@ in
     # Flatpak Qt apps can't follow symlinks to /nix/store.
     # The catppuccin Kvantum module creates symlinks via xdg.configFile.
     # Replace both the theme directory AND kvantum.kvconfig with real files.
+    # Also clean stale .bak files before home-manager checks for conflicts.
+    home.activation.cleanupKvantumBak = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+      rm -rf "$HOME/.config/Kvantum/"*.bak 2>/dev/null || true
+    '';
+
     home.activation.copyKvantumForFlatpak = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
       KVANTUM_THEME="catppuccin-${theme.catppuccin.flavor}-${theme.catppuccin.accent}"
       KVANTUM_DIR="$HOME/.config/Kvantum/$KVANTUM_THEME"

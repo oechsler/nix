@@ -134,6 +134,7 @@ in
       # Clean up stale .bak files before home-manager checks for conflicts
       activation.cleanupBackups = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
         rm -f ~/.gtkrc-2.0.bak
+        rm -rf ~/.local/share/themes/*.bak 2>/dev/null || true
       '';
 
       pointerCursor = {
