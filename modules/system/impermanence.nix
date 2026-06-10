@@ -29,7 +29,6 @@
 # - NetworkManager WiFi passwords
 # - Bluetooth pairings
 # - Docker containers/images
-# - Waydroid Android images (if enabled)
 # - Flatpak apps
 # - SSH host keys
 # - SOPS secrets
