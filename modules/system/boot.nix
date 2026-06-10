@@ -60,12 +60,16 @@ in
           timeout = 0;
         };
 
+        # Bump inotify limits for dev tooling (LSP servers, file watchers, etc.).
+        # Default 8192 is far too low for modern projects.
+        # NOTE: nvim-tree ENOSPC was a btrfs/libuv bug, not an inotify limit issue.
         kernel.sysctl = {
           "fs.inotify.max_user_watches" = 524288;
           "fs.inotify.max_user_instances" = 512;
         };
       };
 
+      # Cgroup-aware inotify limit for user sessions (systemd path units, etc.)
       systemd.settings.Manager.DefaultMemoryInotifyMax = "524288";
     }
 
