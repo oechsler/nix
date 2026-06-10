@@ -13,7 +13,7 @@
 #
 # Theme:
 # - Catppuccin Lavender accent
-# - Wasserfall_6k_7.jpg wallpaper
+# - Nix-Logo wallpaper
 #
 # Monitor layout:
 # - DP-1 (right): Workspaces 1-4
@@ -36,7 +36,6 @@
   # Host-specific Overrides
   #===========================
   theme.catppuccin.accent = "lavender";
-  theme.wallpaper = "Wasserfall_6k_7.jpg";
 
   # Ensure samuel owns /mnt/games (mounted by disko)
   systemd.tmpfiles.rules = [
