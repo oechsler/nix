@@ -16,7 +16,14 @@
 #   terminal.exec - Command prefix to launch TUI apps
 #   Usage: terminal.exec "title" -e "command"
 
-{ pkgs, lib, fonts, theme, features, ... }:
+{
+  pkgs,
+  lib,
+  fonts,
+  theme,
+  features,
+  ...
+}:
 
 {
   #===========================
@@ -41,7 +48,8 @@
         settings = {
           window_padding_width = theme.gaps.outer;
           confirm_os_window_close = 0;
-        } // lib.optionalAttrs (features.desktop.wm != "hyprland") {
+        }
+        // lib.optionalAttrs (features.desktop.wm != "hyprland") {
           remember_window_size = "no";
           initial_window_width = "96c";
           initial_window_height = "22c";

@@ -25,7 +25,10 @@
         exec = "kitty nvim %F";
         icon = "nvim";
         terminal = false;
-        categories = [ "Utility" "TextEditor" ];
+        categories = [
+          "Utility"
+          "TextEditor"
+        ];
         mimeType = [
           "text/plain"
           "text/markdown"
@@ -53,26 +56,26 @@
     mimeApps = {
       enable = true;
       defaultApplications = {
-        "application/pdf"            = [ "firefox.desktop" ];
-        "text/plain"                 = [ "nvim.desktop" ];
-        "text/markdown"              = [ "nvim.desktop" ];
-        "text/x-script.python"       = [ "nvim.desktop" ];
-        "text/x-shellscript"         = [ "nvim.desktop" ];
-        "text/x-nix"                 = [ "nvim.desktop" ];
-        "text/x-lua"                 = [ "nvim.desktop" ];
-        "text/x-c"                   = [ "nvim.desktop" ];
-        "text/x-c++"                 = [ "nvim.desktop" ];
-        "text/x-go"                  = [ "nvim.desktop" ];
-        "text/x-rust"                = [ "nvim.desktop" ];
-        "text/x-java"                = [ "nvim.desktop" ];
-        "text/x-javascript"          = [ "nvim.desktop" ];
-        "text/x-typescript"          = [ "nvim.desktop" ];
-        "text/css"                   = [ "nvim.desktop" ];
-        "text/html"                  = [ "nvim.desktop" ];
-        "text/xml"                   = [ "nvim.desktop" ];
-        "application/json"           = [ "nvim.desktop" ];
-        "application/x-yaml"         = [ "nvim.desktop" ];
-        "application/toml"           = [ "nvim.desktop" ];
+        "application/pdf" = [ "firefox.desktop" ];
+        "text/plain" = [ "nvim.desktop" ];
+        "text/markdown" = [ "nvim.desktop" ];
+        "text/x-script.python" = [ "nvim.desktop" ];
+        "text/x-shellscript" = [ "nvim.desktop" ];
+        "text/x-nix" = [ "nvim.desktop" ];
+        "text/x-lua" = [ "nvim.desktop" ];
+        "text/x-c" = [ "nvim.desktop" ];
+        "text/x-c++" = [ "nvim.desktop" ];
+        "text/x-go" = [ "nvim.desktop" ];
+        "text/x-rust" = [ "nvim.desktop" ];
+        "text/x-java" = [ "nvim.desktop" ];
+        "text/x-javascript" = [ "nvim.desktop" ];
+        "text/x-typescript" = [ "nvim.desktop" ];
+        "text/css" = [ "nvim.desktop" ];
+        "text/html" = [ "nvim.desktop" ];
+        "text/xml" = [ "nvim.desktop" ];
+        "application/json" = [ "nvim.desktop" ];
+        "application/x-yaml" = [ "nvim.desktop" ];
+        "application/toml" = [ "nvim.desktop" ];
       };
     };
 

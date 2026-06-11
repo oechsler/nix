@@ -22,7 +22,12 @@
 # - Desktop without battery → always treated as AC
 # - Laptop with battery → checks /sys/class/power_supply/*/online
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   inherit (config) idle;
@@ -55,50 +60,62 @@ let
   # 2. Calculate target brightness (dimPercent of max)
   # 3. Step down by dimStepPercent every dimStepDelay seconds
   # 4. Stop at target brightness
-  smoothDim = toString (pkgs.writeShellScript "smooth-dim" ''
-    brightnessctl -s
-    current=$(brightnessctl get)
-    max=$(brightnessctl max)
-    target=$((max * ${toString dimPercent} / 100))
-    step=$((max * ${toString dimStepPercent} / 100))
-    while [ "$current" -gt "$target" ]; do
-      current=$((current - step))
-      [ "$current" -lt "$target" ] && current=$target
-      brightnessctl set "$current" -q
-      sleep ${dimStepDelay}
-    done
-  '');
+  smoothDim = toString (
+    pkgs.writeShellScript "smooth-dim" ''
+      brightnessctl -s
+      current=$(brightnessctl get)
+      max=$(brightnessctl max)
+      target=$((max * ${toString dimPercent} / 100))
+      step=$((max * ${toString dimStepPercent} / 100))
+      while [ "$current" -gt "$target" ]; do
+        current=$((current - step))
+        [ "$current" -lt "$target" ] && current=$target
+        brightnessctl set "$current" -q
+        sleep ${dimStepDelay}
+      done
+    ''
+  );
 
   # Restore brightness to saved value
-  undim = toString (pkgs.writeShellScript "undim" ''
-    brightnessctl -r
-  '');
+  undim = toString (
+    pkgs.writeShellScript "undim" ''
+      brightnessctl -r
+    ''
+  );
 
   # Dim screen only on battery (instant dim, no smooth transition)
-  dimBattery = toString (pkgs.writeShellScript "dim-battery" ''
-    ${onBattery} && ${smoothDim}
-  '');
+  dimBattery = toString (
+    pkgs.writeShellScript "dim-battery" ''
+      ${onBattery} && ${smoothDim}
+    ''
+  );
 
   # Battery-aware lock/dim behavior
   # - On battery: Lock screen immediately
   # - On AC: Smooth dim (warning before lock)
-  dimAcLockBattery = toString (pkgs.writeShellScript "dim-ac-lock-battery" ''
-    if ${onBattery}; then
-      loginctl lock-session
-    else
-      ${smoothDim}
-    fi
-  '');
+  dimAcLockBattery = toString (
+    pkgs.writeShellScript "dim-ac-lock-battery" ''
+      if ${onBattery}; then
+        loginctl lock-session
+      else
+        ${smoothDim}
+      fi
+    ''
+  );
 
   # Suspend only on battery
-  suspendBattery = toString (pkgs.writeShellScript "suspend-battery" ''
-    ${onBattery} && systemctl suspend
-  '');
+  suspendBattery = toString (
+    pkgs.writeShellScript "suspend-battery" ''
+      ${onBattery} && systemctl suspend
+    ''
+  );
 
   # Lock and suspend on AC (e.g., long idle on desktop)
-  lockSuspendAC = toString (pkgs.writeShellScript "lock-suspend-ac" ''
-    ${onAC} && loginctl lock-session && systemctl suspend
-  '');
+  lockSuspendAC = toString (
+    pkgs.writeShellScript "lock-suspend-ac" ''
+      ${onAC} && loginctl lock-session && systemctl suspend
+    ''
+  );
 in
 {
   #===========================

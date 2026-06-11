@@ -13,7 +13,12 @@
 # - Console keyboard layout
 # - Desktop keyboard layout (consumed by Hyprland, KDE)
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   cfg = config.locale;

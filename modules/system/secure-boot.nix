@@ -9,7 +9,13 @@
 #    (--microsoft includes MS keys for Windows dual-boot)
 # 6. Enable Secure Boot in UEFI/BIOS
 # 7. Reboot and verify: bootctl status
-{ config, lib, pkgs, inputs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  inputs,
+  ...
+}:
 
 let
   cfg = config.features.secureBoot;

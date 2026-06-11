@@ -63,7 +63,8 @@ let
   nixFiles = lib.filesystem.listFilesRecursive ./.;
 
   # Filter to only .nix files, exclude certain paths
-  relevantFiles = builtins.filter (path:
+  relevantFiles = builtins.filter (
+    path:
     let
       str = toString path;
       isNix = lib.hasSuffix ".nix" str;
@@ -71,7 +72,7 @@ let
       notFlakeLock = !(lib.hasInfix "flake.lock" str);
       notResult = !(lib.hasInfix "/result" str);
     in
-      isNix && notGenerated && notFlakeLock && notResult
+    isNix && notGenerated && notFlakeLock && notResult
   ) nixFiles;
 
   # ============================================================================
@@ -90,19 +91,31 @@ let
   #            strings because they're literal config keys, not Nix attributes:
   #              settings = { "browser.startup.page" = 3; };  ← CORRECT
   #
-  checkQuotedAttrs = file: let
-    content = builtins.readFile file;
-    fileName = baseNameOf (toString file);
-    # Skip files with application settings (Firefox, etc.) where quoted keys are required
-    # Also skip lint.nix itself (contains example code in comments)
-    isAppSettings = builtins.elem fileName [ "browsers.nix" "lint.nix" "gaming.nix" ];
-    # Regex pattern: matches "word.word" = (quoted string with dot followed by equals)
-    hasQuotedAttrs = builtins.match ".*\"[a-z][a-z0-9]*\\.[a-z][a-z0-9.]*\"[[:space:]]*=.*" content != null;
-  in {
-    file = toString file;
-    pass = isAppSettings || !hasQuotedAttrs;
-    message = if hasQuotedAttrs && !isAppSettings then "Found quoted nested attributes (use foo.bar not \"foo.bar\")" else null;
-  };
+  checkQuotedAttrs =
+    file:
+    let
+      content = builtins.readFile file;
+      fileName = baseNameOf (toString file);
+      # Skip files with application settings (Firefox, etc.) where quoted keys are required
+      # Also skip lint.nix itself (contains example code in comments)
+      isAppSettings = builtins.elem fileName [
+        "browsers.nix"
+        "lint.nix"
+        "gaming.nix"
+      ];
+      # Regex pattern: matches "word.word" = (quoted string with dot followed by equals)
+      hasQuotedAttrs =
+        builtins.match ".*\"[a-z][a-z0-9]*\\.[a-z][a-z0-9.]*\"[[:space:]]*=.*" content != null;
+    in
+    {
+      file = toString file;
+      pass = isAppSettings || !hasQuotedAttrs;
+      message =
+        if hasQuotedAttrs && !isAppSettings then
+          "Found quoted nested attributes (use foo.bar not \"foo.bar\")"
+        else
+          null;
+    };
 
   # ============================================================================
   # CHECK 2: Documentation Headers
@@ -132,23 +145,27 @@ let
   #   - default.nix files (they only import other modules)
   #   - packages/*.nix (package definitions use meta.description instead)
   #
-  checkDocHeader = file: let
-    content = builtins.readFile file;
-    fileName = baseNameOf (toString file);
-    filePath = toString file;
-    # Skip default.nix files (they just import)
-    isDefaultNix = fileName == "default.nix";
-    # Skip package definitions (they use meta.description)
-    isPackage = lib.hasInfix "/packages/" filePath;
-    # Check if first 5 lines contain a comment
-    lines = lib.splitString "\n" content;
-    firstLines = lib.take 5 lines;
-    hasComment = builtins.any (line: lib.hasPrefix "#" line) firstLines;
-  in {
-    file = toString file;
-    pass = isDefaultNix || isPackage || hasComment;
-    message = if !hasComment && !isDefaultNix && !isPackage then "Missing documentation header" else null;
-  };
+  checkDocHeader =
+    file:
+    let
+      content = builtins.readFile file;
+      fileName = baseNameOf (toString file);
+      filePath = toString file;
+      # Skip default.nix files (they just import)
+      isDefaultNix = fileName == "default.nix";
+      # Skip package definitions (they use meta.description)
+      isPackage = lib.hasInfix "/packages/" filePath;
+      # Check if first 5 lines contain a comment
+      lines = lib.splitString "\n" content;
+      firstLines = lib.take 5 lines;
+      hasComment = builtins.any (line: lib.hasPrefix "#" line) firstLines;
+    in
+    {
+      file = toString file;
+      pass = isDefaultNix || isPackage || hasComment;
+      message =
+        if !hasComment && !isDefaultNix && !isPackage then "Missing documentation header" else null;
+    };
 
   # ============================================================================
   # RUN ALL CHECKS
@@ -172,45 +189,58 @@ let
   }) relevantFiles;
 
   # Aggregate results
-  failures = builtins.filter (r:
-    !(r.checks.quotedAttrs.pass && r.checks.docHeader.pass)
-  ) results;
+  failures = builtins.filter (r: !(r.checks.quotedAttrs.pass && r.checks.docHeader.pass)) results;
 
   # Generate report
   report = lib.concatStringsSep "\n" (
-    [ "=== NixOS Configuration Lint Results ===" "" ]
-    ++ (if failures == [] then [
-      "✅ All checks passed!"
+    [
+      "=== NixOS Configuration Lint Results ==="
       ""
-      "Files checked: ${toString (builtins.length relevantFiles)}"
-      "  - No quoted nested attributes"
-      "  - All modules have documentation headers"
-    ] else
-      [ "❌ Found ${toString (builtins.length failures)} files with issues:" "" ]
-      ++ (map (f: let
-        quotedFail = !f.checks.quotedAttrs.pass;
-        docFail = !f.checks.docHeader.pass;
-      in ''
-        File: ${f.file}
-        ${lib.optionalString quotedFail "  ❌ ${f.checks.quotedAttrs.message}"}
-        ${lib.optionalString docFail "  ❌ ${f.checks.docHeader.message}"}
-      '') failures)
+    ]
+    ++ (
+      if failures == [ ] then
+        [
+          "✅ All checks passed!"
+          ""
+          "Files checked: ${toString (builtins.length relevantFiles)}"
+          "  - No quoted nested attributes"
+          "  - All modules have documentation headers"
+        ]
+      else
+        [
+          "❌ Found ${toString (builtins.length failures)} files with issues:"
+          ""
+        ]
+        ++ (map (
+          f:
+          let
+            quotedFail = !f.checks.quotedAttrs.pass;
+            docFail = !f.checks.docHeader.pass;
+          in
+          ''
+            File: ${f.file}
+            ${lib.optionalString quotedFail "  ❌ ${f.checks.quotedAttrs.message}"}
+            ${lib.optionalString docFail "  ❌ ${f.checks.docHeader.message}"}
+          ''
+        ) failures)
     )
   );
 
 in
-  # ============================================================================
-  # DERIVATION: Fail build if any checks fail
-  # ============================================================================
-  # Creates a derivation that:
-  # 1. Prints the linting report (successes and failures)
-  # 2. Writes report to $out (for nix build)
-  # 3. Exits with code 1 if any checks failed (breaks CI/CD)
-  #
-  pkgs.runCommand "nixos-config-lint" {
+# ============================================================================
+# DERIVATION: Fail build if any checks fail
+# ============================================================================
+# Creates a derivation that:
+# 1. Prints the linting report (successes and failures)
+# 2. Writes report to $out (for nix build)
+# 3. Exits with code 1 if any checks failed (breaks CI/CD)
+#
+pkgs.runCommand "nixos-config-lint"
+  {
     inherit report;
-    failOnIssues = failures != [];
-  } ''
+    failOnIssues = failures != [ ];
+  }
+  ''
     echo "$report"
     echo "$report" > $out
 
@@ -274,4 +304,3 @@ in
 #   builtins.all (x: test x) list           # All true?
 #
 # ============================================================================
-

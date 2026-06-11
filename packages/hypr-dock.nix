@@ -1,5 +1,14 @@
-{ lib, buildGoModule, fetchFromGitHub, pkg-config, gtk3, gtk-layer-shell
-, wrapGAppsHook3, librsvg, shared-mime-info }:
+{
+  lib,
+  buildGoModule,
+  fetchFromGitHub,
+  pkg-config,
+  gtk3,
+  gtk-layer-shell,
+  wrapGAppsHook3,
+  librsvg,
+  shared-mime-info,
+}:
 
 buildGoModule rec {
   pname = "hypr-dock";
@@ -14,8 +23,16 @@ buildGoModule rec {
 
   vendorHash = "sha256-amBAJW9oyCU53bxHh8MHR4Fj64VBUTzcEnWnvPlcZ7g=";
 
-  nativeBuildInputs = [ pkg-config wrapGAppsHook3 shared-mime-info ];
-  buildInputs = [ gtk3 gtk-layer-shell librsvg ];
+  nativeBuildInputs = [
+    pkg-config
+    wrapGAppsHook3
+    shared-mime-info
+  ];
+  buildInputs = [
+    gtk3
+    gtk-layer-shell
+    librsvg
+  ];
 
   subPackages = [ "cmd/hypr-dock" ];
 

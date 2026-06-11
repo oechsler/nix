@@ -12,7 +12,12 @@
 # - file-roller - Archive manager (for extracting archives in Nautilus)
 # - xdg-user-dirs-gtk - Updates ~/.config/user-dirs.dirs
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
   #===========================
@@ -28,9 +33,11 @@
 
   # Prevent Nextcloud from adding bookmarks
   xdg.configFile."gtk-3.0/bookmarks".force = true;
-  xdg.configFile."gtk-3.0/bookmarks".text = let
-    entry = b: "file://${b.path} ${b.name}";
-  in lib.concatMapStringsSep "\n" entry config.fileManager.bookmarks + "\n";
+  xdg.configFile."gtk-3.0/bookmarks".text =
+    let
+      entry = b: "file://${b.path} ${b.name}";
+    in
+    lib.concatMapStringsSep "\n" entry config.fileManager.bookmarks + "\n";
 
   systemd.user.services.xdg-user-dirs-gtk = {
     Unit.Description = "Update XDG user dirs for GTK";

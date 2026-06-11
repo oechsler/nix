@@ -25,56 +25,61 @@
 #
 # Note: SSH agent is configured in proton-pass.nix
 
-{ config, pkgs, user, ... }:
+{
+  config,
+  pkgs,
+  user,
+  ...
+}:
 
 {
   home.packages = [ pkgs.git-credential-manager ];
 
   programs = {
     git = {
-    enable = true;
+      enable = true;
 
-    signing = {
-      key = "${config.home.homeDirectory}/.ssh/id_ed25519.pub";
-      signByDefault = true;
-      format = "ssh";
+      signing = {
+        key = "${config.home.homeDirectory}/.ssh/id_ed25519.pub";
+        signByDefault = true;
+        format = "ssh";
+      };
+
+      settings = {
+        user.name = user.fullName;
+        user.email = user.email;
+
+        init.defaultBranch = "main";
+        pull.rebase = true;
+        pull.autoStash = true;
+
+        diff.tool = "nvimdiff";
+        difftool.prompt = false;
+
+        merge.tool = "nvimdiff";
+        merge.conflictstyle = "diff3";
+        mergetool.prompt = false;
+
+        credential.helper = "${pkgs.git-credential-manager}/bin/git-credential-manager";
+        credential.credentialStore = "secretservice";
+
+        # GitHub OAuth support
+        "credential.https://github.com".provider = "github";
+
+        # Forgejo instance (git.at.oechsler.it) — use generic provider with PAT
+        "credential.https://git.at.oechsler.it".provider = "generic";
+        "credential.https://git.at.oechsler.it".username = "samuel";
+      };
+
+      ignores = [
+        "*~"
+        ".DS_Store"
+        "AGENTS.md"
+        "CLAUDE.md"
+        "VAULT.md"
+        ".opencode/opencode.json"
+      ];
     };
-
-    settings = {
-      user.name = user.fullName;
-      user.email = user.email;
-
-      init.defaultBranch = "main";
-      pull.rebase = true;
-      pull.autoStash = true;
-
-      diff.tool = "nvimdiff";
-      difftool.prompt = false;
-
-      merge.tool = "nvimdiff";
-      merge.conflictstyle = "diff3";
-      mergetool.prompt = false;
-
-      credential.helper = "${pkgs.git-credential-manager}/bin/git-credential-manager";
-      credential.credentialStore = "secretservice";
-
-      # GitHub OAuth support
-      "credential.https://github.com".provider = "github";
-
-      # Forgejo instance (git.at.oechsler.it) — use generic provider with PAT
-      "credential.https://git.at.oechsler.it".provider = "generic";
-      "credential.https://git.at.oechsler.it".username = "samuel";
-    };
-
-    ignores = [
-      "*~"
-      ".DS_Store"
-      "AGENTS.md"
-      "CLAUDE.md"
-      "VAULT.md"
-      ".opencode/opencode.json"
-    ];
-  };
 
     delta = {
       enable = true;

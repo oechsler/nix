@@ -17,7 +17,12 @@
 #   features.desktop.enable = true
 #   features.desktop.wm = "kde"
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
   config = lib.mkIf (config.features.desktop.enable && config.features.desktop.wm == "kde") {

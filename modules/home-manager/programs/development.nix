@@ -19,7 +19,12 @@
 #
 # Server mode disables development tools.
 
-{ pkgs, features, lib, ... }:
+{
+  pkgs,
+  features,
+  lib,
+  ...
+}:
 
 {
   #===========================
@@ -31,10 +36,10 @@
     (lib.mkIf features.development.enable {
       home.packages = with pkgs; [
         # Development utilities
-        cloc          # Count lines of code
-        distrobox     # Container environments
-        ansible       # Infrastructure automation
-        opentofu      # Terraform alternative (open-source)
+        cloc # Count lines of code
+        distrobox # Container environments
+        ansible # Infrastructure automation
+        opentofu # Terraform alternative (open-source)
 
         # Languages & Compilers
         go
@@ -63,8 +68,8 @@
         kubectl
         kubernetes-helm
         kubectx
-        kubeseal    # Sealed Secrets CLI
-        kubelogin-oidc  # kubectl OIDC login plugin (int128/kubelogin)
+        kubeseal # Sealed Secrets CLI
+        kubelogin-oidc # kubectl OIDC login plugin (int128/kubelogin)
       ];
     })
 
@@ -79,7 +84,12 @@
           # Primary: Mistral (Codestral for code, Mistral Small for light tasks)
           # Budget: OpenCode Go (DeepSeek)
           # Fallback: OpenAI (ChatGPT Plus), Anthropic (Claude Code Auth)
-          enabled_providers = [ "mistral" "opencode-go" "openai" "anthropic" ];
+          enabled_providers = [
+            "mistral"
+            "opencode-go"
+            "openai"
+            "anthropic"
+          ];
 
           model = "mistral/mistral-medium-latest";
           small_model = "mistral/mistral-small-latest";
@@ -107,8 +117,8 @@
     # GUI Development Tools (only for desktop)
     (lib.mkIf (features.development.enable && features.desktop.enable) {
       home.packages = with pkgs; [
-        dbeaver-bin        # Database GUI
-        jetbrains.goland   # Go IDE
+        dbeaver-bin # Database GUI
+        jetbrains.goland # Go IDE
       ];
 
       programs.vscode = {

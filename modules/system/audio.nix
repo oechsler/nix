@@ -24,7 +24,9 @@ let
 in
 {
   options.features.audio = {
-    enable = (lib.mkEnableOption "audio support (PipeWire)") // { default = true; };
+    enable = (lib.mkEnableOption "audio support (PipeWire)") // {
+      default = true;
+    };
   };
 
   config = lib.mkIf cfg.enable {

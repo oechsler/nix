@@ -25,7 +25,15 @@
 # Toolbar layout:
 #   Back | Forward | Reload | Spacer | URL bar | Spacer | Downloads | Proton Pass
 
-{ pkgs, inputs, features, fonts, lib, config, ... }:
+{
+  pkgs,
+  inputs,
+  features,
+  fonts,
+  lib,
+  config,
+  ...
+}:
 
 {
   #===========================
@@ -38,178 +46,193 @@
     #---------------------------
 
     programs.firefox = {
-    enable = true;
-    configPath = "${config.xdg.configHome}/mozilla/firefox";
+      enable = true;
+      configPath = "${config.xdg.configHome}/mozilla/firefox";
 
-    # KDE Plasma integration (media controls, downloads, tabs)
-    nativeMessagingHosts = lib.optionals (features.desktop.wm == "kde") [
-      pkgs.kdePackages.plasma-browser-integration
-    ];
-
-    #---------------------------
-    # Default Profile
-    #---------------------------
-    profiles.default = {
-      isDefault = true;
-
-      # Extensions
-      extensions.force = true;  # Prevent Firefox from disabling extensions
-      extensions.packages = with inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system}; [
-        firefox-color # catppuccin.firefox
-        ublock-origin
-        proton-pass
-        new-tab-override
-      ] ++ lib.optionals (features.desktop.wm == "kde") [
-        inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system}.plasma-integration
+      # KDE Plasma integration (media controls, downloads, tabs)
+      nativeMessagingHosts = lib.optionals (features.desktop.wm == "kde") [
+        pkgs.kdePackages.plasma-browser-integration
       ];
 
-      # Search configuration
-      search = {
-        default = "ddg";  # DuckDuckGo
-        force = true;     # Prevent Firefox from changing search engine
-        engines = {
-          "google".metaData.hidden = true;
-          "bing".metaData.hidden = true;
-          "amazondotcom-de".metaData.hidden = true;
-          "ebay".metaData.hidden = true;
-          "ebay-de".metaData.hidden = true;
-          "wikipedia".metaData.hidden = true;
-          "wikipedia_de".metaData.hidden = true;
-          "wikipedia-de".metaData.hidden = true;
-          "leo_ende_de".metaData.hidden = true;
-          "ecosia".metaData.hidden = true;
-          "perplexity".metaData.hidden = true;
-        };
-      };
+      #---------------------------
+      # Default Profile
+      #---------------------------
+      profiles.default = {
+        isDefault = true;
 
-      settings = {
-        "intl.accept_languages" = "de-DE,de,en-US,en";
-        "intl.locale.requested" = "de";
+        # Extensions
+        extensions.force = true; # Prevent Firefox from disabling extensions
+        extensions.packages =
+          with inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system};
+          [
+            firefox-color # catppuccin.firefox
+            ublock-origin
+            proton-pass
+            new-tab-override
+          ]
+          ++ lib.optionals (features.desktop.wm == "kde") [
+            inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system}.plasma-integration
+          ];
 
-        "browser.toolbars.bookmarks.visibility" = "never";
-
-        # Toolbar layout: back forward reload | spacer | urlbar | spacer | downloads proton-pass
-        # To customize toolbar: Right-click toolbar → Customize Toolbar
-        "browser.uiCustomization.state" = builtins.toJSON {
-          placements = {
-            nav-bar = [
-              "back-button"
-              "forward-button"
-              "stop-reload-button"
-              "customizableui-special-spring1"
-              "urlbar-container"
-              "customizableui-special-spring2"
-              "downloads-button"
-              "78272b6fa58f4a1abaac99321d503a20_proton_me-browser-action"
-              "unified-extensions-button"
-            ];
-            toolbar-menubar = [ "menubar-items" ];
-            TabsToolbar = [ "tabbrowser-tabs" ];
-            PersonalToolbar = [ "personal-bookmarks" ];
-            widget-overflow-fixed-list = [];
-            unified-extensions-area = [ "ublock0_raymondhill_net-browser-action" "newtaboverride_agenedia_com-browser-action" ];
+        # Search configuration
+        search = {
+          default = "ddg"; # DuckDuckGo
+          force = true; # Prevent Firefox from changing search engine
+          engines = {
+            "google".metaData.hidden = true;
+            "bing".metaData.hidden = true;
+            "amazondotcom-de".metaData.hidden = true;
+            "ebay".metaData.hidden = true;
+            "ebay-de".metaData.hidden = true;
+            "wikipedia".metaData.hidden = true;
+            "wikipedia_de".metaData.hidden = true;
+            "wikipedia-de".metaData.hidden = true;
+            "leo_ende_de".metaData.hidden = true;
+            "ecosia".metaData.hidden = true;
+            "perplexity".metaData.hidden = true;
           };
-          seen = [ "developer-button" "profiler-button" "78272b6fa58f4a1abaac99321d503a20_proton_me-browser-action" "ublock0_raymondhill_net-browser-action" "newtaboverride_agenedia_com-browser-action" ];
-          dirtyAreaCache = [ "nav-bar" "unified-extensions-area" ];
-          currentVersion = 21;
-          newElementCount = 2;
         };
 
-        "layout.css.prefers-color-scheme.content-override" = 0; # 0 = System
-        "ui.systemUsesDarkTheme" = 1; # Force dark theme for UI
+        settings = {
+          "intl.accept_languages" = "de-DE,de,en-US,en";
+          "intl.locale.requested" = "de";
 
-        "browser.startup.homepage" = "https://dash.at.oechsler.it";
-        "browser.startup.page" = 3; # 3 = Restore previous session
+          "browser.toolbars.bookmarks.visibility" = "never";
 
-        # Vertical tabs — collapsed, no extra tools
-        "sidebar.verticalTabs" = true;
-        "sidebar.revamp" = true;
-        "sidebar.visibility" = "always-show";
-        "sidebar.main.tools" = "";
+          # Toolbar layout: back forward reload | spacer | urlbar | spacer | downloads proton-pass
+          # To customize toolbar: Right-click toolbar → Customize Toolbar
+          "browser.uiCustomization.state" = builtins.toJSON {
+            placements = {
+              nav-bar = [
+                "back-button"
+                "forward-button"
+                "stop-reload-button"
+                "customizableui-special-spring1"
+                "urlbar-container"
+                "customizableui-special-spring2"
+                "downloads-button"
+                "78272b6fa58f4a1abaac99321d503a20_proton_me-browser-action"
+                "unified-extensions-button"
+              ];
+              toolbar-menubar = [ "menubar-items" ];
+              TabsToolbar = [ "tabbrowser-tabs" ];
+              PersonalToolbar = [ "personal-bookmarks" ];
+              widget-overflow-fixed-list = [ ];
+              unified-extensions-area = [
+                "ublock0_raymondhill_net-browser-action"
+                "newtaboverride_agenedia_com-browser-action"
+              ];
+            };
+            seen = [
+              "developer-button"
+              "profiler-button"
+              "78272b6fa58f4a1abaac99321d503a20_proton_me-browser-action"
+              "ublock0_raymondhill_net-browser-action"
+              "newtaboverride_agenedia_com-browser-action"
+            ];
+            dirtyAreaCache = [
+              "nav-bar"
+              "unified-extensions-area"
+            ];
+            currentVersion = 21;
+            newElementCount = 2;
+          };
 
-        # DRM content (Netflix, Spotify, etc.)
-        "media.eme.enabled" = true;
-        "media.gmp-widevinecdm.enabled" = true;
+          "layout.css.prefers-color-scheme.content-override" = 0; # 0 = System
+          "ui.systemUsesDarkTheme" = 1; # Force dark theme for UI
 
-        "browser.contentblocking.category" = "strict";
-        "privacy.trackingprotection.enabled" = true;
-        "privacy.trackingprotection.socialtracking.enabled" = true;
-        "privacy.annotate_channels.strict_list.enabled" = true;
-        "privacy.fingerprintingProtection" = true;
-        "privacy.antitracking.enableWebcompat" = false;
-        "privacy.globalprivacycontrol.enabled" = true;
+          "browser.startup.homepage" = "https://dash.at.oechsler.it";
+          "browser.startup.page" = 3; # 3 = Restore previous session
 
-        "browser.urlbar.suggest.searches" = false;
-        "browser.urlbar.suggest.quicksuggest.sponsored" = false;
-        "browser.urlbar.suggest.quicksuggest.nonsponsored" = false;
-        "browser.urlbar.sponsoredTopSites" = false;
-        "browser.urlbar.quicksuggest.enabled" = false;
-        "browser.urlbar.quicksuggest.dataCollection.enabled" = false;
-        "browser.search.suggest.enabled" = false;
+          # Vertical tabs — collapsed, no extra tools
+          "sidebar.verticalTabs" = true;
+          "sidebar.revamp" = true;
+          "sidebar.visibility" = "always-show";
+          "sidebar.main.tools" = "";
 
-        "signon.rememberSignons" = false;
-        "signon.autofillForms" = false;
-        "signon.firefoxRelay.feature" = "disabled";
-        "extensions.formautofill.creditCards.enabled" = false;
-        "extensions.formautofill.addresses.enabled" = false;
+          # DRM content (Netflix, Spotify, etc.)
+          "media.eme.enabled" = true;
+          "media.gmp-widevinecdm.enabled" = true;
 
-        "browser.newtabpage.enabled" = false;
-        "browser.newtabpage.activity-stream.showSponsored" = false;
-        "browser.newtabpage.activity-stream.showSponsoredTopSites" = false;
-        "browser.newtabpage.activity-stream.feeds.topsites" = false;
-        "browser.newtabpage.activity-stream.feeds.section.topstories" = false;
-        "browser.newtabpage.activity-stream.feeds.section.highlights" = false;
-        "browser.newtabpage.activity-stream.feeds.snippets" = false;
-        "browser.newtabpage.activity-stream.section.highlights.includePocket" = false;
-        "browser.newtabpage.activity-stream.showSearch" = false;
-        "browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features" = false;
-        "browser.newtabpage.activity-stream.asrouter.userprefs.cfr.addons" = false;
+          "browser.contentblocking.category" = "strict";
+          "privacy.trackingprotection.enabled" = true;
+          "privacy.trackingprotection.socialtracking.enabled" = true;
+          "privacy.annotate_channels.strict_list.enabled" = true;
+          "privacy.fingerprintingProtection" = true;
+          "privacy.antitracking.enableWebcompat" = false;
+          "privacy.globalprivacycontrol.enabled" = true;
 
-        "datareporting.healthreport.uploadEnabled" = false;
-        "datareporting.policy.dataSubmissionEnabled" = false;
-        "toolkit.telemetry.enabled" = false;
-        "toolkit.telemetry.unified" = false;
-        "toolkit.telemetry.archive.enabled" = false;
-        "browser.ping-centre.telemetry" = false;
-        "app.shield.optoutstudies.enabled" = false;
+          "browser.urlbar.suggest.searches" = false;
+          "browser.urlbar.suggest.quicksuggest.sponsored" = false;
+          "browser.urlbar.suggest.quicksuggest.nonsponsored" = false;
+          "browser.urlbar.sponsoredTopSites" = false;
+          "browser.urlbar.quicksuggest.enabled" = false;
+          "browser.urlbar.quicksuggest.dataCollection.enabled" = false;
+          "browser.search.suggest.enabled" = false;
 
-        "dom.security.https_only_mode" = true;
-        "dom.security.https_only_mode_ever_enabled" = true;
+          "signon.rememberSignons" = false;
+          "signon.autofillForms" = false;
+          "signon.firefoxRelay.feature" = "disabled";
+          "extensions.formautofill.creditCards.enabled" = false;
+          "extensions.formautofill.addresses.enabled" = false;
 
-        "browser.translations.automaticallyPopup" = false;
-        "browser.translations.enable" = false;
+          "browser.newtabpage.enabled" = false;
+          "browser.newtabpage.activity-stream.showSponsored" = false;
+          "browser.newtabpage.activity-stream.showSponsoredTopSites" = false;
+          "browser.newtabpage.activity-stream.feeds.topsites" = false;
+          "browser.newtabpage.activity-stream.feeds.section.topstories" = false;
+          "browser.newtabpage.activity-stream.feeds.section.highlights" = false;
+          "browser.newtabpage.activity-stream.feeds.snippets" = false;
+          "browser.newtabpage.activity-stream.section.highlights.includePocket" = false;
+          "browser.newtabpage.activity-stream.showSearch" = false;
+          "browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features" = false;
+          "browser.newtabpage.activity-stream.asrouter.userprefs.cfr.addons" = false;
 
-        # Fonts — always use real font families for web content, regardless of uiStyle
-        "font.default.x-western" = "sans-serif";
-        "font.default.x-unicode" = "sans-serif";
-        "font.name.sans-serif.x-western" = fonts.sansSerif;
-        "font.name.sans-serif.x-unicode" = fonts.sansSerif;
-        "font.name.serif.x-western" = fonts.serif;
-        "font.name.serif.x-unicode" = fonts.serif;
-        "font.name.monospace.x-western" = fonts.monospace;
-        "font.name.monospace.x-unicode" = fonts.monospace;
+          "datareporting.healthreport.uploadEnabled" = false;
+          "datareporting.policy.dataSubmissionEnabled" = false;
+          "toolkit.telemetry.enabled" = false;
+          "toolkit.telemetry.unified" = false;
+          "toolkit.telemetry.archive.enabled" = false;
+          "browser.ping-centre.telemetry" = false;
+          "app.shield.optoutstudies.enabled" = false;
 
-        # DNS over HTTPS
-        "network.trr.mode" = 5;  # 5 = Off
+          "dom.security.https_only_mode" = true;
+          "dom.security.https_only_mode_ever_enabled" = true;
 
-        # Enable userContent.css for font overrides
-        "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
+          "browser.translations.automaticallyPopup" = false;
+          "browser.translations.enable" = false;
+
+          # Fonts — always use real font families for web content, regardless of uiStyle
+          "font.default.x-western" = "sans-serif";
+          "font.default.x-unicode" = "sans-serif";
+          "font.name.sans-serif.x-western" = fonts.sansSerif;
+          "font.name.sans-serif.x-unicode" = fonts.sansSerif;
+          "font.name.serif.x-western" = fonts.serif;
+          "font.name.serif.x-unicode" = fonts.serif;
+          "font.name.monospace.x-western" = fonts.monospace;
+          "font.name.monospace.x-unicode" = fonts.monospace;
+
+          # DNS over HTTPS
+          "network.trr.mode" = 5; # 5 = Off
+
+          # Enable userContent.css for font overrides
+          "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
+        };
+
+        # Override system-ui / inherited fonts so web content stays sans-serif
+        # even when the desktop uiStyle is set to monospace.
+        userContent = ''
+          @-moz-document url-prefix("http://"), url-prefix("https://") {
+            :root, body {
+              font-family: "${fonts.sansSerif}", sans-serif !important;
+            }
+            code, pre, kbd, samp, tt {
+              font-family: "${fonts.monospace}", monospace !important;
+            }
+          }
+        '';
       };
-
-      # Override system-ui / inherited fonts so web content stays sans-serif
-      # even when the desktop uiStyle is set to monospace.
-      userContent = ''
-        @-moz-document url-prefix("http://"), url-prefix("https://") {
-          :root, body {
-            font-family: "${fonts.sansSerif}", sans-serif !important;
-          }
-          code, pre, kbd, samp, tt {
-            font-family: "${fonts.monospace}", monospace !important;
-          }
-        }
-      '';
     };
-  };
 
     catppuccin.firefox = {
       enable = true;

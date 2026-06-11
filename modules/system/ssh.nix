@@ -20,7 +20,12 @@
 # - Keys automatically updated if changed on GitHub
 # - Proper file permissions (700 for .ssh, 600 for authorized_keys)
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.features.ssh;

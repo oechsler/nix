@@ -22,16 +22,33 @@
 # - Boot loader config
 # - Firmware settings
 
-{ config, lib, pkgs, modulesPath, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  modulesPath,
+  ...
+}:
 
 let
-  generated = import ./hardware-configuration.generated.nix { inherit config lib pkgs modulesPath; };
-  cleaned = builtins.removeAttrs generated [ "fileSystems" "swapDevices" ];
+  generated = import ./hardware-configuration.generated.nix {
+    inherit
+      config
+      lib
+      pkgs
+      modulesPath
+      ;
+  };
+  cleaned = builtins.removeAttrs generated [
+    "fileSystems"
+    "swapDevices"
+  ];
   # Strip boot.initrd.luks if present (disko handles LUKS devices)
   hasLuks = cleaned ? boot && cleaned.boot ? initrd && cleaned.boot.initrd ? luks;
   withoutLuks =
     if hasLuks then
-      cleaned // {
+      cleaned
+      // {
         boot = cleaned.boot // {
           initrd = builtins.removeAttrs cleaned.boot.initrd [ "luks" ];
         };
@@ -39,4 +56,4 @@ let
     else
       cleaned;
 in
-  withoutLuks
+withoutLuks

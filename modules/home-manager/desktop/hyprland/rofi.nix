@@ -21,7 +21,14 @@
 #   config.rofi.clipboard       - Clipboard manager
 #   config.rofi.powerProfile    - Power profile menu
 
-{ config, pkgs, lib, fonts, theme, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  fonts,
+  theme,
+  ...
+}:
 
 let
   # ============================================================================
@@ -36,20 +43,22 @@ let
   #
   # Args:
   #   mode = rofi mode (e.g., "drun", "window")
-  toggleRofi = mode: pkgs.writeShellScript "rofi-${mode}" ''
-    if pgrep -x "rofi" > /dev/null; then
-      # Check if rofi is running with the same mode
-      if pgrep -fa "rofi.*-show ${mode}" > /dev/null; then
-        pkill -x rofi
+  toggleRofi =
+    mode:
+    pkgs.writeShellScript "rofi-${mode}" ''
+      if pgrep -x "rofi" > /dev/null; then
+        # Check if rofi is running with the same mode
+        if pgrep -fa "rofi.*-show ${mode}" > /dev/null; then
+          pkill -x rofi
+        else
+          # Different mode requested - restart with new mode
+          pkill -x rofi
+          rofi -show ${mode}
+        fi
       else
-        # Different mode requested - restart with new mode
-        pkill -x rofi
         rofi -show ${mode}
       fi
-    else
-      rofi -show ${mode}
-    fi
-  '';
+    '';
 
   # Application launcher (drun = desktop run)
   toggleDrun = toggleRofi "drun";
@@ -234,35 +243,37 @@ in
         display-drun = "Apps";
         display-window = "Fenster";
       };
-      theme = let
-        inherit (config.lib.formats.rasi) mkLiteral;
-        accentColor = "@${config.catppuccin.accent}";
-      in {
-        "window" = {
-          width = mkLiteral "33%";
-          border = mkLiteral "${toString theme.border.width}px solid";
-          border-color = mkLiteral accentColor;
-          border-radius = mkLiteral "${toString theme.radius.default}px";
+      theme =
+        let
+          inherit (config.lib.formats.rasi) mkLiteral;
+          accentColor = "@${config.catppuccin.accent}";
+        in
+        {
+          "window" = {
+            width = mkLiteral "33%";
+            border = mkLiteral "${toString theme.border.width}px solid";
+            border-color = mkLiteral accentColor;
+            border-radius = mkLiteral "${toString theme.radius.default}px";
+          };
+          "element" = {
+            border-radius = mkLiteral "${toString theme.radius.small}px";
+          };
+          "element selected.normal" = {
+            background-color = mkLiteral accentColor;
+            text-color = mkLiteral "@base";
+          };
+          "element selected.active" = {
+            background-color = mkLiteral accentColor;
+            text-color = mkLiteral "@base";
+          };
+          "element selected.urgent" = {
+            background-color = mkLiteral "@red";
+            text-color = mkLiteral "@base";
+          };
+          "inputbar" = {
+            border-radius = mkLiteral "${toString theme.radius.small}px";
+          };
         };
-        "element" = {
-          border-radius = mkLiteral "${toString theme.radius.small}px";
-        };
-        "element selected.normal" = {
-          background-color = mkLiteral accentColor;
-          text-color = mkLiteral "@base";
-        };
-        "element selected.active" = {
-          background-color = mkLiteral accentColor;
-          text-color = mkLiteral "@base";
-        };
-        "element selected.urgent" = {
-          background-color = mkLiteral "@red";
-          text-color = mkLiteral "@base";
-        };
-        "inputbar" = {
-          border-radius = mkLiteral "${toString theme.radius.small}px";
-        };
-      };
     };
 
     # Hide Rofi from drun

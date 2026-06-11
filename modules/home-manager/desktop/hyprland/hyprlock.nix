@@ -23,7 +23,12 @@
 # - Peach: Caps lock border
 # - Text: Text color
 
-{ theme, fonts, displays, ... }:
+{
+  theme,
+  fonts,
+  displays,
+  ...
+}:
 
 {
   #===========================
@@ -42,8 +47,8 @@
       # General Settings
       #---------------------------
       general = {
-        hide_cursor = true;  # Hide mouse cursor on lock screen
-        grace = 3;           # Grace period (seconds) before locking
+        hide_cursor = true; # Hide mouse cursor on lock screen
+        grace = 3; # Grace period (seconds) before locking
       };
 
       #---------------------------
@@ -51,16 +56,22 @@
       #---------------------------
       # Wallpaper with blur effect (per-monitor)
       background =
-        if displays.monitors == [] then
+        if displays.monitors == [ ] then
           # Fallback for no monitor config
-          [{ path = "${theme.wallpaperPath}"; blur_passes = 3; blur_size = 8; }]
+          [
+            {
+              path = "${theme.wallpaperPath}";
+              blur_passes = 3;
+              blur_size = 8;
+            }
+          ]
         else
           # Per-monitor wallpaper support
           map (m: {
             monitor = m.name;
             path = "${if m.wallpaper != null then m.wallpaper else theme.wallpaperPath}";
-            blur_passes = 3;  # Number of blur passes (more = stronger blur)
-            blur_size = 8;    # Blur radius
+            blur_passes = 3; # Number of blur passes (more = stronger blur)
+            blur_size = 8; # Blur radius
           }) displays.monitors;
 
       #---------------------------

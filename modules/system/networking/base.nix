@@ -10,7 +10,12 @@
 #   features.wifi.enterpriseNetworks = [ "uni" ];   # WPA2 Enterprise networks
 #   features.tailscale.enable = true;               # Tailscale VPN (default: true)
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   ip6Privacy = if config.features.ipv6PrivacyExtensions.enable then 2 else 0;

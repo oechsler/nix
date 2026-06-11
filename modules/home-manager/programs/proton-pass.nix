@@ -29,7 +29,13 @@
 #   Socket: ~/.ssh/proton-pass-agent.sock
 #   Service: systemctl --user status proton-pass-ssh-agent
 
-{ config, pkgs, lib, features, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  features,
+  ...
+}:
 
 {
   #===========================
@@ -117,7 +123,7 @@
           # Environment variables for the SSH agent
           Environment = [
             "SSH_AUTH_SOCK=%h/.ssh/proton-pass-agent.sock"
-            "PROTON_PASS_KEY_PROVIDER=fs"  # Use filesystem key storage
+            "PROTON_PASS_KEY_PROVIDER=fs" # Use filesystem key storage
           ];
         };
 
