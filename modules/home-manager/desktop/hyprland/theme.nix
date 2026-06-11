@@ -48,54 +48,56 @@ in
     catppuccin.hyprland.enable = false;
     catppuccin.kvantum.enable = true;
 
-    # gnome platform theme reads color-scheme from portal (dark mode detection)
-    # while QT_STYLE_OVERRIDE=kvantum preserves the Kvantum look
-    # mkForce overrides the value set by qt.platformTheme.name = "qtct"
-    home.sessionVariables.QT_QPA_PLATFORMTHEME = lib.mkForce "gnome";
+    home = {
+      # gnome platform theme reads color-scheme from portal (dark mode detection)
+      # while QT_STYLE_OVERRIDE=kvantum preserves the Kvantum look
+      # mkForce overrides the value set by qt.platformTheme.name = "qtct"
+      sessionVariables.QT_QPA_PLATFORMTHEME = lib.mkForce "gnome";
 
-    # Flatpak Qt apps can't follow symlinks to /nix/store.
-    # The catppuccin Kvantum module creates symlinks via xdg.configFile.
-    # Replace both the theme directory AND kvantum.kvconfig with real files.
-    # Also clean stale .bak files before home-manager checks for conflicts.
-    home.activation.cleanupKvantumBak = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-      KVANTUM_DIR="$HOME/.config/Kvantum"
-      for f in "$KVANTUM_DIR"/*.bak; do
-        [ -e "$f" ] || continue
-        chmod -R u+w "$f" 2>/dev/null || true
-        rm -rf "$f"
-      done
-    '';
+      # Flatpak Qt apps can't follow symlinks to /nix/store.
+      # The catppuccin Kvantum module creates symlinks via xdg.configFile.
+      # Replace both the theme directory AND kvantum.kvconfig with real files.
+      # Also clean stale .bak files before home-manager checks for conflicts.
+      activation.cleanupKvantumBak = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+        KVANTUM_DIR="$HOME/.config/Kvantum"
+        for f in "$KVANTUM_DIR"/*.bak; do
+          [ -e "$f" ] || continue
+          chmod -R u+w "$f" 2>/dev/null || true
+          rm -rf "$f"
+        done
+      '';
 
-    home.activation.copyKvantumForFlatpak = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-      KVANTUM_THEME="catppuccin-${theme.catppuccin.flavor}-${theme.catppuccin.accent}"
-      KVANTUM_DIR="$HOME/.config/Kvantum/$KVANTUM_THEME"
-      KVANTUM_CONF="$HOME/.config/Kvantum/kvantum.kvconfig"
+      activation.copyKvantumForFlatpak = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+        KVANTUM_THEME="catppuccin-${theme.catppuccin.flavor}-${theme.catppuccin.accent}"
+        KVANTUM_DIR="$HOME/.config/Kvantum/$KVANTUM_THEME"
+        KVANTUM_CONF="$HOME/.config/Kvantum/kvantum.kvconfig"
 
-      # Replace theme dir symlink with real files
-      if [ -L "$KVANTUM_DIR" ]; then
-        SRC=$(readlink -f "$KVANTUM_DIR")
-        if [ -d "$SRC" ]; then
-          rm -f "$KVANTUM_DIR"
-          cp -rL "$SRC" "$KVANTUM_DIR"
+        # Replace theme dir symlink with real files
+        if [ -L "$KVANTUM_DIR" ]; then
+          SRC=$(readlink -f "$KVANTUM_DIR")
+          if [ -d "$SRC" ]; then
+            rm -f "$KVANTUM_DIR"
+            cp -rL "$SRC" "$KVANTUM_DIR"
+          fi
         fi
-      fi
 
-      # Replace kvantum.kvconfig symlink with real file
-      if [ -L "$KVANTUM_CONF" ]; then
-        CONTENT=$(cat "$KVANTUM_CONF" 2>/dev/null)
-        if [ -n "$CONTENT" ]; then
-          rm -f "$KVANTUM_CONF"
-          printf '%s\n' "$CONTENT" > "$KVANTUM_CONF"
+        # Replace kvantum.kvconfig symlink with real file
+        if [ -L "$KVANTUM_CONF" ]; then
+          CONTENT=$(cat "$KVANTUM_CONF" 2>/dev/null)
+          if [ -n "$CONTENT" ]; then
+            rm -f "$KVANTUM_CONF"
+            printf '%s\n' "$CONTENT" > "$KVANTUM_CONF"
+          fi
         fi
-      fi
-    '';
+      '';
 
-    home.packages = with pkgs; [
-      libsForQt5.qt5ct
-      kdePackages.qt6ct
-      libsForQt5.qtstyleplugin-kvantum
-      kdePackages.qtstyleplugin-kvantum
-    ];
+      packages = with pkgs; [
+        libsForQt5.qt5ct
+        kdePackages.qt6ct
+        libsForQt5.qtstyleplugin-kvantum
+        kdePackages.qtstyleplugin-kvantum
+      ];
+    };
 
     xdg.configFile."qt5ct/qt5ct.conf".text = ''
       [Appearance]
