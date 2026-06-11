@@ -17,26 +17,39 @@
 #
 # Note: Only active when features.desktop.wm == "kde" and displays.monitors is not empty
 
-{ lib, pkgs, features, displays, ... }:
+{
+  lib,
+  pkgs,
+  features,
+  displays,
+  ...
+}:
 
 let
   isKde = features.desktop.wm == "kde";
 
   # Convert rotation enum to kscreen format
-  kscreenRotation = rot: {
-    "normal" = "normal";
-    "90"     = "right";
-    "180"    = "inverted";
-    "270"    = "left";
-  }.${rot};
+  kscreenRotation =
+    rot:
+    {
+      "normal" = "normal";
+      "90" = "right";
+      "180" = "inverted";
+      "270" = "left";
+    }
+    .${rot};
 
-  monitorArgs = lib.concatMapStringsSep " " (m:
-    lib.concatStringsSep " " ([
-      "output.${m.name}.scale.${toString m.scale}"
-      "output.${m.name}.mode.${toString m.width}x${toString m.height}@${toString m.refreshRate}"
-      "output.${m.name}.position.${toString m.x},${toString m.y}"
-      "output.${m.name}.rotation.${kscreenRotation m.rotation}"
-    ] ++ lib.optional m.vrr "output.${m.name}.vrrpolicy.always")
+  monitorArgs = lib.concatMapStringsSep " " (
+    m:
+    lib.concatStringsSep " " (
+      [
+        "output.${m.name}.scale.${toString m.scale}"
+        "output.${m.name}.mode.${toString m.width}x${toString m.height}@${toString m.refreshRate}"
+        "output.${m.name}.position.${toString m.x},${toString m.y}"
+        "output.${m.name}.rotation.${kscreenRotation m.rotation}"
+      ]
+      ++ lib.optional m.vrr "output.${m.name}.vrrpolicy.always"
+    )
   ) displays.monitors;
 
   kscreenDoctor = "${pkgs.kdePackages.libkscreen}/bin/kscreen-doctor";
@@ -47,7 +60,7 @@ in
   #===========================
 
   # KDE only: Apply display config at startup
-  config = lib.mkIf (isKde && displays.monitors != []) {
+  config = lib.mkIf (isKde && displays.monitors != [ ]) {
     # Generate autostart .desktop entry that runs kscreen-doctor
     xdg.configFile."autostart/nix-display-config.desktop".text = ''
       [Desktop Entry]

@@ -21,7 +21,12 @@
 # Note: Terminal (kitty) and code editors always use fonts.defaults.monospace,
 # regardless of uiStyle setting.
 
-{ pkgs, config, lib, ... }:
+{
+  pkgs,
+  config,
+  lib,
+  ...
+}:
 
 {
   #===========================
@@ -50,16 +55,21 @@
 
     # UI Font Style Toggle
     uiStyle = lib.mkOption {
-      type = lib.types.enum [ "monospace" "sans-serif" ];
+      type = lib.types.enum [
+        "monospace"
+        "sans-serif"
+      ];
       default = "monospace";
       description = "Font style for UI elements (waybar, dunst, rofi, hyprlock, SDDM, GTK, Qt)";
     };
 
     ui = lib.mkOption {
       type = lib.types.str;
-      default = if config.fonts.defaults.uiStyle == "monospace"
-                then config.fonts.defaults.monospace
-                else config.fonts.defaults.sansSerif;
+      default =
+        if config.fonts.defaults.uiStyle == "monospace" then
+          config.fonts.defaults.monospace
+        else
+          config.fonts.defaults.sansSerif;
       readOnly = true;
       description = "Resolved UI font name based on uiStyle (do not set manually)";
     };
@@ -89,13 +99,13 @@
     #---------------------------
     packages = with pkgs; [
       # Nerd Fonts (patched with icons and glyphs)
-      nerd-fonts.jetbrains-mono  # Primary monospace font
-      nerd-fonts.symbols-only    # Icon font (used by waybar, etc.)
+      nerd-fonts.jetbrains-mono # Primary monospace font
+      nerd-fonts.symbols-only # Icon font (used by waybar, etc.)
 
       # Noto Fonts (Google's universal font family)
-      noto-fonts              # Sans-serif and serif fonts
-      noto-fonts-cjk-sans     # CJK (Chinese, Japanese, Korean) support
-      noto-fonts-color-emoji  # Color emoji support
+      noto-fonts # Sans-serif and serif fonts
+      noto-fonts-cjk-sans # CJK (Chinese, Japanese, Korean) support
+      noto-fonts-color-emoji # Color emoji support
     ];
 
     #---------------------------
@@ -104,7 +114,10 @@
     fontconfig = {
       enable = true;
       defaultFonts = {
-        monospace = [ config.fonts.defaults.monospace "Noto Sans Mono" ];
+        monospace = [
+          config.fonts.defaults.monospace
+          "Noto Sans Mono"
+        ];
         sansSerif = [ config.fonts.defaults.sansSerif ];
         serif = [ config.fonts.defaults.serif ];
         emoji = [ "Noto Color Emoji" ];

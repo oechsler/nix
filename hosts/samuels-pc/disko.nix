@@ -41,7 +41,10 @@ _:
                 format = "vfat";
                 mountpoint = "/boot";
                 mountOptions = [ "umask=0077" ];
-                extraArgs = [ "-n" "BOOT" ];
+                extraArgs = [
+                  "-n"
+                  "BOOT"
+                ];
               };
             };
             root = {
@@ -53,27 +56,46 @@ _:
                 passwordFile = "/tmp/luks-password";
                 content = {
                   type = "btrfs";
-                  extraArgs = [ "-f" "-L" "nixos" ];
+                  extraArgs = [
+                    "-f"
+                    "-L"
+                    "nixos"
+                  ];
                   subvolumes = {
                     "@" = {
                       mountpoint = "/";
-                      mountOptions = [ "compress=zstd" "noatime" ];
+                      mountOptions = [
+                        "compress=zstd"
+                        "noatime"
+                      ];
                     };
                     "@home" = {
                       mountpoint = "/home";
-                      mountOptions = [ "compress=zstd" "noatime" ];
+                      mountOptions = [
+                        "compress=zstd"
+                        "noatime"
+                      ];
                     };
                     "@nix" = {
                       mountpoint = "/nix";
-                      mountOptions = [ "compress=zstd" "noatime" ];
+                      mountOptions = [
+                        "compress=zstd"
+                        "noatime"
+                      ];
                     };
                     "@persist" = {
                       mountpoint = "/persist";
-                      mountOptions = [ "compress=zstd" "noatime" ];
+                      mountOptions = [
+                        "compress=zstd"
+                        "noatime"
+                      ];
                     };
                     "@snapshots" = {
                       mountpoint = "/.snapshots";
-                      mountOptions = [ "compress=zstd" "noatime" ];
+                      mountOptions = [
+                        "compress=zstd"
+                        "noatime"
+                      ];
                     };
                   };
                 };
@@ -97,11 +119,18 @@ _:
                 passwordFile = "/tmp/luks-password";
                 content = {
                   type = "btrfs";
-                  extraArgs = [ "-f" "-L" "games" ];
+                  extraArgs = [
+                    "-f"
+                    "-L"
+                    "games"
+                  ];
                   subvolumes = {
                     "@games" = {
                       mountpoint = "/mnt/games";
-                      mountOptions = [ "compress=zstd" "noatime" ];
+                      mountOptions = [
+                        "compress=zstd"
+                        "noatime"
+                      ];
                     };
                   };
                 };

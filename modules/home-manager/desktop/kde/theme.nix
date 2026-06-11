@@ -11,7 +11,14 @@
 # Common theming (GTK, cursor, icons, pinned apps):
 # - See common/theme.nix
 
-{ config, pkgs, lib, theme, input, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  theme,
+  input,
+  ...
+}:
 
 let
   inherit (theme.catppuccin) flavor accent;
@@ -22,9 +29,8 @@ let
 
   # Helper function: Capitalize first letter
   # Example: "mocha" → "Mocha"
-  capitalize = s:
-    (lib.toUpper (builtins.substring 0 1 s)) +
-    (builtins.substring 1 (builtins.stringLength s) s);
+  capitalize =
+    s: (lib.toUpper (builtins.substring 0 1 s)) + (builtins.substring 1 (builtins.stringLength s) s);
 
   # KDE theme names (Plasma-specific)
   # Examples: "Catppuccin Mocha Mauve", "CatppuccinMochaMauve"
@@ -47,7 +53,7 @@ let
   # Solution: Patch the theme to use 28x28 buttons (matches macOS/Windows)
   #
   # How: Copy theme from Nix store and sed the ButtonHeight/ButtonWidth values
-  patchedAurorae = pkgs.runCommand "${auroraeThemeId}-tiny" {} ''
+  patchedAurorae = pkgs.runCommand "${auroraeThemeId}-tiny" { } ''
     cp -r ${catppuccinKde}/share/aurorae/themes/${auroraeThemeId} $out
     chmod +w $out $out/${auroraeThemeId}rc
     sed -i 's/ButtonHeight=37/ButtonHeight=28/' $out/${auroraeThemeId}rc
@@ -59,7 +65,9 @@ let
 
   # Pinned applications for KDE taskbar
   # Format: "applications:firefox.desktop,applications:kitty.desktop,..."
-  pinnedLaunchersStr = lib.concatStringsSep "," (map (app: "applications:${app}.desktop") config.desktop.pinnedApps);
+  pinnedLaunchersStr = lib.concatStringsSep "," (
+    map (app: "applications:${app}.desktop") config.desktop.pinnedApps
+  );
 
   # Kickoff menu icon (KDE start menu)
   kickoffIcon = if isLight then "nix-snowflake" else "nix-snowflake-white";
@@ -194,8 +202,12 @@ in
       kwin = {
         # Window decoration buttons (Mac-style: close, minimize, maximize on left)
         titlebarButtons = {
-          left = [ "close" "minimize" "maximize" ];
-          right = [];
+          left = [
+            "close"
+            "minimize"
+            "maximize"
+          ];
+          right = [ ];
         };
 
         # Disable hot corners
@@ -205,7 +217,7 @@ in
 
       # KRunner (search) on Super+Space
       shortcuts."org.kde.krunner.desktop"._launch = "Meta+Space";
-      shortcuts.kwin.Overview = [];
+      shortcuts.kwin.Overview = [ ];
 
       # Low-level config for things without high-level API
       configFile = {

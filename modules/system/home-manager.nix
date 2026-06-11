@@ -24,7 +24,13 @@
 # - Only needed for host-specific user configuration (e.g., idle timeouts)
 # - If missing, only common modules are loaded
 
-{ config, inputs, lib, hostPath, ... }:
+{
+  config,
+  inputs,
+  lib,
+  hostPath,
+  ...
+}:
 
 let
   # Check if host has a custom home.nix file
@@ -39,7 +45,13 @@ in
     useGlobalPkgs = true;
     extraSpecialArgs = {
       inherit inputs;
-      inherit (config) locale user features displays input;
+      inherit (config)
+        locale
+        user
+        features
+        displays
+        input
+        ;
       inherit (config) theme;
       inherit (config.sops) secretsFile;
       fonts = config.fonts.defaults;

@@ -22,11 +22,20 @@
 #
 # Position: Top-right corner with theme.gaps.outer margin
 
-{ config, lib, fonts, theme, displays, ... }:
+{
+  config,
+  lib,
+  fonts,
+  theme,
+  displays,
+  ...
+}:
 
 let
   # Extract Catppuccin palette colors
-  palette = (lib.importJSON "${config.catppuccin.sources.palette}/palette.json").${config.catppuccin.flavor}.colors;
+  palette =
+    (lib.importJSON "${config.catppuccin.sources.palette}/palette.json")
+    .${config.catppuccin.flavor}.colors;
   accent = palette.${config.catppuccin.accent}.hex;
 
   # Show notifications on primary monitor

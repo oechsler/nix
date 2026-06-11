@@ -26,14 +26,16 @@ in
 
   config = {
     # Generate XDG autostart .desktop entries for KDE
-    xdg.configFile = builtins.listToAttrs (map (app: {
-      name = "autostart/${slug app}.desktop";
-      value.text = ''
-        [Desktop Entry]
-        Type=Application
-        Name=${app.name}
-        Exec=${app.exec}
-      '';
-    }) cfg.apps);
+    xdg.configFile = builtins.listToAttrs (
+      map (app: {
+        name = "autostart/${slug app}.desktop";
+        value.text = ''
+          [Desktop Entry]
+          Type=Application
+          Name=${app.name}
+          Exec=${app.exec}
+        '';
+      }) cfg.apps
+    );
   };
 }

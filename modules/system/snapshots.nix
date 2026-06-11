@@ -26,7 +26,12 @@
 #   2. Browse snapshot: ls /mnt/btrfs-root/@snapshots/@home.20240315T120000/
 #   3. Copy files: cp -a /mnt/btrfs-root/@snapshots/@home.20240315T120000/file ~/
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.features.snapshots;
@@ -37,7 +42,9 @@ in
   #===========================
 
   options.features.snapshots = {
-    enable = (lib.mkEnableOption "automatic btrfs snapshots") // { default = true; };
+    enable = (lib.mkEnableOption "automatic btrfs snapshots") // {
+      default = true;
+    };
   };
 
   #===========================
@@ -51,14 +58,14 @@ in
     #---------------------------
     services.btrbk = {
       instances.default = {
-        onCalendar = "hourly";  # Run every hour
+        onCalendar = "hourly"; # Run every hour
         settings = {
-          timestamp_format = "long";  # ISO 8601 format (e.g., 20240315T120000)
-          snapshot_preserve_min = "2h";  # Don't delete snapshots younger than 2h
-          snapshot_preserve = "24h 7d 2w 6m";  # Retention: 24 hourly, 7 daily, 2 weekly, 6 monthly
+          timestamp_format = "long"; # ISO 8601 format (e.g., 20240315T120000)
+          snapshot_preserve_min = "2h"; # Don't delete snapshots younger than 2h
+          snapshot_preserve = "24h 7d 2w 6m"; # Retention: 24 hourly, 7 daily, 2 weekly, 6 monthly
 
           volume."/mnt/btrfs-root" = {
-            snapshot_dir = "@snapshots";  # Store snapshots in @snapshots subvolume
+            snapshot_dir = "@snapshots"; # Store snapshots in @snapshots subvolume
 
             # Snapshot subvolumes
             # - @ (root): Only if impermanence disabled (otherwise wiped on boot)
@@ -98,10 +105,10 @@ in
       inherit (config.fileSystems."/") device;
       fsType = "btrfs";
       options = [
-        "subvol=/"       # Mount btrfs root, not @ subvolume
-        "compress=zstd"  # Enable compression
-        "noatime"        # Don't update access times (performance)
-        "x-gvfs-hide"    # Hide from file managers (it's a technical mount)
+        "subvol=/" # Mount btrfs root, not @ subvolume
+        "compress=zstd" # Enable compression
+        "noatime" # Don't update access times (performance)
+        "x-gvfs-hide" # Hide from file managers (it's a technical mount)
       ];
     };
 
@@ -123,14 +130,14 @@ in
       volume /mnt/btrfs-root
         snapshot_dir @snapshots
         ${lib.optionalString (!config.features.impermanence.enable) ''
-      subvolume @
-        snapshot_create always
+          subvolume @
+            snapshot_create always
         ''}
       subvolume @home
         snapshot_create always
         ${lib.optionalString config.features.impermanence.enable ''
-      subvolume @persist
-        snapshot_create always
+          subvolume @persist
+            snapshot_create always
         ''}
     '';
   };

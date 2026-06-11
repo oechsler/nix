@@ -25,7 +25,12 @@
 # - Shows desktop notifications on success/failure
 # - Unmounts gracefully on shutdown
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   cfg = config.features.smb;
@@ -72,12 +77,28 @@ let
   # - path: SMB path (e.g., "//192.168.1.100/share")
   # - username: SMB username
   # - password: SMB password
-  smbSecrets = lib.listToAttrs (lib.flatten (map (name: [
-    { name = "smb/${name}/label"; value = {}; }
-    { name = "smb/${name}/path"; value = {}; }
-    { name = "smb/${name}/username"; value = {}; }
-    { name = "smb/${name}/password"; value = {}; }
-  ]) cfg.shares));
+  smbSecrets = lib.listToAttrs (
+    lib.flatten (
+      map (name: [
+        {
+          name = "smb/${name}/label";
+          value = { };
+        }
+        {
+          name = "smb/${name}/path";
+          value = { };
+        }
+        {
+          name = "smb/${name}/username";
+          value = { };
+        }
+        {
+          name = "smb/${name}/password";
+          value = { };
+        }
+      ]) cfg.shares
+    )
+  );
 
   # ============================================================================
   # MOUNT SCRIPT
@@ -96,12 +117,14 @@ let
   # - forceuid/forcegid - Override server-provided ownership
   # - soft - Allow mount to be interrupted if server is down
   # - file_mode/dir_mode - Set permissions (644 for files, 755 for dirs)
-  mountContent = lib.concatMapStringsSep "\n" (name:
+  mountContent = lib.concatMapStringsSep "\n" (
+    name:
     let
       creds = config.sops.templates."smb-credentials-${name}".path;
       label = config.sops.placeholder."smb/${name}/label";
       path = config.sops.placeholder."smb/${name}/path";
-    in ''
+    in
+    ''
       LABEL="${label}"
       MOUNT_UID=$(id -u ${user.name})
       MOUNT_GID=$(id -g ${user.name})
@@ -152,9 +175,12 @@ let
   #
   # Uses lazy unmount (-l) to detach even if share is busy
   # || true ensures the service doesn't fail if unmount fails
-  umountContent = lib.concatMapStringsSep "\n" (name:
-    let label = config.sops.placeholder."smb/${name}/label";
-    in ''
+  umountContent = lib.concatMapStringsSep "\n" (
+    name:
+    let
+      label = config.sops.placeholder."smb/${name}/label";
+    in
+    ''
       # Lazy unmount: detach immediately, clean up when no longer busy
       umount -l "${user.home}/smb/${label}" || true
     ''
@@ -166,7 +192,9 @@ in
   #===========================
 
   options.features.smb = {
-    enable = (lib.mkEnableOption "SMB network share mounts") // { default = true; };
+    enable = (lib.mkEnableOption "SMB network share mounts") // {
+      default = true;
+    };
     shares = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];
@@ -206,17 +234,32 @@ in
         smb-mount = {
           description = "Mount SMB Shares";
 
-          after  = [ "network-online.target" "systemd-resolved.service" "graphical.target" "sops-install-secrets.service" ];
-          wants  = [ "network-online.target" "systemd-resolved.service" ];
+          after = [
+            "network-online.target"
+            "systemd-resolved.service"
+            "graphical.target"
+            "sops-install-secrets.service"
+          ];
+          wants = [
+            "network-online.target"
+            "systemd-resolved.service"
+          ];
           wantedBy = [ "graphical.target" ];
 
           unitConfig.ConditionPathExists = config.sops.age.keyFile;
 
-          path = [ pkgs.cifs-utils pkgs.util-linux pkgs.sudo pkgs.libnotify pkgs.iproute2 pkgs.systemd ];
+          path = [
+            pkgs.cifs-utils
+            pkgs.util-linux
+            pkgs.sudo
+            pkgs.libnotify
+            pkgs.iproute2
+            pkgs.systemd
+          ];
 
           serviceConfig = {
             Type = "oneshot";
-            RemainAfterExit = true;  # Consider service active after mount completes
+            RemainAfterExit = true; # Consider service active after mount completes
 
             # Pre-start: Wait for network and DNS
             ExecStartPre = "${waitForNetwork}";
@@ -239,18 +282,22 @@ in
       # Generate credential files for each share
       # Format: username=<user>\npassword=<pass>
       # Used by mount.cifs via -o credentials=<file>
-      templates = lib.listToAttrs (map (name: {
-        name = "smb-credentials-${name}";
-        value.content = ''
-          username=${config.sops.placeholder."smb/${name}/username"}
-          password=${config.sops.placeholder."smb/${name}/password"}
-        '';
-      }) cfg.shares) // {
-        # Mount script (generated from mountContent)
-        "smb-mount.sh".content = "#!/bin/bash\n" + mountContent;
-        # Unmount script (generated from umountContent)
-        "smb-umount.sh".content = "#!/bin/bash\n" + umountContent;
-      };
+      templates =
+        lib.listToAttrs (
+          map (name: {
+            name = "smb-credentials-${name}";
+            value.content = ''
+              username=${config.sops.placeholder."smb/${name}/username"}
+              password=${config.sops.placeholder."smb/${name}/password"}
+            '';
+          }) cfg.shares
+        )
+        // {
+          # Mount script (generated from mountContent)
+          "smb-mount.sh".content = "#!/bin/bash\n" + mountContent;
+          # Unmount script (generated from umountContent)
+          "smb-umount.sh".content = "#!/bin/bash\n" + umountContent;
+        };
 
       # Declare all required secrets
       secrets = smbSecrets;

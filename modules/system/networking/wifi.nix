@@ -8,7 +8,12 @@
 #   WPA2 Enterprise: wifi/<name>/ssid, wifi/<name>/identity, wifi/<name>/password
 #                    (EAP-PEAP with MSCHAPv2 inner auth)
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 let
   cfg = config.features.wifi;

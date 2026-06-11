@@ -53,7 +53,10 @@
     desktop.wm = "kde";
     gaming.enable = false;
     auth.yubikey.enable = true;
-    smb.shares = [ "personal-drive" "pika" ];
+    smb.shares = [
+      "personal-drive"
+      "pika"
+    ];
     wifi.networks = [ "home" ];
   };
 

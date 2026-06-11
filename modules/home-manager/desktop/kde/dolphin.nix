@@ -29,14 +29,38 @@ let
   # We hide any that aren't explicitly bookmarked
   dirs = config.xdg.userDirs;
   xdgPlaces = [
-    { path = dirs.desktop;     icon = "folder-desktop"; }
-    { path = dirs.documents;   icon = "folder-documents"; }
-    { path = dirs.download;    icon = "folder-download"; }
-    { path = dirs.music;       icon = "folder-music"; }
-    { path = dirs.pictures;    icon = "folder-pictures"; }
-    { path = dirs.publicShare; icon = "folder-public"; }
-    { path = dirs.templates;   icon = "folder-templates"; }
-    { path = dirs.videos;      icon = "folder-videos"; }
+    {
+      path = dirs.desktop;
+      icon = "folder-desktop";
+    }
+    {
+      path = dirs.documents;
+      icon = "folder-documents";
+    }
+    {
+      path = dirs.download;
+      icon = "folder-download";
+    }
+    {
+      path = dirs.music;
+      icon = "folder-music";
+    }
+    {
+      path = dirs.pictures;
+      icon = "folder-pictures";
+    }
+    {
+      path = dirs.publicShare;
+      icon = "folder-public";
+    }
+    {
+      path = dirs.templates;
+      icon = "folder-templates";
+    }
+    {
+      path = dirs.videos;
+      icon = "folder-videos";
+    }
   ];
 
   # XDG directories not in fileManager.bookmarks (to be hidden)

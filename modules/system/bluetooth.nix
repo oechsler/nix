@@ -17,7 +17,9 @@ let
 in
 {
   options.features.bluetooth = {
-    enable = (lib.mkEnableOption "bluetooth support") // { default = true; };
+    enable = (lib.mkEnableOption "bluetooth support") // {
+      default = true;
+    };
   };
 
   config = lib.mkIf cfg.enable {

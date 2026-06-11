@@ -26,7 +26,12 @@
 # - No change: "Das System ist bereits auf dem neuesten Stand"
 # - Failure: Shows last 5 error lines from journal
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   #===========================
@@ -38,7 +43,10 @@
   #---------------------------
   nix = {
     settings = {
-      experimental-features = [ "nix-command" "flakes" ];
+      experimental-features = [
+        "nix-command"
+        "flakes"
+      ];
       # Deduplicate identical files in /nix/store
       # Saves disk space by hardlinking duplicate files
       auto-optimise-store = true;
@@ -51,7 +59,7 @@
     gc = {
       automatic = true;
       dates = "weekly";
-      options = "--delete-older-than 14d";  # Keep last 14 days
+      options = "--delete-older-than 14d"; # Keep last 14 days
     };
   };
 
@@ -69,9 +77,9 @@
   system.autoUpgrade = {
     enable = true;
     flake = "${config.users.users.${config.user.name}.home}/repos/nix#${config.networking.hostName}";
-    operation = "boot";  # Build but don't activate (requires reboot)
-    allowReboot = false;  # Never reboot automatically
-    flags = [ "--refresh" ];  # Refresh cached evaluations
+    operation = "boot"; # Build but don't activate (requires reboot)
+    allowReboot = false; # Never reboot automatically
+    flags = [ "--refresh" ]; # Refresh cached evaluations
   };
 
   #---------------------------
@@ -88,108 +96,112 @@
     # Upgrade schedule
     timers.nixos-upgrade = {
       timerConfig = {
-        OnBootSec = "30min";  # First upgrade 30min after boot
-        OnUnitActiveSec = "24h";  # Subsequent upgrades every 24h
-        Persistent = lib.mkForce false;  # Don't run missed upgrades on boot
+        OnBootSec = "30min"; # First upgrade 30min after boot
+        OnUnitActiveSec = "24h"; # Subsequent upgrades every 24h
+        Persistent = lib.mkForce false; # Don't run missed upgrades on boot
       };
     };
 
-  #---------------------------
-  # 6. Upgrade Customization
-  #---------------------------
-  # Why: The default nixos-upgrade service doesn't update flake.lock or notify the user.
-  #
-  # Problem: Users don't know when upgrades succeed/fail or when reboot is needed.
-  #
-  # Solution: Customize nixos-upgrade service to:
-  # - Pull remote (including CI-tested flake.lock) before upgrading
-  # - Notify user on success with reboot recommendation
-  # - Notify user on failure with error details
-  #
-  # How it works:
-  # - ExecStartPre: Run updateFlake script (git pull — uses CI-tested flake.lock)
-  # - ExecStart: Run nixos-rebuild boot (default behavior)
-  # - ExecStartPost: Check if reboot is needed and notify
-  # - OnFailure: Trigger failure notification service
-
-    services.nixos-upgrade = let
-    flakeDir = "${config.users.users.${config.user.name}.home}/repos/nix";
-    user = config.user.name;
-
-    # Helper script to send desktop notifications from system service
-    # Why: System services don't have access to user D-Bus session
-    # Solution: Use systemd-run --machine=<user>@ to run notify-send in user session
-    notify = pkgs.writeShellScript "nixos-upgrade-notify" ''
-      ${pkgs.systemd}/bin/systemd-run --machine=${user}@ \
-        --user --pipe --quiet --collect \
-        ${pkgs.libnotify}/bin/notify-send "$@"
-    '';
-
-    # Pre-upgrade script: Sync with remote
-    # Steps:
-    # 1. Reset flake.lock to git HEAD (discard local experimental changes)
-    # 2. Pull latest changes from remote (git pull --ff-only)
-    #    This includes the CI-tested flake.lock — no local flake update needed.
+    #---------------------------
+    # 6. Upgrade Customization
+    #---------------------------
+    # Why: The default nixos-upgrade service doesn't update flake.lock or notify the user.
     #
-    # Note: All operations run as user (sudo -u) not root, to preserve git ownership
-    updateFlake = pkgs.writeShellScript "nixos-upgrade-update-flake" ''
-      cd ${flakeDir}
-      ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git checkout flake.lock
-      ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git pull --ff-only
-    '';
+    # Problem: Users don't know when upgrades succeed/fail or when reboot is needed.
+    #
+    # Solution: Customize nixos-upgrade service to:
+    # - Pull remote (including CI-tested flake.lock) before upgrading
+    # - Notify user on success with reboot recommendation
+    # - Notify user on failure with error details
+    #
+    # How it works:
+    # - ExecStartPre: Run updateFlake script (git pull — uses CI-tested flake.lock)
+    # - ExecStart: Run nixos-rebuild boot (default behavior)
+    # - ExecStartPost: Check if reboot is needed and notify
+    # - OnFailure: Trigger failure notification service
 
-    # Post-upgrade success script
-    # Compare /run/current-system (newly built) vs /run/booted-system (currently running)
-    # If different: Reboot recommended
-    # If same: System already up-to-date
-    successScript = pkgs.writeShellScript "nixos-upgrade-success" ''
-      current=$(readlink /run/current-system)
-      booted=$(readlink /run/booted-system)
-      if [ "$current" != "$booted" ]; then
-        # New system generation built, reboot needed to activate
-        ${notify} -u normal \
-          "Systemaktualisierung abgeschlossen" \
-          "Ein Neustart wird empfohlen."
-      else
-        # No changes, system already up-to-date
-        ${notify} -u low \
-          "Systemaktualisierung" \
-          "Das System ist bereits auf dem neuesten Stand."
-      fi
-    '';
-  in {
-    path = [ pkgs.git ];
+    services.nixos-upgrade =
+      let
+        flakeDir = "${config.users.users.${config.user.name}.home}/repos/nix";
+        user = config.user.name;
 
-    serviceConfig.ExecStartPre = lib.mkBefore [ "${updateFlake}" ];
-    serviceConfig.ExecStartPost = "${successScript}";
+        # Helper script to send desktop notifications from system service
+        # Why: System services don't have access to user D-Bus session
+        # Solution: Use systemd-run --machine=<user>@ to run notify-send in user session
+        notify = pkgs.writeShellScript "nixos-upgrade-notify" ''
+          ${pkgs.systemd}/bin/systemd-run --machine=${user}@ \
+            --user --pipe --quiet --collect \
+            ${pkgs.libnotify}/bin/notify-send "$@"
+        '';
 
-    # Trigger failure notification service on upgrade failure
-    unitConfig.OnFailure = [ "nixos-upgrade-notify-failure.service" ];
-  };
+        # Pre-upgrade script: Sync with remote
+        # Steps:
+        # 1. Reset flake.lock to git HEAD (discard local experimental changes)
+        # 2. Pull latest changes from remote (git pull --ff-only)
+        #    This includes the CI-tested flake.lock — no local flake update needed.
+        #
+        # Note: All operations run as user (sudo -u) not root, to preserve git ownership
+        updateFlake = pkgs.writeShellScript "nixos-upgrade-update-flake" ''
+          cd ${flakeDir}
+          ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git checkout flake.lock
+          ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git pull --ff-only
+        '';
+
+        # Post-upgrade success script
+        # Compare /run/current-system (newly built) vs /run/booted-system (currently running)
+        # If different: Reboot recommended
+        # If same: System already up-to-date
+        successScript = pkgs.writeShellScript "nixos-upgrade-success" ''
+          current=$(readlink /run/current-system)
+          booted=$(readlink /run/booted-system)
+          if [ "$current" != "$booted" ]; then
+            # New system generation built, reboot needed to activate
+            ${notify} -u normal \
+              "Systemaktualisierung abgeschlossen" \
+              "Ein Neustart wird empfohlen."
+          else
+            # No changes, system already up-to-date
+            ${notify} -u low \
+              "Systemaktualisierung" \
+              "Das System ist bereits auf dem neuesten Stand."
+          fi
+        '';
+      in
+      {
+        path = [ pkgs.git ];
+
+        serviceConfig.ExecStartPre = lib.mkBefore [ "${updateFlake}" ];
+        serviceConfig.ExecStartPost = "${successScript}";
+
+        # Trigger failure notification service on upgrade failure
+        unitConfig.OnFailure = [ "nixos-upgrade-notify-failure.service" ];
+      };
 
     #---------------------------
     # 7. Upgrade Failure Notification
     #---------------------------
     # Triggered when nixos-upgrade service fails
     # Shows last 5 error lines from journal in critical notification
-    services.nixos-upgrade-notify-failure = let
-    notify = pkgs.writeShellScript "nixos-upgrade-notify-failure" ''
-      # Extract last 5 error lines from nixos-upgrade journal
-      error=$(${pkgs.systemd}/bin/journalctl -u nixos-upgrade.service -b --no-pager -p err -o cat | tail -5)
+    services.nixos-upgrade-notify-failure =
+      let
+        notify = pkgs.writeShellScript "nixos-upgrade-notify-failure" ''
+          # Extract last 5 error lines from nixos-upgrade journal
+          error=$(${pkgs.systemd}/bin/journalctl -u nixos-upgrade.service -b --no-pager -p err -o cat | tail -5)
 
-      # Send critical notification to user session
-      ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
-        --user --pipe --quiet --collect \
-        ${pkgs.libnotify}/bin/notify-send -u critical \
-          "Systemaktualisierung fehlgeschlagen" \
-          "Die automatische Aktualisierung konnte nicht durchgeführt werden.\n\n$error"
-    '';
-  in {
-    description = "Notify on NixOS upgrade failure";
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = "${notify}";
-    };
-  };
+          # Send critical notification to user session
+          ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
+            --user --pipe --quiet --collect \
+            ${pkgs.libnotify}/bin/notify-send -u critical \
+              "Systemaktualisierung fehlgeschlagen" \
+              "Die automatische Aktualisierung konnte nicht durchgeführt werden.\n\n$error"
+        '';
+      in
+      {
+        description = "Notify on NixOS upgrade failure";
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = "${notify}";
+        };
+      };
   };
 }
