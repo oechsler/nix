@@ -31,9 +31,10 @@ jobs:
       - name: Get current kernel version
         id: current-kernel
         run: |
-          CURRENT_COMMIT=$(grep -A 1 "cachyos-kernel.url" flake.nix | grep -oP '${{ steps.kernel-repo.outputs.KERNEL_REPO }}/[a-f0-9]+' | cut -d'/' -f4)
+          KERNEL_REPO="${{ steps.kernel-repo.outputs.KERNEL_REPO }}"
+          CURRENT_COMMIT=$(grep -oE "$KERNEL_REPO/[a-f0-9]{40}" flake.nix | cut -d'/' -f3)
           echo "commit=$CURRENT_COMMIT" >> "$GITHUB_OUTPUT"
-          CURRENT_NIXPKGS_KERNEL=$(grep -A 1 "nixpkgs-kernel.url" flake.nix | grep -oP 'github:nixos/nixpkgs/[a-f0-9]+' | cut -d'/' -f4)
+          CURRENT_NIXPKGS_KERNEL=$(grep -oE 'github:nixos/nixpkgs/[a-f0-9]{40}' flake.nix | cut -d'/' -f3)
           echo "nixpkgs_kernel_commit=$CURRENT_NIXPKGS_KERNEL" >> "$GITHUB_OUTPUT"
 
       - name: Fetch latest cachyos-kernel commit
