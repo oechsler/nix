@@ -41,7 +41,7 @@ jobs:
           nix build .#nixosConfigurations.samuels-pc.config.system.build.toplevel --dry-run
 
       - name: Commit and push
-        if: steps.check.outputs.changed == 'true'
+        if: steps.check.outputs.changed == 'true' && success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
