@@ -3,14 +3,10 @@
   "extends": [
     "config:recommended"
   ],
-  "enabledManagers": ["nix", "github-actions"],
+  "enabledManagers": ["github-actions"],
   "dependencyDashboard": false,
   "labels": ["dependencies"],
   "packageRules": [
-    {
-      "matchManagers": ["nix"],
-      "groupName": "flake inputs"
-    },
     {
       "matchDepTypes": ["action"],
       "groupName": "Forgejo Actions"
