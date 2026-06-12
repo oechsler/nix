@@ -43,6 +43,7 @@ let
 
   # WM detection
   isKde = features.desktop.wm == "kde";
+  usesTerminalFileManager = features.desktop.fileManager == "terminal";
 in
 {
   #===========================
@@ -76,11 +77,14 @@ in
     # Apps shown in KDE taskbar / Hyprland dock
     desktop.pinnedApps = [
       "firefox"
-      (if isKde then "org.kde.dolphin" else "org.gnome.Nautilus")
       "kitty"
     ]
+    ++ lib.optional usesTerminalFileManager "yazi"
+    ++ lib.optional (!usesTerminalFileManager) (
+      if isKde then "org.kde.dolphin" else "org.gnome.Nautilus"
+    )
     ++ lib.optionals features.development.enable [
-      "code"
+      "nvim"
     ]
     ++ lib.optionals features.apps.enable [
       "obsidian"

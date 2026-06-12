@@ -8,6 +8,7 @@ Most desktop-oriented features default to enabled. Some toggles inherit their pa
 features.server = true;          # Disables all desktop-related features at once
 features.gaming.enable = false;
 features.desktop.wm = "kde";
+features.desktop.fileManager = "terminal";
 features.ssh.enable = true;
 ```
 
@@ -21,6 +22,7 @@ features.ssh.enable = true;
 | `features.desktop.enable` | `true` | Desktop environment (SDDM, Firefox, theming) |
 | `features.desktop.wm` | `"hyprland"` | Window manager (`"hyprland"` / `"kde"`) |
 | `features.desktop.login` | `"greeter"` | How the desktop session is entered: `"greeter"` (SDDM login) or `"autologin"`. Autologin only auto-unlocks the keyring with `unlockMethod = "password"`. |
+| `features.desktop.fileManager` | `"default"` | Primary file manager: `"default"` uses Nautilus (Hyprland) or Dolphin (KDE); `"terminal"` uses Yazi in Kitty and removes the GUI file manager from pinned apps. |
 | `features.audio.enable` | `true` | PipeWire audio (ALSA, PulseAudio compat) |
 | `features.bluetooth.enable` | `true` | Bluetooth support (power on boot) |
 | `features.gaming.enable` | `true` | Steam + Proton-GE, GameMode, Gamescope, MangoHud, ProtonUp-Qt |
@@ -189,17 +191,28 @@ Default autostart apps are extended based on feature toggles:
 
 Each entry is `{ name = "..."; exec = "..."; }` — on KDE these generate XDG autostart `.desktop` files, on Hyprland they're launched via `exec-once`.
 
+## File Manager
+
+`features.desktop.fileManager` controls the primary file manager integration:
+
+| Value | Behavior |
+|-------|----------|
+| `"default"` | Use the desktop's GUI file manager: Nautilus on Hyprland, Dolphin on KDE. |
+| `"terminal"` | Use Yazi as the primary file manager. Hyprland `Super+E` and KDE `Meta+E` open `kitty yazi`; directory MIME defaults point to `yazi.desktop`; the GUI file manager is omitted from dock/taskbar pins. |
+
+Yazi integrations follow existing feature toggles instead of adding yazi-specific toggles. Heavy preview integrations are only enabled when the corresponding app/development feature is enabled.
+
 ## File Manager Bookmarks
 
 Set in `home.nix`:
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `fileManager.bookmarks` | Downloads, Schreibtisch, Repos, Dokumente, Bilder | Sidebar bookmarks for Nautilus (Hyprland) and Dolphin (KDE) |
+| `fileManager.bookmarks` | Downloads, Schreibtisch, Repos, Dokumente, Bilder | Sidebar bookmarks for Nautilus (Hyprland), Dolphin (KDE), and Yazi shortcuts |
 
 Each entry is `{ name = "..."; path = "/absolute/path"; icon = "folder-..."; }`. The `icon` field defaults to `"folder"`.
 
-Bookmarks are managed declaratively — on Nautilus via GTK bookmarks (force-overwritten to prevent Nextcloud pollution), on Dolphin via `user-places.xbel`.
+Bookmarks are managed declaratively — on Nautilus via GTK bookmarks, on Dolphin via `user-places.xbel`, and on Yazi as `g1`, `g2`, ... shortcuts.
 
 ## Pinned Dock/Taskbar Apps
 
@@ -207,10 +220,10 @@ Set in `home.nix`:
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `desktop.pinnedApps` | Firefox, Dolphin/Nautilus, Kitty (+ conditional) | Pinned dock/taskbar apps (works on Hyprland + KDE) |
+| `desktop.pinnedApps` | Firefox, Kitty, Dolphin/Nautilus or Yazi (+ conditional) | Pinned dock/taskbar apps (works on Hyprland + KDE). Yazi replaces Dolphin/Nautilus when `features.desktop.fileManager = "terminal"`. |
 
 Default pinned apps are extended based on feature toggles:
-- `features.development.enable` adds VS Code
+- `features.development.enable` adds Neovim
 - `features.apps.enable` adds Obsidian, Vesktop, Spotify
 - `features.gaming.enable` adds Steam
 

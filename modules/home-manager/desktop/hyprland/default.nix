@@ -105,6 +105,9 @@ let
   brightnessNotify = import ./scripts/brightness-notify.nix { inherit pkgs; };
   batteryWarning = import ./scripts/battery-warning.nix { inherit pkgs; };
 
+  fileManagerCommand =
+    if features.desktop.fileManager == "terminal" then "kitty yazi" else "nautilus";
+
 in
 {
   #===========================
@@ -116,11 +119,13 @@ in
     ./waybar.nix # Status bar
     ./rofi.nix # Application launcher, power menu, window switcher
     ./awww.nix # Wayland-specific tools (clipboard, screenshots)
-    ./nautilus.nix # File manager (GNOME Files)
     ./hyprlock.nix # Screen locker
     ./hypridle.nix # Idle management (auto-lock, screen timeout)
     ./dunst.nix # Notification daemon
     ./hypr-dock.nix # Application dock
+  ]
+  ++ lib.optionals (features.desktop.fileManager == "default") [
+    ./nautilus.nix # File manager (GNOME Files)
   ];
 
   #===========================
@@ -387,7 +392,7 @@ in
           "$mainMod, Q, killactive,"
           "$mainMod, M, exec, ${config.rofi.power}"
           "$mainMod SHIFT, Q, exec, hyprlock"
-          "$mainMod, E, exec, nautilus"
+          "$mainMod, E, exec, ${fileManagerCommand}"
           # Toggle floating — resize to 60 % of monitor (keeps 16:9 ratio) and center
           "$mainMod, V, exec, hyprctl --batch 'dispatch togglefloating ; dispatch resizeactive exact 60% 60% ; dispatch centerwindow'"
           "$mainMod, R, exec, ${config.rofi.toggle}"

@@ -12,8 +12,7 @@
 #    - kubectl, helm, k9s
 #
 # 3. GUI Tools (features.development.enable && features.desktop.enable)
-#    - VS Code
-#    - JetBrains Toolbox (IntelliJ IDEA, etc.)
+#    - JetBrains GoLand
 #    - DBeaver (Database GUI)
 #    - Only useful on desktops
 #
@@ -120,22 +119,6 @@
         dbeaver-bin # Database GUI
         jetbrains.goland # Go IDE
       ];
-
-      programs.vscode = {
-        enable = true;
-        package = pkgs.vscode;
-
-        profiles.default = {
-          userSettings = {
-            "workbench.startupEditor" = "none";
-          };
-
-          extensions = with pkgs.vscode-extensions; [
-            jnoortheen.nix-ide
-            vscodevim.vim
-          ];
-        };
-      };
     })
   ];
 }

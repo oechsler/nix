@@ -17,6 +17,7 @@
   lib,
   theme,
   input,
+  features,
   ...
 }:
 
@@ -215,9 +216,14 @@ in
         cornerBarrier = false;
       };
 
-      # KRunner (search) on Super+Space
-      shortcuts."org.kde.krunner.desktop"._launch = "Meta+Space";
-      shortcuts.kwin.Overview = [ ];
+      shortcuts = {
+        # KRunner (search) on Super+Space
+        "org.kde.krunner.desktop"._launch = "Meta+Space";
+        kwin.Overview = [ ];
+      }
+      // lib.optionalAttrs (features.desktop.fileManager == "terminal") {
+        "yazi.desktop"._launch = "Meta+E";
+      };
 
       # Low-level config for things without high-level API
       configFile = {

@@ -7,12 +7,16 @@
 # - dolphin.nix - File manager sidebar configuration
 # - displays.nix - Monitor configuration via kscreen-doctor
 
+{ features, lib, ... }:
+
 {
   imports = [
     ./theme.nix
     ./autostart.nix
     ./idle.nix
-    ./dolphin.nix
     ./displays.nix
+  ]
+  ++ lib.optionals (features.desktop.fileManager == "default") [
+    ./dolphin.nix
   ];
 }
