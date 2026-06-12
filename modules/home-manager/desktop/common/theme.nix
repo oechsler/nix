@@ -77,12 +77,14 @@ in
     # Apps shown in KDE taskbar / Hyprland dock
     desktop.pinnedApps = [
       "firefox"
-      "kitty"
     ]
     ++ lib.optional usesTerminalFileManager "yazi"
     ++ lib.optional (!usesTerminalFileManager) (
       if isKde then "org.kde.dolphin" else "org.gnome.Nautilus"
     )
+    ++ [
+      "kitty"
+    ]
     ++ lib.optionals features.development.enable [
       "nvim"
     ]
