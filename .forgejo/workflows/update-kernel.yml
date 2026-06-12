@@ -76,7 +76,7 @@ jobs:
           nix build .#nixosConfigurations.samuels-pc.config.system.build.toplevel --dry-run
 
       - name: Commit and push kernel update
-        if: steps.check-update.outputs.needs_update == 'true'
+        if: steps.check-update.outputs.needs_update == 'true' && success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
