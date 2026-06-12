@@ -175,7 +175,7 @@ in
 {
   programs.yazi = {
     enable = true;
-    shellWrapperName = "y";
+    shellWrapperName = "yy";
 
     extraPackages =
       with pkgs;
@@ -392,4 +392,18 @@ in
   };
 
   xdg.mimeApps.defaultApplications."inode/directory" = [ "yazi.desktop" ];
+
+  programs.fish.functions.y = {
+    body = ''
+      set -l tmp (mktemp -t yazi-cwd.XXXXXX)
+      yazi --cwd-file="$tmp" $argv
+      if test -f "$tmp"
+        set -l cwd (cat "$tmp")
+        /bin/rm -f "$tmp"
+        if test -n "$cwd" -a "$cwd" != "$PWD"
+          cd "$cwd"
+        end
+      end
+    '';
+  };
 }
