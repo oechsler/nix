@@ -35,10 +35,11 @@ sops/           # Encrypted secrets
 Common per-host overrides:
 
 ```nix
-features.server = true;               # Minimal server (no desktop, optimized kernel)
-features.impermanence.enable = false; # Disable root wipe on boot
-features.gaming.enable = false;       # No Steam/gaming
-features.desktop.wm = "kde";          # Hyprland or KDE
+features.server = true;                         # Minimal server (no desktop, optimized kernel)
+features.impermanence.enable = false;           # Disable root wipe on boot
+features.gaming.enable = false;                 # No Steam/gaming
+features.desktop.wm = "kde";                    # Hyprland or KDE
+features.desktop.fileManager = "terminal";       # Yazi instead of GUI file manager
 ```
 
 ## Using as Flake Input

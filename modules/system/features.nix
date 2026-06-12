@@ -49,6 +49,7 @@
 # --- OTHER OPTIONS ---
 #
 #   features.desktop.wm = "hyprland" | "kde";  # Window manager (default: hyprland)
+#   features.desktop.fileManager = "default" | "terminal";  # Primary file manager
 #   features.auth.yubikey.enable = true;        # YubiKey PAM (default: on when unlockMethod = "yubikey")
 #   features.auth.totp.enable = true;           # TOTP 2FA (default: true)
 #   features.development.enable = true;         # Dev tools (default: true)
@@ -74,7 +75,7 @@ let
     # Desktop & GUI
     desktop.enable = false; # No Hyprland/KDE, SDDM, Firefox, hypr-dock
     apps.enable = false; # No Discord, Spotify, etc.
-    development.enable = false; # No dev tools (languages, kubectl, VS Code, etc.)
+    development.enable = false; # No dev tools (languages, kubectl, IDEs, etc.)
 
     # Hardware
     audio.enable = false; # No sound
@@ -163,6 +164,14 @@ in
         ];
         default = "greeter";
         description = "How the desktop session is entered after boot.";
+      };
+      fileManager = lib.mkOption {
+        type = lib.types.enum [
+          "default"
+          "terminal"
+        ];
+        default = "default";
+        description = "Primary file manager for the desktop environment";
       };
     };
     development.enable = (lib.mkEnableOption "development tools") // {

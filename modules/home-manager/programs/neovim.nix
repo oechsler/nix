@@ -398,7 +398,7 @@
       vim.keymap.set("n", "<leader>q", "<cmd>close<cr>", { desc = "Close split" })
       vim.keymap.set("n", "<leader>z", "<cmd>only<cr>", { desc = "Zoom (close other splits)" })
 
-      -- Buffers (VSCode-style)
+      -- Buffers
       for i = 1, 9 do
         vim.keymap.set("n", "<leader>" .. i, "<cmd>BufferLineGoToBuffer " .. i .. "<cr>", { desc = "Buffer " .. i })
       end

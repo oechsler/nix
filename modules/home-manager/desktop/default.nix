@@ -17,5 +17,6 @@
     [ ./common ]
     ++ lib.optionals (features.desktop.wm == "hyprland") [ ./hyprland ]
     ++ lib.optionals (features.desktop.wm == "kde") [ ./kde ]
+    ++ lib.optionals (features.desktop.fileManager == "terminal") [ ./yazi ]
   );
 }

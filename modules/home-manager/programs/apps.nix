@@ -31,8 +31,8 @@
 # Hyprland apps:
 # - Baobab - Disk usage analyzer (GNOME)
 # - Loupe - Image viewer (GNOME)
-# - GNOME Keyring - Secret storage for browsers, VSCode, etc.
-# - libsecret - Tools for accessing gnome-keyring (used by Chrome, VSCode, etc.)
+# - GNOME Keyring - Secret storage for browsers, desktop apps, etc.
+# - libsecret - Tools for accessing gnome-keyring (used by Chrome, Vesktop, etc.)
 
 {
   pkgs,
@@ -110,7 +110,7 @@ in
       # GNOME/GTK utilities for tiling WMs
       (lib.mkIf (!isKde) {
         # GNOME Keyring for credential storage
-        # Used by: Chrome/Chromium, VSCode, Vesktop, etc.
+        # Used by: Chrome/Chromium, Vesktop, etc.
         # Note: Proton Pass uses kernel keyring instead (via keyutils)
         # Unlock: pam_gnome_keyring captures the SDDM password at login and
         # auto-unlocks the keyring. sddm/polkit/hyprlock are password-only for

@@ -15,7 +15,11 @@
 #     { name = "My Folder"; path = "/path/to/folder"; icon = "folder"; }
 #   ];
 
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  ...
+}:
 
 let
   home = config.home.homeDirectory;
