@@ -401,7 +401,7 @@ in
         set -l cwd (cat "$tmp")
         command rm -f "$tmp"
         if test -n "$cwd" -a "$cwd" != "$PWD"
-          cd "$cwd"
+          builtin cd "$cwd"
         end
       end
     '';
