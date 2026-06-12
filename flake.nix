@@ -47,7 +47,7 @@
 
     # Pinned nixpkgs for the CachyOS kernel — bump together with cachyos-kernel
     # when upgrading the kernel version.
-    nixpkgs-kernel.url = "github:nixos/nixpkgs/1c5503ba41146fb6b49ed9706823b30de7f3a78f";
+    nixpkgs-kernel.url = "github:nixos/nixpkgs/e4ade1db48ff481708436f206a377be351a38974";
 
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -92,8 +92,8 @@
       # Pinned: nix flake update must not silently bump the kernel version.
       # Bump this together with nixpkgs-kernel when upgrading the kernel.
       # See: github.com/xddxdd/nix-cachyos-kernel (version.json tracks kernel versions)
-      # Current: rev b240fa59 (2026-06-01), kernel 7.0.10.
-      url = "github:xddxdd/nix-cachyos-kernel/b240fa5983f987f516b150662aedfbf6d7e3b7c8";
+      # Current: rev 6cd613f1 (2026-06-12), kernel 7.0.12
+      url = "github:xddxdd/nix-cachyos-kernel/6cd613f177ba39598cbf8b04fbe885d967dee771";
       inputs.nixpkgs.follows = "nixpkgs-kernel";
     };
 
