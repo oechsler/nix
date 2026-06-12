@@ -68,7 +68,7 @@ jobs:
 
       - name: Update flake.lock
         if: steps.check-update.outputs.needs_update == 'true'
-        run: nix flake update
+        run: nix flake update cachyos-kernel nixpkgs-kernel
 
       - name: Validate configurations (dry-run)
         if: steps.check-update.outputs.needs_update == 'true'
