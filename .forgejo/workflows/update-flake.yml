@@ -14,6 +14,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Set nixpkgs repo variable
+        id: nixpkgs-repo
+        run: |
+          echo "NIXPKGS_REPO=github:nixos/nixpkgs/nixos-unstable" >> "$GITHUB_OUTPUT"
+
       - name: Checkout repository
         uses: actions/checkout@v6
         with:
