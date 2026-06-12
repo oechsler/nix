@@ -4,11 +4,6 @@ on:
   schedule:
     - cron: "0 6 */14 * *"
   workflow_dispatch:
-    inputs:
-      force:
-        description: "Force update even if no new kernel is available"
-        required: false
-        default: "false"
 
 permissions:
   contents: write
@@ -53,8 +48,8 @@ jobs:
       - name: Check if update is needed
         id: check-update
         run: |
-          if [[ "${{ github.event.inputs.force }}" == "true" || "${{ steps.current-kernel.outputs.commit }}" != "${{ steps.latest-kernel.outputs.commit }}" ]]; then
-            echo "Kernel update forced or available!"
+          if [[ "${{ steps.current-kernel.outputs.commit }}" != "${{ steps.latest-kernel.outputs.commit }}" ]]; then
+            echo "Kernel update available!"
             echo "needs_update=true" >> "$GITHUB_OUTPUT"
           else
             echo "Kernel is up to date."
