@@ -16,8 +16,7 @@ jobs:
     steps:
       - name: Set nixpkgs repo variable
         id: nixpkgs-repo
-        run: |
-          echo "NIXPKGS_REPO=github:nixos/nixpkgs/nixos-unstable" >> "$GITHUB_OUTPUT"
+        run: echo "NIXPKGS_REPO=github:nixos/nixpkgs/nixos-unstable" >> "$GITHUB_OUTPUT"
 
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -41,12 +40,10 @@ jobs:
 
       - name: Validate configurations (dry-run)
         if: steps.check.outputs.changed == 'true'
-        run: |
-          nix build .#nixosConfigurations.samuels-razer.config.system.build.toplevel --dry-run
-          nix build .#nixosConfigurations.samuels-pc.config.system.build.toplevel --dry-run
+        run: nix build .#nixosConfigurations.samuels-razer.config.system.build.toplevel --dry-run && nix build .#nixosConfigurations.samuels-pc.config.system.build.toplevel --dry-run
 
       - name: Commit and push
-        if: steps.check.outputs.changed == 'true' && success()
+        if: steps.check.outputs.changed == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
