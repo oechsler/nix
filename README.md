@@ -2,7 +2,7 @@
 
 My personal NixOS configurations using Flakes and Home-Manager.
 
-![Preview](.github/assets/preview.png)
+![Hyprland Preview](.assets/preview-hyprland.png)
 
 ## Structure
 
@@ -14,6 +14,17 @@ modules/
   home-manager/ # User programs, dotfiles, theming
 sops/           # Encrypted secrets
 ```
+
+## Previews
+
+### KDE Plasma
+<details>
+<summary>Show KDE Preview</summary>
+<br>
+
+![KDE Preview](.assets/preview-kde.png)
+
+</details>
 
 ## Quick Start
 
