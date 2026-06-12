@@ -205,21 +205,6 @@ in
         restore
         ;
 
-      bookmarks = {
-        package = pkgs.yaziPlugins.bookmarks;
-        setup = true;
-        settings = {
-          persist = "all";
-          desc_format = "parent";
-          file_pick_mode = "parent";
-          show_keys = true;
-          notify = {
-            enable = true;
-            timeout = 2;
-          };
-        };
-      };
-
       git = {
         package = pkgs.yaziPlugins.git;
         setup = true;
@@ -301,34 +286,6 @@ in
           on = "<C-p>";
           run = "plugin clipboard -- --action=paste";
           desc = "Paste files from system clipboard";
-        }
-        {
-          on = "m";
-          run = "plugin bookmarks save";
-          desc = "Save bookmark";
-        }
-        {
-          on = "'";
-          run = "plugin bookmarks jump";
-          desc = "Jump to bookmark";
-        }
-        {
-          on = [
-            " "
-            "b"
-            "d"
-          ];
-          run = "plugin bookmarks delete";
-          desc = "Delete bookmark";
-        }
-        {
-          on = [
-            " "
-            "b"
-            "D"
-          ];
-          run = "plugin bookmarks delete_all";
-          desc = "Delete all bookmarks";
         }
         {
           on = [
