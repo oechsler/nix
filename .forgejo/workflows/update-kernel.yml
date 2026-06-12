@@ -22,26 +22,26 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
+      - name: Set kernel repo variables
+        id: kernel-repo
+        run: |
+          echo "KERNEL_REPO=github:xddxdd/nix-cachyos-kernel" >> "$GITHUB_OUTPUT"
+          echo "KERNEL_VERSION_JSON_URL=https://raw.githubusercontent.com/xddxdd/nix-cachyos-kernel/main/version.json" >> "$GITHUB_OUTPUT"
+
       - name: Get current kernel version
         id: current-kernel
         run: |
-          CURRENT_COMMIT=$(grep -A 1 "cachyos-kernel.url" flake.nix | grep -oP 'github:xddxdd/nix-cachyos-kernel/[a-f0-9]+' | cut -d'/' -f4)
-          echo "Current cachyos-kernel commit: $CURRENT_COMMIT"
+          CURRENT_COMMIT=$(grep -A 1 "cachyos-kernel.url" flake.nix | grep -oP '${{ steps.kernel-repo.outputs.KERNEL_REPO }}/[a-f0-9]+' | cut -d'/' -f4)
           echo "commit=$CURRENT_COMMIT" >> "$GITHUB_OUTPUT"
-
           CURRENT_NIXPKGS_KERNEL=$(grep -A 1 "nixpkgs-kernel.url" flake.nix | grep -oP 'github:nixos/nixpkgs/[a-f0-9]+' | cut -d'/' -f4)
-          echo "Current nixpkgs-kernel commit: $CURRENT_NIXPKGS_KERNEL"
           echo "nixpkgs_kernel_commit=$CURRENT_NIXPKGS_KERNEL" >> "$GITHUB_OUTPUT"
 
       - name: Fetch latest cachyos-kernel commit
         id: latest-kernel
         run: |
           LATEST_COMMIT=$(curl -s "https://api.github.com/repos/xddxdd/nix-cachyos-kernel/commits/main" | jq -r '.sha')
-          echo "Latest cachyos-kernel commit: $LATEST_COMMIT"
           echo "commit=$LATEST_COMMIT" >> "$GITHUB_OUTPUT"
-
-          LATEST_NIXPKGS_KERNEL=$(curl -s "https://raw.githubusercontent.com/xddxdd/nix-cachyos-kernel/main/version.json" | jq -r '.nixpkgsRev')
-          echo "Latest nixpkgs-kernel commit: $LATEST_NIXPKGS_KERNEL"
+          LATEST_NIXPKGS_KERNEL=$(curl -s "${{ steps.kernel-repo.outputs.KERNEL_VERSION_JSON_URL }}" | jq -r '.nixpkgsRev')
           echo "nixpkgs_kernel_commit=$LATEST_NIXPKGS_KERNEL" >> "$GITHUB_OUTPUT"
 
       - name: Check if update is needed
@@ -58,10 +58,9 @@ jobs:
       - name: Update flake.nix with new kernel commits
         if: steps.check-update.outputs.needs_update == 'true'
         run: |
-          sed -i "s|github:xddxdd/nix-cachyos-kernel/[a-f0-9]\{40\}|github:xddxdd/nix-cachyos-kernel/${{ steps.latest-kernel.outputs.commit }}|" flake.nix
+          sed -i "s|${{ steps.kernel-repo.outputs.KERNEL_REPO }}/[a-f0-9]\{40\}|${{ steps.kernel-repo.outputs.KERNEL_REPO }}/${{ steps.latest-kernel.outputs.commit }}|" flake.nix
           sed -i "s|github:nixos/nixpkgs/[a-f0-9]\{40\}|github:nixos/nixpkgs/${{ steps.latest-kernel.outputs.nixpkgs_kernel_commit }}|" flake.nix
-
-          LATEST_KERNEL_VERSION=$(curl -s "https://raw.githubusercontent.com/xddxdd/nix-cachyos-kernel/main/version.json" | jq -r '.kernelVersion')
+          LATEST_KERNEL_VERSION=$(curl -s "${{ steps.kernel-repo.outputs.KERNEL_VERSION_JSON_URL }}" | jq -r '.kernelVersion')
           sed -i "s|Current: rev [a-f0-9]\{8\} ([0-9-]\{10\}), kernel [0-9.]\+|Current: rev ${{ steps.latest-kernel.outputs.commit | slice(0,8) }} ($(date +%Y-%m-%d)), kernel $LATEST_KERNEL_VERSION|" flake.nix
 
       - name: Update flake.lock
