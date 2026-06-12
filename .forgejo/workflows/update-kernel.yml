@@ -1,0 +1,85 @@
+name: Update Kernel
+
+on:
+  schedule:
+    - cron: "0 6 */14 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update-kernel:
+    name: Check and update CachyOS kernel
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: true
+          fetch-depth: 0
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Get current kernel version
+        id: current-kernel
+        run: |
+          CURRENT_COMMIT=$(grep -A 1 "cachyos-kernel.url" flake.nix | grep -oP 'github:xddxdd/nix-cachyos-kernel/[a-f0-9]+' | cut -d'/' -f4)
+          echo "Current cachyos-kernel commit: $CURRENT_COMMIT"
+          echo "commit=$CURRENT_COMMIT" >> "$GITHUB_OUTPUT"
+
+          CURRENT_NIXPKGS_KERNEL=$(grep -A 1 "nixpkgs-kernel.url" flake.nix | grep -oP 'github:nixos/nixpkgs/[a-f0-9]+' | cut -d'/' -f4)
+          echo "Current nixpkgs-kernel commit: $CURRENT_NIXPKGS_KERNEL"
+          echo "nixpkgs_kernel_commit=$CURRENT_NIXPKGS_KERNEL" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch latest cachyos-kernel commit
+        id: latest-kernel
+        run: |
+          LATEST_COMMIT=$(curl -s "https://api.github.com/repos/xddxdd/nix-cachyos-kernel/commits/main" | jq -r '.sha')
+          echo "Latest cachyos-kernel commit: $LATEST_COMMIT"
+          echo "commit=$LATEST_COMMIT" >> "$GITHUB_OUTPUT"
+
+          LATEST_NIXPKGS_KERNEL=$(curl -s "https://raw.githubusercontent.com/xddxdd/nix-cachyos-kernel/main/version.json" | jq -r '.nixpkgsRev')
+          echo "Latest nixpkgs-kernel commit: $LATEST_NIXPKGS_KERNEL"
+          echo "nixpkgs_kernel_commit=$LATEST_NIXPKGS_KERNEL" >> "$GITHUB_OUTPUT"
+
+      - name: Check if update is needed
+        id: check-update
+        run: |
+          if [[ "${{ steps.current-kernel.outputs.commit }}" != "${{ steps.latest-kernel.outputs.commit }}" ]]; then
+            echo "Kernel update available!"
+            echo "needs_update=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Kernel is up to date."
+            echo "needs_update=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Update flake.nix with new kernel commits
+        if: steps.check-update.outputs.needs_update == 'true'
+        run: |
+          sed -i "s|github:xddxdd/nix-cachyos-kernel/[a-f0-9]\{40\}|github:xddxdd/nix-cachyos-kernel/${{ steps.latest-kernel.outputs.commit }}|" flake.nix
+          sed -i "s|github:nixos/nixpkgs/[a-f0-9]\{40\}|github:nixos/nixpkgs/${{ steps.latest-kernel.outputs.nixpkgs_kernel_commit }}|" flake.nix
+
+          LATEST_KERNEL_VERSION=$(curl -s "https://raw.githubusercontent.com/xddxdd/nix-cachyos-kernel/main/version.json" | jq -r '.kernelVersion')
+          sed -i "s|Current: rev [a-f0-9]\{8\} ([0-9-]\{10\}), kernel [0-9.]\+|Current: rev ${{ steps.latest-kernel.outputs.commit | slice(0,8) }} ($(date +%Y-%m-%d)), kernel $LATEST_KERNEL_VERSION|" flake.nix
+
+      - name: Update flake.lock
+        if: steps.check-update.outputs.needs_update == 'true'
+        run: nix flake update
+
+      - name: Validate configurations (dry-run)
+        if: steps.check-update.outputs.needs_update == 'true'
+        run: |
+          nix build .#nixosConfigurations.samuels-razer.config.system.build.toplevel --dry-run
+          nix build .#nixosConfigurations.samuels-pc.config.system.build.toplevel --dry-run
+
+      - name: Commit and push kernel update
+        if: steps.check-update.outputs.needs_update == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add flake.nix flake.lock
+          git commit -m "chore: bump cachyos-kernel to ${{ steps.latest-kernel.outputs.commit | slice(0,8) }}"
+          git push
