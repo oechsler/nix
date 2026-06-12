@@ -399,7 +399,7 @@ in
       yazi --cwd-file="$tmp" $argv
       if test -f "$tmp"
         set -l cwd (cat "$tmp")
-        /bin/rm -f "$tmp"
+        command rm -f "$tmp"
         if test -n "$cwd" -a "$cwd" != "$PWD"
           cd "$cwd"
         end
