@@ -119,13 +119,15 @@ load_state() {
     echo ""
     info "Resuming previous session"
     # Save CLI values before sourcing (CLI has priority)
-    local cli_host="$HOST" cli_ssh="$SSH_KEY_FILE" cli_password="$USER_PASSWORD_HASH"
+    local cli_host="$HOST" cli_ssh="$SSH_KEY"
     # shellcheck source=/dev/null
     source "$STATE_FILE"
     # Restore CLI values where set
     [[ -n "$cli_host" ]] && HOST="$cli_host"
-    [[ -n "$cli_ssh" ]] && SSH_KEY_FILE="$cli_ssh"
-    [[ -n "$cli_password" ]] && USER_PASSWORD_HASH="$cli_password"
+    if [[ -n "$cli_ssh" ]]; then
+      SSH_KEY="$cli_ssh"
+      SSH_KEY_FILE=""  # Reset so phase_collect_inputs uses the new path
+    fi
     success "Loaded: host=$HOST"
   fi
 }
@@ -252,7 +254,7 @@ phase_detect_features() {
       persistPrefix = cfg.features.impermanence.persistPrefix;
       totp = cfg.features.auth.totp.enable;
       yubikey = cfg.features.auth.yubikey.enable;
-      yubikeyLuks = cfg.features.auth.yubikey.luks.enable;
+      yubikeyLuks = cfg.features.encryption.unlockMethod == "yubikey";
       secureBoot = cfg.features.secureBoot.enable;
       desktop = cfg.features.desktop.enable;
       wm = cfg.features.desktop.wm;
@@ -265,7 +267,7 @@ phase_detect_features() {
 
   # Ensure jq is available (not on NixOS ISO by default)
   if ! command -v jq &>/dev/null; then
-    nix-env -iA nixos.jq 2>/dev/null
+    nix profile install nixpkgs#jq 2>/dev/null || nix-env -iA nixos.jq 2>/dev/null
   fi
 
   read -r FEAT_ENCRYPTION FEAT_IMPERMANENCE PERSIST_PREFIX FEAT_TOTP \
@@ -473,7 +475,7 @@ phase_state_version() {
   local host_dir="$REPO_DIR/hosts/$HOST"
 
   local version
-  version="$(nixos-version | cut -d. -f1,2)"
+  version="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.pkgs.lib.version" | cut -d. -f1,2)"
   success "NixOS version: $version"
 
   sed -i "s|system\.stateVersion = \"[^\"]*\"|system.stateVersion = \"$version\"|" \
