@@ -22,31 +22,35 @@ let
   wifiProfiles = lib.listToAttrs (
     map (name: {
       name = "wifi-${name}";
-      value = {
-        connection = {
-          id = "\${WIFI_${lib.toUpper name}_SSID}";
-          type = "wifi";
-          autoconnect = true;
-        };
-        wifi = {
-          mode = "infrastructure";
-          ssid = "\${WIFI_${lib.toUpper name}_SSID}";
-        };
-        wifi-security = {
-          auth-alg = "open";
-          key-mgmt = "wpa-psk";
-          psk = "\${WIFI_${lib.toUpper name}_PSK}";
-        };
-        ipv4 = {
-          method = "auto";
-          route-metric = 600;
-        };
-        ipv6 = {
-          method = "auto";
-          ip6-privacy = ip6Privacy;
-          route-metric = 600;
-        };
-      };
+       value = {
+         connection = {
+           id = "\${WIFI_${lib.toUpper name}_SSID}";
+           type = "wifi";
+           autoconnect = true;
+         };
+         wifi = {
+           mode = "infrastructure";
+           ssid = "\${WIFI_${lib.toUpper name}_SSID}";
+         };
+         wifi-security = {
+           auth-alg = "open";
+           key-mgmt = "wpa-psk";
+           psk = "\${WIFI_${lib.toUpper name}_PSK}";
+         };
+         ipv4 = {
+           method = "auto";
+           route-metric = 600;
+           dns-priority = 50;
+           ignore-auto-dns = false;
+         };
+         ipv6 = {
+           method = "auto";
+           ip6-privacy = ip6Privacy;
+           route-metric = 600;
+           dns-priority = 50;
+           ignore-auto-dns = false;
+         };
+       };
     }) cfg.networks
   );
 
@@ -78,21 +82,25 @@ let
         wifi-security = {
           key-mgmt = "wpa-eap";
         };
-        "802-1x" = {
-          eap = "peap;";
-          identity = "\${WIFI_${lib.toUpper name}_IDENTITY}";
-          password = "\${WIFI_${lib.toUpper name}_PASSWORD}";
-          phase2-auth = "mschapv2";
-        };
-        ipv4 = {
-          method = "auto";
-          route-metric = 600;
-        };
-        ipv6 = {
-          method = "auto";
-          ip6-privacy = ip6Privacy;
-          route-metric = 600;
-        };
+         "802-1x" = {
+           eap = "peap;";
+           identity = "\${WIFI_${lib.toUpper name}_IDENTITY}";
+           password = "\${WIFI_${lib.toUpper name}_PASSWORD}";
+           phase2-auth = "mschapv2";
+         };
+         ipv4 = {
+           method = "auto";
+           route-metric = 600;
+           dns-priority = 50;
+           ignore-auto-dns = false;
+         };
+         ipv6 = {
+           method = "auto";
+           ip6-privacy = ip6Privacy;
+           route-metric = 600;
+           dns-priority = 50;
+           ignore-auto-dns = false;
+         };
       };
     }) cfg.enterpriseNetworks
   );
