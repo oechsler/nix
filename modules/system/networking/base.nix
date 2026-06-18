@@ -47,63 +47,61 @@ in
     };
   };
 
-  config = {
-    networking = {
-      networkmanager = {
-        enable = true;
-        wifi.backend = "iwd";
-        unmanaged = [
-          "interface-name:docker*"
-          "interface-name:br-*"
-          "interface-name:veth*"
-          "interface-name:tailscale*"
-        ];
-        ensureProfiles.profiles.ethernet-default = {
-          connection = {
-            id = "Ethernet";
-            type = "ethernet";
-            autoconnect = true;
-            autoconnect-priority = 999;
-          };
-          ipv4 = {
-            method = "auto";
-            route-metric = 100;
-            dns-priority = 100;
-            ignore-auto-dns = false;
-          };
-          ipv6 = {
-            method = "auto";
-            ip6-privacy = ip6Privacy;
-            route-metric = 100;
-            dns-priority = 100;
-            ignore-auto-dns = false;
-          };
-        };
-      };
-      wireless.iwd = {
-        enable = true;
-        settings.General.EnableNetworkConfiguration = false;
-      };
-    };
-
-       services.resolved = {
+   config = {
+     networking = {
+       networkmanager = {
          enable = true;
-         settings.Resolve = {
-           DNSSEC = "allow-downgrade";
-           Domains = [ "~." ];
-           LLMNR = false;
-           MulticastDNS = false;
-           Cache = true;
-           DNSStubListener = true;
-           FallbackDNS = ""; # Disable all fallback DNS servers
-           DNS = ""; # Clear any static DNS to ensure NetworkManager DNS is used
+         wifi.backend = "iwd";
+         unmanaged = [
+           "interface-name:docker*"
+           "interface-name:br-*"
+           "interface-name:veth*"
+           "interface-name:tailscale*"
+         ];
+         ensureProfiles.profiles.ethernet-default = {
+           connection = {
+             id = "Ethernet";
+             type = "ethernet";
+             autoconnect = true;
+             autoconnect-priority = 999;
+           };
+           ipv4 = {
+             method = "auto";
+             route-metric = 100;
+             dns-priority = 100;
+             ignore-auto-dns = false;
+           };
+           ipv6 = {
+             method = "auto";
+             ip6-privacy = ip6Privacy;
+             route-metric = 100;
+             dns-priority = 100;
+             ignore-auto-dns = false;
+           };
          };
        };
+       wireless.iwd = {
+         enable = true;
+         settings.General.EnableNetworkConfiguration = false;
+       };
+     };
 
-       # Disable systemd-resolved's built-in fallback DNS servers
-       systemd.services.resolved.serviceConfig.Environment = [ "SYSTEMD_RESOLVED_FALLBACK_DNS=" ];
+     services.resolved = {
+       enable = true;
+       settings.Resolve = {
+         DNSSEC = "allow-downgrade";
+         Domains = [ "~." ];
+         LLMNR = false;
+         MulticastDNS = false;
+         Cache = true;
+         DNSStubListener = true;
+         FallbackDNS = "";
+         DNS = "";
+       };
+     };
 
-     # Ensure NetworkManager properly hands off DNS to systemd-resolved
+     systemd.services.resolved.serviceConfig.Environment = [ "SYSTEMD_RESOLVED_FALLBACK_DNS=" ];
+
      networking.networkmanager.settings = {
        main = {
          dns = "systemd-resolved";
@@ -120,24 +118,22 @@ in
        };
      };
 
-      # NetworkManager dispatcher to refresh DNS on resume from suspend
-      networking.networkmanager.dispatcherScripts = [
-        {
-          source = pkgs.writeShellScript "99-resolved-refresh" ''
-            #!${pkgs.bash}/bin/bash
-            if [ "$2" = "resume" ] || [ "$2" = "connectivity-change" ]; then
-              ${pkgs.systemd}/bin/resolvectl flush-caches
-              # Restart systemd-resolved to pick up new DNS from NetworkManager
-              ${pkgs.systemd}/bin/systemctl restart systemd-resolved.service
-            fi
-          '';
-          type = "basic";
-        }
-      ];
+     networking.networkmanager.dispatcherScripts = [
+       {
+         source = pkgs.writeShellScript "99-resolved-refresh" ''
+           #!${pkgs.bash}/bin/bash
+           if [ "$2" = "resume" ] || [ "$2" = "connectivity-change" ]; then
+             ${pkgs.systemd}/bin/resolvectl flush-caches
+             ${pkgs.systemd}/bin/systemctl restart systemd-resolved.service
+           fi
+         '';
+         type = "basic";
+       }
+     ];
 
-    environment.systemPackages = with pkgs; [
-      avahi
-      iwd
-    ];
-  };
+     environment.systemPackages = with pkgs; [
+       avahi
+       iwd
+     ];
+   };
 }
