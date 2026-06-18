@@ -66,7 +66,7 @@
 
       eza = {
         enable = true;
-        enableFishIntegration = true;
+        enableFishIntegration = false;
         icons = "auto";
         extraOptions = [ "--group-directories-first" ];
       };
