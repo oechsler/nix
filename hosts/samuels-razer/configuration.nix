@@ -50,7 +50,12 @@
   ];
 
   features = {
-    desktop.wm = "kde";
+    encryption.unlockMethod = "yubikey";
+    desktop = {
+      wm = "kde";
+      login = "greeter";
+      fileManager = "terminal";
+    };
     gaming.enable = false;
     auth.yubikey.enable = true;
     smb.shares = [

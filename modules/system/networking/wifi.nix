@@ -1,7 +1,7 @@
 # WiFi Configuration
 #
 # WiFi connection profiles (PSK + Enterprise) with SOPS credentials,
-# ethernet/WiFi autoconnect switching for desktops, and iwd profiles.
+# optional ethernet/WiFi autoconnect switching for non-KDE desktops, and iwd profiles.
 #
 # WiFi credentials are stored in SOPS secrets:
 #   WPA2-PSK:        wifi/<name>/ssid, wifi/<name>/psk
@@ -187,8 +187,13 @@ in
 {
   config = lib.mkMerge [
 
-    # Ethernet/WiFi switching (desktop only)
-    (lib.mkIf (config.features.desktop.enable && cfg.enable) {
+    # Ethernet/WiFi switching for desktops without NetworkManager UI policy.
+    (lib.mkIf (
+      config.features.desktop.enable
+      && config.features.desktop.wm != "kde"
+      && cfg.enable
+      && cfg.preferEthernet.enable
+    ) {
       networking.networkmanager.dispatcherScripts = [
         {
           source = ethernetWifiSwitch;

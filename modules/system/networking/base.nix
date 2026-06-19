@@ -8,6 +8,7 @@
 #   features.wifi.enable = true;                    # Enable WiFi (default: true)
 #   features.wifi.networks = [ "home" ];            # WPA2-PSK networks
 #   features.wifi.enterpriseNetworks = [ "uni" ];   # WPA2 Enterprise networks
+#   features.wifi.preferEthernet.enable = true;     # Disable WiFi when Ethernet is active (default: true, non-KDE desktops)
 #   features.tailscale.enable = true;               # Tailscale VPN (default: true)
 
 {
@@ -40,6 +41,9 @@ in
         type = lib.types.listOf lib.types.str;
         default = [ ];
         description = "WPA2 Enterprise (EAP-PEAP/MSCHAPv2) network names";
+      };
+      preferEthernet.enable = (lib.mkEnableOption "disable WiFi while Ethernet is connected on non-KDE desktops") // {
+        default = true;
       };
     };
     tailscale.enable = (lib.mkEnableOption "Tailscale VPN") // {
