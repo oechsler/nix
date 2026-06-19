@@ -7,7 +7,15 @@
 # - Hide CUPS desktop entry (not needed in launcher)
 # - Auto-create XDG directories
 
-{ config, ... }:
+{
+  config,
+  features,
+  ...
+}:
+
+let
+  isKde = features.desktop.wm == "kde";
+in
 
 {
   xdg = {
@@ -78,6 +86,10 @@
         "application/toml" = [ "nvim.desktop" ];
       };
     };
+
+    # KDE rewrites mimeapps.list through System Settings and file dialogs.
+    # Keep declarative defaults authoritative for Plasma sessions.
+    configFile."mimeapps.list".force = isKde;
 
     userDirs = {
       enable = true;

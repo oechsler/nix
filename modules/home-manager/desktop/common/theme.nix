@@ -120,10 +120,16 @@ in
         settings.StartupWMClass = "Vesktop";
       };
 
-      # GTK4 ignores the theme package — it loads CSS from ~/.config/gtk-4.0/ directly
-      configFile."gtk-4.0/gtk.css".source = "${catppuccinGtk}/share/themes/${themeName}/gtk-4.0/gtk.css";
-      configFile."gtk-4.0/gtk-dark.css".source =
-        "${catppuccinGtk}/share/themes/${themeName}/gtk-4.0/gtk-dark.css";
+      # GTK4 ignores the theme package — it loads CSS from ~/.config/gtk-4.0/ directly.
+      # KDE rewrites these files, so force Home Manager ownership for Plasma sessions.
+      configFile."gtk-4.0/gtk.css" = {
+        source = "${catppuccinGtk}/share/themes/${themeName}/gtk-4.0/gtk.css";
+        force = isKde;
+      };
+      configFile."gtk-4.0/gtk-dark.css" = {
+        source = "${catppuccinGtk}/share/themes/${themeName}/gtk-4.0/gtk-dark.css";
+        force = isKde;
+      };
     };
 
     catppuccin = {
