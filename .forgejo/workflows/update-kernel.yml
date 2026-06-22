@@ -24,7 +24,7 @@ jobs:
           echo "KERNEL_LOCK_URL=https://raw.githubusercontent.com/xddxdd/nix-cachyos-kernel/master/flake.lock" >> "$GITHUB_OUTPUT"
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: true
 
