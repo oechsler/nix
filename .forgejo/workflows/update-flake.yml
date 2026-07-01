@@ -19,7 +19,7 @@ jobs:
         run: echo "NIXPKGS_REPO=github:nixos/nixpkgs/nixos-unstable" >> "$GITHUB_OUTPUT"
 
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: true
 
