@@ -534,41 +534,22 @@ phase_mount() {
 # Phase 8: NixOS Install
 #===========================
 
-ram_monitor() {
-  local log="$1"
-  while true; do
-    sleep 5
-    local total used avail
-    read -r total used avail < <(awk '/^MemTotal:/{t=$2} /^MemAvailable:/{a=$2} END{printf "%d %d %d", t/1024, (t-a)/1024, a/1024}' /proc/meminfo)
-    printf "${YELLOW}··· [RAM] %d / %d MB used (%d MB free) ···${RESET}\n" "$used" "$total" "$avail" >> "$log"
-    printf "${YELLOW}··· [RAM] %d / %d MB used (%d MB free) ···${RESET}\n" "$used" "$total" "$avail" > /dev/tty
-  done
-}
-
 phase_install() {
   local host_dir="$REPO_DIR/hosts/$HOST"
-  local install_log="/tmp/nixos-install.log"
+
+  # Scale build parallelism to available RAM (~4 GB per job, min 1)
+  local ram_gb max_jobs
+  ram_gb=$(awk '/^MemTotal:/{printf "%d", $2/1024/1024}' /proc/meminfo)
+  max_jobs=$(( ram_gb / 4 ))
+  (( max_jobs < 1 )) && max_jobs=1
+  info "RAM: ${ram_gb} GB detected — using --max-jobs ${max_jobs}"
 
   nixos-generate-config --root /mnt --show-hardware-config > "$host_dir/hardware-configuration.generated.nix"
   nix flake lock "$REPO_DIR"
   git -C "$REPO_DIR" add --all
 
-  info "Building NixOS — logging to $install_log"
-  echo ""
-
-  ram_monitor "$install_log" &
-  local monitor_pid=$!
-
-  local install_ok=true
-  nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --cores 4 --max-jobs 2 2>&1 \
-    | tee -a "$install_log" || install_ok=false
-
-  kill "$monitor_pid" 2>/dev/null
-  wait "$monitor_pid" 2>/dev/null
-
-  if [[ "$install_ok" != true ]]; then
-    echo ""
-    error "nixos-install failed. Full log: $install_log"
+  if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs"; then
+    error "nixos-install failed. Check the output above."
   fi
 
   success "NixOS installed"
