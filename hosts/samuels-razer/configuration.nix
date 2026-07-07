@@ -1,10 +1,11 @@
 # samuels-razer Host Configuration
 #
-# Razer Blade gaming laptop configuration.
+# Razer Blade Stealth 13 (2018, RZ09-02393) laptop configuration.
 #
 # Hardware:
-# - 14" QHD+ display (3200x1800 @ 60Hz, 1.6x scaling)
-# - eDP-1 internal display
+# - Intel Core i7-8550U (Kaby Lake-R) + Intel UHD Graphics 620
+# - 16 GB LPDDR3-1866 (soldered)
+# - 13.3" QHD+ display (3200x1800 @ 60Hz, 1.6x scaling, eDP-1)
 #
 # Features:
 # - KDE Plasma desktop (better for laptop/battery management)

@@ -14,7 +14,7 @@
 #
 # Local Hosts:
 # - samuels-pc: Desktop workstation (2x 1440p, Ryzen 9 5950X, RX 7900 XTX)
-# - samuels-razer: Laptop (gaming laptop, portable workstation)
+# - samuels-razer: Razer Blade Stealth 13 2018 (i7-8550U, Intel UHD 620)
 # - samuels-terra: Desktop workstation (2x 1440p, Ryzen 9 9950X3D2, RX 9070 XT)
 #
 # Key inputs:
