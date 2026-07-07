@@ -536,10 +536,10 @@ phase_mount() {
 
 ram_monitor() {
   while true; do
+    sleep 5
     local total used avail
     read -r total used avail < <(awk '/^MemTotal:/{t=$2} /^MemAvailable:/{a=$2} END{printf "%d %d %d", t/1024, (t-a)/1024, a/1024}' /proc/meminfo)
-    printf '\r    %s[RAM]%s %d MB used / %d MB total (%d MB free)   ' "$BOLD" "$RESET" "$used" "$total" "$avail"
-    sleep 3
+    printf '    %s[RAM]%s %d MB used / %d MB total (%d MB free)\n' "$BOLD" "$RESET" "$used" "$total" "$avail" > /dev/tty
   done
 }
 
@@ -559,7 +559,6 @@ phase_install() {
 
   kill "$monitor_pid" 2>/dev/null
   wait "$monitor_pid" 2>/dev/null
-  printf '\r%*s\r' "$(tput cols)" ""  # clear the RAM line
 
   [[ "$install_ok" == true ]] || error "nixos-install failed. Check the output above."
 
