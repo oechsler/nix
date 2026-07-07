@@ -534,6 +534,15 @@ phase_mount() {
 # Phase 8: NixOS Install
 #===========================
 
+ram_monitor() {
+  while true; do
+    local total used avail
+    read -r total used avail < <(awk '/^MemTotal:/{t=$2} /^MemAvailable:/{a=$2} END{printf "%d %d %d", t/1024, (t-a)/1024, a/1024}' /proc/meminfo)
+    printf '\r    %s[RAM]%s %d MB used / %d MB total (%d MB free)   ' "$BOLD" "$RESET" "$used" "$total" "$avail"
+    sleep 3
+  done
+}
+
 phase_install() {
   local host_dir="$REPO_DIR/hosts/$HOST"
 
@@ -541,9 +550,18 @@ phase_install() {
   nix flake lock "$REPO_DIR"
   git -C "$REPO_DIR" add --all
 
-  if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --cores 4 --max-jobs 2; then
-    error "nixos-install failed. Check the output above."
-  fi
+  echo ""
+  ram_monitor &
+  local monitor_pid=$!
+
+  local install_ok=true
+  nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --cores 4 --max-jobs 2 || install_ok=false
+
+  kill "$monitor_pid" 2>/dev/null
+  wait "$monitor_pid" 2>/dev/null
+  printf '\r%*s\r' "$(tput cols)" ""  # clear the RAM line
+
+  [[ "$install_ok" == true ]] || error "nixos-install failed. Check the output above."
 
   success "NixOS installed"
 }
