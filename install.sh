@@ -549,6 +549,10 @@ phase_install() {
   nix flake lock "$REPO_DIR"
   git -C "$REPO_DIR" add --all
 
+  # Redirect nix temp/build dirs to /mnt so they land on disk, not the live ISO tmpfs
+  mkdir -p /mnt/tmp
+  export TMPDIR=/mnt/tmp
+
   if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs"; then
     error "nixos-install failed. Check the output above."
   fi
