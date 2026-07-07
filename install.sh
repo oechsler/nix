@@ -133,11 +133,11 @@ load_state() {
 }
 
 save_state() {
-  cat > "$STATE_FILE" <<EOF
-HOST="$HOST"
-SSH_KEY_FILE="${SSH_KEY_FILE:-}"
-USER_PASSWORD_HASH="${USER_PASSWORD_HASH:-}"
-EOF
+  {
+    printf 'HOST=%q\n' "$HOST"
+    printf 'SSH_KEY_FILE=%q\n' "${SSH_KEY_FILE:-}"
+    printf 'USER_PASSWORD_HASH=%q\n' "${USER_PASSWORD_HASH:-}"
+  } > "$STATE_FILE"
   chmod 600 "$STATE_FILE"
 }
 
