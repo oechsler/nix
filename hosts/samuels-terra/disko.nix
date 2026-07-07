@@ -27,7 +27,7 @@ _:
     disk = {
       main = {
         type = "disk";
-        device = "/dev/disk/by-id/nvme-Samsung_SSD_9100_Pro_2TB_S7YFNJ0L208614L";
+        device = "/dev/disk/by-id/nvme-Samsung_SSD_9100_PRO_2TB_S7YFNJ0L208614L";
         content = {
           type = "gpt";
           partitions = {
