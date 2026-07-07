@@ -541,7 +541,7 @@ phase_install() {
   nix flake lock "$REPO_DIR"
   git -C "$REPO_DIR" add --all
 
-  if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password; then
+  if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --cores 4 --max-jobs 2; then
     error "nixos-install failed. Check the output above."
   fi
 
