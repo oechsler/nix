@@ -475,7 +475,7 @@ phase_state_version() {
   local host_dir="$REPO_DIR/hosts/$HOST"
 
   local version
-  version="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.pkgs.lib.version" | cut -d. -f1,2)"
+  version="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.pkgs.lib.version" | grep -o '^[0-9]*\.[0-9]*')"
   success "NixOS version: $version"
 
   sed -i "s|system\.stateVersion = \"[^\"]*\"|system.stateVersion = \"$version\"|" \
