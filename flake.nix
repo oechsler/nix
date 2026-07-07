@@ -15,6 +15,7 @@
 # Local Hosts:
 # - samuels-pc: Desktop workstation (2x 1440p, Secure Boot, dual-boot)
 # - samuels-razer: Laptop (gaming laptop, portable workstation)
+# - samuels-terra: Desktop workstation (2x 1440p, Ryzen 9 9950X3D, RX 9070 XT)
 #
 # Key inputs:
 # - nixpkgs: NixOS packages (unstable channel)
@@ -215,11 +216,13 @@
       nixosConfigurations = {
         samuels-razer = mkHost "samuels-razer";
         samuels-pc = mkHost "samuels-pc";
+        samuels-terra = mkHost "samuels-terra";
       };
 
       diskoConfigurations = {
         samuels-pc = mkDisko "samuels-pc";
         samuels-razer = mkDisko "samuels-razer";
+        samuels-terra = mkDisko "samuels-terra";
       };
 
       #===========================
