@@ -13,9 +13,9 @@
 #   - checks: CI/CD linters (custom conventions, statix, deadnix)
 #
 # Local Hosts:
-# - samuels-pc: Desktop workstation (2x 1440p, Secure Boot, dual-boot)
+# - samuels-pc: Desktop workstation (2x 1440p, Ryzen 9 5950X, RX 7900 XTX)
 # - samuels-razer: Laptop (gaming laptop, portable workstation)
-# - samuels-terra: Desktop workstation (2x 1440p, Ryzen 9 9950X3D, RX 9070 XT)
+# - samuels-terra: Desktop workstation (2x 1440p, Ryzen 9 9950X3D2, RX 9070 XT)
 #
 # Key inputs:
 # - nixpkgs: NixOS packages (unstable channel)

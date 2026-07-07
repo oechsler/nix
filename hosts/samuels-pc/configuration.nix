@@ -3,6 +3,7 @@
 # Desktop workstation configuration.
 #
 # Hardware:
+# - Ryzen 9 5950X (Zen 3) + RX 7900 XTX (RDNA3)
 # - Dual 1440p 165Hz monitors (DP-1, DP-2)
 # - Dedicated /mnt/games partition (1TB for Steam library)
 #
@@ -81,7 +82,7 @@
     encryption.unlockMethod = "yubikey";
     desktop.login = "greeter";
     desktop.fileManager = "terminal";
-    gaming.gpu = "amd"; # RX 7900 XT (RDNA3) — enables VA-API hardware encoding
+    gaming.gpu = "amd"; # RX 7900 XTX (RDNA3) — enables VA-API hardware encoding
     smb.shares = [
       "personal-drive"
       "pika"
