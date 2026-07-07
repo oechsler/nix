@@ -535,32 +535,42 @@ phase_mount() {
 #===========================
 
 ram_monitor() {
+  local log="$1"
   while true; do
     sleep 5
     local total used avail
     read -r total used avail < <(awk '/^MemTotal:/{t=$2} /^MemAvailable:/{a=$2} END{printf "%d %d %d", t/1024, (t-a)/1024, a/1024}' /proc/meminfo)
-    printf '    %s[RAM]%s %d MB used / %d MB total (%d MB free)\n' "$BOLD" "$RESET" "$used" "$total" "$avail" > /dev/tty
+    printf '    [RAM] %d MB used / %d MB total (%d MB free)\n' "$used" "$total" "$avail" | tee -a "$log" > /dev/tty
   done
 }
 
 phase_install() {
   local host_dir="$REPO_DIR/hosts/$HOST"
+  local install_log="/tmp/nixos-install.log"
 
   nixos-generate-config --root /mnt --show-hardware-config > "$host_dir/hardware-configuration.generated.nix"
   nix flake lock "$REPO_DIR"
   git -C "$REPO_DIR" add --all
 
+  info "Building NixOS — output logged to $install_log"
   echo ""
-  ram_monitor &
+
+  ram_monitor "$install_log" &
   local monitor_pid=$!
 
   local install_ok=true
-  nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --cores 4 --max-jobs 2 || install_ok=false
+  nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --cores 4 --max-jobs 2 \
+    >> "$install_log" 2>&1 || install_ok=false
 
   kill "$monitor_pid" 2>/dev/null
   wait "$monitor_pid" 2>/dev/null
 
-  [[ "$install_ok" == true ]] || error "nixos-install failed. Check the output above."
+  if [[ "$install_ok" != true ]]; then
+    echo ""
+    warn "Last 20 lines of $install_log:"
+    tail -20 "$install_log" >&2
+    error "nixos-install failed. Full log: $install_log"
+  fi
 
   success "NixOS installed"
 }
