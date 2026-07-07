@@ -538,11 +538,12 @@ phase_install() {
   local host_dir="$REPO_DIR/hosts/$HOST"
 
   # Scale build parallelism to available RAM (~4 GB per job, min 1)
-  local ram_gb max_jobs
-  ram_gb=$(awk '/^MemTotal:/{printf "%d", $2/1024/1024}' /proc/meminfo)
-  max_jobs=$(( ram_gb / 4 ))
+  # Uses MemAvailable (not MemTotal) so live ISO overhead is accounted for
+  local avail_gb max_jobs
+  avail_gb=$(awk '/^MemAvailable:/{printf "%d", $2/1024/1024}' /proc/meminfo)
+  max_jobs=$(( avail_gb / 4 ))
   (( max_jobs < 1 )) && max_jobs=1
-  info "RAM: ${ram_gb} GB detected — using --max-jobs ${max_jobs}"
+  info "RAM available: ${avail_gb} GB — using --max-jobs ${max_jobs}"
 
   nixos-generate-config --root /mnt --show-hardware-config > "$host_dir/hardware-configuration.generated.nix"
   nix flake lock "$REPO_DIR"
