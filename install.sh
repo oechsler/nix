@@ -506,6 +506,7 @@ phase_state_version() {
 
   local version
   version="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.pkgs.lib.version" | grep -o '^[0-9]*\.[0-9]*')"
+  echo ""
   success "NixOS version: $version"
 
   sed -i "s|system\.stateVersion = \"[^\"]*\"|system.stateVersion = \"$version\"|" \
@@ -577,9 +578,13 @@ phase_install() {
 
   [[ "$FEAT_ENCRYPTION" == "true" ]] && luks_password_file > /dev/null
 
+  info "Generating hardware configuration..."
+  echo ""
   nixos-generate-config --root /mnt --show-hardware-config > "$host_dir/hardware-configuration.generated.nix"
   nix flake lock "$REPO_DIR"
   git -C "$REPO_DIR" add --all
+  success "Hardware configuration generated"
+  echo ""
 
   # Redirect nix temp/build dirs to /mnt so they land on disk, not the live ISO tmpfs
   mkdir -p /mnt/tmp
@@ -631,8 +636,8 @@ setup_ssh() {
   chmod 600 "$ssh_dir/id_ed25519"
   chmod 644 "$ssh_dir/id_ed25519.pub"
 
-  # Clean up temp file if pasted interactively
-  [[ -n "$SSH_KEY" ]] || rm -f "$SSH_KEY_FILE"
+  # Clean up temp file if key was pasted (not a persistent path)
+  [[ -z "$SSH_KEY" ]] && rm -f "$SSH_KEY_FILE"
 
   success "SSH key installed"
 }
@@ -814,8 +819,11 @@ phase_post_install() {
     warn "Config copy failed. Clone the repo manually after boot."
   fi
 
+  echo ""
   info "Fixing home directory ownership..."
+  echo ""
   nixos-enter --root /mnt -c "chown -R $CONFIG_USERNAME:users /home/$CONFIG_USERNAME"
+  success "Ownership fixed"
 }
 
 #===========================
