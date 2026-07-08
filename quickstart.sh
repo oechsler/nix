@@ -32,7 +32,6 @@ warn()    { echo -e "${YELLOW}!!${RESET} $*"; }
 error()   { echo -e "${RED}ERROR:${RESET} $*" >&2; exit 1; }
 
 info "NixOS Quickstart"
-echo ""
 
 [[ $EUID -eq 0 ]] || error "Must run as root. Log in as root on the NixOS ISO."
 command -v nixos-version &>/dev/null || error "Not a NixOS system."
