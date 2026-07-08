@@ -32,7 +32,7 @@ DO_FORMAT=false
 DO_INSTALL=false
 DO_POST_INSTALL=false
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
-STATE_FILE="/tmp/nix-installer.env"
+STATE_FILE="/tmp/install.env"
 
 show_help() {
   cat <<'EOF'
@@ -128,13 +128,7 @@ load_state() {
       SSH_KEY="$cli_ssh"
       SSH_KEY_FILE=""  # Reset so phase_collect_inputs uses the new path
     fi
-    # Restore LUKS password from state into /tmp/luks-password
-    if [[ -n "$cli_luks" ]]; then
-      LUKS_PASSWORD="$cli_luks"
-    elif [[ -n "${LUKS_PASSWORD:-}" ]]; then
-      printf '%s' "$LUKS_PASSWORD" > /tmp/luks-password
-      chmod 600 /tmp/luks-password
-    fi
+    [[ -n "$cli_luks" ]] && LUKS_PASSWORD="$cli_luks"
     success "Loaded: host=$HOST"
   fi
 }
@@ -144,12 +138,7 @@ save_state() {
     printf 'HOST=%q\n' "$HOST"
     printf 'SSH_KEY_FILE=%q\n' "${SSH_KEY_FILE:-}"
     printf 'USER_PASSWORD_HASH=%q\n' "${USER_PASSWORD_HASH:-}"
-    # Persist LUKS password so resume works without re-prompting
-    if [[ -f /tmp/luks-password ]]; then
-      printf 'LUKS_PASSWORD=%q\n' "$(cat /tmp/luks-password)"
-    else
-      printf 'LUKS_PASSWORD=%q\n' "${LUKS_PASSWORD:-}"
-    fi
+    printf 'LUKS_PASSWORD=%q\n' "${LUKS_PASSWORD:-}"
   } > "$STATE_FILE"
   chmod 600 "$STATE_FILE"
 }
@@ -157,6 +146,13 @@ save_state() {
 #===========================
 # Phase 1: Environment
 #===========================
+
+# Write LUKS_PASSWORD to /tmp/luks-password for tools that need a file (disko, systemd-cryptenroll)
+luks_password_file() {
+  printf '%s' "$LUKS_PASSWORD" > /tmp/luks-password
+  chmod 600 /tmp/luks-password
+  echo /tmp/luks-password
+}
 
 phase_validate() {
   info "NixOS Installer"
@@ -329,25 +325,20 @@ AGE_KEY=""
 USER_PASSWORD_HASH=""
 
 phase_collect_inputs() {
-  # --- LUKS Password (needed for format, mount, or post-install with TPM enrollment) ---
+  # --- LUKS Password ---
   if [[ "$FEAT_ENCRYPTION" == "true" ]] && [[ "$DO_FORMAT" == true || "$DO_INSTALL" == true || "$DO_POST_INSTALL" == true ]]; then
     echo ""
-    if [[ -f /tmp/luks-password ]]; then
-      info "Using existing /tmp/luks-password"
-    elif [[ -n "$LUKS_PASSWORD" ]]; then
-      printf '%s' "$LUKS_PASSWORD" > /tmp/luks-password
-      chmod 600 /tmp/luks-password
-      success "LUKS password set via -p"
+    if [[ -n "$LUKS_PASSWORD" ]]; then
+      success "LUKS password ready (cached)"
     elif [[ "$YES" == true ]]; then
-      error "Encryption enabled but no LUKS password. Use -p PASSWORD or pre-create /tmp/luks-password."
+      error "Encryption enabled but no LUKS password. Use -p PASSWORD."
     else
       info "LUKS Disk Encryption"
       local pass pass_confirm
       read -rsp "    Enter LUKS password: " pass; echo
       read -rsp "    Confirm password:    " pass_confirm; echo
       [[ "$pass" == "$pass_confirm" ]] || error "Passwords do not match."
-      printf '%s' "$pass" > /tmp/luks-password
-      chmod 600 /tmp/luks-password
+      LUKS_PASSWORD="$pass"
       success "Password saved"
     fi
   fi
@@ -520,6 +511,8 @@ phase_state_version() {
 #===========================
 
 phase_partition() {
+  [[ "$FEAT_ENCRYPTION" == "true" ]] && luks_password_file > /dev/null
+
   # shellcheck disable=SC2054  # comma is disko syntax, not array separator
   local disko_args=(--mode destroy,format,mount --flake "$REPO_DIR#$HOST")
   if [[ "$YES" == true ]]; then
@@ -557,6 +550,8 @@ phase_install() {
   max_jobs=$(( avail_gb / 4 ))
   (( max_jobs < 1 )) && max_jobs=1
   info "RAM available: ${avail_gb} GB — using --max-jobs ${max_jobs}"
+
+  [[ "$FEAT_ENCRYPTION" == "true" ]] && luks_password_file > /dev/null
 
   nixos-generate-config --root /mnt --show-hardware-config > "$host_dir/hardware-configuration.generated.nix"
   nix flake lock "$REPO_DIR"
@@ -688,14 +683,8 @@ setup_tpm() {
     return 1
   fi
 
-  # LUKS password: from /tmp/luks-password or interactive prompt
-  local password_file="/tmp/luks-password"
-  if [[ ! -f "$password_file" ]]; then
-    local password
-    read -rsp "    LUKS password for TPM enrollment: " password; echo
-    printf '%s' "$password" > "$password_file"
-    chmod 600 "$password_file"
-  fi
+  local password_file
+  password_file="$(luks_password_file)"
 
   local pcrs="0+7"
   for dev in "${LUKS_DEVICES[@]}"; do
@@ -718,14 +707,8 @@ setup_yubikey_luks() {
     return 1
   fi
 
-  # LUKS password: from /tmp/luks-password or interactive prompt
-  local password_file="/tmp/luks-password"
-  if [[ ! -f "$password_file" ]]; then
-    local password
-    read -rsp "    LUKS password for FIDO2 enrollment: " password; echo
-    printf '%s' "$password" > "$password_file"
-    chmod 600 "$password_file"
-  fi
+  local password_file
+  password_file="$(luks_password_file)"
 
   for dev in "${LUKS_DEVICES[@]}"; do
     local enrolled=false
@@ -891,7 +874,7 @@ main() {
   phase_complete
 
   # Cleanup
-  rm -f /tmp/luks-password "$STATE_FILE"
+  rm -f /tmp/luks-password /tmp/install.env
 }
 
 main
