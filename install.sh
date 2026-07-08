@@ -609,6 +609,7 @@ NIXEOF
       local sbctl_bin
       sbctl_bin="$(nix build --no-link --print-out-paths nixpkgs#sbctl 2>/dev/null | grep -m1 '/nix/store')/bin/sbctl"
       [[ -x "$sbctl_bin" ]] || error "sbctl binary not found at $sbctl_bin"
+      NIX_REMOTE="local?root=/mnt" nix copy --no-check-sigs "$sbctl_bin" 2>/dev/null || true
       nixos-enter --root /mnt -c "mkdir -p ${sbctl_db} && ${sbctl_bin} create-keys --database-path ${sbctl_db}"
       success "Secure Boot keys generated"
     fi
