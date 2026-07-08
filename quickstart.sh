@@ -18,38 +18,36 @@ REPO_URL="${REPO:-https://github.com/oechsler/nix.git}"
 BRANCH="${BRANCH:-main}"
 CLONE_DIR="/tmp/nix-config"
 
-# --- Colors ---
+# --- Colors (match install.sh) ---
 if [[ -t 1 ]]; then
-  RED='\033[0;31m' GREEN='\033[0;32m' BLUE='\033[0;34m' BOLD='\033[1m' RESET='\033[0m'
+  RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[0;33m'
+  BLUE='\033[0;34m' BOLD='\033[1m' RESET='\033[0m'
 else
-  RED='' GREEN='' BLUE='' BOLD='' RESET=''
+  RED='' GREEN='' YELLOW='' BLUE='' BOLD='' RESET=''
 fi
 
-info()  { echo -e "${BLUE}==>${RESET} ${BOLD}$*${RESET}"; }
-error() { echo -e "${RED}ERROR:${RESET} $*" >&2; exit 1; }
-ok()    { echo -e "    ${GREEN}$*${RESET}"; }
+info()    { echo -e "${BLUE}==>${RESET} ${BOLD}$*${RESET}"; }
+success() { echo -e "    ${GREEN}$*${RESET}"; }
+warn()    { echo -e "${YELLOW}!!${RESET} $*"; }
+error()   { echo -e "${RED}ERROR:${RESET} $*" >&2; exit 1; }
 
-# --- Environment checks ---
 info "NixOS Quickstart"
 echo ""
 
 [[ $EUID -eq 0 ]] || error "Must run as root. Log in as root on the NixOS ISO."
-
 command -v nixos-version &>/dev/null || error "Not a NixOS system."
 
-# Check network
 if ! curl -sf --max-time 5 https://github.com > /dev/null 2>&1; then
   error "No network. Connect to the internet first (nmtui or iwctl)."
 fi
-ok "Network OK"
+success "Network OK"
 
-# --- Install git ---
 if ! command -v git &>/dev/null; then
   echo ""
   info "Installing git..."
   nix-env -iA nixos.git
 fi
-ok "Git available"
+success "Git available"
 
 # --- Clone repository ---
 echo ""
@@ -59,10 +57,10 @@ if [[ -d "$CLONE_DIR" ]]; then
   git -C "$CLONE_DIR" checkout "$BRANCH"
   git -C "$CLONE_DIR" reset --hard "origin/$BRANCH"
 else
-  info "Cloning $REPO_URL (branch: $BRANCH)..."
+  info "Cloning repository (branch: $BRANCH)..."
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$CLONE_DIR"
 fi
-ok "Repository ready at $CLONE_DIR"
+success "Repository ready"
 
 # --- Restore stdin for interactive prompts ---
 # When piped (curl | bash), stdin is the pipe stream. After the { } block
