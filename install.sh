@@ -607,7 +607,8 @@ NIXEOF
     if [[ ! -f "/mnt${sbctl_db}/keys/db/db.pem" ]]; then
       info "Generating Secure Boot keys..."
       local sbctl_bin
-      sbctl_bin="$(nix build --no-link --print-out-paths nixpkgs#sbctl)/bin/sbctl"
+      sbctl_bin="$(nix build --no-link --print-out-paths nixpkgs#sbctl 2>/dev/null | grep -m1 '/nix/store')/bin/sbctl"
+      [[ -x "$sbctl_bin" ]] || error "sbctl binary not found at $sbctl_bin"
       nixos-enter --root /mnt -c "mkdir -p ${sbctl_db} && ${sbctl_bin} create-keys --database-path ${sbctl_db}"
       success "Secure Boot keys generated"
     fi
