@@ -525,10 +525,7 @@ phase_partition() {
   [[ "$FEAT_ENCRYPTION" == "true" ]] && luks_password_file > /dev/null
 
   # shellcheck disable=SC2054  # comma is disko syntax, not array separator
-  local disko_args=(--mode destroy,format,mount --flake "$REPO_DIR#$HOST")
-  if [[ "$YES" == true ]]; then
-    disko_args+=(--yes-wipe-all-disks)
-  fi
+  local disko_args=(--mode destroy,format,mount --flake "$REPO_DIR#$HOST" --yes-wipe-all-disks)
 
   if ! nix run github:nix-community/disko -- "${disko_args[@]}"; then
     error "Disko failed. Check disk IDs in hosts/$HOST/disko.nix"
@@ -572,6 +569,7 @@ phase_install() {
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
     if [[ ! -f /mnt/var/lib/sbctl/keys/db/db.pem ]]; then
       info "Generating Secure Boot keys (sbctl)..."
+      mkdir -p /mnt/var/lib
       install -d -m 755 /mnt/var/lib/sbctl
       nix-shell -p sbctl --run "sbctl create-keys --database-path /mnt/var/lib/sbctl"
       success "Secure Boot keys generated"
