@@ -76,7 +76,7 @@
     encryption.unlockMethod = "yubikey";
     desktop.login = "greeter";
     desktop.fileManager = "terminal";
-    gaming.gpu = "amd"; # RX 9070 XT (RDNA4) — enables VA-API hardware encoding
+    hardware.gpu = "amd"; # RX 9070 XT (RDNA4)
     smb.shares = [
       "personal-drive"
       "pika"

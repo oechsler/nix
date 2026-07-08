@@ -82,7 +82,7 @@
     encryption.unlockMethod = "yubikey";
     desktop.login = "greeter";
     desktop.fileManager = "terminal";
-    gaming.gpu = "amd"; # RX 7900 XTX (RDNA3) — enables VA-API hardware encoding
+    hardware.gpu = "amd"; # RX 7900 XTX (RDNA3)
     smb.shares = [
       "personal-drive"
       "pika"

@@ -174,6 +174,14 @@ in
         description = "Primary file manager for the desktop environment";
       };
     };
+    hardware = {
+      gpu = lib.mkOption {
+        type = lib.types.nullOr (lib.types.enum [ "amd" "intel" ]);
+        default = null;
+        description = "GPU vendor — loads the correct driver and enables VA-API hardware encoding.";
+      };
+    };
+
     development.enable = (lib.mkEnableOption "development tools") // {
       default = true;
     };

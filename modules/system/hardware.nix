@@ -10,9 +10,14 @@
 # - Improves performance on systems with limited RAM
 # - Compression ratio typically 2-3x
 
-{ config, pkgs, ... }:
+{ config, pkgs, lib, ... }:
 
 {
+  # Load GPU driver early and enable graphics — needed for Wayland regardless of gaming.
+  # nixos-generate-config may miss newer PCI IDs (RDNA3+/RDNA4) on older live ISOs.
+  boot.initrd.kernelModules = lib.mkIf (config.features.hardware.gpu == "amd") [ "amdgpu" ];
+  hardware.graphics.enable = lib.mkIf (config.features.hardware.gpu != null) true;
+
   programs.coolercontrol.enable = true;
   services.printing.enable = false;
   zramSwap = {

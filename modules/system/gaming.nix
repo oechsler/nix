@@ -7,9 +7,7 @@
 # - MangoHud              — in-game FPS/GPU/CPU overlay
 # - ProtonUp-Qt           — GUI to manage Proton-GE versions
 #
-# features.gaming.gpu:
-#   "amd"   — VA-API via Mesa radeonsi (RDNA2+)
-#   "intel" — VA-API via intel-media-driver (iHD, Gen 9+)
+# VA-API hardware encoding is controlled by features.hardware.gpu (not gaming-specific).
 
 {
   pkgs,
@@ -25,16 +23,6 @@ in
   options.features.gaming = {
     enable = (lib.mkEnableOption "gaming support (Steam, Gamemode, Gamescope)") // {
       default = true;
-    };
-    gpu = lib.mkOption {
-      type = lib.types.nullOr (
-        lib.types.enum [
-          "amd"
-          "intel"
-        ]
-      );
-      default = null;
-      description = "GPU vendor — enables VA-API hardware encoding for Steam Remote Play";
     };
   };
 
@@ -89,12 +77,9 @@ in
       # Mesa radeonsi provides VAAPI via VCN encoder (RDNA2+).
       # Without this, Steam falls back to software encoding → stream freezes.
       # enable32Bit: Steam's streaming encoder is 32-bit and requires 32-bit GPU drivers.
-      (lib.mkIf (cfg.gpu == "amd") {
+      (lib.mkIf (config.features.hardware.gpu == "amd") {
         environment.systemPackages = [ pkgs.libva-utils ]; # vainfo: verify encoding works
-        # Load amdgpu early — nixos-generate-config may miss newer PCI IDs (RDNA3+)
-        boot.initrd.kernelModules = [ "amdgpu" ];
         hardware.graphics = {
-          enable = true;
           enable32Bit = true;
           extraPackages = [ pkgs.libvdpau-va-gl ];
         };
@@ -105,8 +90,7 @@ in
       #---------------------------
       # Intel GPU: VA-API hardware encoding
       #---------------------------
-      # intel-media-driver (iHD) provides VAAPI for Gen 9+ (Broadwell and newer).
-      (lib.mkIf (cfg.gpu == "intel") {
+      (lib.mkIf (config.features.hardware.gpu == "intel") {
         environment.systemPackages = [ pkgs.libva-utils ];
         hardware.graphics.extraPackages = with pkgs; [
           intel-media-driver # iHD VA-API driver
