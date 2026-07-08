@@ -182,9 +182,13 @@ phase_validate() {
 
   [[ $EUID -eq 0 ]] || error "Must run as root."
 
-  # Refuse to run outside a NixOS live ISO
-  if [[ ! -e /etc/NIXOS ]] || [[ -e /run/current-system/fine-tune ]]; then
-    error "This installer is intended for the NixOS live ISO only. Run it from a booted NixOS installation medium."
+  # Refuse to run on an already-installed NixOS system
+  # Live ISOs have /etc/NIXOS but no persistent /etc/nixos/configuration.nix
+  if [[ ! -e /etc/NIXOS ]]; then
+    error "This installer must run on a NixOS system. Boot from a NixOS ISO first."
+  fi
+  if [[ -e /etc/nixos/configuration.nix ]]; then
+    error "This installer is intended for the NixOS live ISO only, not an installed system."
   fi
 
   command -v nix &>/dev/null || error "Nix is not available."
