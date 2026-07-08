@@ -275,6 +275,7 @@ FIDO2_LUKS_ENROLLED=false
 phase_detect_features() {
   echo ""
   info "Reading configuration for $HOST..."
+  echo ""
 
   local json
   json=$(nix eval --json "$REPO_DIR#nixosConfigurations.${HOST}.config" --apply '
@@ -312,8 +313,6 @@ phase_detect_features() {
   # Parse LUKS device paths into array
   mapfile -t LUKS_DEVICES < <(echo "$json" | jq -r '.luksDevices[]')
 
-  success "Features detected"
-  echo ""
   echo -e "    Host:          ${BOLD}$HOST${RESET}"
   echo -e "    Username:      ${BOLD}$CONFIG_USERNAME${RESET}"
   if [[ "$FEAT_SERVER" == "true" ]]; then
@@ -335,6 +334,8 @@ phase_detect_features() {
   else
     echo -e "    Password:      ${GREEN}set in config${RESET}"
   fi
+  echo ""
+  success "Features detected"
 }
 
 #===========================
@@ -356,6 +357,7 @@ phase_collect_inputs() {
       error "Encryption enabled but no LUKS password. Use -p PASSWORD."
     else
       info "LUKS Disk Encryption"
+      echo ""
       local pass pass_confirm
       read -rsp "    Enter LUKS password: " pass; echo
       read -rsp "    Confirm password:    " pass_confirm; echo
@@ -369,6 +371,7 @@ phase_collect_inputs() {
   if [[ "$DO_POST_INSTALL" == true ]]; then
     echo ""
     info "SSH Key (required for SOPS secrets)"
+    echo ""
     if [[ -n "$SSH_KEY_FILE" && -f "$SSH_KEY_FILE" ]]; then
       success "SSH key ready (cached)"
     elif [[ -n "$SSH_KEY" ]]; then
@@ -378,7 +381,6 @@ phase_collect_inputs() {
     elif [[ "$YES" == true ]]; then
       error "SSH key required. Use -s /path/to/key."
     else
-      echo ""
       echo -e "    ${BOLD}[1]${RESET} Enter file path"
       echo -e "    ${BOLD}[2]${RESET} Paste key content"
       echo ""
@@ -411,7 +413,9 @@ phase_collect_inputs() {
       success "Password hash ready (cached)"
     else
       warn "No password set in host config — account would be locked after install."
+      echo ""
       info "User Password"
+      echo ""
       local pass pass_confirm
       read -rsp "    Enter password for $CONFIG_USERNAME: " pass; echo
       read -rsp "    Confirm password:    " pass_confirm; echo
