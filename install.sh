@@ -703,7 +703,12 @@ setup_yubikey() {
   local mappings_file="/mnt${PERSIST_PREFIX}/etc/u2f_mappings"
   mkdir -p "$(dirname "$mappings_file")"
 
-  info "Insert your YubiKey and press the button when prompted..."
+  info "YubiKey PAM Registration"
+  echo ""
+  echo -e "    Insert your YubiKey now, then press Enter to start."
+  echo -e "    The key will ${BOLD}flash${RESET} — touch it to register."
+  echo ""
+  read -rp "    Press Enter when ready..." _
   echo ""
 
   local credentials
@@ -758,10 +763,9 @@ setup_yubikey_luks() {
   echo ""
   info "YubiKey FIDO2 LUKS Enrollment"
   echo ""
-  echo -e "    Insert your YubiKey now, then press Enter to start."
   echo -e "    The key will ${BOLD}flash${RESET} — touch it to confirm each enrollment."
   echo ""
-  read -rp "    Press Enter when ready..." _
+  read -rp "    Press Enter to start..." _
 
   for dev in "${LUKS_DEVICES[@]}"; do
     local enrolled=false
