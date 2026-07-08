@@ -572,7 +572,7 @@ phase_install() {
     if [[ ! -f "$sbctl_db/keys/db/db.pem" ]]; then
       info "Generating Secure Boot keys (sbctl)..."
       mkdir -p "$sbctl_db"
-      nix-env -iA nixpkgs.sbctl
+      nix-env -iA nixos.sbctl
       sbctl create-keys --database-path "$sbctl_db"
       success "Secure Boot keys generated"
     else
