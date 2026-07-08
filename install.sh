@@ -576,15 +576,13 @@ phase_install() {
   export TMPDIR=/mnt/tmp
 
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
-    # Step 1: Temporarily disable Secure Boot via an override module so
-    # nixos-install doesn't invoke lanzaboote (keys don't exist yet).
-    # Using a separate file is robust regardless of how secureBoot is written in config.
-    info "Installing base system (Secure Boot disabled for initial install)..."
+    # Disable Secure Boot via an override module so nixos-install doesn't invoke
+    # lanzaboote (sbctl keys can't be generated from the live ISO).
+    # The user sets up Secure Boot manually after first boot.
     local override_nix="$host_dir/secure-boot-install-override.nix"
     cat > "$override_nix" <<'NIXEOF'
 { lib, ... }: { features.secureBoot.enable = lib.mkForce false; }
 NIXEOF
-    # Inject override into imports and stage both files for the flake
     sed -i "/imports = \[/a\\    .\/secure-boot-install-override.nix" "$host_dir/configuration.nix"
     git -C "$REPO_DIR" add "$override_nix" "$host_dir/configuration.nix"
 
@@ -592,34 +590,13 @@ NIXEOF
     nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs" \
       || install_ok=false
 
-    # Remove override and unstage regardless of install result
+    # Remove override regardless of install result
     sed -i '/secure-boot-install-override\.nix/d' "$host_dir/configuration.nix"
     rm -f "$override_nix"
     git -C "$REPO_DIR" add "$host_dir/configuration.nix"
     git -C "$REPO_DIR" rm --cached "$override_nix" 2>/dev/null || true
 
     [[ "$install_ok" == true ]] || error "nixos-install failed. Check the output above."
-
-    # Step 2: Generate keys inside the installed system.
-    # Build sbctl on the host and run the store binary directly in the chroot —
-    # the nix store is bind-mounted by nixos-enter so the path is valid inside.
-    local sbctl_db="${PERSIST_PREFIX}/var/lib/sbctl"
-    if [[ ! -f "/mnt${sbctl_db}/keys/db/db.pem" ]]; then
-      info "Generating Secure Boot keys..."
-      local sbctl_bin
-      sbctl_bin="$(nix build --no-link --print-out-paths nixpkgs#sbctl 2>/dev/null | grep -m1 '/nix/store')/bin/sbctl"
-      [[ -x "$sbctl_bin" ]] || error "sbctl binary not found at $sbctl_bin"
-      NIX_REMOTE="local?root=/mnt" nix copy --no-check-sigs "$sbctl_bin" 2>/dev/null || true
-      nixos-enter --root /mnt -c "mkdir -p ${sbctl_db} && ${sbctl_bin} create-keys --database-path ${sbctl_db}"
-      success "Secure Boot keys generated"
-    fi
-
-    # Step 3: Rebuild with lanzaboote enabled so boot entries get signed
-    info "Rebuilding with Secure Boot enabled..."
-    if ! nixos-enter --root /mnt -c \
-        "nixos-rebuild boot --flake /home/${CONFIG_USERNAME}/repos/nix#${HOST}"; then
-      error "Secure Boot rebuild failed. Check the output above."
-    fi
   else
     if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs"; then
       error "nixos-install failed. Check the output above."
@@ -863,11 +840,18 @@ phase_complete() {
 
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
     echo ""
-    echo -e "    ${YELLOW}${BOLD}⚠ UEFI Setup Mode required:${RESET}"
-    echo -e "      1. In UEFI: disable Secure Boot and enable ${BOLD}Setup Mode${RESET}"
-    echo -e "      2. Boot into NixOS"
-    echo -e "      3. sudo sbctl enroll-keys --microsoft"
-    echo -e "      4. Reboot and enable Secure Boot in UEFI"
+    echo -e "    ${YELLOW}${BOLD}⚠ Secure Boot — manual setup required after first boot:${RESET}"
+    echo -e "      Secure Boot was disabled for the install. To activate it:"
+    echo ""
+    echo -e "      ${BOLD}1.${RESET} In UEFI: disable Secure Boot, enable ${BOLD}Setup Mode${RESET}"
+    echo -e "      ${BOLD}2.${RESET} Boot into NixOS"
+    echo -e "      ${BOLD}3.${RESET} sudo nixos-rebuild switch --flake ~/repos/nix#${HOST}"
+    echo -e "             (activates lanzaboote + installs sbctl)"
+    echo -e "      ${BOLD}4.${RESET} sudo sbctl create-keys"
+    echo -e "      ${BOLD}5.${RESET} sudo nixos-rebuild switch --flake ~/repos/nix#${HOST}"
+    echo -e "             (signs boot entries with the new keys)"
+    echo -e "      ${BOLD}6.${RESET} sudo sbctl enroll-keys --microsoft"
+    echo -e "      ${BOLD}7.${RESET} Reboot and enable Secure Boot in UEFI"
   fi
 
   echo ""
