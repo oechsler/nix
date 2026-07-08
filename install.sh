@@ -571,12 +571,18 @@ phase_install() {
   git -C "$REPO_DIR" add --all
 
   # Generate sbctl keys before nixos-install so lanzaboote can sign boot files.
-  # Run via nixos-enter so sbctl sees / as the target system (avoids permission issues with /mnt paths).
+  # Generate in /tmp first (guaranteed writable), then copy to persist path.
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
-    local sbctl_db="${PERSIST_PREFIX}/var/lib/sbctl"
-    if [[ ! -f "/mnt${sbctl_db}/keys/db/db.pem" ]]; then
+    local sbctl_db="/mnt${PERSIST_PREFIX}/var/lib/sbctl"
+    if [[ ! -f "$sbctl_db/keys/db/db.pem" ]]; then
       info "Generating Secure Boot keys (sbctl)..."
-      nixos-enter --root /mnt -c "mkdir -p ${sbctl_db} && sbctl create-keys --database-path ${sbctl_db}"
+      local tmp_db
+      tmp_db="$(mktemp -d)"
+      nix-env -iA nixos.sbctl
+      sbctl create-keys --database-path "$tmp_db"
+      mkdir -p "$sbctl_db"
+      cp -r "$tmp_db/." "$sbctl_db/"
+      rm -rf "$tmp_db"
       success "Secure Boot keys generated"
     else
       success "Secure Boot keys already present"
