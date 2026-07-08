@@ -755,6 +755,14 @@ setup_yubikey_luks() {
   local password_file
   password_file="$(luks_password_file)"
 
+  echo ""
+  info "YubiKey FIDO2 LUKS Enrollment"
+  echo ""
+  echo -e "    Insert your YubiKey now, then press Enter to start."
+  echo -e "    The key will ${BOLD}flash${RESET} — touch it to confirm each enrollment."
+  echo ""
+  read -rp "    Press Enter when ready..." _
+
   for dev in "${LUKS_DEVICES[@]}"; do
     local enrolled=false
     for attempt in 1 2 3; do
