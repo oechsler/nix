@@ -859,18 +859,10 @@ phase_complete() {
 
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
     echo ""
-    echo -e "    ${YELLOW}${BOLD}⚠ Secure Boot — manual setup required after first boot:${RESET}"
-    echo -e "      Secure Boot was disabled for the install. To activate it:"
-    echo ""
-    echo -e "      ${BOLD}1.${RESET} In UEFI: disable Secure Boot, enable ${BOLD}Setup Mode${RESET}"
-    echo -e "      ${BOLD}2.${RESET} Boot into NixOS"
-    echo -e "      ${BOLD}3.${RESET} sudo nixos-rebuild switch --flake ~/repos/nix#${HOST}"
-    echo -e "             (activates lanzaboote + installs sbctl)"
-    echo -e "      ${BOLD}4.${RESET} sudo sbctl create-keys"
-    echo -e "      ${BOLD}5.${RESET} sudo nixos-rebuild switch --flake ~/repos/nix#${HOST}"
-    echo -e "             (signs boot entries with the new keys)"
-    echo -e "      ${BOLD}6.${RESET} sudo sbctl enroll-keys --microsoft"
-    echo -e "      ${BOLD}7.${RESET} Reboot and enable Secure Boot in UEFI"
+    echo -e "    ${YELLOW}${BOLD}⚠ Secure Boot — setup required after first boot:${RESET}"
+    echo -e "      1. In UEFI: disable Secure Boot, enable ${BOLD}Setup Mode${RESET}"
+    echo -e "      2. Boot into NixOS"
+    echo -e "      3. Run: ${BOLD}sudo secure-boot-init${RESET}"
   fi
 
   echo ""
