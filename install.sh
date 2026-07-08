@@ -840,19 +840,31 @@ phase_complete() {
 
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
     echo ""
-    echo -e "    ${YELLOW}${BOLD}⚠ Before rebooting — UEFI setup required:${RESET}"
-    echo -e "      1. Enter UEFI/BIOS firmware setup"
-    echo -e "      2. Disable Secure Boot (if enabled)"
-    echo -e "      3. Enable ${BOLD}Setup Mode${RESET} (clears existing keys)"
-    echo -e "      4. Save and exit — then boot into the new system"
-    echo ""
-    echo -e "    ${BOLD}Once booted into NixOS:${RESET}"
-    echo "      sudo sbctl enroll-keys --microsoft"
-    echo "      Then reboot and enable Secure Boot in UEFI"
+    echo -e "    ${YELLOW}${BOLD}⚠ UEFI Setup Mode required:${RESET}"
+    echo -e "      1. In UEFI: disable Secure Boot and enable ${BOLD}Setup Mode${RESET}"
+    echo -e "      2. Boot into NixOS"
+    echo -e "      3. sudo sbctl enroll-keys --microsoft"
+    echo -e "      4. Reboot and enable Secure Boot in UEFI"
   fi
 
   echo ""
-  echo "    You can reboot now."
+  if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
+    if [[ "$YES" != true ]]; then
+      local confirm
+      read -rp "    Reboot into UEFI firmware setup now? [Y/n]: " confirm
+      if [[ "$confirm" =~ ^[nN]$ ]]; then
+        echo "    Reboot manually when ready."
+      else
+        systemctl reboot --firmware-setup
+      fi
+    fi
+  else
+    if [[ "$YES" != true ]]; then
+      local confirm
+      read -rp "    Reboot now? [Y/n]: " confirm
+      [[ "$confirm" =~ ^[nN]$ ]] || reboot
+    fi
+  fi
   echo ""
 }
 
