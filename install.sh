@@ -570,31 +570,37 @@ phase_install() {
   nix flake lock "$REPO_DIR"
   git -C "$REPO_DIR" add --all
 
-  # Generate sbctl keys before nixos-install so lanzaboote can sign boot files.
-  # Generate in /tmp first (guaranteed writable), then copy to persist path.
-  if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
-    local sbctl_db="/mnt${PERSIST_PREFIX}/var/lib/sbctl"
-    if [[ ! -f "$sbctl_db/keys/db/db.pem" ]]; then
-      info "Generating Secure Boot keys (sbctl)..."
-      local tmp_db
-      tmp_db="$(mktemp -d)"
-      nix-env -iA nixos.sbctl
-      sbctl create-keys --database-path "$tmp_db"
-      mkdir -p "$sbctl_db"
-      cp -r "$tmp_db/." "$sbctl_db/"
-      rm -rf "$tmp_db"
-      success "Secure Boot keys generated"
-    else
-      success "Secure Boot keys already present"
-    fi
-  fi
-
   # Redirect nix temp/build dirs to /mnt so they land on disk, not the live ISO tmpfs
   mkdir -p /mnt/tmp
   export TMPDIR=/mnt/tmp
 
-  if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs"; then
-    error "nixos-install failed. Check the output above."
+  if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
+    # Step 1: Install without lanzaboote (no keys exist yet, it would fail to sign)
+    info "Installing base system (Secure Boot disabled for initial install)..."
+    if ! nixos-install --flake "$REPO_DIR#$HOST" \
+        --no-root-password --max-jobs "$max_jobs" \
+        --option extra-config "features.secureBoot.enable = false"; then
+      error "nixos-install failed. Check the output above."
+    fi
+
+    # Step 2: Generate keys inside the installed system via nixos-enter
+    local sbctl_db="${PERSIST_PREFIX}/var/lib/sbctl"
+    if [[ ! -f "/mnt${sbctl_db}/keys/db/db.pem" ]]; then
+      info "Generating Secure Boot keys..."
+      nixos-enter --root /mnt -c "sbctl create-keys --database-path ${sbctl_db}"
+      success "Secure Boot keys generated"
+    fi
+
+    # Step 3: Rebuild with lanzaboote enabled so boot entries get signed
+    info "Rebuilding with Secure Boot enabled..."
+    if ! nixos-enter --root /mnt -c \
+        "nixos-rebuild boot --flake /home/${CONFIG_USERNAME}/repos/nix#${HOST}"; then
+      error "Secure Boot rebuild failed. Check the output above."
+    fi
+  else
+    if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs"; then
+      error "nixos-install failed. Check the output above."
+    fi
   fi
 
   success "NixOS installed"
