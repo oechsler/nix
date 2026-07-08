@@ -118,6 +118,7 @@ load_state() {
   if [[ -f "$STATE_FILE" ]]; then
     echo ""
     info "Resuming previous session"
+    echo ""
     # Save CLI values before sourcing (CLI has priority)
     local cli_host="$HOST" cli_ssh="$SSH_KEY" cli_luks="$LUKS_PASSWORD"
     # shellcheck source=/dev/null
@@ -135,6 +136,7 @@ load_state() {
       chmod 600 "$SSH_KEY_FILE"
     fi
     success "Loaded: host=$HOST"
+    echo ""
   fi
 }
 
