@@ -18,7 +18,6 @@ REPO_URL="${REPO:-https://github.com/oechsler/nix.git}"
 BRANCH="${BRANCH:-main}"
 CLONE_DIR="/tmp/nix-config"
 
-# --- Colors (match install.sh) ---
 if [[ -t 1 ]]; then
   RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[0;33m'
   BLUE='\033[0;34m' BOLD='\033[1m' RESET='\033[0m'
@@ -32,6 +31,7 @@ warn()    { echo -e "${YELLOW}!!${RESET} $*"; }
 error()   { echo -e "${RED}ERROR:${RESET} $*" >&2; exit 1; }
 
 info "NixOS Quickstart"
+echo ""
 
 [[ $EUID -eq 0 ]] || error "Must run as root. Log in as root on the NixOS ISO."
 command -v nixos-version &>/dev/null || error "Not a NixOS system."
@@ -42,34 +42,32 @@ fi
 success "Network OK"
 
 if ! command -v git &>/dev/null; then
-  echo ""
   info "Installing git..."
+  echo ""
   nix-env -iA nixos.git
 fi
 success "Git available"
 
-# --- Clone repository ---
 echo ""
 if [[ -d "$CLONE_DIR" ]]; then
-  info "Updating existing clone at $CLONE_DIR..."
+  info "Updating existing clone..."
+  echo ""
   git -C "$CLONE_DIR" fetch origin "$BRANCH"
   git -C "$CLONE_DIR" checkout "$BRANCH"
   git -C "$CLONE_DIR" reset --hard "origin/$BRANCH"
 else
   info "Cloning repository (branch: $BRANCH)..."
+  echo ""
   git clone --depth 1 --branch "$BRANCH" "$REPO_URL" "$CLONE_DIR"
 fi
 success "Repository ready"
 
-# --- Restore stdin for interactive prompts ---
-# When piped (curl | bash), stdin is the pipe stream. After the { } block
-# is fully read, stdin is at EOF. Reopen from /dev/tty so the installer
-# can prompt interactively.
+# When piped (curl | bash), stdin is at EOF after the { } block is read.
+# Reopen from /dev/tty so the installer can prompt interactively.
 if [[ ! -t 0 ]]; then
   exec < /dev/tty || error "Cannot reopen terminal for interactive input."
 fi
 
-# --- Hand off to installer ---
 echo ""
 info "Starting installer..."
 echo ""
