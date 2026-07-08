@@ -571,7 +571,9 @@ phase_install() {
       info "Generating Secure Boot keys (sbctl)..."
       mkdir -p /mnt/var/lib
       install -d -m 755 /mnt/var/lib/sbctl
-      nix-shell -p sbctl --run "sbctl create-keys --database-path /mnt/var/lib/sbctl"
+      local sbctl
+      sbctl="$(nix build --no-link --print-out-paths nixpkgs#sbctl 2>/dev/null)/bin/sbctl"
+      "$sbctl" create-keys --database-path /mnt/var/lib/sbctl
       success "Secure Boot keys generated"
     else
       success "Secure Boot keys already present"
