@@ -600,7 +600,7 @@ NIXEOF
     local sbctl_db="${PERSIST_PREFIX}/var/lib/sbctl"
     if [[ ! -f "/mnt${sbctl_db}/keys/db/db.pem" ]]; then
       info "Generating Secure Boot keys..."
-      nixos-enter --root /mnt -c "sbctl create-keys --database-path ${sbctl_db}"
+      nixos-enter --root /mnt -c "nix shell nixpkgs#sbctl --command sbctl create-keys --database-path ${sbctl_db}"
       success "Secure Boot keys generated"
     fi
 
