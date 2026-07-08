@@ -124,11 +124,16 @@ load_state() {
     source "$STATE_FILE"
     # Restore CLI values where set
     [[ -n "$cli_host" ]] && HOST="$cli_host"
+    [[ -n "$cli_luks" ]] && LUKS_PASSWORD="$cli_luks"
+    # Restore SSH key: CLI path takes priority, then cached content
     if [[ -n "$cli_ssh" ]]; then
       SSH_KEY="$cli_ssh"
-      SSH_KEY_FILE=""  # Reset so phase_collect_inputs uses the new path
+      SSH_KEY_FILE=""
+    elif [[ -n "${SSH_KEY_CONTENT:-}" ]]; then
+      SSH_KEY_FILE="$(mktemp)"
+      printf '%s\n' "$SSH_KEY_CONTENT" > "$SSH_KEY_FILE"
+      chmod 600 "$SSH_KEY_FILE"
     fi
-    [[ -n "$cli_luks" ]] && LUKS_PASSWORD="$cli_luks"
     success "Loaded: host=$HOST"
   fi
 }
@@ -136,9 +141,14 @@ load_state() {
 save_state() {
   {
     printf 'HOST=%q\n' "$HOST"
-    printf 'SSH_KEY_FILE=%q\n' "${SSH_KEY_FILE:-}"
     printf 'USER_PASSWORD_HASH=%q\n' "${USER_PASSWORD_HASH:-}"
     printf 'LUKS_PASSWORD=%q\n' "${LUKS_PASSWORD:-}"
+    # Store key content (not path) so resume works after reboot
+    if [[ -n "${SSH_KEY_FILE:-}" && -f "$SSH_KEY_FILE" ]]; then
+      printf 'SSH_KEY_CONTENT=%q\n' "$(cat "$SSH_KEY_FILE")"
+    else
+      printf 'SSH_KEY_CONTENT=%q\n' "${SSH_KEY_CONTENT:-}"
+    fi
   } > "$STATE_FILE"
   chmod 600 "$STATE_FILE"
 }
@@ -321,6 +331,7 @@ phase_detect_features() {
 #===========================
 
 SSH_KEY_FILE=""
+SSH_KEY_CONTENT=""
 AGE_KEY=""
 USER_PASSWORD_HASH=""
 
