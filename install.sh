@@ -182,6 +182,11 @@ phase_validate() {
 
   [[ $EUID -eq 0 ]] || error "Must run as root."
 
+  # Refuse to run outside a NixOS live ISO
+  if [[ ! -e /etc/NIXOS ]] || [[ -e /run/current-system/fine-tune ]]; then
+    error "This installer is intended for the NixOS live ISO only. Run it from a booted NixOS installation medium."
+  fi
+
   command -v nix &>/dev/null || error "Nix is not available."
 
   export NIX_CONFIG="experimental-features = nix-command flakes
@@ -566,14 +571,12 @@ phase_install() {
   git -C "$REPO_DIR" add --all
 
   # Generate sbctl keys before nixos-install so lanzaboote can sign boot files.
-  # Keys go to /mnt/persist/var/lib/sbctl (impermanence binds this to /var/lib/sbctl).
+  # Run via nixos-enter so sbctl sees / as the target system (avoids permission issues with /mnt paths).
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
-    local sbctl_db="/mnt${PERSIST_PREFIX}/var/lib/sbctl"
-    if [[ ! -f "$sbctl_db/keys/db/db.pem" ]]; then
+    local sbctl_db="${PERSIST_PREFIX}/var/lib/sbctl"
+    if [[ ! -f "/mnt${sbctl_db}/keys/db/db.pem" ]]; then
       info "Generating Secure Boot keys (sbctl)..."
-      mkdir -p "$sbctl_db"
-      nix-env -iA nixos.sbctl
-      sbctl create-keys --database-path "$sbctl_db"
+      nixos-enter --root /mnt -c "mkdir -p ${sbctl_db} && sbctl create-keys --database-path ${sbctl_db}"
       success "Secure Boot keys generated"
     else
       success "Secure Boot keys already present"
