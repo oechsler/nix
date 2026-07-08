@@ -265,6 +265,12 @@ in
         done
 
         config="$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+        # Wait for Plasma to write its initial config (missing on first login)
+        config_timeout=30
+        while [ ! -f "$config" ] && [ $config_timeout -gt 0 ]; do
+          sleep 0.5
+          config_timeout=$((config_timeout - 1))
+        done
         if [ -f "$config" ]; then
           ${plasmaWidgetConfig} "$config" "org.kde.plasma.icontasks" "launchers" "${pinnedLaunchersStr}" \
             || ${plasmaWidgetConfig} "$config" "org.kde.plasma.taskmanager" "launchers" "${pinnedLaunchersStr}" \
