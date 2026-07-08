@@ -599,11 +599,15 @@ NIXEOF
 
     [[ "$install_ok" == true ]] || error "nixos-install failed. Check the output above."
 
-    # Step 2: Generate keys inside the installed system
+    # Step 2: Generate keys inside the installed system.
+    # Build sbctl on the host and run the store binary directly in the chroot —
+    # the nix store is bind-mounted by nixos-enter so the path is valid inside.
     local sbctl_db="${PERSIST_PREFIX}/var/lib/sbctl"
     if [[ ! -f "/mnt${sbctl_db}/keys/db/db.pem" ]]; then
       info "Generating Secure Boot keys..."
-      nixos-enter --root /mnt -c "nix shell nixpkgs#sbctl --command sbctl create-keys --database-path ${sbctl_db}"
+      local sbctl_bin
+      sbctl_bin="$(nix build --no-link --print-out-paths nixpkgs#sbctl)/bin/sbctl"
+      nixos-enter --root /mnt -c "mkdir -p ${sbctl_db} && ${sbctl_bin} create-keys --database-path ${sbctl_db}"
       success "Secure Boot keys generated"
     fi
 
