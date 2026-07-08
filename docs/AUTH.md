@@ -99,9 +99,6 @@ YubiKey PAM is enabled automatically when `encryption.unlockMethod = "yubikey"`.
 
 ```nix
 features.auth.yubikey.enable = true;
-
-# Optional: require FIDO2 PIN in addition to touch
-features.auth.yubikey.pin = true;
 ```
 
 Then register your key:
