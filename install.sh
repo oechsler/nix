@@ -840,10 +840,15 @@ phase_complete() {
 
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
     echo ""
-    echo -e "    ${BOLD}Secure Boot (post-install):${RESET}"
-    echo "      1. Boot into the new system"
-    echo "      2. sudo sbctl enroll-keys --microsoft"
-    echo "      3. Reboot, enable Secure Boot in UEFI"
+    echo -e "    ${YELLOW}${BOLD}⚠ Before rebooting — UEFI setup required:${RESET}"
+    echo -e "      1. Enter UEFI/BIOS firmware setup"
+    echo -e "      2. Disable Secure Boot (if enabled)"
+    echo -e "      3. Enable ${BOLD}Setup Mode${RESET} (clears existing keys)"
+    echo -e "      4. Save and exit — then boot into the new system"
+    echo ""
+    echo -e "    ${BOLD}Once booted into NixOS:${RESET}"
+    echo "      sudo sbctl enroll-keys --microsoft"
+    echo "      Then reboot and enable Secure Boot in UEFI"
   fi
 
   echo ""
