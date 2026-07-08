@@ -1,12 +1,7 @@
 # Secure Boot with lanzaboote
 #
-# Setup instructions:
-# 1. Run install.sh — it generates sbctl keys automatically before nixos-install
-# 2. Boot into the new system (UEFI in Setup Mode, Secure Boot disabled)
-# 3. Enroll keys: sudo sbctl enroll-keys --microsoft
-#    (--microsoft includes MS keys for Windows dual-boot)
-# 4. Enable Secure Boot in UEFI/BIOS
-# 5. Reboot and verify: bootctl status
+# Setup (run after first boot):
+#   sudo secure-boot-init
 {
   config,
   lib,
@@ -17,6 +12,105 @@
 
 let
   cfg = config.features.secureBoot;
+
+  secure-boot-init = pkgs.writeShellApplication {
+    name = "secure-boot-init";
+    runtimeInputs = [ pkgs.sbctl pkgs.systemd pkgs.coreutils ];
+    text = ''
+      if [[ $EUID -ne 0 ]]; then
+        exec sudo "$0" "$@"
+      fi
+
+      FLAKE="$(eval echo ~"''${SUDO_USER:-$USER}")/repos/nix#$(hostname)"
+
+      echo ""
+      echo "==> Secure Boot Setup"
+      echo ""
+
+      #--- Read current state ---
+      bootctl_out=$(bootctl status 2>/dev/null || true)
+      sb_enabled=$(echo "$bootctl_out" | awk '/Secure Boot:/{print $3}')
+      setup_mode=$(echo "$bootctl_out" | awk '/Setup Mode:/{print $3}')
+      lanza_active=$(echo "$bootctl_out" | grep -c "lanzaboote" || true)
+      keys_exist=false
+      [[ -f /var/lib/sbctl/keys/db/db.pem ]] && keys_exist=true
+      keys_enrolled=false
+      if sbctl status 2>/dev/null | grep -q "Secure Boot:.*true\|Enrolled keys:.*true\|enrolled"; then
+        keys_enrolled=true
+      fi
+
+      echo "    Secure Boot:    ''${sb_enabled:-unknown}"
+      echo "    Setup Mode:     ''${setup_mode:-unknown}"
+      echo "    Keys generated: $([ "$keys_exist" = true ] && echo "yes" || echo "no")"
+      echo "    Keys enrolled:  $([ "$keys_enrolled" = true ] && echo "yes" || echo "no")"
+      echo ""
+
+      #--- Already fully set up? ---
+      if [[ "$sb_enabled" == "enabled" ]] && [[ "$keys_enrolled" == true ]]; then
+        echo "==> Verifying all boot files are signed..."
+        echo ""
+        sbctl verify
+        echo ""
+        echo "    Secure Boot is active and all files are signed."
+        exit 0
+      fi
+
+      #--- Step 1: activate lanzaboote ---
+      if [[ "$lanza_active" -eq 0 ]]; then
+        echo "==> Step 1/4: Activating lanzaboote..."
+        echo ""
+        nixos-rebuild switch --flake "$FLAKE"
+        echo ""
+      else
+        echo "    Step 1/4: lanzaboote already active."
+        echo ""
+      fi
+
+      #--- Step 2: generate keys ---
+      if [[ "$keys_exist" != true ]]; then
+        echo "==> Step 2/4: Generating Secure Boot keys..."
+        echo ""
+        sbctl create-keys
+        echo ""
+      else
+        echo "    Step 2/4: Keys already present."
+        echo ""
+      fi
+
+      #--- Step 3: sign boot entries ---
+      echo "==> Step 3/4: Signing boot entries..."
+      echo ""
+      nixos-rebuild switch --flake "$FLAKE"
+      echo ""
+
+      #--- Step 4: enroll keys (requires Setup Mode) ---
+      if [[ "$keys_enrolled" != true ]]; then
+        if [[ "$setup_mode" != "yes" && "$setup_mode" != "true" && "$setup_mode" != "1" ]]; then
+          echo "!! Step 4/4: UEFI is not in Setup Mode — cannot enroll keys."
+          echo ""
+          echo "   To continue:"
+          echo "   1. Reboot into UEFI/BIOS firmware setup"
+          echo "   2. Disable Secure Boot"
+          echo "   3. Enable Setup Mode (clears existing keys)"
+          echo "   4. Reboot into NixOS"
+          echo "   5. Run: sudo secure-boot-init"
+          exit 1
+        fi
+        echo "==> Step 4/4: Enrolling keys into firmware..."
+        echo ""
+        sbctl enroll-keys --microsoft
+        echo ""
+        echo "    Keys enrolled. Reboot and enable Secure Boot in UEFI/BIOS."
+        echo "    Then run: sudo secure-boot-init (to verify)"
+      else
+        echo "    Step 4/4: Keys already enrolled."
+        echo ""
+        echo "    Enable Secure Boot in UEFI/BIOS if not already done."
+        echo "    Then run: sudo secure-boot-init (to verify)"
+      fi
+      echo ""
+    '';
+  };
 in
 {
   imports = [
@@ -36,7 +130,9 @@ in
       pkiBundle = "/var/lib/sbctl";
     };
 
-    # sbctl for key management
-    environment.systemPackages = [ pkgs.sbctl ];
+    environment.systemPackages = [
+      pkgs.sbctl
+      secure-boot-init
+    ];
   };
 }
