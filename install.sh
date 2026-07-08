@@ -563,6 +563,7 @@ phase_install() {
   max_jobs=$(( avail_gb / 4 ))
   (( max_jobs < 1 )) && max_jobs=1
   success "RAM available: ${avail_gb} GB — using --max-jobs ${max_jobs}"
+  echo ""
 
   [[ "$FEAT_ENCRYPTION" == "true" ]] && luks_password_file > /dev/null
 
