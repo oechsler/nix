@@ -575,17 +575,24 @@ phase_install() {
   export TMPDIR=/mnt/tmp
 
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
-    # Step 1: Temporarily disable Secure Boot in config so nixos-install
-    # doesn't invoke lanzaboote (which needs keys that don't exist yet)
+    # Step 1: Temporarily disable Secure Boot via an override module so
+    # nixos-install doesn't invoke lanzaboote (keys don't exist yet).
+    # Using a separate file is robust regardless of how secureBoot is written in config.
     info "Installing base system (Secure Boot disabled for initial install)..."
-    sed -i 's/secureBoot\.enable = true/secureBoot.enable = false/' "$host_dir/configuration.nix"
+    local override_nix="$host_dir/secure-boot-install-override.nix"
+    cat > "$override_nix" <<'NIXEOF'
+{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }
+NIXEOF
+    # Inject override into imports
+    sed -i "/imports = \[/a\\    .\/secure-boot-install-override.nix" "$host_dir/configuration.nix"
 
     local install_ok=true
     nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs" \
       || install_ok=false
 
-    # Restore Secure Boot in config regardless of install result
-    sed -i 's/secureBoot\.enable = false/secureBoot.enable = true/' "$host_dir/configuration.nix"
+    # Remove override regardless of install result
+    sed -i '/secure-boot-install-override\.nix/d' "$host_dir/configuration.nix"
+    rm -f "$override_nix"
 
     [[ "$install_ok" == true ]] || error "nixos-install failed. Check the output above."
 
