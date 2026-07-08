@@ -549,6 +549,18 @@ phase_install() {
   nix flake lock "$REPO_DIR"
   git -C "$REPO_DIR" add --all
 
+  # Generate sbctl keys into /mnt before nixos-install so lanzaboote can sign boot files
+  if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
+    if [[ ! -f /mnt/var/lib/sbctl/keys/db/db.pem ]]; then
+      info "Generating Secure Boot keys (sbctl)..."
+      mkdir -p /mnt/var/lib/sbctl
+      nix-shell -p sbctl --run "sbctl create-keys --database-path /mnt/var/lib/sbctl"
+      success "Secure Boot keys generated"
+    else
+      success "Secure Boot keys already present"
+    fi
+  fi
+
   # Redirect nix temp/build dirs to /mnt so they land on disk, not the live ISO tmpfs
   mkdir -p /mnt/tmp
   export TMPDIR=/mnt/tmp
@@ -808,10 +820,8 @@ phase_complete() {
     echo ""
     echo -e "    ${BOLD}Secure Boot (post-install):${RESET}"
     echo "      1. Boot into the new system"
-    echo "      2. sudo sbctl create-keys"
-    echo "      3. sudo nixos-rebuild switch --flake ~/repos/nix#$HOST"
-    echo "      4. sudo sbctl enroll-keys --microsoft"
-    echo "      5. Reboot, enable Secure Boot in UEFI"
+    echo "      2. sudo sbctl enroll-keys --microsoft"
+    echo "      3. Reboot, enable Secure Boot in UEFI"
   fi
 
   echo ""

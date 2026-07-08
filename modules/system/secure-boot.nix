@@ -1,14 +1,12 @@
 # Secure Boot with lanzaboote
 #
 # Setup instructions:
-# 1. First boot WITHOUT secure boot enabled (in UEFI setup mode)
-# 2. Generate keys: nix-shell -p sbctl --run "sudo sbctl create-keys"
-# 3. Rebuild: sudo nixos-rebuild switch --flake .#hostname
-# 4. Verify: sudo sbctl verify (all files should be signed)
-# 5. Enroll keys: sudo sbctl enroll-keys --microsoft
+# 1. Run install.sh — it generates sbctl keys automatically before nixos-install
+# 2. Boot into the new system (UEFI in Setup Mode, Secure Boot disabled)
+# 3. Enroll keys: sudo sbctl enroll-keys --microsoft
 #    (--microsoft includes MS keys for Windows dual-boot)
-# 6. Enable Secure Boot in UEFI/BIOS
-# 7. Reboot and verify: bootctl status
+# 4. Enable Secure Boot in UEFI/BIOS
+# 5. Reboot and verify: bootctl status
 {
   config,
   lib,
