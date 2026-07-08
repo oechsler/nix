@@ -759,12 +759,14 @@ setup_yubikey_luks() {
     local enrolled=false
     for attempt in 1 2 3; do
       info "Enrolling FIDO2 on $(basename "$dev")... (attempt $attempt/3)"
-      if systemd-cryptenroll "$dev" --fido2-device=auto --unlock-key-file="$password_file"; then
+      echo ""
+      if systemd-cryptenroll "$dev" --fido2-device=auto --fido2-with-client-pin=no --unlock-key-file="$password_file"; then
         success "$(basename "$dev") enrolled"
         enrolled=true
         break
       fi
       if [[ "$attempt" -lt 3 ]]; then
+        echo ""
         warn "Enrollment failed. Make sure your FIDO2 key is plugged in."
         read -rp "    Press Enter to retry..." _
       fi

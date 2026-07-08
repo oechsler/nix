@@ -199,7 +199,7 @@ let
         chmod 600 "$PASS_FILE"
         for dev in "''${DEVICES[@]}"; do
           echo "Insert YubiKey and touch it when the light flashes..."
-          if systemd-cryptenroll "$dev" --fido2-device=auto --unlock-key-file="$PASS_FILE"; then
+          if systemd-cryptenroll "$dev" --fido2-device=auto --fido2-with-client-pin=no --unlock-key-file="$PASS_FILE"; then
             echo "  $(basename "$dev"): OK"
           else
             echo "  $(basename "$dev"): FAILED"
