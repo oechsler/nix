@@ -137,21 +137,12 @@ Boot into UEFI/BIOS and:
 - Disable Secure Boot
 - Enable "Setup Mode" (or clear existing keys)
 
-### 3. Generate and enroll keys
+### 3. Enroll keys
+
+The installer (`install.sh`) generates sbctl keys automatically before `nixos-install`.
+After booting into the new system:
 
 ```bash
-# Rebuild with lanzaboote enabled
-sudo nixos-rebuild switch --flake .#hostname
-
-# Create signing keys
-sudo sbctl create-keys
-
-# Rebuild again to sign boot files
-sudo nixos-rebuild switch --flake .#hostname
-
-# Verify all files are signed
-sudo sbctl verify
-
 # Enroll keys (--microsoft keeps Windows/firmware compatibility)
 sudo sbctl enroll-keys --microsoft
 ```
