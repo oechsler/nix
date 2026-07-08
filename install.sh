@@ -539,6 +539,7 @@ phase_state_version() {
 
 phase_partition() {
   [[ "$FEAT_ENCRYPTION" == "true" ]] && luks_password_file > /dev/null
+  echo ""
 
   # shellcheck disable=SC2054  # comma is disko syntax, not array separator
   local disko_args=(--mode destroy,format,mount --flake "$REPO_DIR#$HOST" --yes-wipe-all-disks)
