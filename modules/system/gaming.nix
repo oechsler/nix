@@ -91,7 +91,10 @@ in
       # enable32Bit: Steam's streaming encoder is 32-bit and requires 32-bit GPU drivers.
       (lib.mkIf (cfg.gpu == "amd") {
         environment.systemPackages = [ pkgs.libva-utils ]; # vainfo: verify encoding works
+        # Load amdgpu early — nixos-generate-config may miss newer PCI IDs (RDNA3+)
+        boot.initrd.kernelModules = [ "amdgpu" ];
         hardware.graphics = {
+          enable = true;
           enable32Bit = true;
           extraPackages = [ pkgs.libvdpau-va-gl ];
         };
