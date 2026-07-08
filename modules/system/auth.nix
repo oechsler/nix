@@ -10,7 +10,8 @@
 # TOTP is always on by default and acts as fallback when YubiKey is also active.
 #
 #   unlockMethod = "yubikey";
-#   → YubiKey FIDO2 LUKS unlock. YubiKey on sudo. TOTP fallback on sudo.
+#   → YubiKey FIDO2 LUKS unlock (touch only, no PIN — not supported by YubiKey).
+#     YubiKey on sudo. TOTP fallback on sudo.
 #     SDDM: password only (pam_gnome_keyring needs the login password).
 #     SSH: YubiKey only (no password), publickey required.
 #
@@ -198,9 +199,7 @@ let
         chmod 600 "$PASS_FILE"
         for dev in "''${DEVICES[@]}"; do
           echo "Insert YubiKey and touch it when the light flashes..."
-          ENROLL_ARGS=(--fido2-device=auto --unlock-key-file="$PASS_FILE")
-          ${lib.optionalString cfg.yubikey.pin "ENROLL_ARGS+=(--fido2-with-client-pin=yes)"}
-          if systemd-cryptenroll "$dev" "''${ENROLL_ARGS[@]}"; then
+          if systemd-cryptenroll "$dev" --fido2-device=auto --unlock-key-file="$PASS_FILE"; then
             echo "  $(basename "$dev"): OK"
           else
             echo "  $(basename "$dev"): FAILED"
@@ -411,7 +410,6 @@ in
         default = config.features.encryption.unlockMethod == "yubikey";
         description = "Enable YubiKey authentication tools and PAM integration.";
       };
-      pin = lib.mkEnableOption "require FIDO2 PIN on YubiKey (in addition to touch)";
     };
   };
 
@@ -495,9 +493,6 @@ in
       security.pam.u2f.settings = {
         cue = true; # Show "Please touch the device" prompt
         authfile = u2fFile;
-      }
-      // lib.optionalAttrs cfg.yubikey.pin {
-        userVerification = true; # Require FIDO2 PIN (touch alone is not enough)
       };
 
       # sudo + SSH: YubiKey required
