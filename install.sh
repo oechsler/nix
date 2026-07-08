@@ -319,7 +319,7 @@ phase_detect_features() {
     echo -e "    LUKS devices:  ${DIM}${#LUKS_DEVICES[@]} partition(s)${RESET}"
     echo -e "    LUKS Unlock:   $(label_bool "$FEAT_YUBIKEY_LUKS") (YubiKey FIDO2)"
   fi
-  if [[ "$CONFIG_PASSWORD_LOCKED" == "true" ]]; then
+  if [[ "$CONFIG_PASSWORD_LOCKED" == "true" && -z "$USER_PASSWORD_HASH" ]]; then
     echo -e "    Password:      ${YELLOW}not set${RESET}"
   else
     echo -e "    Password:      ${GREEN}set in config${RESET}"
