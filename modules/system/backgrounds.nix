@@ -184,7 +184,10 @@ in
         description = "Extract encrypted wallpapers";
         wantedBy = [ "multi-user.target" ];
         before = [ "display-manager.service" ];
-        after = [ "sops-install-secrets.service" ];
+        after = [
+          "local-fs.target" # /persist must be mounted before writing wallpapers
+          "sops-install-secrets.service"
+        ];
         unitConfig.ConditionPathExists = config.sops.age.keyFile;
         serviceConfig = {
           Type = "oneshot";
@@ -203,7 +206,8 @@ in
       systemd.services.prepare-backgrounds = {
         description = "Prepare wallpapers from store";
         wantedBy = [ "multi-user.target" ];
-        before = [ "display-manager.service" ]; # Must complete before SDDM starts
+        before = [ "display-manager.service" ];
+        after = [ "local-fs.target" ]; # /persist must be mounted before writing wallpapers
 
         serviceConfig = {
           Type = "oneshot";
