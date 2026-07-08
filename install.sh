@@ -583,16 +583,19 @@ phase_install() {
     cat > "$override_nix" <<'NIXEOF'
 { lib, ... }: { features.secureBoot.enable = lib.mkForce false; }
 NIXEOF
-    # Inject override into imports
+    # Inject override into imports and stage both files for the flake
     sed -i "/imports = \[/a\\    .\/secure-boot-install-override.nix" "$host_dir/configuration.nix"
+    git -C "$REPO_DIR" add "$override_nix" "$host_dir/configuration.nix"
 
     local install_ok=true
     nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs" \
       || install_ok=false
 
-    # Remove override regardless of install result
+    # Remove override and unstage regardless of install result
     sed -i '/secure-boot-install-override\.nix/d' "$host_dir/configuration.nix"
     rm -f "$override_nix"
+    git -C "$REPO_DIR" add "$host_dir/configuration.nix"
+    git -C "$REPO_DIR" rm --cached "$override_nix" 2>/dev/null || true
 
     [[ "$install_ok" == true ]] || error "nixos-install failed. Check the output above."
 
