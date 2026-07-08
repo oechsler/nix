@@ -119,7 +119,7 @@ load_state() {
     echo ""
     info "Resuming previous session"
     # Save CLI values before sourcing (CLI has priority)
-    local cli_host="$HOST" cli_ssh="$SSH_KEY"
+    local cli_host="$HOST" cli_ssh="$SSH_KEY" cli_luks="$LUKS_PASSWORD"
     # shellcheck source=/dev/null
     source "$STATE_FILE"
     # Restore CLI values where set
@@ -127,6 +127,13 @@ load_state() {
     if [[ -n "$cli_ssh" ]]; then
       SSH_KEY="$cli_ssh"
       SSH_KEY_FILE=""  # Reset so phase_collect_inputs uses the new path
+    fi
+    # Restore LUKS password from state into /tmp/luks-password
+    if [[ -n "$cli_luks" ]]; then
+      LUKS_PASSWORD="$cli_luks"
+    elif [[ -n "${LUKS_PASSWORD:-}" ]]; then
+      printf '%s' "$LUKS_PASSWORD" > /tmp/luks-password
+      chmod 600 /tmp/luks-password
     fi
     success "Loaded: host=$HOST"
   fi
@@ -137,6 +144,12 @@ save_state() {
     printf 'HOST=%q\n' "$HOST"
     printf 'SSH_KEY_FILE=%q\n' "${SSH_KEY_FILE:-}"
     printf 'USER_PASSWORD_HASH=%q\n' "${USER_PASSWORD_HASH:-}"
+    # Persist LUKS password so resume works without re-prompting
+    if [[ -f /tmp/luks-password ]]; then
+      printf 'LUKS_PASSWORD=%q\n' "$(cat /tmp/luks-password)"
+    else
+      printf 'LUKS_PASSWORD=%q\n' "${LUKS_PASSWORD:-}"
+    fi
   } > "$STATE_FILE"
   chmod 600 "$STATE_FILE"
 }
@@ -553,7 +566,7 @@ phase_install() {
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
     if [[ ! -f /mnt/var/lib/sbctl/keys/db/db.pem ]]; then
       info "Generating Secure Boot keys (sbctl)..."
-      mkdir -p /mnt/var/lib/sbctl
+      install -d -m 755 /mnt/var/lib/sbctl
       nix-shell -p sbctl --run "sbctl create-keys --database-path /mnt/var/lib/sbctl"
       success "Secure Boot keys generated"
     else
