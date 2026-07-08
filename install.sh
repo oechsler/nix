@@ -575,15 +575,21 @@ phase_install() {
   export TMPDIR=/mnt/tmp
 
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
-    # Step 1: Install without lanzaboote (no keys exist yet, it would fail to sign)
+    # Step 1: Temporarily disable Secure Boot in config so nixos-install
+    # doesn't invoke lanzaboote (which needs keys that don't exist yet)
     info "Installing base system (Secure Boot disabled for initial install)..."
-    if ! nixos-install --flake "$REPO_DIR#$HOST" \
-        --no-root-password --max-jobs "$max_jobs" \
-        --option extra-config "features.secureBoot.enable = false"; then
-      error "nixos-install failed. Check the output above."
-    fi
+    sed -i 's/secureBoot\.enable = true/secureBoot.enable = false/' "$host_dir/configuration.nix"
 
-    # Step 2: Generate keys inside the installed system via nixos-enter
+    local install_ok=true
+    nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs" \
+      || install_ok=false
+
+    # Restore Secure Boot in config regardless of install result
+    sed -i 's/secureBoot\.enable = false/secureBoot.enable = true/' "$host_dir/configuration.nix"
+
+    [[ "$install_ok" == true ]] || error "nixos-install failed. Check the output above."
+
+    # Step 2: Generate keys inside the installed system
     local sbctl_db="${PERSIST_PREFIX}/var/lib/sbctl"
     if [[ ! -f "/mnt${sbctl_db}/keys/db/db.pem" ]]; then
       info "Generating Secure Boot keys..."
