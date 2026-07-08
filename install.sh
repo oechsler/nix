@@ -569,17 +569,10 @@ phase_install() {
   # Keys go to /mnt/persist/var/lib/sbctl (impermanence binds this to /var/lib/sbctl).
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
     local sbctl_db="/mnt${PERSIST_PREFIX}/var/lib/sbctl"
-    info "Secure Boot key path: $sbctl_db"
-    info "  mountpoints under /mnt:"
-    findmnt --target /mnt -o TARGET 2>/dev/null || true
     if [[ ! -f "$sbctl_db/keys/db/db.pem" ]]; then
       info "Generating Secure Boot keys (sbctl)..."
       mkdir -p "$sbctl_db"
-      local sbctl_bin
-      sbctl_bin="$(nix build --no-link --print-out-paths nixpkgs#sbctl 2>/dev/null | head -1)/bin/sbctl"
-      info "  sbctl binary: $sbctl_bin"
-      info "  running as: $(id)"
-      "$sbctl_bin" create-keys --database-path "$sbctl_db"
+      nix run nixpkgs#sbctl -- create-keys --database-path "$sbctl_db"
       success "Secure Boot keys generated"
     else
       success "Secure Boot keys already present"
