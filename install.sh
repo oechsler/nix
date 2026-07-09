@@ -268,6 +268,7 @@ phase_select_host() {
       if [[ "$h" == "$current_hostname" ]]; then
         HOST="$current_hostname"
         success "Host detected from hostname: $HOST"
+        echo ""
         return
       fi
     done
