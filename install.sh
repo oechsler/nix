@@ -184,15 +184,18 @@ phase_validate() {
 
   [[ $EUID -eq 0 ]] || error "Must run as root."
 
-  # Refuse to run on an already-installed NixOS system.
-  # On a live ISO, / is mounted as tmpfs. On an installed system it's btrfs/ext4/etc.
   if [[ ! -e /etc/NIXOS ]]; then
     error "This installer must run on a NixOS system. Boot from a NixOS ISO first."
   fi
+
   local root_fstype
   root_fstype="$(findmnt -n -o FSTYPE /)"
-  if [[ "$root_fstype" != "tmpfs" ]]; then
-    error "This installer is intended for the NixOS live ISO only (root is $root_fstype, not tmpfs)."
+  IS_LIVE=false
+  [[ "$root_fstype" == "tmpfs" ]] && IS_LIVE=true
+
+  # --format is only safe on a live ISO (would wipe a running system)
+  if [[ "$DO_FORMAT" == true && "$IS_LIVE" != true ]]; then
+    error "--format is only allowed on the NixOS live ISO, not on an installed system."
   fi
 
   command -v nix &>/dev/null || error "Nix is not available."
@@ -911,6 +914,35 @@ main() {
   load_state
   phase_validate
   phase_select_host
+
+  # On an installed system: offer to upgrade instead of reinstall
+  if [[ "$IS_LIVE" != true && "$YES" != true ]]; then
+    echo ""
+    warn "Running on an installed NixOS system (not a live ISO)."
+    echo ""
+    echo -e "    ${BOLD}[1]${RESET} Upgrade existing system (nixos-rebuild switch)"
+    echo -e "    ${BOLD}[2]${RESET} Continue with installer (e.g. re-run post-install)"
+    echo ""
+    local choice
+    read -rp "    Choice [1-2]: " choice
+    echo ""
+    case "$choice" in
+      1)
+        info "Upgrading system..."
+        echo ""
+        nixos-rebuild switch --flake "$REPO_DIR#$HOST"
+        echo ""
+        success "System upgraded."
+        exit 0
+        ;;
+      2)
+        ;;
+      *)
+        error "Invalid choice."
+        ;;
+    esac
+  fi
+
   phase_detect_features
   phase_collect_inputs
   phase_summary
