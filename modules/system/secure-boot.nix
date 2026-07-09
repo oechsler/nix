@@ -135,18 +135,14 @@ let
         echo ""
       fi
 
-      #--- Step 2: activate lanzaboote + sign boot entries ---
-      # Keys must exist before this rebuild so impermanence persists /var/lib/sbctl.
-      # Skip rebuild if already enrolled — but always sign to catch unsigned files.
-      if [[ "$keys_enrolled" != true ]]; then
-        step 2 3 "Rebuilding system with Secure Boot active (persists keys across reboots)..."
-        echo ""
-        "$REPO_DIR/install.sh" --yes --quiet
-        echo ""
-      else
-        step 2 3 "Signing all boot files..."
-        echo ""
-      fi
+      #--- Step 2: rebuild with lanzaboote active + sign boot entries ---
+      # Always rebuild — lanzaboote generates signed EFI images during the build.
+      # sbctl sign-all alone is not sufficient: it can only sign files that
+      # lanzaboote has already placed in /boot/EFI/nixos/, which requires a build.
+      step 2 3 "Rebuilding system with Secure Boot active..."
+      echo ""
+      "$REPO_DIR/install.sh" --yes --quiet --repair
+      echo ""
       sbctl sign-all
       echo ""
 

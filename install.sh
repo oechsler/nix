@@ -35,6 +35,7 @@ DO_INSTALL=false
 DO_POST_INSTALL=false
 SKIP_TOTP=false
 QUIET_UPGRADE=false
+REPAIR=false
 ORIGINAL_ARGS=("$@")
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 # When invoked via PATH (not from the repo directory), resolve the repo location
@@ -95,6 +96,7 @@ while [[ $# -gt 0 ]]; do
     -p|--luks-password)  LUKS_PASSWORD="$2"; shift 2 ;;
     --skip-totp)         SKIP_TOTP=true; shift ;;
     --quiet)             QUIET_UPGRADE=true; shift ;;
+    --repair)            REPAIR=true; shift ;;
     --keyboard)          KEYBOARD_OVERRIDE="$2"; shift 2 ;;
     -y|--yes)            YES=true; shift ;;
     --dry-run)           DRY_RUN=true; shift ;;
@@ -1207,7 +1209,7 @@ phase_upgrade() {
     git -C "$REPO_DIR" add "$override_nix" "$host_dir/configuration.nix"
 
     local rebuild_ok=true
-    nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" || rebuild_ok=false
+    nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" ${REPAIR:+--repair} || rebuild_ok=false
 
     sed -i '/secure-boot-upgrade-override\.nix/d' "$host_dir/configuration.nix"
     rm -f "$override_nix"
@@ -1216,7 +1218,7 @@ phase_upgrade() {
 
     [[ "$rebuild_ok" == true ]] || error "nixos-rebuild failed. Check the output above."
   else
-    nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" || error "nixos-rebuild failed. Check the output above."
+    nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" ${REPAIR:+--repair} || error "nixos-rebuild failed. Check the output above."
   fi
 
   echo ""
