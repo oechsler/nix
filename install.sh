@@ -1197,12 +1197,15 @@ phase_upgrade() {
     local override_nix="$host_dir/secure-boot-upgrade-override.nix"
     printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }\n' > "$override_nix"
     sed -i "/imports = \[/a\\    .\/secure-boot-upgrade-override.nix" "$host_dir/configuration.nix"
+    git -C "$REPO_DIR" add "$override_nix" "$host_dir/configuration.nix"
 
     local rebuild_ok=true
     nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" || rebuild_ok=false
 
     sed -i '/secure-boot-upgrade-override\.nix/d' "$host_dir/configuration.nix"
     rm -f "$override_nix"
+    git -C "$REPO_DIR" rm --cached "$override_nix" 2>/dev/null || true
+    git -C "$REPO_DIR" add "$host_dir/configuration.nix"
 
     [[ "$rebuild_ok" == true ]] || error "nixos-rebuild failed. Check the output above."
   else

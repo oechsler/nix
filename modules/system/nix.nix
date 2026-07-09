@@ -150,6 +150,8 @@
             printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }\n' > "$OVERRIDE"
             sed -i '/imports = \[/a\    .\/secure-boot-upgrade-override.nix' \
               ${flakeDir}/hosts/$(hostname)/configuration.nix
+            ${pkgs.git}/bin/git -C ${flakeDir} add "$OVERRIDE" \
+              ${flakeDir}/hosts/$(hostname)/configuration.nix
           fi
         '';
 
@@ -160,6 +162,9 @@
             sed -i '/secure-boot-upgrade-override\.nix/d' \
               ${flakeDir}/hosts/$(hostname)/configuration.nix
             rm -f "$OVERRIDE"
+            ${pkgs.git}/bin/git -C ${flakeDir} rm --cached "$OVERRIDE" 2>/dev/null || true
+            ${pkgs.git}/bin/git -C ${flakeDir} add \
+              ${flakeDir}/hosts/$(hostname)/configuration.nix
           fi
         '';
 
