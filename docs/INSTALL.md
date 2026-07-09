@@ -175,9 +175,10 @@ Afterwards, in UEFI: set OS Type → Windows UEFI mode, Secure Boot → On.
 ### Verify
 
 ```bash
-bootctl status   # should show "Secure Boot: enabled"
-sudo secure-boot-init   # re-run to verify all files are signed
+sudo secure-boot-init
 ```
+
+When Secure Boot is active and all keys are enrolled, `secure-boot-init` detects this automatically, runs `sbctl verify` to confirm all boot files are signed, and exits with a success message. No manual `bootctl status` needed.
 
 ### TPM + Secure Boot ordering
 
