@@ -118,11 +118,14 @@ let
         # sbctl not yet installed (system not rebuilt yet) — run via nix
         nix run nixpkgs#sbctl -- create-keys
       fi
-      # Copy keys to /persist immediately so the impermanence bind-mount
-      # that activates during the next rebuild (step 2) finds them there.
+      # Copy keys to /persist so they survive the impermanence bind-mount
+      # activation during the next rebuild. Skip if /var/lib/sbctl is already
+      # a bind-mount of /persist/var/lib/sbctl (keys are already in the right place).
       if [[ -d /var/lib/sbctl/keys && -d /persist ]]; then
-        mkdir -p /persist/var/lib/sbctl
-        cp -a /var/lib/sbctl/keys /persist/var/lib/sbctl/
+        if ! mountpoint -q /var/lib/sbctl 2>/dev/null; then
+          mkdir -p /persist/var/lib/sbctl
+          cp -a /var/lib/sbctl/keys /persist/var/lib/sbctl/
+        fi
       fi
       echo ""
 
