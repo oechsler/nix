@@ -336,10 +336,11 @@ phase_detect_features() {
     echo ""
     success "Features loaded from cache (host: $HOST)"
     echo ""
-    # Still apply keyboard layout — loadkeys is normally called at the end of
-    # this function, but the cache path skips it
+    # Still apply keyboard layout — normally called at end of this function
+    local keyboard="${KEYBOARD_OVERRIDE:-$CONFIG_KEYBOARD}"
     if [[ "$IS_LIVE" == true ]] && command -v loadkeys &>/dev/null; then
-      loadkeys "${KEYBOARD_OVERRIDE:-$CONFIG_KEYBOARD}" 2>/dev/null || true
+      loadkeys "$keyboard" 2>/dev/null && success "Keyboard layout set to: $keyboard" || \
+        warn "Could not set keyboard layout '$keyboard'"
     fi
     return
   fi
@@ -393,9 +394,19 @@ phase_detect_features() {
   # Parse LUKS device paths into array
   mapfile -t LUKS_DEVICES < <(echo "$json" | jq -r '.luksDevices[]')
 
-  # Apply host keyboard layout so passwords are typed correctly on the live ISO
-  if [[ "$IS_LIVE" == true ]] && command -v loadkeys &>/dev/null; then
-    loadkeys "$CONFIG_KEYBOARD" 2>/dev/null || true
+  # Apply keyboard layout so passwords are typed correctly on the live ISO.
+  # Uses --keyboard override if given, otherwise falls back to host config.
+  local keyboard="${KEYBOARD_OVERRIDE:-$CONFIG_KEYBOARD}"
+  if [[ "$IS_LIVE" == true ]]; then
+    if command -v loadkeys &>/dev/null; then
+      if loadkeys "$keyboard" 2>/dev/null; then
+        success "Keyboard layout set to: $keyboard"
+      else
+        warn "Could not set keyboard layout '$keyboard' — passwords use ISO default (us)"
+      fi
+    else
+      warn "loadkeys not found — passwords use ISO default (us)"
+    fi
   fi
 
   echo -e "    Host:          ${BOLD}$HOST${RESET}"
