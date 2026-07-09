@@ -20,6 +20,10 @@
 { config, pkgs, lib, ... }:
 
 {
+  # Enable all redistributable firmware blobs — required for WiFi, BT, and other
+  # peripherals that need binary firmware (e.g. MediaTek MT7925, Intel AX, etc.)
+  hardware.enableAllFirmware = true;
+
   hardware = {
     # CPU microcode updates — loaded at early boot, patches security vulnerabilities.
     cpu.amd.updateMicrocode = lib.mkIf (config.features.hardware.cpu == "amd") true;

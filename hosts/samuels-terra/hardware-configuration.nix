@@ -21,6 +21,10 @@
 # - Kernel modules
 # - Boot loader config
 # - Firmware settings
+#
+# Manual overrides (hardware not detected by nixos-generate-config):
+# - ucsi_acpi, typec_ucsi: USB-C controller modules for FIDO2 key detection at boot
+# - mt7925e: MediaTek MT7925 WiFi 7 + Bluetooth 5.4 (ROG Strix X870-I onboard adapter)
 
 {
   config,
@@ -58,10 +62,13 @@ let
 in
 withoutLuks
 // {
-  # ROG Strix X870-I: USB-C controller modules required in initrd for FIDO2
-  # key detection at boot. xhci_pci/usbhid already come from the generated config.
   boot = (withoutLuks.boot or { }) // {
+    # MediaTek MT7925 WiFi 7 + Bluetooth 5.4 — not auto-detected, must be loaded explicitly
+    kernelModules =
+      ((withoutLuks.boot or { }).kernelModules or [ ]) ++ [ "mt7925e" ];
+
     initrd = ((withoutLuks.boot or { }).initrd or { }) // {
+      # USB-C controller modules required in initrd for FIDO2 key detection at boot
       availableKernelModules =
         ((withoutLuks.boot or { }).initrd or { }).availableKernelModules or [ ]
         ++ [
