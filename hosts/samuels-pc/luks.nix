@@ -18,33 +18,39 @@
 # - cryptroot: disk-main-root
 # - cryptgames: disk-games-games
 
-{ config, ... }:
+{ config, lib, ... }:
 
 let
-  unlockOpts = {
-    yubikey = [ "fido2-device=auto" "fido2-no-client-pin" "tries=0" ];
-    tpm2 = [ "tpm2-device=auto" "tries=0" ];
-    password = [ "tries=0" ];
+  method = config.features.encryption.unlockMethod;
+  luksDevice = name: device: {
+    boot.initrd.luks.devices.${name} = {
+      inherit device;
+      allowDiscards = true;
+      crypttabExtraOpts = [ "tries=0" ];
+    };
+    boot.initrd.systemd.luks.devices.${name} = lib.mkMerge [
+      (lib.mkIf (method == "yubikey") {
+        fido2 = {
+          enable = true;
+          device = "auto";
+          credential = "auto";
+        };
+      })
+      (lib.mkIf (method == "tpm2") {
+        tpm2.enable = true;
+      })
+    ];
   };
 in
-{
-  boot.initrd.luks.devices = {
-    "cryptroot" = {
-      device = "/dev/disk/by-partlabel/disk-main-root";
-      allowDiscards = true;
-      crypttabExtraOpts = unlockOpts.${config.features.encryption.unlockMethod};
-    };
-    "cryptgames" = {
-      device = "/dev/disk/by-partlabel/disk-games-games";
-      allowDiscards = true;
-      crypttabExtraOpts = unlockOpts.${config.features.encryption.unlockMethod};
-    };
-  };
+lib.mkMerge [
+  (luksDevice "cryptroot" "/dev/disk/by-partlabel/disk-main-root")
+  (luksDevice "cryptgames" "/dev/disk/by-partlabel/disk-games-games")
 
-  # On FIDO2 timeout/failure: fall back to password prompt instead of rebooting.
-  # reboot-force would cause an endless loop if the YubiKey is not detected.
-  boot.initrd.systemd.services."systemd-cryptsetup@cryptroot" = {
-    overrideStrategy = "asDropin";
-    unitConfig.FailureAction = "none";
-  };
-}
+  {
+    # On FIDO2 timeout/failure: fall back to password prompt instead of rebooting.
+    boot.initrd.systemd.services."systemd-cryptsetup@cryptroot" = {
+      overrideStrategy = "asDropin";
+      unitConfig.FailureAction = "none";
+    };
+  }
+]
