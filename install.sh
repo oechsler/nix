@@ -621,8 +621,28 @@ phase_install() {
   mkdir -p /mnt/tmp
   export TMPDIR=/mnt/tmp
 
-  if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs"; then
-    error "nixos-install failed. Check the output above."
+  if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
+    # Disable lanzaboote for the install — keys don't exist yet.
+    # secure-boot-init handles everything after first boot.
+    local override_nix="$host_dir/secure-boot-install-override.nix"
+    printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }\n' > "$override_nix"
+    sed -i "/imports = \[/a\\    .\/secure-boot-install-override.nix" "$host_dir/configuration.nix"
+    git -C "$REPO_DIR" add "$override_nix" "$host_dir/configuration.nix"
+
+    local install_ok=true
+    nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs" \
+      || install_ok=false
+
+    sed -i '/secure-boot-install-override\.nix/d' "$host_dir/configuration.nix"
+    rm -f "$override_nix"
+    git -C "$REPO_DIR" add "$host_dir/configuration.nix"
+    git -C "$REPO_DIR" rm --cached "$override_nix" 2>/dev/null || true
+
+    [[ "$install_ok" == true ]] || error "nixos-install failed. Check the output above."
+  else
+    if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs"; then
+      error "nixos-install failed. Check the output above."
+    fi
   fi
 
   success "NixOS installed"
