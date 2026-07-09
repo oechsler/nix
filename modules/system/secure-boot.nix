@@ -137,20 +137,20 @@ let
       #--- Step 3: enroll keys ---
       if [[ "$keys_enrolled" != true ]]; then
         if [[ "$ASUS_BOARD" == "true" ]]; then
-          # ASUS firmware does not expose Setup Mode when keys are cleared —
-          # it disables Secure Boot entirely instead. Setting OS Type = Other OS
-          # and Secure Boot Mode = Custom in UEFI allows enrollment without Setup Mode.
-          step 3 3 "Enrolling keys (ASUS board — Custom Mode)..."
+          # ASUS firmware: to enter Setup Mode you must delete all Secure Boot
+          # variables under Key Management. This disables Secure Boot but puts
+          # the system in Setup Mode so sbctl can enroll keys.
+          step 3 3 "Enrolling keys (ASUS board)..."
           echo ""
-          warn "Before continuing, configure your UEFI (Boot → Secure Boot):"
-          warn "  OS Type:           Other OS"
-          warn "  Secure Boot Mode:  Custom"
-          warn "  Key Management:    leave keys untouched — do NOT clear them"
-          warn "  Secure Boot:       can stay Off for now"
+          warn "Before continuing, enter Setup Mode in UEFI (Boot → Secure Boot):"
+          warn "  1. Secure Boot Mode:  Custom"
+          warn "  2. Key Management:    Delete All Secure Boot Variables"
+          warn "     (this puts the system in Setup Mode — Secure Boot will be Off)"
+          warn "  3. Save and reboot into NixOS"
           echo ""
-          read -rp "Confirm UEFI is set to Other OS + Custom Mode, then press Enter..." _
+          read -rp "Confirm system is in Setup Mode, then press Enter..." _
           echo ""
-          sbctl enroll-keys --microsoft --firmware-builtin --yes-this-might-brick-my-machine
+          sbctl enroll-keys --microsoft --firmware-builtin
           echo ""
           success "Keys enrolled."
           info "Now reboot into UEFI and activate Secure Boot:"
