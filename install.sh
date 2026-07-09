@@ -860,6 +860,7 @@ copy_config() {
 }
 
 phase_post_install() {
+  echo ""
   setup_ssh
   setup_sops
 
