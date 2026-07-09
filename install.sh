@@ -210,6 +210,9 @@ luks_password_file() {
 }
 
 phase_validate() {
+  # Print header once — suppress after sudo re-elevation
+  [[ "${_HEADER_PRINTED:-}" != "1" ]] && { info "NixOS Installer"; echo ""; export _HEADER_PRINTED=1; }
+
   if [[ ! -e /etc/NIXOS ]]; then
     error "Not a NixOS system. Boot from a NixOS ISO first."
   fi
@@ -217,10 +220,6 @@ phase_validate() {
   if [[ $EUID -ne 0 ]]; then
     exec sudo "$0" "${ORIGINAL_ARGS[@]}"
   fi
-
-  # Print header after sudo re-elevation so it appears exactly once
-  info "NixOS Installer"
-  echo ""
 
   if [[ "$DRY_RUN" == true ]]; then
     warn "Dry-run mode: no changes will be made"
