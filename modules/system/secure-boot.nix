@@ -144,9 +144,10 @@ let
           step 3 3 "Enrolling keys (ASUS board — partial enrollment to bypass SetupMode check)..."
           echo ""
           warn "Before continuing, configure your UEFI (Boot → Secure Boot):"
-          warn "  1. Secure Boot Mode:  Custom"
-          warn "  2. Key Management:    Delete All Secure Boot Variables"
-          warn "  3. Save and reboot into NixOS"
+          warn "  1. OS Type:           Other OS"
+          warn "  2. Secure Boot Mode:  Custom"
+          warn "  3. Key Management:    Delete All Secure Boot Variables"
+          warn "  4. Save and reboot into NixOS"
           echo ""
           read -rp "Confirm keys are cleared and you are back in NixOS, then press Enter..." _
           echo ""
