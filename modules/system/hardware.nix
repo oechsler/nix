@@ -1,6 +1,7 @@
 # Hardware Configuration
 #
 # This module configures hardware-related system services:
+# - CPU microcode updates (when features.hardware.cpu is set)
 # - GPU graphics + VA-API drivers (when features.hardware.gpu is set)
 # - CoolerControl - Fan control GUI (monitors and controls system fans)
 # - zram swap - Compressed RAM swap (100% of RAM, improves performance)
@@ -19,6 +20,10 @@
 { config, pkgs, lib, ... }:
 
 {
+  # CPU microcode updates — loaded at early boot, patches security vulnerabilities.
+  hardware.cpu.amd.updateMicrocode = lib.mkIf (config.features.hardware.cpu == "amd") true;
+  hardware.cpu.intel.updateMicrocode = lib.mkIf (config.features.hardware.cpu == "intel") true;
+
   # Enable graphics support whenever a GPU is configured.
   # VA-API drivers are set here so hardware video decoding works in all contexts
   # (browser, video players) — not just when gaming is enabled.

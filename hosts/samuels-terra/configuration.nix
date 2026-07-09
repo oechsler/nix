@@ -76,6 +76,7 @@
     encryption.unlockMethod = "yubikey";
     desktop.login = "greeter";
     desktop.fileManager = "terminal";
+    hardware.cpu = "amd"; # Ryzen 9 9950X3D2 (Zen 5)
     hardware.gpu = "amd"; # RX 9070 XT (RDNA4)
     smb.shares = [
       "personal-drive"
