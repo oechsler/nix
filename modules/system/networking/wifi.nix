@@ -31,7 +31,7 @@ let
         };
         wifi = {
           mode = "infrastructure";
-          ssid = net.ssid;
+          inherit (net) ssid;
         };
         wifi-security = {
           auth-alg = "open";
@@ -67,14 +67,14 @@ let
         };
         wifi = {
           mode = "infrastructure";
-          ssid = net.ssid;
+          inherit (net) ssid;
         };
         wifi-security = {
           key-mgmt = "wpa-eap";
         };
         "802-1x" = {
           eap = "peap";
-          identity = net.identity;
+          inherit (net) identity;
           password = "\${WIFI_${lib.toUpper net.name}_PASSWORD}";
           phase2-auth = "mschapv2";
         };
