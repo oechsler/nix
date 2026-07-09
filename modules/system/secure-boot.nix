@@ -58,6 +58,15 @@ let
         exit 1
       fi
 
+      # Run the installer's upgrade flow first to ensure the system is fully
+      # up to date and the Secure Boot flag is active in the running generation.
+      # The installer handles the override (mkForce false) when sbctl keys are
+      # missing, so this is safe to call before keys are generated.
+      info "Rebuilding system to activate Secure Boot configuration..."
+      echo ""
+      "$REPO_DIR/install.sh" --yes
+      echo ""
+
       reboot_to_uefi() {
         echo ""
         read -rp "    Reboot into UEFI firmware setup now? [Y/n]: " confirm
