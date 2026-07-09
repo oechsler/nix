@@ -628,7 +628,11 @@ phase_install() {
     # 3. Rebuild inside the chroot with lanzaboote enabled to sign boot entries
     local override_nix="$host_dir/secure-boot-install-override.nix"
     cat > "$override_nix" <<'NIXEOF'
-{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }
+{ lib, pkgs, ... }: {
+  features.secureBoot.enable = lib.mkForce false;
+  # Include sbctl so keys can be generated in the chroot after install
+  environment.systemPackages = [ pkgs.sbctl ];
+}
 NIXEOF
     sed -i "/imports = \[/a\\    .\/secure-boot-install-override.nix" "$host_dir/configuration.nix"
     git -C "$REPO_DIR" add "$override_nix" "$host_dir/configuration.nix"
@@ -647,14 +651,12 @@ NIXEOF
 
     [[ "$install_ok" == true ]] || error "nixos-install failed. Check the output above."
 
-    # Step 2: generate sbctl keys inside the installed chroot
+    # Step 2: generate sbctl keys inside the installed chroot.
+    # sbctl is included via the override module so it's available in /run/current-system/sw/bin.
     local sbctl_db="${PERSIST_PREFIX}/var/lib/sbctl"
     info "Generating Secure Boot keys..."
     echo ""
-    nixos-enter --root /mnt -c "
-      mkdir -p ${sbctl_db}
-      nix shell nixpkgs#sbctl --command sbctl create-keys --database-path ${sbctl_db}
-    "
+    nixos-enter --root /mnt -c "mkdir -p ${sbctl_db} && sbctl create-keys --database-path ${sbctl_db}"
     success "Secure Boot keys generated"
     echo ""
 
