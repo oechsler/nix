@@ -153,7 +153,6 @@ let
       # interfere. lanzaboote in the config produces a different derivation than
       # the previous build (which had mkForce false), so Nix will build fresh and
       # lanzaboote will generate signed EFI images.
-      local avail_gb max_jobs
       avail_gb=$(awk '/^MemAvailable:/{printf "%d", $2/1024/1024}' /proc/meminfo)
       max_jobs=$(( avail_gb / 4 ))
       (( max_jobs < 1 )) && max_jobs=1
