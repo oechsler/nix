@@ -21,6 +21,13 @@ let
         exec sudo "$0" "$@"
       fi
 
+      # Guard: refuse to run if Secure Boot is not enabled in the NixOS config
+      if [[ "${lib.boolToString cfg.enable}" != "true" ]]; then
+        echo "Error: features.secureBoot.enable is not set for this host."
+        echo "Enable it in hosts/$(hostname)/configuration.nix and rebuild first."
+        exit 1
+      fi
+
       FLAKE="$(eval echo ~"''${SUDO_USER:-''${USER}}")/repos/nix#$(hostname)"
 
       echo ""
