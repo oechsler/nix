@@ -15,24 +15,20 @@
 # Differences from samuels-pc:
 # - Only one encrypted partition (no separate games partition)
 
-{ config, lib, ... }:
+{ config, ... }:
 
 let
-  method = config.features.encryption.unlockMethod;
+  unlockOpts = {
+    yubikey = [ "fido2-device=auto" "tries=0" ];
+    tpm2    = [ "tpm2-device=auto"  "tries=0" ];
+    password = [ "tries=0" ];
+  };
 in
 {
   boot.initrd.luks.devices."cryptroot" = {
     device = "/dev/disk/by-partlabel/disk-main-root";
     allowDiscards = true;
-    crypttabExtraOpts = [ "tries=0" ];
-    fido2 = lib.mkIf (method == "yubikey") {
-      enable = true;
-      credential = "auto";
-      passwordLessMode = false;
-    };
-    tpm2 = lib.mkIf (method == "tpm2") {
-      enable = true;
-    };
+    crypttabExtraOpts = unlockOpts.${config.features.encryption.unlockMethod};
   };
 
   # On failure: fall back to password prompt instead of rebooting.

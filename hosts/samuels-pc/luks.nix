@@ -18,28 +18,27 @@
 # - cryptroot: disk-main-root
 # - cryptgames: disk-games-games
 
-{ config, lib, ... }:
+{ config, ... }:
 
 let
-  method = config.features.encryption.unlockMethod;
-  mkLuksDevice = device: {
-    inherit device;
-    allowDiscards = true;
-    crypttabExtraOpts = [ "tries=0" ];
-    fido2 = lib.mkIf (method == "yubikey") {
-      enable = true;
-      credential = "auto";
-      passwordLessMode = false;
-    };
-    tpm2 = lib.mkIf (method == "tpm2") {
-      enable = true;
-    };
+  unlockOpts = {
+    yubikey = [ "fido2-device=auto" "tries=0" ];
+    tpm2    = [ "tpm2-device=auto"  "tries=0" ];
+    password = [ "tries=0" ];
   };
 in
 {
   boot.initrd.luks.devices = {
-    "cryptroot" = mkLuksDevice "/dev/disk/by-partlabel/disk-main-root";
-    "cryptgames" = mkLuksDevice "/dev/disk/by-partlabel/disk-games-games";
+    "cryptroot" = {
+      device = "/dev/disk/by-partlabel/disk-main-root";
+      allowDiscards = true;
+      crypttabExtraOpts = unlockOpts.${config.features.encryption.unlockMethod};
+    };
+    "cryptgames" = {
+      device = "/dev/disk/by-partlabel/disk-games-games";
+      allowDiscards = true;
+      crypttabExtraOpts = unlockOpts.${config.features.encryption.unlockMethod};
+    };
   };
 
   # On FIDO2 timeout/failure: fall back to password prompt instead of rebooting.
