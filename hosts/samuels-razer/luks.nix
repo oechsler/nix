@@ -4,9 +4,9 @@
 # - cryptroot: System partition (root, home, nix, persist)
 #
 # Unlock method:
-#   features.encryption.unlockMethod = "yubikey"  → fido2-device=auto (YubiKey FIDO2 touch at boot)
-#   features.encryption.unlockMethod = "tpm2"     → tpm2-device=auto  (TPM2 auto-unlock, default)
-#   features.encryption.unlockMethod = "password" → prompt for LUKS passphrase
+#   features.encryption.unlockMethod = "yubikey"  → FIDO2 touch at boot
+#   features.encryption.unlockMethod = "tpm2"     → TPM2 auto-unlock
+#   features.encryption.unlockMethod = "password" → LUKS passphrase prompt
 #
 # Setup:
 #   YubiKey: yubikey-luks-init
@@ -25,20 +25,15 @@ in
     device = "/dev/disk/by-partlabel/disk-main-root";
     allowDiscards = true;
     crypttabExtraOpts = [ "tries=0" ];
+    fido2 = lib.mkIf (method == "yubikey") {
+      enable = true;
+      credential = "auto";
+      passwordLessMode = false;
+    };
+    tpm2 = lib.mkIf (method == "tpm2") {
+      enable = true;
+    };
   };
-
-  boot.initrd.systemd.luks.devices."cryptroot" = lib.mkMerge [
-    (lib.mkIf (method == "yubikey") {
-      fido2 = {
-        enable = true;
-        device = "auto";
-        credential = "auto";
-      };
-    })
-    (lib.mkIf (method == "tpm2") {
-      tpm2.enable = true;
-    })
-  ];
 
   # On failure: fall back to password prompt instead of rebooting.
   boot.initrd.systemd.services."systemd-cryptsetup@cryptroot" = {
