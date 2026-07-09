@@ -64,7 +64,7 @@ let
       # missing, so this is safe to call before keys are generated.
       info "Rebuilding system to activate Secure Boot configuration..."
       echo ""
-      "$REPO_DIR/install.sh" --yes
+      "$REPO_DIR/install.sh" --yes --quiet
       echo ""
 
       reboot_to_uefi() {

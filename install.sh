@@ -34,6 +34,7 @@ DO_FORMAT=false
 DO_INSTALL=false
 DO_POST_INSTALL=false
 SKIP_TOTP=false
+QUIET_UPGRADE=false
 ORIGINAL_ARGS=("$@")
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 # When invoked via PATH (not from the repo directory), resolve the repo location
@@ -93,6 +94,7 @@ while [[ $# -gt 0 ]]; do
     -s|--ssh-key)        SSH_KEY="$2"; shift 2 ;;
     -p|--luks-password)  LUKS_PASSWORD="$2"; shift 2 ;;
     --skip-totp)         SKIP_TOTP=true; shift ;;
+    --quiet)             QUIET_UPGRADE=true; shift ;;
     --keyboard)          KEYBOARD_OVERRIDE="$2"; shift 2 ;;
     -y|--yes)            YES=true; shift ;;
     --dry-run)           DRY_RUN=true; shift ;;
@@ -1215,6 +1217,8 @@ phase_upgrade() {
 
   echo ""
   success "System upgraded."
+
+  [[ "$QUIET_UPGRADE" == "true" ]] && return
 
   echo ""
   echo -e "${BOLD}============================================${RESET}"
