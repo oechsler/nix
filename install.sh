@@ -735,7 +735,9 @@ setup_yubikey() {
   echo ""
 
   local credentials
-  credentials=$(nix-shell -p pam_u2f --run "pamu2fcfg -u $CONFIG_USERNAME")
+  # Pass the target hostname as origin so credentials work on the installed system.
+  # pam_u2f uses pam://$hostname as origin by default — must match at registration time.
+  credentials=$(nix-shell -p pam_u2f --run "pamu2fcfg -u $CONFIG_USERNAME -o pam://$HOST -i pam://$HOST")
   if [[ -z "$credentials" ]]; then
     return 1
   fi
