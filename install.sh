@@ -235,7 +235,6 @@ phase_validate() {
   IS_LIVE=false
   [[ "$root_fstype" == "tmpfs" ]] && IS_LIVE=true
 
-
   command -v nix &>/dev/null || error "Nix is not available."
 
   export NIX_CONFIG="experimental-features = nix-command flakes
@@ -369,14 +368,19 @@ phase_detect_features() {
     nix profile install nixpkgs#jq 2>/dev/null || nix-env -iA nixos.jq 2>/dev/null
   fi
 
-  read -r FEAT_ENCRYPTION FEAT_IMPERMANENCE PERSIST_PREFIX FEAT_TOTP \
-          FEAT_YUBIKEY FEAT_YUBIKEY_LUKS FEAT_SECURE_BOOT FEAT_DESKTOP FEAT_WM FEAT_SERVER \
-          CONFIG_USERNAME CONFIG_PASSWORD_LOCKED CONFIG_KEYBOARD \
-    < <(echo "$json" | jq -r '[
-      .encryption, .impermanence, .persistPrefix, .totp,
-      .yubikey, .yubikeyLuks, .secureBoot, .desktop, .wm, .server, .userName,
-      .passwordLocked, .keyboard
-    ] | @tsv')
+  FEAT_ENCRYPTION=$(echo "$json"      | jq -r '.encryption')
+  FEAT_IMPERMANENCE=$(echo "$json"    | jq -r '.impermanence')
+  PERSIST_PREFIX=$(echo "$json"       | jq -r '.persistPrefix')
+  FEAT_TOTP=$(echo "$json"            | jq -r '.totp')
+  FEAT_YUBIKEY=$(echo "$json"         | jq -r '.yubikey')
+  FEAT_YUBIKEY_LUKS=$(echo "$json"    | jq -r '.yubikeyLuks')
+  FEAT_SECURE_BOOT=$(echo "$json"     | jq -r '.secureBoot')
+  FEAT_DESKTOP=$(echo "$json"         | jq -r '.desktop')
+  FEAT_WM=$(echo "$json"              | jq -r '.wm')
+  FEAT_SERVER=$(echo "$json"          | jq -r '.server')
+  CONFIG_USERNAME=$(echo "$json"      | jq -r '.userName')
+  CONFIG_PASSWORD_LOCKED=$(echo "$json" | jq -r '.passwordLocked')
+  CONFIG_KEYBOARD=$(echo "$json"      | jq -r '.keyboard')
 
   # Parse LUKS device paths into array
   mapfile -t LUKS_DEVICES < <(echo "$json" | jq -r '.luksDevices[]')
@@ -904,22 +908,25 @@ phase_complete() {
   local post_boot_tasks=()
   local tpm_deferred=false
 
-  if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
-    post_boot_tasks+=("secure-boot-init    — sign boot files and enroll Secure Boot keys")
-  fi
-  if [[ "$FEAT_YUBIKEY_LUKS" == "true" && "$FEAT_ENCRYPTION" == "true" ]]; then
-    post_boot_tasks+=("yubikey-luks-init   — enroll YubiKey FIDO2 for LUKS unlock at boot")
-  fi
-  if [[ "$FEAT_YUBIKEY" == "true" ]]; then
-    post_boot_tasks+=("yubikey-init        — register YubiKey for sudo / SSH")
-  fi
-  # TOTP deferred when skipped interactively or via --skip-totp / -y
+  # Build post-boot task list. Order matters: Secure Boot must run before TPM
+  # because PCR 7 seals against the active Secure Boot state.
   local oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"
-  if [[ "$FEAT_TOTP" == "true" && ! -f "$oath_file" ]]; then
+
+  [[ "$FEAT_SECURE_BOOT" == "true" ]] && \
+    post_boot_tasks+=("secure-boot-init    — sign boot files and enroll Secure Boot keys")
+
+  [[ "$FEAT_YUBIKEY_LUKS" == "true" && "$FEAT_ENCRYPTION" == "true" ]] && \
+    post_boot_tasks+=("yubikey-luks-init   — enroll YubiKey FIDO2 for LUKS unlock at boot")
+
+  [[ "$FEAT_YUBIKEY" == "true" ]] && \
+    post_boot_tasks+=("yubikey-init        — register YubiKey for sudo / SSH")
+
+  # TOTP: only shown when not already configured (skipped via --skip-totp or -y)
+  [[ "$FEAT_TOTP" == "true" && ! -f "$oath_file" ]] && \
     post_boot_tasks+=("totp-init           — configure TOTP 2FA for sudo / SSH")
-  fi
-  # TPM was enrolled during install only if Secure Boot is disabled.
-  # With Secure Boot: deferred so the seal is made against the final SB state (PCR 7).
+
+  # TPM: deferred when Secure Boot is enabled so the seal is made against the
+  # final SB state (PCR 7). Enrolling before SB is active produces a broken seal.
   if [[ "$TPM_ENROLLED" != "true" && "$FEAT_ENCRYPTION" == "true" && \
         "$FEAT_YUBIKEY_LUKS" != "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
     tpm_deferred=true
@@ -1146,15 +1153,19 @@ phase_upgrade() {
     [[ -f "$oath_file" ]] && grep -q "^HOTP.*${invoking_username}" "$oath_file" 2>/dev/null && totp_enrolled=true
   fi
 
-  # Collect pending tasks
+  # Collect pending tasks (only features that are enabled but not yet set up)
   local pending_tasks=()
-  [[ "$feat_sb" == "true" && "$sb_active" != "true" ]] && \
+
+  [[ "$feat_sb" == "true"           && "$sb_active" != "true"            ]] && \
     pending_tasks+=("secure-boot-init    — sign boot files and enroll Secure Boot keys")
+
   [[ "$feat_yubikey_luks" == "true" && "$yubikey_luks_enrolled" != "true" ]] && \
     pending_tasks+=("yubikey-luks-init   — enroll YubiKey FIDO2 for LUKS unlock at boot")
-  [[ "$feat_yubikey" == "true" && "$yubikey_pam_enrolled" != "true" ]] && \
+
+  [[ "$feat_yubikey" == "true"      && "$yubikey_pam_enrolled" != "true"  ]] && \
     pending_tasks+=("yubikey-init        — register YubiKey for sudo / SSH")
-  [[ "$feat_totp" == "true" && "$totp_enrolled" != "true" ]] && \
+
+  [[ "$feat_totp" == "true"         && "$totp_enrolled" != "true"         ]] && \
     pending_tasks+=("totp-init           — configure TOTP 2FA for sudo / SSH")
 
   echo ""
