@@ -35,8 +35,13 @@ error()   { echo -e "${RED}ERROR:${RESET} $*" >&2; exit 1; }
 info "NixOS Quickstart"
 echo ""
 
+# Self-elevate when run as a file; error when piped (curl | bash needs sudo explicitly)
 if [[ $EUID -ne 0 ]]; then
-  exec sudo "$0" "$@"
+  if [[ -f "$0" ]]; then
+    exec sudo "$0" "$@"
+  else
+    error "Must run as root. Use: curl -sL ... | sudo bash"
+  fi
 fi
 command -v nixos-version &>/dev/null || error "Not a NixOS system."
 
