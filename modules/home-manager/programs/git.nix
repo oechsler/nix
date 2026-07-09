@@ -75,7 +75,6 @@
         "*~"
         ".DS_Store"
         "AGENTS.md"
-        "CLAUDE.md"
         "VAULT.md"
         ".opencode/opencode.json"
       ];

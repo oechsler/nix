@@ -94,7 +94,6 @@
       # Tools
       grug-far-nvim
       opencode-nvim
-      claudecode-nvim
     ];
 
     #---------------------------
@@ -266,14 +265,6 @@
       require("grug-far").setup()
 
       --------------------------------------------------------
-      -- Claude Code
-      --------------------------------------------------------
-      require("claudecode").setup({
-        terminal = { split_side = "right", split_width_percentage = 0.33 },
-        diff_opts = { auto_close_on_accept = true, open_in_current_tab = true },
-      })
-
-      --------------------------------------------------------
       -- opencode
       --------------------------------------------------------
       vim.o.autoread = true  -- required for buffer reload after edits
@@ -281,7 +272,6 @@
 
       require("which-key").setup()
       require("which-key").add({
-        { "<leader>a", group = "Claude Code", icon = "󰚩" },
         { "<leader>b", group = "Buffers", icon = "󰓩" },
         { "<leader>o", group = "Open Code" },
         { "<leader>c", group = "Code" },
@@ -428,16 +418,6 @@
       vim.keymap.set({ "n", "v" }, "<leader>cf", function()
         require("conform").format({ async = true, lsp_format = "fallback" })
       end, { desc = "Format" })
-
-      -- Claude Code
-      vim.keymap.set("n", "<leader>at", "<cmd>ClaudeCode<cr>",           { desc = "Toggle" })
-      vim.keymap.set("n", "<leader>af", "<cmd>ClaudeCodeFocus<cr>",      { desc = "Focus" })
-      vim.keymap.set("n", "<leader>an", "<cmd>ClaudeCode<cr>",           { desc = "New session" })
-      vim.keymap.set("n", "<leader>ar", "<cmd>ClaudeCode --resume<cr>",  { desc = "Resume session" })
-      vim.keymap.set("n", "<leader>ab", "<cmd>ClaudeCodeAdd %<cr>",      { desc = "Add buffer" })
-      vim.keymap.set("v", "<leader>as", "<cmd>ClaudeCodeSend<cr>",       { desc = "Send selection" })
-      vim.keymap.set("n", "<leader>aa", "<cmd>ClaudeCodeDiffAccept<cr>", { desc = "Accept diff" })
-      vim.keymap.set("n", "<leader>ad", "<cmd>ClaudeCodeDiffReject<cr>", { desc = "Reject diff" })
 
       -- Open Code
       vim.keymap.set({ "n", "t" }, "<leader>ot", function() require("opencode").toggle() end,                                        { desc = "Toggle" })

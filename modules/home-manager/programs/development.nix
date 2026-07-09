@@ -5,7 +5,7 @@
 # 1. CLI Tools (features.development.enable = true)
 #    - Languages: Go, Rust, Java, Node.js
 #    - Utilities: cloc, distrobox
-#    - opencode (AI coding agent)
+#    - opencode (AI coding agent) with API keys from SOPS
 #    - Useful on development machines
 #
 # 2. Kubernetes Tools (features.development.enable = true)
@@ -16,9 +16,15 @@
 #    - DBeaver (Database GUI)
 #    - Only useful on desktops
 #
+# opencode API keys are stored as SOPS secrets:
+#   opencode/mistral/api-key
+#   opencode/openai/api-key
+# opencode reads them via {file:/run/secrets/...} at runtime — no env vars needed.
+#
 # Server mode disables development tools.
 
 {
+  config,
   pkgs,
   features,
   lib,
@@ -74,20 +80,21 @@
 
     # CLI AI Tools (useful on servers and desktops)
     (lib.mkIf features.development.enable {
-      home.packages = with pkgs; [ claude-code ];
+      # API keys — decrypted by sops at boot, read by opencode via {file:...} syntax
+      sops.secrets."opencode/mistral/api-key" = { };
+      sops.secrets."opencode/openai/api-key" = { };
 
       programs.opencode = {
         enable = true;
 
         settings = {
           # Primary: Mistral (Codestral for code, Mistral Small for light tasks)
-          # Budget: OpenCode Go (DeepSeek)
-          # Fallback: OpenAI (ChatGPT Plus), Anthropic (Claude Code Auth)
+          # Budget: OpenCode Go (DeepSeek, no API key needed)
+          # Fallback: OpenAI (ChatGPT Plus)
           enabled_providers = [
             "mistral"
             "opencode-go"
             "openai"
-            "anthropic"
           ];
 
           model = "mistral/mistral-medium-latest";
@@ -96,18 +103,21 @@
           # Other models switchable via /models:
           #   opencode-go/deepseek-v4-pro
           #   openai/gpt-5.3-codex
-          #   anthropic/claude-sonnet-4-6
 
           plugin = [
-            "opencode-claude-auth"
             "opencode-openai-codex-auth"
           ];
 
           provider = {
             opencode-go.options.timeout = 600000;
-            openai.options.timeout = 600000;
-            anthropic.options.timeout = 600000;
-            mistral.options.timeout = 600000;
+            mistral.options = {
+              timeout = 600000;
+              apiKey = "{file:${config.sops.secrets."opencode/mistral/api-key".path}}";
+            };
+            openai.options = {
+              timeout = 600000;
+              apiKey = "{file:${config.sops.secrets."opencode/openai/api-key".path}}";
+            };
           };
         };
       };
