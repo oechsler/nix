@@ -56,7 +56,6 @@ let
         exit 1
       fi
 
-
       reboot_to_uefi() {
         echo ""
         read -rp "    Reboot into UEFI firmware setup now? [Y/n]: " confirm
@@ -88,13 +87,12 @@ let
         keys_enrolled=true
       fi
 
-      echo -e "  ''${BOLD}Secure Boot:''${RESET}    ''${sb_enabled:-unknown}"
-      echo -e "  ''${BOLD}Setup Mode:''${RESET}     ''${setup_mode:-unknown}"
-      echo -e "  ''${BOLD}Keys generated:''${RESET} $([ "$keys_exist" = true ] && echo "yes" || echo "no")"
-      echo -e "  ''${BOLD}Keys enrolled:''${RESET}  $([ "$keys_enrolled" = true ] && echo "yes" || echo "no")"
-      if [[ "$ASUS_BOARD" == "true" ]]; then
-        echo -e "  ''${BOLD}Board vendor:''${RESET}   ASUS (non-standard Setup Mode — Custom Mode required)"
-      fi
+      echo -e "    Secure Boot:    ''${sb_enabled:-unknown}"
+      echo -e "    Setup Mode:     ''${setup_mode:-unknown}"
+      echo -e "    Keys generated: $([ "$keys_exist" = true ] && echo "yes" || echo "no")"
+      echo -e "    Keys enrolled:  $([ "$keys_enrolled" = true ] && echo "yes" || echo "no")"
+      [[ "$ASUS_BOARD" == "true" ]] && \
+        echo -e "    Board:          ''${DIM}ASUS (non-standard Setup Mode)''${RESET}"
       echo ""
 
       #--- Already fully set up? ---
@@ -159,12 +157,13 @@ let
           sbctl enroll-keys --partial PK  --ignore-immutable --yes-this-might-brick-my-machine
           echo ""
           success "Keys enrolled."
-          info "Now reboot into UEFI and activate Secure Boot:"
-          info "  OS Type:           Windows UEFI mode"
-          info "  Secure Boot Mode:  Standard  (or keep Custom)"
-          info "  → Secure Boot state will show: On"
-          info ""
-          info "Then run: sudo secure-boot-init  (to verify signatures)"
+          echo ""
+          warn "Now reboot into UEFI and activate Secure Boot:"
+          warn "  OS Type:           Windows UEFI mode"
+          warn "  Secure Boot Mode:  Standard  (or keep Custom)"
+          warn "  → Secure Boot state will show: On"
+          echo ""
+          warn "Then run: sudo secure-boot-init  (to verify signatures)"
           reboot_to_uefi
         elif [[ "$setup_mode" != "yes" ]]; then
           step 3 3 "Enrolling keys into firmware..."
@@ -185,15 +184,16 @@ let
           sbctl enroll-keys --microsoft --firmware-builtin
           echo ""
           success "Keys enrolled."
-          info "Reboot into UEFI and enable Secure Boot."
-          info "Then run: sudo secure-boot-init (to verify)"
+          echo ""
+          warn "Reboot into UEFI and enable Secure Boot."
+          warn "Then run: sudo secure-boot-init  (to verify signatures)"
           reboot_to_uefi
         fi
       else
         step 3 3 "Keys already enrolled."
         echo ""
-        info "Enable Secure Boot in UEFI/BIOS if not already done."
-        info "Then run: sudo secure-boot-init (to verify)"
+        warn "Enable Secure Boot in UEFI/BIOS if not already done."
+        warn "Then run: sudo secure-boot-init  (to verify signatures)"
         reboot_to_uefi
       fi
       echo ""
