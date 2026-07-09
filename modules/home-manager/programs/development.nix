@@ -81,8 +81,9 @@
     # CLI AI Tools (useful on servers and desktops)
     (lib.mkIf features.development.enable {
       # API keys — decrypted by sops at boot, read by opencode via {file:...} syntax
+      # openai uses OAuth (opencode-openai-codex-auth plugin) — no API key needed
       sops.secrets."opencode/mistral/api-key" = { };
-      sops.secrets."opencode/openai/api-key" = { };
+      sops.secrets."opencode/opencode-go/api-key" = { };
 
       programs.opencode = {
         enable = true;
@@ -109,15 +110,16 @@
           ];
 
           provider = {
-            opencode-go.options.timeout = 600000;
+            opencode-go.options = {
+              timeout = 600000;
+              apiKey = "{file:${config.sops.secrets."opencode/opencode-go/api-key".path}}";
+            };
             mistral.options = {
               timeout = 600000;
               apiKey = "{file:${config.sops.secrets."opencode/mistral/api-key".path}}";
             };
-            openai.options = {
-              timeout = 600000;
-              apiKey = "{file:${config.sops.secrets."opencode/openai/api-key".path}}";
-            };
+            # openai: no apiKey — authenticated via opencode-openai-codex-auth plugin (OAuth)
+            openai.options.timeout = 600000;
           };
         };
       };
