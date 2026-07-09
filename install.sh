@@ -1182,6 +1182,9 @@ phase_upgrade() {
 
   local sb_config_enabled
   sb_config_enabled="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.config.features.secureBoot.enable" 2>/dev/null || echo "false")"
+  # Debug: show what we detected so failures are diagnosable
+  success "Secure Boot in config: $sb_config_enabled — keys on disk: $sb_keys_exist"
+  echo ""
 
   if [[ "$sb_config_enabled" == "true" && "$sb_keys_exist" != "true" ]]; then
     warn "Secure Boot keys not yet generated — disabling lanzaboote for this rebuild."
