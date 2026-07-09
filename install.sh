@@ -1232,8 +1232,6 @@ main() {
     local sb_enabled
     sb_enabled="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.config.features.secureBoot.enable" 2>/dev/null || echo "false")"
 
-    info "System Upgrade"
-    echo ""
     echo -e "    ${DIM}Pulls the latest configuration from git and rebuilds the system.${RESET}"
     echo -e "    ${DIM}Activates immediately — no reboot required.${RESET}"
     echo ""
