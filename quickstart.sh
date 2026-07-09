@@ -17,6 +17,8 @@ set -euo pipefail
 REPO_URL="${REPO:-https://github.com/oechsler/nix.git}"
 BRANCH="${BRANCH:-main}"
 CLONE_DIR="/tmp/nix-config"
+USER_HOME="$(getent passwd "${SUDO_USER:-$USER}" | cut -d: -f6)"
+INSTALLED_REPO="$USER_HOME/repos/nix"
 
 if [[ -t 1 ]]; then
   RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[0;33m'
@@ -33,8 +35,22 @@ error()   { echo -e "${RED}ERROR:${RESET} $*" >&2; exit 1; }
 info "NixOS Quickstart"
 echo ""
 
-[[ $EUID -eq 0 ]] || error "Must run as root. Log in as root on the NixOS ISO."
+[[ $EUID -eq 0 ]] || error "Must run as root."
 command -v nixos-version &>/dev/null || error "Not a NixOS system."
+
+# On an installed system: use the existing repo instead of cloning
+if [[ -f "$INSTALLED_REPO/flake.nix" ]]; then
+  success "Found existing repo at $INSTALLED_REPO"
+
+  if [[ ! -t 0 ]]; then
+    exec < /dev/tty || error "Cannot reopen terminal for interactive input."
+  fi
+
+  echo ""
+  info "Starting installer..."
+  echo ""
+  exec bash "$INSTALLED_REPO/install.sh" "$@"
+fi
 
 if ! curl -sf --max-time 5 https://github.com > /dev/null 2>&1; then
   error "No network. Connect to the internet first (nmtui or iwctl)."
