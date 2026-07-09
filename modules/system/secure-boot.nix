@@ -55,38 +55,27 @@ let
         exit 0
       fi
 
-      #--- Step 1: activate lanzaboote ---
-      if [[ "$lanza_active" -eq 0 ]]; then
-        echo "==> Step 1/4: Activating lanzaboote..."
-        echo ""
-        nixos-rebuild switch --flake "$FLAKE"
-        echo ""
-      else
-        echo "    Step 1/4: lanzaboote already active."
-        echo ""
-      fi
-
-      #--- Step 2: generate keys ---
+      #--- Step 1: generate keys first (lanzaboote needs them before rebuild) ---
       if [[ "$keys_exist" != true ]]; then
-        echo "==> Step 2/4: Generating Secure Boot keys..."
+        echo "==> Step 1/4: Generating Secure Boot keys..."
         echo ""
         sbctl create-keys
         echo ""
       else
-        echo "    Step 2/4: Keys already present."
+        echo "    Step 1/4: Keys already present."
         echo ""
       fi
 
-      #--- Step 3: sign boot entries ---
-      echo "==> Step 3/4: Signing boot entries..."
+      #--- Step 2: activate lanzaboote + sign boot entries ---
+      echo "==> Step 2/4: Activating lanzaboote and signing boot entries..."
       echo ""
       nixos-rebuild switch --flake "$FLAKE"
       echo ""
 
-      #--- Step 4: enroll keys (requires Setup Mode) ---
+      #--- Step 3: enroll keys (requires Setup Mode) ---
       if [[ "$keys_enrolled" != true ]]; then
         if [[ "$setup_mode" != "yes" && "$setup_mode" != "true" && "$setup_mode" != "1" ]]; then
-          echo "!! Step 4/4: UEFI is not in Setup Mode — cannot enroll keys."
+          echo "!! Step 3/3: UEFI is not in Setup Mode — cannot enroll keys."
           echo ""
           echo "   To continue:"
           echo "   1. Reboot into UEFI/BIOS firmware setup"
@@ -96,14 +85,14 @@ let
           echo "   5. Run: sudo secure-boot-init"
           exit 1
         fi
-        echo "==> Step 4/4: Enrolling keys into firmware..."
+        echo "==> Step 3/3: Enrolling keys into firmware..."
         echo ""
         sbctl enroll-keys --microsoft
         echo ""
         echo "    Keys enrolled. Reboot and enable Secure Boot in UEFI/BIOS."
         echo "    Then run: sudo secure-boot-init (to verify)"
       else
-        echo "    Step 4/4: Keys already enrolled."
+        echo "    Step 3/3: Keys already enrolled."
         echo ""
         echo "    Enable Secure Boot in UEFI/BIOS if not already done."
         echo "    Then run: sudo secure-boot-init (to verify)"
