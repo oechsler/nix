@@ -35,14 +35,15 @@ let
       echo -e "''${DIM}Sign boot files and enroll keys into firmware''${RESET}"
       echo ""
 
-      # Guard: refuse to run if Secure Boot is not enabled in the NixOS config
-      # (value is baked in at build time by Nix)
-      SECURE_BOOT_ENABLED=${lib.boolToString cfg.enable}
-      if [[ "$SECURE_BOOT_ENABLED" != "true" ]]; then
+      FLAKE="$(eval echo ~"''${SUDO_USER:-''${USER}}")/repos/nix#$(hostname)"
+
+      # Guard: refuse to run if Secure Boot is not enabled in the flake config.
+      # Read at runtime from the flake so the install-time override (mkForce false)
+      # does not permanently disable this script on the installed system.
+      sb_in_config=$(nix eval --raw "$FLAKE.config.features.secureBoot.enable" 2>/dev/null || echo "false")
+      if [[ "$sb_in_config" != "true" ]]; then
         error "features.secureBoot.enable is not set for this host. Enable it in hosts/$(hostname)/configuration.nix and rebuild first."
       fi
-
-      FLAKE="$(eval echo ~"''${SUDO_USER:-''${USER}}")/repos/nix#$(hostname)"
 
       reboot_to_uefi() {
         echo ""
