@@ -92,7 +92,7 @@ let
       sb_enabled=$(echo "$bootctl_out" | awk '/Secure Boot:/{print $3}')
       setup_mode=$(echo "$bootctl_out" | awk '/Setup Mode:/{print $3}')
       keys_exist=false
-      [[ -f /var/lib/sbctl/keys/db/db.pem ]] && keys_exist=true
+      [[ -f /var/lib/sbctl/keys/db/db.pem && -f /var/lib/sbctl/keys/db/db.key ]] && keys_exist=true
       keys_enrolled=false
       if sbctl status 2>/dev/null | grep -q "Secure Boot:.*true\|Enrolled keys:.*true\|enrolled"; then
         keys_enrolled=true
