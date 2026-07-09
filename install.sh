@@ -1182,7 +1182,7 @@ phase_upgrade() {
   # If secure-boot-init hasn't run yet, disable lanzaboote for this rebuild
   # so the system can still be upgraded. secure-boot-init will re-enable it.
   local sb_keys_exist=false
-  [[ -f /var/lib/sbctl/keys/db/db.pem ]] && sb_keys_exist=true
+  [[ -f /var/lib/sbctl/keys/db/db.pem && -f /var/lib/sbctl/keys/db/db.key ]] && sb_keys_exist=true
 
   # Check if secureBoot is enabled by grepping the host config directly —
   # more reliable than nix eval which can fail for various reasons on an
