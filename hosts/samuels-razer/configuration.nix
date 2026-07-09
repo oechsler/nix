@@ -51,7 +51,11 @@
   ];
 
   features = {
+    kernel = "cachyos-v3"; # Intel Core i7-8550U (Kaby Lake-R) — x86_64-v3 optimized build
+    # secureBoot.enable is NOT set — Razer BIOS does not reliably support custom key enrollment.
+    # TPM-backed LUKS provides the primary boot-time security on this machine.
     encryption.unlockMethod = "yubikey";
+    hardware.gpu = "intel"; # Intel UHD Graphics 620
     desktop = {
       wm = "kde";
       login = "greeter";

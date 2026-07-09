@@ -92,35 +92,37 @@
   # Configuration
   #===========================
 
-  config.fonts = {
+  config = lib.mkIf config.features.desktop.enable {
+    fonts = {
 
-    #---------------------------
-    # 1. Font Packages
-    #---------------------------
-    packages = with pkgs; [
-      # Nerd Fonts (patched with icons and glyphs)
-      nerd-fonts.jetbrains-mono # Primary monospace font
-      nerd-fonts.symbols-only # Icon font (used by waybar, etc.)
+      #---------------------------
+      # 1. Font Packages
+      #---------------------------
+      packages = with pkgs; [
+        # Nerd Fonts (patched with icons and glyphs)
+        nerd-fonts.jetbrains-mono # Primary monospace font
+        nerd-fonts.symbols-only # Icon font (used by waybar, etc.)
 
-      # Noto Fonts (Google's universal font family)
-      noto-fonts # Sans-serif and serif fonts
-      noto-fonts-cjk-sans # CJK (Chinese, Japanese, Korean) support
-      noto-fonts-color-emoji # Color emoji support
-    ];
+        # Noto Fonts (Google's universal font family)
+        noto-fonts # Sans-serif and serif fonts
+        noto-fonts-cjk-sans # CJK (Chinese, Japanese, Korean) support
+        noto-fonts-color-emoji # Color emoji support
+      ];
 
-    #---------------------------
-    # 2. Fontconfig Defaults
-    #---------------------------
-    fontconfig = {
-      enable = true;
-      defaultFonts = {
-        monospace = [
-          config.fonts.defaults.monospace
-          "Noto Sans Mono"
-        ];
-        sansSerif = [ config.fonts.defaults.sansSerif ];
-        serif = [ config.fonts.defaults.serif ];
-        emoji = [ "Noto Color Emoji" ];
+      #---------------------------
+      # 2. Fontconfig Defaults
+      #---------------------------
+      fontconfig = {
+        enable = true;
+        defaultFonts = {
+          monospace = [
+            config.fonts.defaults.monospace
+            "Noto Sans Mono"
+          ];
+          sansSerif = [ config.fonts.defaults.sansSerif ];
+          serif = [ config.fonts.defaults.serif ];
+          emoji = [ "Noto Color Emoji" ];
+        };
       };
     };
   };

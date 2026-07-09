@@ -18,19 +18,42 @@ REPO_URL="${REPO:-https://github.com/oechsler/nix.git}"
 BRANCH="${BRANCH:-main}"
 CLONE_DIR="/tmp/nix-config"
 USER_HOME="$(getent passwd "${SUDO_USER:-$USER}" | cut -d: -f6)"
-INSTALLED_REPO="$USER_HOME/repos/nix"
 
 if [[ -t 1 ]]; then
   RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[0;33m'
-  BLUE='\033[0;34m' BOLD='\033[1m' RESET='\033[0m'
+  BLUE='\033[0;34m' BOLD='\033[1m' DIM='\033[2m' RESET='\033[0m'
 else
-  RED='' GREEN='' YELLOW='' BLUE='' BOLD='' RESET=''
+  RED='' GREEN='' YELLOW='' BLUE='' BOLD='' DIM='' RESET=''
 fi
 
 info()    { echo -e "${BLUE}==>${RESET} ${BOLD}$*${RESET}"; }
-success() { echo -e "    ${GREEN}$*${RESET}"; }
-warn()    { echo -e "${YELLOW}!!${RESET} $*"; }
-error()   { echo -e "${RED}ERROR:${RESET} $*" >&2; exit 1; }
+success() { echo -e "    ${GREEN}✓${RESET} $*"; }
+warn()    { echo -e "    ${YELLOW}!${RESET} $*"; }
+error()   { echo -e "${RED}Error:${RESET} $*" >&2; exit 1; }
+
+# Resolve the repo path from the running system's nixos-upgrade unit.
+# The flake path is baked in as --flake /path/to/repo#hostname by install.sh.
+# Falls back to asking the user if the unit is absent or disabled.
+find_installed_repo() {
+  local flake_dir
+  flake_dir=$(systemctl show nixos-upgrade.service --property=ExecStart 2>/dev/null \
+    | grep -o -- '--flake [^ ]*' | awk '{print $2}' | sed 's/#.*//' || true)
+  if [[ -n "$flake_dir" && -f "$flake_dir/flake.nix" ]]; then
+    echo "$flake_dir" && return
+  fi
+
+  # nixos-upgrade not configured — ask the user
+  if [[ -t 0 ]]; then
+    warn "Could not resolve repo path from nixos-upgrade.service."
+    read -rp "Path to your NixOS config repo: " flake_dir
+    flake_dir="${flake_dir/#\~/$USER_HOME}"
+    [[ -f "$flake_dir/flake.nix" ]] && echo "$flake_dir" && return
+  fi
+
+  echo ""
+}
+
+INSTALLED_REPO="$(find_installed_repo)"
 
 info "NixOS Quickstart"
 echo ""
@@ -44,17 +67,15 @@ if [[ $EUID -ne 0 ]]; then
   fi
 fi
 command -v nixos-version &>/dev/null || error "Not a NixOS system."
-
-# On an installed system: use the existing repo instead of cloning
+echo ""
+# On an installed system: hand off to install.sh which handles the upgrade flow
 if [[ -f "$INSTALLED_REPO/flake.nix" ]]; then
-  success "Found existing repo at $INSTALLED_REPO"
+  success "Existing installation found at $INSTALLED_REPO"
 
   if [[ ! -t 0 ]]; then
     exec < /dev/tty || error "Cannot reopen terminal for interactive input."
   fi
 
-  echo ""
-  info "Starting installer..."
   echo ""
   exec bash "$INSTALLED_REPO/install.sh" "$@"
 fi

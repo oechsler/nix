@@ -97,18 +97,32 @@ let
         exec sudo "$0" "$@"
       fi
 
+      RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[0;33m'
+      BLUE='\033[0;34m' BOLD='\033[1m' DIM='\033[2m' RESET='\033[0m'
+
+      info()    { echo -e "''${BLUE}==>''${RESET} ''${BOLD}$*''${RESET}"; }
+      success() { echo -e "    ''${GREEN}✓''${RESET} $*"; }
+      warn()    { echo -e "    ''${YELLOW}!''${RESET} $*"; }
+      error()   { echo -e "''${RED}Error:''${RESET} $*" >&2; exit 1; }
+      step()    { echo -e "\n''${BOLD}[$1/$2]''${RESET} $3"; }
+
+      echo ""
+      echo -e "''${BOLD}TOTP Setup''${RESET}"
+      echo -e "''${DIM}Configure time-based one-time password (2FA) for sudo and SSH''${RESET}"
+      echo ""
+
       OATH_FILE="${oathFile}"
       USERNAME="''${SUDO_USER:-$USER}"
       HOSTNAME="$(hostname)"
 
       # Check for existing secret
       if [[ -f "$OATH_FILE" ]] && grep -q "HOTP/T30/6 $USERNAME " "$OATH_FILE" 2>/dev/null; then
-        echo "TOTP secret exists for $USERNAME."
+        info "Current status: enrolled"
         echo ""
         echo "  [r] Re-enroll (generate new secret)"
         echo "  [q] Quit"
       else
-        echo "No TOTP secret for $USERNAME."
+        info "Current status: not enrolled"
         echo ""
         echo "  [e] Enroll (generate secret)"
         echo "  [q] Quit"
@@ -129,17 +143,17 @@ let
       # Convert to base32 for QR code / authenticator app
       SECRET_B32=$(printf '%s' "$SECRET_HEX" | sed 's/../\\x&/g' | xargs -0 printf '%b' | base32 | tr -d '\n')
 
-      # Write oath usersfile
+      # Write oath usersfile — create with restricted permissions atomically
       # Format: HOTP/T30/6 = TOTP with 30s period and 6 digits
+      install -m 600 /dev/null "$OATH_FILE"
       echo "HOTP/T30/6 $USERNAME - $SECRET_HEX" > "$OATH_FILE"
-      chmod 600 "$OATH_FILE"
 
       echo ""
-      echo "Scan this QR code with your authenticator app:"
+      info "Scan this QR code with your authenticator app:"
       echo ""
       qrencode -t ANSIUTF8 "otpauth://totp/NixOS:''${USERNAME}@''${HOSTNAME}?secret=''${SECRET_B32}&issuer=NixOS"
       echo ""
-      echo "Backup secret (base32): $SECRET_B32"
+      echo -e "  ''${BOLD}Backup secret (base32):''${RESET} $SECRET_B32"
       echo ""
 
       # Verify OTP before confirming
@@ -151,18 +165,16 @@ let
           VERIFIED=true
           break
         fi
-        echo "Incorrect. Try again."
+        warn "Incorrect. Try again."
       done
 
       if [[ "$VERIFIED" != "true" ]]; then
-        echo "Verification failed. Removing secret."
         rm -f "$OATH_FILE"
-        exit 1
+        error "Verification failed — secret not saved."
       fi
 
       echo ""
-      echo "TOTP configured for $USERNAME."
-      echo "Run 'sudo nixos-rebuild switch' to activate PAM changes."
+      success "TOTP configured for $USERNAME."
     '';
   };
 
@@ -171,17 +183,31 @@ let
     runtimeInputs = with pkgs; [
       systemd
       gawk
+      coreutils
     ];
     text = ''
       if [[ $EUID -ne 0 ]]; then
         exec sudo "$0" "$@"
       fi
 
+      RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[0;33m'
+      BLUE='\033[0;34m' BOLD='\033[1m' DIM='\033[2m' RESET='\033[0m'
+
+      info()    { echo -e "''${BLUE}==>''${RESET} ''${BOLD}$*''${RESET}"; }
+      success() { echo -e "    ''${GREEN}✓''${RESET} $*"; }
+      warn()    { echo -e "    ''${YELLOW}!''${RESET} $*"; }
+      error()   { echo -e "''${RED}Error:''${RESET} $*" >&2; exit 1; }
+      step()    { echo -e "\n''${BOLD}[$1/$2]''${RESET} $3"; }
+
+      echo ""
+      echo -e "''${BOLD}YubiKey LUKS Setup''${RESET}"
+      echo -e "''${DIM}Enroll YubiKey FIDO2 for encrypted disk unlock at boot''${RESET}"
+      echo ""
+
       DEVICES=(${deviceList})
 
       if [[ ''${#DEVICES[@]} -eq 0 ]]; then
-        echo "Error: No LUKS devices found in NixOS config."
-        exit 1
+        error "No LUKS devices found in NixOS config."
       fi
 
       # List FIDO2 slot numbers on a device
@@ -192,36 +218,55 @@ let
       # Enroll the currently inserted YubiKey on all devices
       do_enroll() {
         echo ""
-        read -rsp "LUKS password: " PASSWORD
+        info "Make sure your YubiKey is inserted before continuing."
+        echo ""
+        read -rsp "Enter LUKS password: " PASSWORD
         echo ""
         PASS_FILE="$(mktemp)"
+        trap 'rm -f "$PASS_FILE"' EXIT
         printf '%s' "$PASSWORD" > "$PASS_FILE"
         chmod 600 "$PASS_FILE"
+
+        ENROLL_OK=true
         for dev in "''${DEVICES[@]}"; do
-          echo "Insert YubiKey and touch it when the light flashes..."
-          if systemd-cryptenroll "$dev" --fido2-device=auto --fido2-with-client-pin=no --unlock-key-file="$PASS_FILE"; then
-            echo "  $(basename "$dev"): OK"
-          else
-            echo "  $(basename "$dev"): FAILED"
+          ATTEMPT=0
+          DEV_OK=false
+          while [[ $ATTEMPT -lt 3 ]]; do
+            ATTEMPT=$(( ATTEMPT + 1 ))
+            info "Touch your YubiKey to enroll on $(basename "$dev") (attempt $ATTEMPT/3)..."
+            if systemd-cryptenroll "$dev" --fido2-device=auto --fido2-with-client-pin=no --unlock-key-file="$PASS_FILE"; then
+              success "$(basename "$dev"): enrolled"
+              DEV_OK=true
+              break
+            else
+              warn "$(basename "$dev"): attempt $ATTEMPT failed"
+            fi
+          done
+          if [[ "$DEV_OK" != "true" ]]; then
+            ENROLL_OK=false
           fi
         done
-        rm -f "$PASS_FILE"
+
+        if [[ "$ENROLL_OK" != "true" ]]; then
+          error "Enrollment failed. Check that your YubiKey is inserted and supports FIDO2."
+        fi
+
         echo ""
-        echo "Done. Plug in your YubiKey and touch it at the next boot."
+        success "YubiKey enrolled on all devices. Touch the key at boot to unlock."
       }
 
       # Wipe a specific slot number (or "fido2" for all) from all devices
       do_wipe_slot() {
         local slot=$1
         for dev in "''${DEVICES[@]}"; do
-          echo "  $(basename "$dev"): wiping slot $slot..."
+          echo -e "    ''${DIM}$(basename "$dev"):''${RESET} wiping slot $slot..."
           systemd-cryptenroll "$dev" --wipe-slot="$slot" || true
         done
       }
 
       #--- Status ---
 
-      echo "LUKS devices (from NixOS config):"
+      info "LUKS devices (from NixOS config):"
       echo ""
       for dev in "''${DEVICES[@]}"; do
         mapfile -t SLOTS < <(get_fido2_slots "$dev")
@@ -229,7 +274,7 @@ let
         if [[ $COUNT -gt 0 ]]; then
           STATUS="$COUNT FIDO2 key(s) enrolled (slots: ''${SLOTS[*]})"
         else
-          STATUS="No FIDO2"
+          STATUS="no FIDO2 keys enrolled"
         fi
         echo "  $(basename "$dev") ($dev) — $STATUS"
       done
@@ -242,9 +287,22 @@ let
       #--- First enrollment or existing-key menu ---
 
       if [[ $SLOT_COUNT -eq 0 ]]; then
-        echo "No FIDO2 keys enrolled. Insert your YubiKey..."
-        do_enroll
+        info "No FIDO2 keys enrolled."
+        echo ""
+        echo "  [e] Enroll YubiKey"
+        echo "  [q] Quit"
+        echo ""
+        read -rp "Choice: " CHOICE
+        case "$CHOICE" in
+          e|E) do_enroll ;;
+          *)
+            echo "Aborted."
+            exit 0
+            ;;
+        esac
       else
+        info "Current status: $SLOT_COUNT FIDO2 key(s) enrolled"
+        echo ""
         echo "  [a] Add key"
         echo "  [d] Delete key"
         echo "  [q] Quit"
@@ -263,7 +321,7 @@ let
                 exit 0
               fi
               do_wipe_slot fido2
-              echo "FIDO2 key removed."
+              success "FIDO2 key removed."
             else
               echo ""
               for i in "''${!REF_SLOTS[@]}"; do
@@ -274,14 +332,13 @@ let
 
               if [[ "$DEL_CHOICE" == "a" || "$DEL_CHOICE" == "A" ]]; then
                 do_wipe_slot fido2
-                echo "All FIDO2 keys removed."
+                success "All FIDO2 keys removed."
               elif [[ "$DEL_CHOICE" =~ ^[0-9]+$ ]] && (( DEL_CHOICE >= 1 && DEL_CHOICE <= SLOT_COUNT )); then
                 SLOT_TO_DEL="''${REF_SLOTS[$((DEL_CHOICE-1))]}"
                 do_wipe_slot "$SLOT_TO_DEL"
-                echo "Key #$DEL_CHOICE (slot $SLOT_TO_DEL) removed. $((SLOT_COUNT-1)) key(s) remaining."
+                success "Key #$DEL_CHOICE (slot $SLOT_TO_DEL) removed. $((SLOT_COUNT-1)) key(s) remaining."
               else
-                echo "Invalid choice. Aborted."
-                exit 1
+                error "Invalid choice."
               fi
             fi
             ;;
@@ -302,6 +359,20 @@ let
         exec sudo "$0" "$@"
       fi
 
+      RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[0;33m'
+      BLUE='\033[0;34m' BOLD='\033[1m' DIM='\033[2m' RESET='\033[0m'
+
+      info()    { echo -e "''${BLUE}==>''${RESET} ''${BOLD}$*''${RESET}"; }
+      success() { echo -e "    ''${GREEN}✓''${RESET} $*"; }
+      warn()    { echo -e "    ''${YELLOW}!''${RESET} $*"; }
+      error()   { echo -e "''${RED}Error:''${RESET} $*" >&2; exit 1; }
+      step()    { echo -e "\n''${BOLD}[$1/$2]''${RESET} $3"; }
+
+      echo ""
+      echo -e "''${BOLD}YubiKey PAM Setup''${RESET}"
+      echo -e "''${DIM}Register a YubiKey for sudo and SSH authentication''${RESET}"
+      echo ""
+
       USERNAME="''${SUDO_USER:-$USER}"
       MAPPINGS_FILE="${u2fFile}"
 
@@ -314,7 +385,7 @@ let
         IFS=':' read -ra CREDS <<< "$CREDS_STR"
         KEY_COUNT=''${#CREDS[@]}
 
-        echo "Found $KEY_COUNT registered YubiKey(s) for $USERNAME:"
+        info "Current status: $KEY_COUNT key(s) registered for $USERNAME"
         echo ""
         for i in "''${!CREDS[@]}"; do
           # Show truncated key handle as identifier
@@ -331,15 +402,14 @@ let
         case "$CHOICE" in
           a|A)
             echo ""
-            echo "Insert your NEW YubiKey and press the button when prompted..."
+            info "Insert your NEW YubiKey and touch the button when it flashes"
             echo ""
             NEW_CRED=$(pamu2fcfg -n)
             if [[ -z "$NEW_CRED" ]]; then
-              echo "Error: Failed to register YubiKey"
-              exit 1
+              error "Failed to read YubiKey. Make sure it is inserted and try again."
             fi
             sed -i "s|^$USERNAME:.*|&:$NEW_CRED|" "$MAPPINGS_FILE"
-            echo "Additional YubiKey registered for $USERNAME."
+            success "YubiKey registered for $USERNAME."
             ;;
           d|D)
             if [[ $KEY_COUNT -eq 1 ]]; then
@@ -349,7 +419,7 @@ let
                 exit 0
               fi
               sed -i "/^$USERNAME:/d" "$MAPPINGS_FILE"
-              echo "All keys removed for $USERNAME."
+              success "All keys removed for $USERNAME."
             else
               echo ""
               echo "Delete which key? (1-$KEY_COUNT, 'a' for all)"
@@ -357,7 +427,7 @@ let
 
               if [[ "$DEL_CHOICE" == "a" || "$DEL_CHOICE" == "A" ]]; then
                 sed -i "/^$USERNAME:/d" "$MAPPINGS_FILE"
-                echo "All keys removed for $USERNAME."
+                success "All keys removed for $USERNAME."
               elif [[ "$DEL_CHOICE" =~ ^[0-9]+$ ]] && (( DEL_CHOICE >= 1 && DEL_CHOICE <= KEY_COUNT )); then
                 # Remove the selected credential and rebuild the line
                 unset "CREDS[$((DEL_CHOICE-1))]"
@@ -370,10 +440,9 @@ let
                   fi
                 done
                 sed -i "s|^$USERNAME:.*|$USERNAME:$REMAINING|" "$MAPPINGS_FILE"
-                echo "Key #$DEL_CHOICE removed. $((KEY_COUNT-1)) key(s) remaining."
+                success "Key #$DEL_CHOICE removed. $((KEY_COUNT-1)) key(s) remaining."
               else
-                echo "Invalid choice. Aborted."
-                exit 1
+                error "Invalid choice."
               fi
             fi
             ;;
@@ -383,19 +452,23 @@ let
             ;;
         esac
       else
-        echo "Insert your YubiKey and press the button when prompted..."
+        info "Current status: no keys registered"
+        echo ""
+        info "Insert your YubiKey and touch the button when it flashes"
         echo ""
         CREDENTIALS=$(pamu2fcfg -u "$USERNAME")
         if [[ -z "$CREDENTIALS" ]]; then
-          echo "Error: Failed to register YubiKey"
-          exit 1
+          error "Failed to read YubiKey. Make sure it is inserted and try again."
+        fi
+        # Create with restricted permissions if not yet existing
+        if [[ ! -f "$MAPPINGS_FILE" ]]; then
+          install -m 600 /dev/null "$MAPPINGS_FILE"
         fi
         echo "$CREDENTIALS" >> "$MAPPINGS_FILE"
-        echo "YubiKey registered for $USERNAME."
+        success "YubiKey registered for $USERNAME."
       fi
 
       chmod 600 "$MAPPINGS_FILE"
-      echo "Run 'sudo nixos-rebuild switch' to activate."
     '';
   };
 in
@@ -516,14 +589,6 @@ in
       # mkDefault: impermanence.nix can override if both are enabled
       boot.initrd.systemd.enable = lib.mkDefault true;
 
-      # USB drivers needed for FIDO2 key detection in initrd.
-      # ucsi_acpi + typec_ucsi ensure USB-C ports are available on AMD/ASUS boards.
-      boot.initrd.availableKernelModules = [
-        "xhci_pci"
-        "usbhid"
-        "ucsi_acpi"
-        "typec_ucsi"
-      ];
 
     })
 

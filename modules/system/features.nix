@@ -178,7 +178,7 @@ in
       gpu = lib.mkOption {
         type = lib.types.nullOr (lib.types.enum [ "amd" "intel" ]);
         default = null;
-        description = "GPU vendor — loads the correct driver and enables VA-API hardware encoding.";
+        description = "GPU vendor — enables graphics support and the correct VA-API driver for hardware video decoding. AMD also gets 32-bit libs when gaming is enabled.";
       };
     };
 

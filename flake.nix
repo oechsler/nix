@@ -109,6 +109,8 @@
   outputs =
     { self, nixpkgs, ... }@inputs:
     let
+      # All hosts in this flake are x86_64-linux.
+      # Adding an aarch64 host would require parameterizing mkHostBase.
       system = "x86_64-linux";
       inherit (nixpkgs) lib;
 

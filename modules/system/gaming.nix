@@ -7,7 +7,8 @@
 # - MangoHud              — in-game FPS/GPU/CPU overlay
 # - ProtonUp-Qt           — GUI to manage Proton-GE versions
 #
-# VA-API hardware encoding is controlled by features.hardware.gpu (not gaming-specific).
+# VA-API drivers are configured in hardware.nix and apply to all desktop systems with a GPU,
+# independent of gaming. gaming.nix only adds 32-bit libs (AMD) and diagnostic tools.
 
 {
   pkgs,
@@ -72,31 +73,21 @@ in
       }
 
       #---------------------------
-      # AMD GPU: VA-API hardware encoding
+      # AMD GPU: 32-bit graphics for Steam Remote Play
       #---------------------------
-      # Mesa radeonsi provides VAAPI via VCN encoder (RDNA2+).
-      # Without this, Steam falls back to software encoding → stream freezes.
       # enable32Bit: Steam's streaming encoder is 32-bit and requires 32-bit GPU drivers.
+      # VA-API drivers and LIBVA_DRIVER_NAME are set in hardware.nix for all GPU users.
       (lib.mkIf (config.features.hardware.gpu == "amd") {
-        environment.systemPackages = [ pkgs.libva-utils ]; # vainfo: verify encoding works
-        hardware.graphics = {
-          enable32Bit = true;
-          extraPackages = [ pkgs.libvdpau-va-gl ];
-        };
-        # Wayland sessions sometimes fail to auto-detect the VA-API driver
-        environment.sessionVariables.LIBVA_DRIVER_NAME = "radeonsi";
+        environment.systemPackages = [ pkgs.libva-utils ]; # vainfo: verify VA-API works
+        hardware.graphics.enable32Bit = true;
       })
 
       #---------------------------
-      # Intel GPU: VA-API hardware encoding
+      # Intel GPU: VA-API tools for gaming/streaming
       #---------------------------
+      # Drivers and LIBVA_DRIVER_NAME are set in hardware.nix.
       (lib.mkIf (config.features.hardware.gpu == "intel") {
         environment.systemPackages = [ pkgs.libva-utils ];
-        hardware.graphics.extraPackages = with pkgs; [
-          intel-media-driver # iHD VA-API driver
-          libvdpau-va-gl
-        ];
-        environment.sessionVariables.LIBVA_DRIVER_NAME = "iHD";
       })
 
     ]

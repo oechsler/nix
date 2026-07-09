@@ -1,9 +1,15 @@
 # Hardware Configuration
 #
 # This module configures hardware-related system services:
+# - GPU graphics + VA-API drivers (when features.hardware.gpu is set)
 # - CoolerControl - Fan control GUI (monitors and controls system fans)
 # - zram swap - Compressed RAM swap (100% of RAM, improves performance)
 # - Printing disabled (no CUPS service)
+#
+# features.hardware.gpu = "amd" | "intel" | null:
+# - Enables hardware.graphics and the correct VA-API driver (radeonsi / iHD).
+# - Applies to all desktop contexts (browser, video players, not just gaming).
+# - gaming.nix adds 32-bit AMD libs on top for Steam Remote Play.
 #
 # zram swap:
 # - Uses 100% of available RAM for compressed swap space
@@ -13,22 +19,46 @@
 { config, pkgs, lib, ... }:
 
 {
-  # Load GPU driver early and enable graphics — needed for Wayland regardless of gaming.
-  # nixos-generate-config may miss newer PCI IDs (RDNA3+/RDNA4) on older live ISOs.
-  boot.initrd.kernelModules = lib.mkIf (config.features.hardware.gpu == "amd") [ "amdgpu" ];
-  hardware.graphics.enable = lib.mkIf (config.features.hardware.gpu != null) true;
+  # Enable graphics support whenever a GPU is configured.
+  # VA-API drivers are set here so hardware video decoding works in all contexts
+  # (browser, video players) — not just when gaming is enabled.
+  hardware.graphics = lib.mkIf (config.features.hardware.gpu != null) {
+    enable = true;
 
-  programs.coolercontrol.enable = true;
+    extraPackages =
+      if config.features.hardware.gpu == "amd" then
+        [ pkgs.libvdpau-va-gl ]
+      else if config.features.hardware.gpu == "intel" then
+        with pkgs; [
+          intel-media-driver # iHD VA-API driver (Broadwell+)
+          libvdpau-va-gl
+        ]
+      else
+        [ ];
+  };
+
+  environment.sessionVariables = lib.mkIf (config.features.hardware.gpu != null) (
+    if config.features.hardware.gpu == "amd" then
+      { LIBVA_DRIVER_NAME = "radeonsi"; }
+    else if config.features.hardware.gpu == "intel" then
+      { LIBVA_DRIVER_NAME = "iHD"; }
+    else
+      { }
+  );
+
   services.printing.enable = false;
   zramSwap = {
     enable = true;
     memoryPercent = 100;
   };
 
+  # CoolerControl: fan control GUI — desktop-only (not needed on servers)
+  programs.coolercontrol.enable = lib.mkDefault (!config.features.server);
+
   # Set CoolerControl password from the same sops secret as the user password.
   # Generates an argon2id hash at boot and writes it to /etc/coolercontrol/.passwd.
   # sops.secrets."user/password" is defined in users.nix (merged automatically).
-  systemd.services.coolercontrol-passwd = {
+  systemd.services.coolercontrol-passwd = lib.mkIf (!config.features.server) {
     description = "Set CoolerControl password from sops secret";
     wantedBy = [ "multi-user.target" ];
     before = [ "coolercontrold.service" ];
@@ -51,7 +81,7 @@
       '';
   };
 
-  systemd.services.coolercontrold = {
+  systemd.services.coolercontrold = lib.mkIf (!config.features.server) {
     after = [ "coolercontrol-passwd.service" ];
     wants = [ "coolercontrol-passwd.service" ];
   };

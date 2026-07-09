@@ -28,24 +28,35 @@ let
         exec sudo "$0" "$@"
       fi
 
+      RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[0;33m'
+      BLUE='\033[0;34m' BOLD='\033[1m' DIM='\033[2m' RESET='\033[0m'
+
+      info()    { echo -e "''${BLUE}==>''${RESET} ''${BOLD}$*''${RESET}"; }
+      success() { echo -e "    ''${GREEN}✓''${RESET} $*"; }
+      warn()    { echo -e "    ''${YELLOW}!''${RESET} $*"; }
+      error()   { echo -e "''${RED}Error:''${RESET} $*" >&2; exit 1; }
+      step()    { echo -e "\n''${BOLD}[$1/$2]''${RESET} $3"; }
+
+      echo ""
+      echo -e "''${BOLD}TPM2 LUKS Setup''${RESET}"
+      echo -e "''${DIM}Enroll TPM2 chip for automatic disk unlock at boot''${RESET}"
+      echo ""
+
       TPM_DEVICE="/dev/tpmrm0"
       DEVICES=(${deviceList})
       PCRS="0+7"
 
       if [[ ! -c "$TPM_DEVICE" ]]; then
-        echo "Error: TPM2 device not found ($TPM_DEVICE)"
-        echo "Make sure your system has a TPM2 chip and it's enabled in BIOS."
-        exit 1
+        error "No TPM2 device found. Make sure TPM2 is enabled in UEFI/BIOS."
       fi
 
       if [[ ''${#DEVICES[@]} -eq 0 ]]; then
-        echo "Error: No LUKS devices found in NixOS config."
-        exit 1
+        error "No LUKS devices found in NixOS config."
       fi
 
       #--- Show status ---
 
-      echo "LUKS devices (from NixOS config):"
+      info "LUKS devices (from NixOS config):"
       echo ""
       for dev in "''${DEVICES[@]}"; do
         NAME=$(basename "$dev")
@@ -53,15 +64,25 @@ let
         if systemd-cryptenroll "$dev" 2>/dev/null | grep -q "tpm2"; then
           STATUS="TPM2 enrolled"
         else
-          STATUS="No TPM2"
+          STATUS="no TPM2 enrolled"
         fi
         echo "  $NAME ($dev) — $STATUS"
       done
 
       #--- Menu ---
 
+      # Check if any device already has a TPM2 slot (for contextual menu label)
+      TPM2_EXISTS=false
+      for dev in "''${DEVICES[@]}"; do
+        systemd-cryptenroll "$dev" 2>/dev/null | grep -q "tpm2" && TPM2_EXISTS=true && break
+      done
+
       echo ""
-      echo "  [e] Enroll TPM2 (wipes existing TPM2 slots first)"
+      if [[ "$TPM2_EXISTS" == "true" ]]; then
+        echo "  [e] Re-enroll TPM2 (wipes existing TPM2 slots first)"
+      else
+        echo "  [e] Enroll TPM2"
+      fi
       echo "  [w] Wipe TPM2 slots"
       echo "  [q] Quit"
       echo ""
@@ -70,26 +91,36 @@ let
       case "$CHOICE" in
         e|E)
           echo ""
-          read -rsp "LUKS password: " PASSWORD
+          read -rsp "Enter LUKS password: " PASSWORD
           echo ""
           PASS_FILE="$(mktemp)"
+          trap 'rm -f "$PASS_FILE"' EXIT
           printf '%s' "$PASSWORD" > "$PASS_FILE"
           chmod 600 "$PASS_FILE"
+          ENROLL_OK=true
           for dev in "''${DEVICES[@]}"; do
             if systemd-cryptenroll "$dev" 2>/dev/null | grep -q "tpm2"; then
-              echo "Wiping existing TPM2 slot on $(basename "$dev")..."
+              echo -e "    ''${DIM}$(basename "$dev"):''${RESET} wiping existing TPM2 slot..."
               systemd-cryptenroll "$dev" --wipe-slot=tpm2 || true
             fi
-            echo "Enrolling $(basename "$dev")..."
+            echo -e "    ''${DIM}$(basename "$dev"):''${RESET} enrolling..."
             if systemd-cryptenroll "$dev" --tpm2-device=auto --tpm2-pcrs="$PCRS" --unlock-key-file="$PASS_FILE"; then
-              echo "  OK"
+              success "$(basename "$dev"): enrolled"
             else
-              echo "  FAILED"
+              warn "$(basename "$dev"): FAILED"
+              ENROLL_OK=false
             fi
           done
-          rm -f "$PASS_FILE"
-          echo ""
-          echo "Done."
+          if [[ "$ENROLL_OK" == "true" ]]; then
+            echo ""
+            success "TPM2 enrolled."
+            echo ""
+            echo -e "  ''${DIM}Your disk will unlock automatically at boot as long as the system''${RESET}"
+            echo -e "  ''${DIM}firmware and Secure Boot state have not changed.''${RESET}"
+          else
+            echo ""
+            error "Enrollment failed on one or more devices. Check the output above."
+          fi
           ;;
         w|W)
           echo ""
@@ -100,14 +131,14 @@ let
           fi
           for dev in "''${DEVICES[@]}"; do
             if systemd-cryptenroll "$dev" 2>/dev/null | grep -q "tpm2"; then
-              echo "Wiping TPM2 slot on $(basename "$dev")..."
+              echo -e "    ''${DIM}$(basename "$dev"):''${RESET} wiping TPM2 slot..."
               systemd-cryptenroll "$dev" --wipe-slot=tpm2 || true
             else
-              echo "$(basename "$dev"): no TPM2 slot, skipping"
+              warn "$(basename "$dev"): no TPM2 slot, skipping"
             fi
           done
           echo ""
-          echo "Done. TPM2 slots wiped."
+          success "TPM2 slots wiped. Disk will require password at next boot."
           ;;
         *)
           echo "Aborted."

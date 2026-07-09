@@ -122,23 +122,32 @@ in
     #---------------------------
     # Create /etc/btrbk/btrbk.conf so `btrbk run` works without -c flag
     # This is a symlink to the systemd service config
-    environment.etc."btrbk/btrbk.conf".text = ''
-      timestamp_format long
-      snapshot_preserve_min 2h
-      snapshot_preserve 24h 7d 2w 6m
+    environment.etc."btrbk/btrbk.conf".text =
+      if config.features.impermanence.enable then
+        ''
+          timestamp_format long
+          snapshot_preserve_min 2h
+          snapshot_preserve 24h 7d 2w 6m
 
-      volume /mnt/btrfs-root
-        snapshot_dir @snapshots
-        ${lib.optionalString (!config.features.impermanence.enable) ''
-          subvolume @
-            snapshot_create always
-        ''}
-      subvolume @home
-        snapshot_create always
-        ${lib.optionalString config.features.impermanence.enable ''
-          subvolume @persist
-            snapshot_create always
-        ''}
-    '';
+          volume /mnt/btrfs-root
+            snapshot_dir @snapshots
+            subvolume @home
+              snapshot_create always
+            subvolume @persist
+              snapshot_create always
+        ''
+      else
+        ''
+          timestamp_format long
+          snapshot_preserve_min 2h
+          snapshot_preserve 24h 7d 2w 6m
+
+          volume /mnt/btrfs-root
+            snapshot_dir @snapshots
+            subvolume @
+              snapshot_create always
+            subvolume @home
+              snapshot_create always
+        '';
   };
 }

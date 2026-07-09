@@ -38,8 +38,8 @@ let
     .${config.catppuccin.flavor}.colors;
   accent = palette.${config.catppuccin.accent}.hex;
 
-  # Show notifications on primary monitor
-  primaryMonitor = lib.head displays.monitors;
+  # Show notifications on primary monitor (empty list = dunst picks automatically)
+  primaryMonitorName = if displays.monitors != [ ] then (lib.head displays.monitors).name else "";
 in
 {
   #===========================
@@ -54,7 +54,7 @@ in
       # Global Settings
       #---------------------------
       global = {
-        monitor = primaryMonitor.name;
+        monitor = primaryMonitorName;
         width = 350;
         height = "(0, 300)";
         offset = "${toString theme.gaps.outer}x${toString theme.gaps.outer}";
