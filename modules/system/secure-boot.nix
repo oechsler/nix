@@ -150,7 +150,7 @@ let
           echo ""
           read -rp "Confirm UEFI is set to Other OS + Custom Mode, then press Enter..." _
           echo ""
-          sbctl enroll-keys --microsoft
+          sbctl enroll-keys --microsoft --yes-this-might-brick-my-machine
           echo ""
           success "Keys enrolled."
           info "Now reboot into UEFI and activate Secure Boot:"
