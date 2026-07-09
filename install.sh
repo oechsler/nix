@@ -1021,7 +1021,7 @@ phase_complete() {
       echo -e "    ${BOLD}Step A${RESET} — In UEFI (Boot → Secure Boot):"
       echo -e "      OS Type:          ${BOLD}Other OS${RESET}"
       echo -e "      Secure Boot Mode: ${BOLD}Custom${RESET}"
-      echo -e "      Key Management:   ${BOLD}Delete All Secure Boot Variables${RESET}"
+      echo -e "      Key Management:   ${BOLD}Clear Secure Boot Keys${RESET}"
       echo -e "      ${DIM}(ASUS does not enter Setup Mode automatically — key deletion is required)${RESET}"
       echo ""
       echo -e "    ${BOLD}Step B${RESET} — Save, reboot into NixOS and run ${BOLD}secure-boot-init${RESET}"

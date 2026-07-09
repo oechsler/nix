@@ -146,7 +146,7 @@ let
           warn "Before continuing, configure your UEFI (Boot → Secure Boot):"
           warn "  1. OS Type:           Other OS"
           warn "  2. Secure Boot Mode:  Custom"
-          warn "  3. Key Management:    Delete All Secure Boot Variables"
+          warn "  3. Key Management:    Clear Secure Boot Keys"
           warn "  4. Save and reboot into NixOS"
           echo ""
           read -rp "Confirm keys are cleared and you are back in NixOS, then press Enter..." _
