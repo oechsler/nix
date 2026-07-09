@@ -150,7 +150,7 @@ let
           echo ""
           read -rp "Confirm UEFI is set to Other OS + Custom Mode, then press Enter..." _
           echo ""
-          sbctl enroll-keys --microsoft --yes-this-might-brick-my-machine
+          sbctl enroll-keys --microsoft --firmware-builtin --yes-this-might-brick-my-machine
           echo ""
           success "Keys enrolled."
           info "Now reboot into UEFI and activate Secure Boot:"
@@ -176,7 +176,7 @@ let
         else
           step 3 3 "Enrolling keys into firmware..."
           echo ""
-          sbctl enroll-keys --microsoft
+          sbctl enroll-keys --microsoft --firmware-builtin
           echo ""
           success "Keys enrolled."
           info "Reboot into UEFI and enable Secure Boot."

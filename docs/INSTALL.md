@@ -151,7 +151,7 @@ Before running `secure-boot-init`, in UEFI:
 
 The script then calls:
 ```bash
-sbctl enroll-keys --microsoft   # keeps Windows/firmware compatibility
+sbctl enroll-keys --microsoft --firmware-builtin
 ```
 
 Then re-enable Secure Boot in UEFI.
@@ -167,7 +167,7 @@ Before running `secure-boot-init`, in UEFI (Boot → Secure Boot):
 
 The script then calls:
 ```bash
-sbctl enroll-keys --microsoft --yes-this-might-brick-my-machine
+sbctl enroll-keys --microsoft --firmware-builtin --yes-this-might-brick-my-machine
 ```
 
 Afterwards, in UEFI: set OS Type → Windows UEFI mode, Secure Boot → On.
