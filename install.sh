@@ -210,21 +210,10 @@ luks_password_file() {
 }
 
 phase_validate() {
-  info "NixOS Installer"
-  echo ""
-
   if [[ "$DRY_RUN" == true ]]; then
-    warn "Dry-run mode: no changes will be made"
+    info "NixOS Installer"
     echo ""
-  fi
-
-  # Only show step flags on live ISO — on installed system the mode is always upgrade
-  if [[ "${IS_LIVE:-false}" == true ]]; then
-    # shellcheck disable=SC2046
-    echo -e "    Steps: ${BOLD}$(printf '%s ' \
-      $([[ "$DO_FORMAT" == true ]] && echo "format") \
-      $([[ "$DO_INSTALL" == true ]] && echo "install") \
-      $([[ "$DO_POST_INSTALL" == true ]] && echo "post-install"))${RESET}"
+    warn "Dry-run mode: no changes will be made"
     echo ""
   fi
 
@@ -1229,17 +1218,11 @@ main() {
   phase_validate
   phase_select_host
 
-  # On an installed system: only upgrade makes sense.
-  # --format and --install are ignored here — they require a live ISO environment.
+  # On an installed system: always upgrade — step flags are ignored.
   if [[ "$IS_LIVE" != true ]]; then
-    if [[ "$DO_FORMAT" == true || "$DO_INSTALL" == true ]]; then
-      warn "--format and --install are only available on a live ISO. Running upgrade instead."
-      echo ""
-    fi
     local sb_enabled
     sb_enabled="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.config.features.secureBoot.enable" 2>/dev/null || echo "false")"
 
-    echo ""
     info "System Upgrade"
     echo ""
     echo -e "    ${DIM}Pulls the latest configuration from git and rebuilds the system.${RESET}"
@@ -1268,6 +1251,15 @@ main() {
     phase_upgrade
     exit 0
   fi
+
+  info "NixOS Installer"
+  echo ""
+  # shellcheck disable=SC2046
+  echo -e "    Steps: ${BOLD}$(printf '%s ' \
+    $([[ "$DO_FORMAT" == true ]] && echo "format") \
+    $([[ "$DO_INSTALL" == true ]] && echo "install") \
+    $([[ "$DO_POST_INSTALL" == true ]] && echo "post-install"))${RESET}"
+  echo ""
 
   phase_detect_features
   phase_collect_inputs
