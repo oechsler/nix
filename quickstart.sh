@@ -11,6 +11,9 @@
 # Environment variables:
 #   BRANCH  — Git branch to clone (default: main)
 #   REPO    — Git repository URL (default: github.com/oechsler/nix)
+#
+# The outer { } block ensures the entire script is read into memory before
+# execution when piped via curl | bash — prevents partial-execution bugs.
 {
 set -euo pipefail
 
