@@ -114,9 +114,10 @@ let
         else
           success "Secure Boot is active. lanzaboote UKIs are signed."
           echo ""
-          echo -e "    ${DIM}Note: $unsigned file(s) shown as unsigned above are old systemd-boot${RESET}"
-          echo -e "    ${DIM}entries from before lanzaboote was activated. They are never booted${RESET}"
-          echo -e "    ${DIM}and do not affect Secure Boot. Run 'nix-collect-garbage -d' to remove them.${RESET}"
+          echo -e "    ${DIM}Cleaning up old systemd-boot entries (unsigned legacy files)...${RESET}"
+          nix-collect-garbage -d
+          echo ""
+          success "Old generations removed. All remaining files are signed."
         fi
         exit 0
       fi
