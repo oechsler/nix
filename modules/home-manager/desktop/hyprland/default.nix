@@ -90,10 +90,14 @@ let
     map (m: map (ws: "${toString ws}, ${m.name}") m.workspaces) displays.monitors
   );
 
-  # Workspace rules: Assign workspaces to monitors
-  # Example: "1, monitor:DP-1"
+  # Workspace rules: Assign workspaces to monitors + set default workspace per monitor
+  # defaultWorkspace prevents Hyprland from creating a stray workspace on startup
   workspaceRules = lib.flatten (
-    map (m: map (ws: "${toString ws}, monitor:${m.name}") m.workspaces) displays.monitors
+    map (m:
+      (map (ws: "${toString ws}, monitor:${m.name}") m.workspaces)
+      ++ (lib.optional (m.workspaces != [])
+        "${toString (builtins.head m.workspaces)}, monitor:${m.name}, default:true")
+    ) displays.monitors
   );
 
   # ============================================================================
