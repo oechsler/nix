@@ -27,6 +27,7 @@ set -euo pipefail
 HOST=""
 SSH_KEY=""
 LUKS_PASSWORD="${LUKS_PASSWORD:-}"
+KEYBOARD_OVERRIDE=""
 YES=false
 DRY_RUN=false
 DO_FORMAT=false
@@ -63,6 +64,7 @@ Options:
   --host HOST           Pre-select host configuration
   -s, --ssh-key PATH    Path to SSH private key
   -p, --luks-password   LUKS disk encryption password
+  --keyboard LAYOUT     Override keyboard layout for this session (e.g. us, de, fr)
   --skip-totp           Skip TOTP setup (deferred to totp-init after first boot)
   -y, --yes             Skip all confirmation prompts (non-interactive mode)
   --dry-run             Show summary and exit without making changes
@@ -91,6 +93,7 @@ while [[ $# -gt 0 ]]; do
     -s|--ssh-key)        SSH_KEY="$2"; shift 2 ;;
     -p|--luks-password)  LUKS_PASSWORD="$2"; shift 2 ;;
     --skip-totp)         SKIP_TOTP=true; shift ;;
+    --keyboard)          KEYBOARD_OVERRIDE="$2"; shift 2 ;;
     -y|--yes)            YES=true; shift ;;
     --dry-run)           DRY_RUN=true; shift ;;
     --format)            DO_FORMAT=true; shift ;;
@@ -336,7 +339,7 @@ phase_detect_features() {
     # Still apply keyboard layout — loadkeys is normally called at the end of
     # this function, but the cache path skips it
     if [[ "$IS_LIVE" == true ]] && command -v loadkeys &>/dev/null; then
-      loadkeys "$CONFIG_KEYBOARD" 2>/dev/null || true
+      loadkeys "${KEYBOARD_OVERRIDE:-$CONFIG_KEYBOARD}" 2>/dev/null || true
     fi
     return
   fi
