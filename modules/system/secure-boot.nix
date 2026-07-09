@@ -77,7 +77,8 @@ let
 
       #--- Detect ASUS boards (non-compliant Setup Mode behaviour) ---
       # ASUS firmware clears keys → Secure Boot disabled instead of entering Setup Mode.
-      # Workaround: use --force to enroll keys even without explicit Setup Mode.
+      # Workaround: set OS Type = Other OS + Secure Boot Mode = Custom in UEFI,
+      # which allows sbctl to enroll keys without requiring explicit Setup Mode.
       board_vendor="$(cat /sys/class/dmi/id/board_vendor 2>/dev/null || true)"
       sys_vendor="$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)"
       ASUS_BOARD=false
@@ -102,7 +103,7 @@ let
       echo -e "  ''${BOLD}Keys generated:''${RESET} $([ "$keys_exist" = true ] && echo "yes" || echo "no")"
       echo -e "  ''${BOLD}Keys enrolled:''${RESET}  $([ "$keys_enrolled" = true ] && echo "yes" || echo "no")"
       if [[ "$ASUS_BOARD" == "true" ]]; then
-        echo -e "  ''${BOLD}Board vendor:''${RESET}   ASUS (non-standard Setup Mode — will use --force)"
+        echo -e "  ''${BOLD}Board vendor:''${RESET}   ASUS (non-standard Setup Mode — Custom Mode required)"
       fi
       echo ""
 
@@ -137,8 +138,9 @@ let
       if [[ "$keys_enrolled" != true ]]; then
         if [[ "$ASUS_BOARD" == "true" ]]; then
           # ASUS firmware does not expose Setup Mode when keys are cleared —
-          # it disables Secure Boot entirely instead. --force bypasses the check.
-          step 3 3 "Enrolling keys (ASUS board — using --force)..."
+          # it disables Secure Boot entirely instead. Setting OS Type = Other OS
+          # and Secure Boot Mode = Custom in UEFI allows enrollment without Setup Mode.
+          step 3 3 "Enrolling keys (ASUS board — Custom Mode)..."
           echo ""
           warn "Before continuing, configure your UEFI (Boot → Secure Boot):"
           warn "  OS Type:           Other OS"
@@ -148,7 +150,7 @@ let
           echo ""
           read -rp "Confirm UEFI is set to Other OS + Custom Mode, then press Enter..." _
           echo ""
-          sbctl enroll-keys --microsoft --force
+          sbctl enroll-keys --microsoft
           echo ""
           success "Keys enrolled."
           info "Now reboot into UEFI and activate Secure Boot:"
