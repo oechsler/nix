@@ -911,7 +911,7 @@ phase_complete() {
     echo -e "    ${YELLOW}${BOLD}⚠ Secure Boot — setup required after first boot:${RESET}"
     echo -e "      1. In UEFI: disable Secure Boot, enable ${BOLD}Setup Mode${RESET}"
     echo -e "      2. Boot into NixOS"
-    echo -e "      3. ${BOLD}sudo nixos-rebuild switch --flake ~/repos/nix#${HOST}${RESET}"
+    echo -e "      3. Run ${BOLD}install.sh${RESET} again — it will upgrade the system"
     echo -e "         (activates lanzaboote and installs secure-boot-init)"
     echo -e "      4. ${BOLD}sudo secure-boot-init${RESET}"
   fi
