@@ -210,9 +210,6 @@ luks_password_file() {
 }
 
 phase_validate() {
-  info "NixOS Installer"
-  echo ""
-
   if [[ "$DRY_RUN" == true ]]; then
     warn "Dry-run mode: no changes will be made"
     echo ""
@@ -1232,7 +1229,7 @@ main() {
     local sb_enabled
     sb_enabled="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.config.features.secureBoot.enable" 2>/dev/null || echo "false")"
 
-    info "System Upgrade"
+    info "NixOS Installer — System Upgrade"
     echo ""
     echo -e "    ${DIM}Pulls the latest configuration from git and rebuilds the system.${RESET}"
     echo -e "    ${DIM}Activates immediately — no reboot required.${RESET}"
@@ -1251,6 +1248,8 @@ main() {
     exit 0
   fi
 
+  info "NixOS Installer"
+  echo ""
   # shellcheck disable=SC2046
   echo -e "    Steps: ${BOLD}$(printf '%s ' \
     $([[ "$DO_FORMAT" == true ]] && echo "format") \
