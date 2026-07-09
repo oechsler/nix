@@ -22,7 +22,7 @@
 
 let
   unlockOpts = {
-    yubikey = [ "fido2-device=auto" "tries=0" ];
+    yubikey = [ "fido2-device=auto" "fido2-no-client-pin" "tries=0" ];
     tpm2 = [ "tpm2-device=auto" "tries=0" ];
     password = [ "tries=0" ];
   };
