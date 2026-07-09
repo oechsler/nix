@@ -106,34 +106,43 @@ let
       fi
 
       #--- Step 1: generate keys ---
-      # Always regenerate — avoids stale/incomplete key state from previous runs.
-      step 1 3 "Generating Secure Boot keys..."
-      echo ""
-      rm -rf /var/lib/sbctl/keys /persist/var/lib/sbctl/keys 2>/dev/null || true
-      if command -v sbctl &>/dev/null; then
-        sbctl create-keys
+      # Skip if keys are already enrolled — EFI vars are immutable after enrollment
+      # and cannot be overwritten. Only regenerate when starting fresh.
+      if [[ "$keys_enrolled" == true ]]; then
+        step 1 3 "Keys already enrolled — skipping key generation."
+        echo ""
       else
-        # sbctl not yet installed (system not rebuilt yet) — run via nix
-        nix run nixpkgs#sbctl -- create-keys
-      fi
-      # Copy keys to /persist so they survive the impermanence bind-mount
-      # activation during the next rebuild. Skip if /var/lib/sbctl is already
-      # a bind-mount of /persist/var/lib/sbctl (keys are already in the right place).
-      if [[ -d /var/lib/sbctl/keys && -d /persist ]]; then
-        if ! mountpoint -q /var/lib/sbctl 2>/dev/null; then
-          mkdir -p /persist/var/lib/sbctl
-          cp -a /var/lib/sbctl/keys /persist/var/lib/sbctl/
+        step 1 3 "Generating Secure Boot keys..."
+        echo ""
+        rm -rf /var/lib/sbctl/keys /persist/var/lib/sbctl/keys 2>/dev/null || true
+        if command -v sbctl &>/dev/null; then
+          sbctl create-keys
+        else
+          nix run nixpkgs#sbctl -- create-keys
         fi
+        # Copy keys to /persist so they survive the impermanence bind-mount
+        # activation during the next rebuild. Skip if already a bind-mount.
+        if [[ -d /var/lib/sbctl/keys && -d /persist ]]; then
+          if ! mountpoint -q /var/lib/sbctl 2>/dev/null; then
+            mkdir -p /persist/var/lib/sbctl
+            cp -a /var/lib/sbctl/keys /persist/var/lib/sbctl/
+          fi
+        fi
+        echo ""
       fi
-      echo ""
 
       #--- Step 2: activate lanzaboote + sign boot entries ---
       # Keys must exist before this rebuild so impermanence persists /var/lib/sbctl.
-      # After this step the keys survive reboots — safe to reboot for BIOS changes.
-      step 2 3 "Rebuilding system with Secure Boot active (persists keys across reboots)..."
-      echo ""
-      "$REPO_DIR/install.sh" --yes --quiet
-      echo ""
+      # Skip if already enrolled — rebuild already happened on a previous run.
+      if [[ "$keys_enrolled" == true ]]; then
+        step 2 3 "System already rebuilt with Secure Boot active — skipping."
+        echo ""
+      else
+        step 2 3 "Rebuilding system with Secure Boot active (persists keys across reboots)..."
+        echo ""
+        "$REPO_DIR/install.sh" --yes --quiet
+        echo ""
+      fi
 
       #--- Step 3: enroll keys ---
       if [[ "$keys_enrolled" != true ]]; then
