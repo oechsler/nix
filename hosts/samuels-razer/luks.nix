@@ -19,9 +19,9 @@
 
 let
   unlockOpts = {
-    yubikey = [ "fido2-device=auto" ];
-    tpm2 = [ "tpm2-device=auto" ];
-    password = [ ];
+    yubikey = [ "fido2-device=auto" "tries=0" ];
+    tpm2 = [ "tpm2-device=auto" "tries=0" ];
+    password = [ "tries=0" ];
   };
 in
 {
@@ -33,9 +33,9 @@ in
     };
   };
 
-  # cryptroot failing → reboot (system can't boot without it)
+  # On failure: fall back to password prompt instead of rebooting.
   boot.initrd.systemd.services."systemd-cryptsetup@cryptroot" = {
     overrideStrategy = "asDropin";
-    unitConfig.FailureAction = "reboot-force";
+    unitConfig.FailureAction = "none";
   };
 }
