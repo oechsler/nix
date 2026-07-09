@@ -515,6 +515,15 @@ in
       # FIDO2 in initrd requires systemd-based initrd
       # mkDefault: impermanence.nix can override if both are enabled
       boot.initrd.systemd.enable = lib.mkDefault true;
+
+      # USB drivers needed for FIDO2 key detection in initrd.
+      # ucsi_acpi + typec_ucsi ensure USB-C ports are available on AMD/ASUS boards.
+      boot.initrd.availableKernelModules = [
+        "xhci_pci"
+        "usbhid"
+        "ucsi_acpi"
+        "typec_ucsi"
+      ];
     })
 
   ];
