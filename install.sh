@@ -1057,6 +1057,89 @@ phase_complete() {
 }
 
 #===========================
+# Pending Setup Check
+#===========================
+
+# Shows which post-install steps still need to be done.
+# Used both on the upgrade entry screen and after a successful upgrade.
+show_pending_setup() {
+  local json
+  json=$(nix eval --json "$REPO_DIR#nixosConfigurations.${HOST}.config" --apply '
+    cfg: {
+      secureBoot    = cfg.features.secureBoot.enable;
+      yubikey       = cfg.features.auth.yubikey.enable;
+      yubikeyLuks   = cfg.features.encryption.unlockMethod == "yubikey";
+      totp          = cfg.features.auth.totp.enable;
+      encryption    = cfg.features.encryption.enable;
+      persistPrefix = cfg.features.impermanence.persistPrefix;
+    }
+  ' 2>/dev/null) || json="{}"
+
+  local feat_sb feat_yubikey feat_yubikey_luks feat_totp feat_enc persist_prefix
+  feat_sb=$(echo "$json"           | jq -r '.secureBoot    // false')
+  feat_yubikey=$(echo "$json"      | jq -r '.yubikey       // false')
+  feat_yubikey_luks=$(echo "$json" | jq -r '.yubikeyLuks   // false')
+  feat_totp=$(echo "$json"         | jq -r '.totp          // false')
+  feat_enc=$(echo "$json"          | jq -r '.encryption    // false')
+  persist_prefix=$(echo "$json"    | jq -r '.persistPrefix // ""')
+
+  # Live state checks
+  local sb_active=false yubikey_luks_enrolled=false yubikey_pam_enrolled=false totp_enrolled=false
+  local invoking_username="${SUDO_USER:-$USER}"
+
+  if [[ "$feat_sb" == "true" ]]; then
+    local sb_state
+    sb_state=$(bootctl status 2>/dev/null | awk '/Secure Boot:/{print $3}')
+    [[ "$sb_state" == "enabled" ]] && sb_active=true
+  fi
+  if [[ "$feat_yubikey_luks" == "true" && "$feat_enc" == "true" ]]; then
+    local first_dev
+    first_dev=$(lsblk -rno NAME,TYPE | awk '$2=="crypt"{print "/dev/"$1; exit}')
+    if [[ -n "$first_dev" ]] && systemd-cryptenroll "$first_dev" 2>/dev/null | grep -q "fido2"; then
+      yubikey_luks_enrolled=true
+    fi
+  fi
+  if [[ "$feat_yubikey" == "true" ]]; then
+    local u2f_file="${persist_prefix}/etc/u2f_mappings"
+    [[ -f "$u2f_file" ]] && grep -q "^${invoking_username}:" "$u2f_file" 2>/dev/null && yubikey_pam_enrolled=true
+  fi
+  if [[ "$feat_totp" == "true" ]]; then
+    local oath_file="${persist_prefix}/etc/users.oath"
+    [[ -f "$oath_file" ]] && grep -q "^HOTP.*${invoking_username}" "$oath_file" 2>/dev/null && totp_enrolled=true
+  fi
+
+  # Build pending task list
+  local pending=()
+
+  [[ "$feat_sb" == "true"           && "$sb_active" != "true"            ]] && \
+    pending+=("secure-boot-init    — sign boot files and enroll Secure Boot keys into firmware")
+
+  [[ "$feat_yubikey_luks" == "true" && "$yubikey_luks_enrolled" != "true" ]] && \
+    pending+=("yubikey-luks-init   — enroll YubiKey FIDO2 for automatic disk unlock at boot")
+
+  [[ "$feat_yubikey" == "true"      && "$yubikey_pam_enrolled" != "true"  ]] && \
+    pending+=("yubikey-init        — register YubiKey for sudo and SSH authentication")
+
+  [[ "$feat_totp" == "true"         && "$totp_enrolled" != "true"         ]] && \
+    pending+=("totp-init           — set up TOTP two-factor authentication for sudo and SSH")
+
+  if [[ ${#pending[@]} -eq 0 ]]; then
+    success "All features are fully set up."
+  else
+    echo -e "  ${BOLD}${YELLOW}Pending setup:${RESET}"
+    echo ""
+    local i=1
+    for task in "${pending[@]}"; do
+      local cmd="${task%%—*}"
+      local desc="${task#*—}"
+      echo -e "    ${BOLD}$((i++)).${RESET} ${BOLD}${cmd}${RESET} ${DIM}—${desc}${RESET}"
+    done
+    echo ""
+    echo -e "    ${DIM}Each script is interactive and guides you through the process step by step.${RESET}"
+  fi
+}
+
+#===========================
 # Phase Upgrade (installed system)
 #===========================
 
@@ -1121,88 +1204,13 @@ phase_upgrade() {
   echo ""
   success "System upgraded."
 
-  # ---- Post-upgrade status: check what still needs attention ----
-  # Read config values from the built system
-  local json
-  json=$(nix eval --json "$REPO_DIR#nixosConfigurations.${HOST}.config" --apply '
-    cfg: {
-      secureBoot    = cfg.features.secureBoot.enable;
-      yubikey       = cfg.features.auth.yubikey.enable;
-      yubikeyLuks   = cfg.features.encryption.unlockMethod == "yubikey";
-      totp          = cfg.features.auth.totp.enable;
-      encryption    = cfg.features.encryption.enable;
-      persistPrefix = cfg.features.impermanence.persistPrefix;
-    }
-  ' 2>/dev/null) || json="{}"
-
-  local feat_sb feat_yubikey feat_yubikey_luks feat_totp feat_enc persist_prefix
-  feat_sb=$(echo "$json"           | jq -r '.secureBoot    // false')
-  feat_yubikey=$(echo "$json"      | jq -r '.yubikey       // false')
-  feat_yubikey_luks=$(echo "$json" | jq -r '.yubikeyLuks   // false')
-  feat_totp=$(echo "$json"         | jq -r '.totp          // false')
-  feat_enc=$(echo "$json"          | jq -r '.encryption    // false')
-  persist_prefix=$(echo "$json"    | jq -r '.persistPrefix // ""')
-
-  # Live state checks
-  local sb_active=false yubikey_luks_enrolled=false yubikey_pam_enrolled=false totp_enrolled=false
-  if [[ "$feat_sb" == "true" ]]; then
-    local sb_state
-    sb_state=$(bootctl status 2>/dev/null | awk '/Secure Boot:/{print $3}')
-    [[ "$sb_state" == "enabled" ]] && sb_active=true
-  fi
-  if [[ "$feat_yubikey_luks" == "true" && "$feat_enc" == "true" ]]; then
-    local first_dev
-    first_dev=$(lsblk -rno NAME,TYPE | awk '$2=="crypt"{print "/dev/"$1; exit}')
-    if [[ -n "$first_dev" ]] && systemd-cryptenroll "$first_dev" 2>/dev/null | grep -q "fido2"; then
-      yubikey_luks_enrolled=true
-    fi
-  fi
-  if [[ "$feat_yubikey" == "true" ]]; then
-    local u2f_file="${persist_prefix}/etc/u2f_mappings"
-    local invoking_username="${SUDO_USER:-$USER}"
-    [[ -f "$u2f_file" ]] && grep -q "^${invoking_username}:" "$u2f_file" 2>/dev/null && yubikey_pam_enrolled=true
-  fi
-  if [[ "$feat_totp" == "true" ]]; then
-    local oath_file="${persist_prefix}/etc/users.oath"
-    local invoking_username="${SUDO_USER:-$USER}"
-    [[ -f "$oath_file" ]] && grep -q "^HOTP.*${invoking_username}" "$oath_file" 2>/dev/null && totp_enrolled=true
-  fi
-
-  # Collect pending tasks (only features that are enabled but not yet set up)
-  local pending_tasks=()
-
-  [[ "$feat_sb" == "true"           && "$sb_active" != "true"            ]] && \
-    pending_tasks+=("secure-boot-init    — sign boot files and enroll Secure Boot keys")
-
-  [[ "$feat_yubikey_luks" == "true" && "$yubikey_luks_enrolled" != "true" ]] && \
-    pending_tasks+=("yubikey-luks-init   — enroll YubiKey FIDO2 for LUKS unlock at boot")
-
-  [[ "$feat_yubikey" == "true"      && "$yubikey_pam_enrolled" != "true"  ]] && \
-    pending_tasks+=("yubikey-init        — register YubiKey for sudo / SSH")
-
-  [[ "$feat_totp" == "true"         && "$totp_enrolled" != "true"         ]] && \
-    pending_tasks+=("totp-init           — configure TOTP 2FA for sudo / SSH")
-
   echo ""
   echo -e "${BOLD}============================================${RESET}"
   echo -e "${GREEN}${BOLD}  Upgrade complete!${RESET}"
   echo -e "${BOLD}============================================${RESET}"
   echo ""
 
-  if [[ ${#pending_tasks[@]} -eq 0 ]]; then
-    success "All features are fully set up — nothing to do."
-  else
-    echo -e "  ${BOLD}${YELLOW}Pending setup:${RESET}"
-    echo ""
-    local i=1
-    for task in "${pending_tasks[@]}"; do
-      local cmd="${task%%—*}"
-      local desc="${task#*—}"
-      echo -e "    ${BOLD}$((i++)).${RESET} ${BOLD}${cmd}${RESET}${DIM}—${desc}${RESET}"
-    done
-    echo ""
-    echo -e "    ${DIM}Each script guides you through the process interactively.${RESET}"
-  fi
+  show_pending_setup
 
   echo ""
   echo -e "${BOLD}============================================${RESET}"
@@ -1226,17 +1234,7 @@ main() {
     info "System Upgrade"
     echo ""
     echo -e "    ${DIM}Pulls the latest configuration from git and rebuilds the system.${RESET}"
-    echo -e "    ${DIM}Activate immediately — no reboot required.${RESET}"
-    echo ""
-    echo -e "  ${BOLD}Post-setup commands${RESET} ${DIM}(run after upgrade if not yet done):${RESET}"
-    echo ""
-    if [[ "$sb_enabled" == "true" ]]; then
-      echo -e "    ${BOLD}secure-boot-init${RESET}      ${DIM}Sign boot files and enroll Secure Boot keys into firmware${RESET}"
-    fi
-    echo -e "    ${BOLD}yubikey-luks-init${RESET}     ${DIM}Enroll YubiKey FIDO2 for automatic disk unlock at boot${RESET}"
-    echo -e "    ${BOLD}yubikey-init${RESET}          ${DIM}Register YubiKey for sudo and SSH authentication${RESET}"
-    echo -e "    ${BOLD}totp-init${RESET}             ${DIM}Set up TOTP two-factor authentication for sudo and SSH${RESET}"
-    echo -e "    ${BOLD}tpm-luks-init${RESET}         ${DIM}Enroll TPM2 chip for automatic disk unlock at boot${RESET}"
+    echo -e "    ${DIM}Activates immediately — no reboot required.${RESET}"
     echo ""
 
     if [[ "$YES" == true ]]; then
