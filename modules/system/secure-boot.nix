@@ -136,14 +136,24 @@ let
       fi
 
       #--- Step 2: rebuild with lanzaboote active + sign boot entries ---
-      # Always rebuild — lanzaboote generates signed EFI images during the build.
-      # sbctl sign-all alone is not sufficient: it can only sign files that
-      # lanzaboote has already placed in /boot/EFI/nixos/, which requires a build.
+      # Rebuild directly without install.sh so git pull / state checks don't
+      # interfere. lanzaboote in the config produces a different derivation than
+      # the previous build (which had mkForce false), so Nix will build fresh and
+      # lanzaboote will generate signed EFI images.
+      local avail_gb max_jobs
+      avail_gb=$(awk '/^MemAvailable:/{printf "%d", $2/1024/1024}' /proc/meminfo)
+      max_jobs=$(( avail_gb / 4 ))
+      (( max_jobs < 1 )) && max_jobs=1
+
       step 2 3 "Rebuilding system with Secure Boot active..."
       echo ""
-      "$REPO_DIR/install.sh" --yes --quiet --repair
+      nixos-rebuild switch --flake "$REPO_DIR#$(hostname)" --max-jobs "$max_jobs"
       echo ""
       sbctl sign-all
+      # Sign any remaining unsigned EFI files sbctl verify finds
+      while IFS= read -r unsigned_file; do
+        [[ -n "$unsigned_file" ]] && sbctl sign -s "$unsigned_file"
+      done < <(sbctl verify 2>/dev/null | awk '/✗/{print $NF}')
       echo ""
 
       #--- Step 3: enroll keys ---

@@ -67,6 +67,7 @@ Options:
   -s, --ssh-key PATH    Path to SSH private key
   -p, --luks-password   LUKS disk encryption password
   --keyboard LAYOUT     Override keyboard layout for this session (e.g. us, de, fr)
+  --repair              Force rebuild of already-cached derivations (nixos-rebuild --repair)
   --skip-totp           Skip TOTP setup (deferred to totp-init after first boot)
   -y, --yes             Skip all confirmation prompts (non-interactive mode)
   --dry-run             Show summary and exit without making changes
