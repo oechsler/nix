@@ -868,12 +868,15 @@ copy_config() {
   local dest="/mnt/home/$CONFIG_USERNAME/repos/nix"
   if [[ ! -d "$dest" ]]; then
     mkdir -p "/mnt/home/$CONFIG_USERNAME/repos"
-    # Use git checkout-index to copy all tracked + staged files so stateVersion,
-    # hardware config and password hash are included without creating a commit.
-    git -C "$REPO_DIR" checkout-index -a --prefix="$dest/"
-    # Also copy untracked generated files that were git-added but not committed
-    cp -n "$REPO_DIR/hosts/$HOST/hardware-configuration.generated.nix" \
-       "$dest/hosts/$HOST/hardware-configuration.generated.nix" 2>/dev/null || true
+
+    # Stage all local changes (stateVersion, hardware config, password hash) so
+    # nix eval on the installed system sees them immediately. Committing is left
+    # to the user — the installer does not create commits on their behalf.
+    git -C "$REPO_DIR" add --all
+
+    # Copy full repo including .git so the installed system has history, remote
+    # tracking, and can run git pull / nixos-rebuild for upgrades.
+    cp -a "$REPO_DIR" "$dest"
     success "Config copied to ~/repos/nix"
   fi
 }
