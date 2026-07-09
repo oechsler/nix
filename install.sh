@@ -27,7 +27,6 @@ set -euo pipefail
 HOST=""
 SSH_KEY=""
 LUKS_PASSWORD="${LUKS_PASSWORD:-}"
-KEYBOARD_OVERRIDE=""
 YES=false
 DRY_RUN=false
 DO_FORMAT=false
@@ -66,7 +65,6 @@ Options:
   --host HOST           Pre-select host configuration
   -s, --ssh-key PATH    Path to SSH private key
   -p, --luks-password   LUKS disk encryption password
-  --keyboard LAYOUT     Override keyboard layout for this session (e.g. us, de, fr)
   --repair              Force rebuild of already-cached derivations (nixos-rebuild --repair)
   --skip-totp           Skip TOTP setup (deferred to totp-init after first boot)
   -y, --yes             Skip all confirmation prompts (non-interactive mode)
@@ -98,7 +96,6 @@ while [[ $# -gt 0 ]]; do
     --skip-totp)         SKIP_TOTP=true; shift ;;
     --quiet)             QUIET_UPGRADE=true; shift ;;
     --repair)            REPAIR=true; shift ;;
-    --keyboard)          KEYBOARD_OVERRIDE="$2"; shift 2 ;;
     -y|--yes)            YES=true; shift ;;
     --dry-run)           DRY_RUN=true; shift ;;
     --format)            DO_FORMAT=true; shift ;;
@@ -196,7 +193,6 @@ save_state() {
     printf 'FEAT_SERVER=%q\n' "${FEAT_SERVER:-false}"
     printf 'CONFIG_USERNAME=%q\n' "${CONFIG_USERNAME:-}"
     printf 'CONFIG_PASSWORD_LOCKED=%q\n' "${CONFIG_PASSWORD_LOCKED:-false}"
-    printf 'CONFIG_KEYBOARD=%q\n' "${CONFIG_KEYBOARD:-us}"
     # Progress — prevents double-enrollment if installer crashes after TPM enroll
     printf 'TPM_ENROLLED=%q\n' "${TPM_ENROLLED:-false}"
   } > "$STATE_FILE"
@@ -320,7 +316,6 @@ FEAT_TOTP=false
 FEAT_YUBIKEY=false
 FEAT_YUBIKEY_LUKS=false
 FEAT_SECURE_BOOT=false
-CONFIG_KEYBOARD="us"
 FEAT_DESKTOP=false
 FEAT_WM=""
 FEAT_SERVER=false
@@ -335,15 +330,6 @@ phase_detect_features() {
     echo ""
     success "Features loaded from cache (host: $HOST)"
     echo ""
-    # Still apply keyboard layout — normally called at end of this function
-    local keyboard="${KEYBOARD_OVERRIDE:-$CONFIG_KEYBOARD}"
-    if [[ "$IS_LIVE" == true ]] && command -v loadkeys &>/dev/null; then
-      if loadkeys "$keyboard" 2>/dev/null || loadkeys "${keyboard}-latin1" 2>/dev/null; then
-        success "Keyboard layout set to: $keyboard"
-      else
-        warn "Could not set keyboard layout '$keyboard'"
-      fi
-    fi
     return
   fi
 
@@ -369,7 +355,6 @@ phase_detect_features() {
       # When user/password is in sops, user-passwd.service sets the password at boot.
       passwordLocked = cfg.user.hashedPassword == "!"
         && !(cfg.sops.secrets ? "user/password");
-      keyboard = cfg.locale.keyboard;
       luksDevices = builtins.attrValues (builtins.mapAttrs (name: dev: dev.device) cfg.boot.initrd.luks.devices);
     }
   ') || error "Failed to evaluate configuration. Check flake syntax."
@@ -391,31 +376,9 @@ phase_detect_features() {
   FEAT_SERVER=$(echo "$json"          | jq -r '.server')
   CONFIG_USERNAME=$(echo "$json"      | jq -r '.userName')
   CONFIG_PASSWORD_LOCKED=$(echo "$json" | jq -r '.passwordLocked')
-  CONFIG_KEYBOARD=$(echo "$json"      | jq -r '.keyboard')
 
   # Parse LUKS device paths into array
   mapfile -t LUKS_DEVICES < <(echo "$json" | jq -r '.luksDevices[]')
-
-  # Apply keyboard layout so passwords are typed correctly on the live ISO.
-  # Uses --keyboard override if given, otherwise falls back to host config.
-  local keyboard="${KEYBOARD_OVERRIDE:-$CONFIG_KEYBOARD}"
-  if [[ "$IS_LIVE" == true ]]; then
-    local loaded=false
-    if command -v loadkeys &>/dev/null; then
-      # Try exact name first, then common variants (de → de-latin1)
-      if loadkeys "$keyboard" 2>/dev/null; then
-        loaded=true
-      elif loadkeys "${keyboard}-latin1" 2>/dev/null; then
-        loaded=true
-      fi
-    fi
-    if [[ "$loaded" == true ]]; then
-      success "Keyboard layout set to: $keyboard"
-    else
-      warn "Could not set keyboard layout '$keyboard' — passwords use ISO default (us)"
-      warn "Use --keyboard to override, e.g. --keyboard de-latin1"
-    fi
-  fi
 
   echo -e "    Host:          ${BOLD}$HOST${RESET}"
   echo -e "    Username:      ${BOLD}$CONFIG_USERNAME${RESET}"
