@@ -530,11 +530,13 @@ in
       boot.initrd.systemd.services."systemd-udev-settle" = {
         wantedBy = [ "sysinit.target" ];
       };
-      boot.initrd.systemd.services."systemd-cryptsetup@cryptroot" = {
-        overrideStrategy = "asDropin";
-        after = [ "systemd-udev-settle.service" ];
-        wants = [ "systemd-udev-settle.service" ];
-      };
+      boot.initrd.systemd.services = lib.mapAttrs' (name: _:
+        lib.nameValuePair "systemd-cryptsetup@${name}" {
+          overrideStrategy = "asDropin";
+          after = [ "systemd-udev-settle.service" ];
+          wants = [ "systemd-udev-settle.service" ];
+        }
+      ) config.boot.initrd.luks.devices;
     })
 
   ];
