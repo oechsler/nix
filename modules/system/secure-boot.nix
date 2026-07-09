@@ -21,7 +21,7 @@ let
         exec sudo "$0" "$@"
       fi
 
-      FLAKE="$(eval echo ~"''${SUDO_USER:-$USER}")/repos/nix#$(hostname)"
+      FLAKE="$(eval echo ~"''${SUDO_USER:-''${USER}}")/repos/nix#$(hostname)"
 
       echo ""
       echo "==> Secure Boot Setup"
