@@ -149,11 +149,10 @@ let
       echo ""
       nixos-rebuild switch --flake "$REPO_DIR#$(hostname)" --max-jobs "$max_jobs"
       echo ""
+      # sbctl sign-all signs lanzaboote's UKI images.
+      # Do NOT sign raw kernel EFI files from previous systemd-boot generations —
+      # manually signing them produces invalid boot entries (lanzaboote requires UKIs).
       sbctl sign-all
-      # Sign any remaining unsigned EFI files sbctl verify finds
-      while IFS= read -r unsigned_file; do
-        [[ -n "$unsigned_file" ]] && sbctl sign -s "$unsigned_file"
-      done < <(sbctl verify 2>/dev/null | awk '/✗/{print $NF}')
       echo ""
 
       #--- Step 3: enroll keys ---
