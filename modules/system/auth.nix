@@ -523,7 +523,6 @@ in
         "usbhid"
         "ucsi_acpi"
         "typec_ucsi"
-        "hidraw" # needed for FIDO2 device access (YubiKey)
       ];
 
       # Wait for all USB devices to settle before cryptsetup tries FIDO2.
