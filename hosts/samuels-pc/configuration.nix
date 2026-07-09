@@ -85,10 +85,10 @@
     desktop.login = "greeter";
     desktop.fileManager = "terminal";
     smb.shares = [
-      "personal-drive"
-      "pika"
+      { name = "personal-drive"; label = "Personal-drive"; path = "//unas.srv.oechsler.it/Personal-drive"; }
+      { name = "pika";           label = "Pika";           path = "//unas.srv.oechsler.it/Pika"; }
     ];
-    wifi.networks = [ "home" ];
+    wifi.networks = [ { name = "home"; ssid = "Oechsler!Box"; } ];
   };
 
   system.stateVersion = "25.11";

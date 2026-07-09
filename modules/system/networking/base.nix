@@ -6,8 +6,12 @@
 # Options:
 #   features.ipv6PrivacyExtensions.enable = true;  # IPv6 temporary addresses (default: !server)
 #   features.wifi.enable = true;                    # Enable WiFi (default: true)
-#   features.wifi.networks = [ "home" ];            # WPA2-PSK networks
-#   features.wifi.enterpriseNetworks = [ "uni" ];   # WPA2 Enterprise networks
+#   features.wifi.networks = [                      # WPA2-PSK networks
+#     { name = "home"; ssid = "MyNetwork"; }        #   psk in sops: wifi/<name>/psk
+#   ];
+#   features.wifi.enterpriseNetworks = [            # WPA2 Enterprise (EAP-PEAP) networks
+#     { name = "uni"; ssid = "Eduroam"; identity = "user@uni.de"; } # password in sops: wifi/<name>/password
+#   ];
 #   features.wifi.preferEthernet.enable = true;     # Disable WiFi when Ethernet is active (default: true, non-KDE desktops)
 #   features.tailscale.enable = true;               # Tailscale VPN (default: true)
 
@@ -33,14 +37,40 @@ in
         default = true;
       };
       networks = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
+        type = lib.types.listOf (lib.types.submodule {
+          options = {
+            name = lib.mkOption {
+              type = lib.types.str;
+              description = "Internal identifier — used as sops key (wifi/<name>/psk).";
+            };
+            ssid = lib.mkOption {
+              type = lib.types.str;
+              description = "WiFi network SSID (broadcast name).";
+            };
+          };
+        });
         default = [ ];
-        description = "WPA2-PSK network names — each needs wifi/<name>/ssid and wifi/<name>/psk SOPS secrets";
+        description = "WPA2-PSK networks. Only wifi/<name>/psk needs a SOPS secret.";
       };
       enterpriseNetworks = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
+        type = lib.types.listOf (lib.types.submodule {
+          options = {
+            name = lib.mkOption {
+              type = lib.types.str;
+              description = "Internal identifier — used as sops key (wifi/<name>/password).";
+            };
+            ssid = lib.mkOption {
+              type = lib.types.str;
+              description = "WiFi network SSID (broadcast name).";
+            };
+            identity = lib.mkOption {
+              type = lib.types.str;
+              description = "EAP identity (e.g. user@university.edu).";
+            };
+          };
+        });
         default = [ ];
-        description = "WPA2 Enterprise (EAP-PEAP/MSCHAPv2) network names";
+        description = "WPA2 Enterprise (EAP-PEAP/MSCHAPv2) networks. Only wifi/<name>/password needs a SOPS secret.";
       };
       preferEthernet.enable = (lib.mkEnableOption "disable WiFi while Ethernet is connected on non-KDE desktops") // {
         default = true;

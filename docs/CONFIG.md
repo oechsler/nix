@@ -31,13 +31,13 @@ features.ssh.enable = true;
 | `features.ipv6PrivacyExtensions.enable` | `!server` | IPv6 privacy extensions for NetworkManager profiles |
 | `features.virtualisation.enable` | `true` | Docker daemon + user group |
 | `features.smb.enable` | `true` | SMB network share mounts (auto-mount with retry) |
-| `features.smb.shares` | `[]` | SMB share names to mount — each needs `smb/<name>/{label,path,username,password}` SOPS secrets |
+| `features.smb.shares` | `[]` | SMB shares to mount — list of `{ name, label, path, username? }`. `username` defaults to `config.user.name`. Only `smb/<name>/password` needs a SOPS secret. |
 | `features.flatpak.enable` | `true` | Flatpak + Flathub (Flatseal, Flatsweep) |
 | `features.appimage.enable` | `true` | AppImage support + auto-watcher in ~/Applications |
 | `features.tailscale.enable` | `true` | Tailscale VPN (+ trayscale tray icon on desktop) |
 | `features.wifi.enable` | `true` | WiFi profiles via SOPS secrets |
-| `features.wifi.networks` | `[]` | WPA2-PSK network names — each needs `wifi/<name>/ssid` + `wifi/<name>/psk` SOPS secrets |
-| `features.wifi.enterpriseNetworks` | `[]` | WPA2 Enterprise (EAP-PEAP) network names — each needs `wifi/<name>/ssid`, `wifi/<name>/identity`, `wifi/<name>/password` SOPS secrets |
+| `features.wifi.networks` | `[]` | WPA2-PSK networks — list of `{ name, ssid }`. Only `wifi/<name>/psk` needs a SOPS secret. |
+| `features.wifi.enterpriseNetworks` | `[]` | WPA2 Enterprise (EAP-PEAP) networks — list of `{ name, ssid, identity }`. Only `wifi/<name>/password` needs a SOPS secret. |
 | `features.development.enable` | `true` | Languages, CLI dev tools, Kubernetes tools, desktop IDEs on desktop hosts |
 | `features.apps.enable` | `true` | Desktop apps (Discord, Spotify, Obsidian, LibreOffice, ...) |
 | `features.apps.winboat.enable` | `false` | WinBoat Windows VM (seamless integration) |

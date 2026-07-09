@@ -3,10 +3,10 @@
 # WiFi connection profiles (PSK + Enterprise) with SOPS credentials,
 # optional ethernet/WiFi autoconnect switching for non-KDE desktops, and iwd profiles.
 #
-# WiFi credentials are stored in SOPS secrets:
-#   WPA2-PSK:        wifi/<name>/ssid, wifi/<name>/psk
-#   WPA2 Enterprise: wifi/<name>/ssid, wifi/<name>/identity, wifi/<name>/password
-#                    (EAP-PEAP with MSCHAPv2 inner auth)
+# SSID and identity are declared inline in features.wifi.networks.
+# Only the password/psk needs a SOPS secret:
+#   WPA2-PSK:        wifi/<name>/psk
+#   WPA2 Enterprise: wifi/<name>/password
 
 {
   config,
@@ -19,120 +19,100 @@ let
   cfg = config.features.wifi;
   ip6Privacy = if config.features.ipv6PrivacyExtensions.enable then 2 else 0;
 
+  # WPA2-PSK profiles — SSID comes directly from config, PSK from sops placeholder
   wifiProfiles = lib.listToAttrs (
-    map (name: {
-      name = "wifi-${name}";
-       value = {
-         connection = {
-           id = "\${WIFI_${lib.toUpper name}_SSID}";
-           type = "wifi";
-           autoconnect = true;
-         };
-         wifi = {
-           mode = "infrastructure";
-           ssid = "\${WIFI_${lib.toUpper name}_SSID}";
-         };
-         wifi-security = {
-           auth-alg = "open";
-           key-mgmt = "wpa-psk";
-           psk = "\${WIFI_${lib.toUpper name}_PSK}";
-         };
-         ipv4 = {
-           method = "auto";
-           route-metric = 600;
-           dns-priority = 50;
-           ignore-auto-dns = false;
-         };
-         ipv6 = {
-           method = "auto";
-           ip6-privacy = ip6Privacy;
-           route-metric = 600;
-           dns-priority = 50;
-           ignore-auto-dns = false;
-         };
-       };
-    }) cfg.networks
-  );
-
-  wifiEnvContent =
-    lib.concatMapStringsSep "\n" (name: ''
-      WIFI_${lib.toUpper name}_SSID=${config.sops.placeholder."wifi/${name}/ssid"}
-      WIFI_${lib.toUpper name}_PSK=${config.sops.placeholder."wifi/${name}/psk"}'') cfg.networks
-    + lib.optionalString (cfg.enterpriseNetworks != [ ]) "\n"
-    + lib.concatMapStringsSep "\n" (name: ''
-      WIFI_${lib.toUpper name}_SSID=${config.sops.placeholder."wifi/${name}/ssid"}
-      WIFI_${lib.toUpper name}_IDENTITY=${config.sops.placeholder."wifi/${name}/identity"}
-      WIFI_${lib.toUpper name}_PASSWORD=${
-        config.sops.placeholder."wifi/${name}/password"
-      }'') cfg.enterpriseNetworks;
-
-  enterpriseWifiProfiles = lib.listToAttrs (
-    map (name: {
-      name = "wifi-${name}";
+    map (net: {
+      name = "wifi-${net.name}";
       value = {
         connection = {
-          id = "\${WIFI_${lib.toUpper name}_SSID}";
+          id = net.ssid;
           type = "wifi";
           autoconnect = true;
         };
         wifi = {
           mode = "infrastructure";
-          ssid = "\${WIFI_${lib.toUpper name}_SSID}";
+          ssid = net.ssid;
+        };
+        wifi-security = {
+          auth-alg = "open";
+          key-mgmt = "wpa-psk";
+          psk = "\${WIFI_${lib.toUpper net.name}_PSK}";
+        };
+        ipv4 = {
+          method = "auto";
+          route-metric = 600;
+          dns-priority = 50;
+          ignore-auto-dns = false;
+        };
+        ipv6 = {
+          method = "auto";
+          ip6-privacy = ip6Privacy;
+          route-metric = 600;
+          dns-priority = 50;
+          ignore-auto-dns = false;
+        };
+      };
+    }) cfg.networks
+  );
+
+  # WPA2 Enterprise profiles — SSID and identity come from config, password from sops
+  enterpriseWifiProfiles = lib.listToAttrs (
+    map (net: {
+      name = "wifi-${net.name}";
+      value = {
+        connection = {
+          id = net.ssid;
+          type = "wifi";
+          autoconnect = true;
+        };
+        wifi = {
+          mode = "infrastructure";
+          ssid = net.ssid;
         };
         wifi-security = {
           key-mgmt = "wpa-eap";
         };
-         "802-1x" = {
-           eap = "peap";
-           identity = "\${WIFI_${lib.toUpper name}_IDENTITY}";
-           password = "\${WIFI_${lib.toUpper name}_PASSWORD}";
-           phase2-auth = "mschapv2";
-         };
-         ipv4 = {
-           method = "auto";
-           route-metric = 600;
-           dns-priority = 50;
-           ignore-auto-dns = false;
-         };
-         ipv6 = {
-           method = "auto";
-           ip6-privacy = ip6Privacy;
-           route-metric = 600;
-           dns-priority = 50;
-           ignore-auto-dns = false;
-         };
+        "802-1x" = {
+          eap = "peap";
+          identity = net.identity;
+          password = "\${WIFI_${lib.toUpper net.name}_PASSWORD}";
+          phase2-auth = "mschapv2";
+        };
+        ipv4 = {
+          method = "auto";
+          route-metric = 600;
+          dns-priority = 50;
+          ignore-auto-dns = false;
+        };
+        ipv6 = {
+          method = "auto";
+          ip6-privacy = ip6Privacy;
+          route-metric = 600;
+          dns-priority = 50;
+          ignore-auto-dns = false;
+        };
       };
     }) cfg.enterpriseNetworks
   );
 
-  wifiSecrets = lib.listToAttrs (
-    lib.flatten (
-      map (name: [
-        {
-          name = "wifi/${name}/ssid";
-          value = { };
-        }
-        {
-          name = "wifi/${name}/psk";
-          value = { };
-        }
-      ]) cfg.networks
-      ++ map (name: [
-        {
-          name = "wifi/${name}/ssid";
-          value = { };
-        }
-        {
-          name = "wifi/${name}/identity";
-          value = { };
-        }
-        {
-          name = "wifi/${name}/password";
-          value = { };
-        }
-      ]) cfg.enterpriseNetworks
+  # Environment file for NetworkManager ensureProfiles — only secrets as vars
+  wifiEnvContent =
+    lib.concatMapStringsSep "\n" (net:
+      "WIFI_${lib.toUpper net.name}_PSK=${config.sops.placeholder."wifi/${net.name}/psk"}"
+    ) cfg.networks
+    + lib.optionalString (cfg.enterpriseNetworks != [ ]) "\n"
+    + lib.concatMapStringsSep "\n" (net:
+      "WIFI_${lib.toUpper net.name}_PASSWORD=${config.sops.placeholder."wifi/${net.name}/password"}"
+    ) cfg.enterpriseNetworks;
+
+  # Sops secrets — only psk/password, no ssid
+  wifiSecrets =
+    lib.listToAttrs (
+      map (net: { name = "wifi/${net.name}/psk"; value = { }; }) cfg.networks
     )
-  );
+    // lib.listToAttrs (
+      map (net: { name = "wifi/${net.name}/password"; value = { }; }) cfg.enterpriseNetworks
+    );
 
   ethernetWifiSwitch = pkgs.writeShellScript "ethernet-wifi-switch" ''
     INTERFACE=''${1:-}
@@ -262,34 +242,29 @@ in
         };
         script =
           lib.concatMapStringsSep "\n" (
-            name:
+            net:
             let
-              ssidPath = config.sops.secrets."wifi/${name}/ssid".path;
-              pskPath = config.sops.secrets."wifi/${name}/psk".path;
+              pskPath = config.sops.secrets."wifi/${net.name}/psk".path;
             in
             ''
-              ssid=$(cat ${ssidPath})
-              ssid_hex=$(printf '%s' "$ssid" | od -An -tx1 | tr -d ' \n')
+              ssid_hex=$(printf '%s' "${net.ssid}" | od -An -tx1 | tr -d ' \n')
               mkdir -p /var/lib/iwd
-              rm -f "/var/lib/iwd/$ssid.psk"
+              rm -f "/var/lib/iwd/${net.ssid}.psk"
               printf '[Security]\nPassphrase=%s\n' "$(cat ${pskPath})" \
                 > "/var/lib/iwd/=$ssid_hex.psk"
               chmod 0600 "/var/lib/iwd/=$ssid_hex.psk"
             ''
           ) cfg.networks
           + lib.concatMapStringsSep "\n" (
-            name:
+            net:
             let
-              ssidPath = config.sops.secrets."wifi/${name}/ssid".path;
-              identityPath = config.sops.secrets."wifi/${name}/identity".path;
-              passwordPath = config.sops.secrets."wifi/${name}/password".path;
+              passwordPath = config.sops.secrets."wifi/${net.name}/password".path;
             in
             ''
-              ssid=$(cat ${ssidPath})
-              ssid_hex=$(printf '%s' "$ssid" | od -An -tx1 | tr -d ' \n')
+              ssid_hex=$(printf '%s' "${net.ssid}" | od -An -tx1 | tr -d ' \n')
               mkdir -p /var/lib/iwd
               printf '[Security]\nEAP-Method=PEAP\nEAP-Identity=%s\nEAP-PEAP-Phase2-Method=MSCHAPV2\nEAP-PEAP-Phase2-Password=%s\n' \
-                "$(cat ${identityPath})" "$(cat ${passwordPath})" \
+                "${net.identity}" "$(cat ${passwordPath})" \
                 > "/var/lib/iwd/=$ssid_hex.8021x"
               chmod 0600 "/var/lib/iwd/=$ssid_hex.8021x"
             ''

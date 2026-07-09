@@ -65,10 +65,10 @@
     gaming.enable = false;
     auth.yubikey.enable = true;
     smb.shares = [
-      "personal-drive"
-      "pika"
+      { name = "personal-drive"; label = "Personal-drive"; path = "//unas.srv.oechsler.it/Personal-drive"; }
+      { name = "pika";           label = "Pika";           path = "//unas.srv.oechsler.it/Pika"; }
     ];
-    wifi.networks = [ "home" ];
+    wifi.networks = [ { name = "home"; ssid = "Oechsler!Box"; } ];
   };
 
   fonts.defaults.terminalSize = 10;
