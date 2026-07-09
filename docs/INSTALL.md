@@ -158,7 +158,7 @@ Then re-enable Secure Boot in UEFI.
 
 ### ASUS boards (non-standard)
 
-ASUS firmware disables Secure Boot instead of entering Setup Mode when keys are cleared. `secure-boot-init` detects this automatically and uses `--force` to bypass the Setup Mode requirement.
+ASUS firmware disables Secure Boot instead of entering Setup Mode when keys are cleared. Setting **Custom Mode** in UEFI allows enrollment without requiring Setup Mode — `secure-boot-init` detects ASUS boards and prompts for this automatically.
 
 Before running `secure-boot-init`, in UEFI (Boot → Secure Boot):
 - **OS Type:** Other OS
@@ -167,7 +167,7 @@ Before running `secure-boot-init`, in UEFI (Boot → Secure Boot):
 
 The script then calls:
 ```bash
-sbctl enroll-keys --microsoft --force
+sbctl enroll-keys --microsoft
 ```
 
 Afterwards, in UEFI: set OS Type → Windows UEFI mode, Secure Boot → On.
