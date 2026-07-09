@@ -60,6 +60,6 @@ in
 
     console.keyMap = cfg.keyboard;
     # Load keyboard layout early so LUKS password prompt uses the correct layout
-    console.earlySetup = true;
+    console.earlySetup = lib.mkDefault true;
   };
 }
