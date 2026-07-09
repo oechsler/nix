@@ -22,7 +22,9 @@ let
       fi
 
       # Guard: refuse to run if Secure Boot is not enabled in the NixOS config
-      if [[ "${lib.boolToString cfg.enable}" != "true" ]]; then
+      # (value is baked in at build time by Nix)
+      SECURE_BOOT_ENABLED=${lib.boolToString cfg.enable}
+      if [[ "$SECURE_BOOT_ENABLED" != "true" ]]; then
         echo "Error: features.secureBoot.enable is not set for this host."
         echo "Enable it in hosts/$(hostname)/configuration.nix and rebuild first."
         exit 1
