@@ -524,6 +524,17 @@ in
         "ucsi_acpi"
         "typec_ucsi"
       ];
+
+      # Wait for all USB devices to settle before cryptsetup tries FIDO2.
+      # Fixes intermittent "device not found" when USB controller initialises slowly.
+      boot.initrd.systemd.services."systemd-udev-settle" = {
+        wantedBy = [ "sysinit.target" ];
+      };
+      boot.initrd.systemd.services."systemd-cryptsetup@cryptroot" = {
+        overrideStrategy = "asDropin";
+        after = [ "systemd-udev-settle.service" ];
+        wants = [ "systemd-udev-settle.service" ];
+      };
     })
 
   ];
