@@ -161,9 +161,10 @@ Then re-enable Secure Boot in UEFI.
 ASUS firmware requires you to explicitly delete all Secure Boot variables to enter Setup Mode. `secure-boot-init` detects ASUS boards and guides you through this.
 
 Before running `secure-boot-init`, in UEFI (Boot → Secure Boot):
-1. **Secure Boot Mode:** Custom
-2. **Key Management:** Delete All Secure Boot Variables
-3. Save and reboot into NixOS
+1. **OS Type:** Other OS
+2. **Secure Boot Mode:** Custom
+3. **Key Management:** Delete All Secure Boot Variables
+4. Save and reboot into NixOS
 
 The script uses partial enrollment to bypass the SetupMode check (ASUS incorrectly reports SetupMode=0 even after key deletion):
 ```bash
