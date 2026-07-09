@@ -114,7 +114,7 @@ let
         else
           success "Secure Boot is active. lanzaboote UKIs are signed."
           echo ""
-          echo -e "    ${DIM}Cleaning up old systemd-boot entries (unsigned legacy files)...${RESET}"
+          echo -e "    ''${DIM}Cleaning up old systemd-boot entries (unsigned legacy files)...''${RESET}"
           nix-collect-garbage -d
           echo ""
           success "Old generations removed. All remaining files are signed."
