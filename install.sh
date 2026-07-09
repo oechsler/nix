@@ -319,7 +319,10 @@ phase_detect_features() {
       wm = cfg.features.desktop.wm;
       server = cfg.features.server;
       userName = cfg.user.name;
-      passwordLocked = cfg.user.hashedPassword == "!";
+      # passwordLocked: true only when hashedPassword = "!" AND no sops secret covers it.
+      # When user/password is in sops, user-passwd.service sets the password at boot.
+      passwordLocked = cfg.user.hashedPassword == "!"
+        && !(cfg.sops.secrets ? "user/password");
       keyboard = cfg.locale.keyboard;
       luksDevices = builtins.attrValues (builtins.mapAttrs (name: dev: dev.device) cfg.boot.initrd.luks.devices);
     }
@@ -365,6 +368,8 @@ phase_detect_features() {
   fi
   if [[ "$CONFIG_PASSWORD_LOCKED" == "true" && -z "$USER_PASSWORD_HASH" ]]; then
     echo -e "    Password:      ${YELLOW}not set${RESET}"
+  elif [[ "$CONFIG_PASSWORD_LOCKED" == "false" ]]; then
+    echo -e "    Password:      ${GREEN}via sops${RESET}  ${DIM}(set at boot by user-passwd.service)${RESET}"
   else
     echo -e "    Password:      ${GREEN}set in config${RESET}"
   fi
@@ -511,6 +516,8 @@ phase_summary() {
     echo -e "    ${BOLD}Post-Install:${RESET}"
     if [[ -n "$USER_PASSWORD_HASH" ]]; then
       echo -e "      Password:     will be written to config"
+    elif [[ "$CONFIG_PASSWORD_LOCKED" == "false" ]]; then
+      echo -e "      Password:     from sops (set at boot)"
     fi
     echo -e "      SSH key:      will be installed"
     echo -e "      SOPS:         age key from SSH key"
