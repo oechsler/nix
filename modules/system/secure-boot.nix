@@ -58,14 +58,6 @@ let
         exit 1
       fi
 
-      # Run the installer's upgrade flow first to ensure the system is fully
-      # up to date and the Secure Boot flag is active in the running generation.
-      # The installer handles the override (mkForce false) when sbctl keys are
-      # missing, so this is safe to call before keys are generated.
-      info "Rebuilding system to activate Secure Boot configuration..."
-      echo ""
-      "$REPO_DIR/install.sh" --yes --quiet
-      echo ""
 
       reboot_to_uefi() {
         echo ""
@@ -117,7 +109,7 @@ let
         exit 0
       fi
 
-      #--- Step 1: generate keys first (lanzaboote needs them before rebuild) ---
+      #--- Step 1: generate keys ---
       if [[ "$keys_exist" != true ]]; then
         step 1 3 "Generating Secure Boot keys..."
         echo ""
@@ -129,9 +121,11 @@ let
       fi
 
       #--- Step 2: activate lanzaboote + sign boot entries ---
-      step 2 3 "Activating lanzaboote and signing boot entries..."
+      # Keys must exist before this rebuild so impermanence persists /var/lib/sbctl.
+      # After this step the keys survive reboots — safe to reboot for BIOS changes.
+      step 2 3 "Rebuilding system with Secure Boot active (persists keys across reboots)..."
       echo ""
-      nixos-rebuild switch --flake "$FLAKE"
+      "$REPO_DIR/install.sh" --yes --quiet
       echo ""
 
       #--- Step 3: enroll keys ---
