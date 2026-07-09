@@ -1095,8 +1095,10 @@ show_pending_setup() {
     [[ "$sb_state" == "enabled" ]] && sb_active=true
   fi
   if [[ "$feat_yubikey_luks" == "true" && "$feat_enc" == "true" ]]; then
+    # Find the underlying LUKS block device by looking for the parent of the
+    # first crypt device — systemd-cryptenroll needs the raw partition, not /dev/mapper/...
     local first_dev
-    first_dev=$(lsblk -rno NAME,TYPE | awk '$2=="crypt"{print "/dev/"$1; exit}')
+    first_dev=$(lsblk -rno NAME,TYPE,PKNAME | awk '$2=="crypt" && $3!="" {print "/dev/"$3; exit}')
     if [[ -n "$first_dev" ]] && systemd-cryptenroll "$first_dev" 2>/dev/null | grep -q "fido2"; then
       yubikey_luks_enrolled=true
     fi
