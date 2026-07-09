@@ -111,7 +111,12 @@ let
       if [[ "$keys_exist" != true ]]; then
         step 1 3 "Generating Secure Boot keys..."
         echo ""
-        sbctl create-keys
+        if command -v sbctl &>/dev/null; then
+          sbctl create-keys
+        else
+          # sbctl not yet installed (system not rebuilt yet) — run via nix
+          nix run nixpkgs#sbctl -- create-keys
+        fi
         echo ""
       else
         step 1 3 "Keys already present — skipping key generation."
