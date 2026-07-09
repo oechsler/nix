@@ -15,7 +15,7 @@ let
 
   secure-boot-init = pkgs.writeShellApplication {
     name = "secure-boot-init";
-    runtimeInputs = [ pkgs.sbctl pkgs.systemd pkgs.coreutils ];
+    runtimeInputs = [ pkgs.sbctl pkgs.systemd pkgs.coreutils pkgs.jq ];
     text = ''
       if [[ $EUID -ne 0 ]]; then
         exec sudo "$0" "$@"
@@ -83,8 +83,12 @@ let
       keys_exist=false
       [[ -f /var/lib/sbctl/keys/db/db.pem && -f /var/lib/sbctl/keys/db/db.key ]] && keys_exist=true
       keys_enrolled=false
-      if sbctl status 2>/dev/null | grep -q "Secure Boot:.*true\|Enrolled keys:.*true\|enrolled"; then
-        keys_enrolled=true
+      if command -v sbctl &>/dev/null; then
+        sbctl_json=$(sbctl status --json 2>/dev/null || true)
+        if [[ -n "$sbctl_json" ]]; then
+          vendor_count=$(echo "$sbctl_json" | jq '.vendors | length' 2>/dev/null || echo "0")
+          [[ "$vendor_count" != "0" ]] && keys_enrolled=true
+        fi
       fi
 
       echo -e "    Secure Boot:    ''${sb_enabled:-unknown}"
