@@ -823,7 +823,12 @@ copy_config() {
   local dest="/mnt/home/$CONFIG_USERNAME/repos/nix"
   if [[ ! -d "$dest" ]]; then
     mkdir -p "/mnt/home/$CONFIG_USERNAME/repos"
-    cp -r "$REPO_DIR" "$dest"
+    # Use git checkout-index to copy all tracked + staged files so stateVersion,
+    # hardware config and password hash are included without creating a commit.
+    git -C "$REPO_DIR" checkout-index -a --prefix="$dest/"
+    # Also copy untracked generated files that were git-added but not committed
+    cp -n "$REPO_DIR/hosts/$HOST/hardware-configuration.generated.nix" \
+       "$dest/hosts/$HOST/hardware-configuration.generated.nix" 2>/dev/null || true
     success "Config copied to ~/repos/nix"
   fi
 }
@@ -906,7 +911,9 @@ phase_complete() {
     echo -e "    ${YELLOW}${BOLD}⚠ Secure Boot — setup required after first boot:${RESET}"
     echo -e "      1. In UEFI: disable Secure Boot, enable ${BOLD}Setup Mode${RESET}"
     echo -e "      2. Boot into NixOS"
-    echo -e "      3. Run: ${BOLD}sudo secure-boot-init${RESET}"
+    echo -e "      3. ${BOLD}sudo nixos-rebuild switch --flake ~/repos/nix#${HOST}${RESET}"
+    echo -e "         (activates lanzaboote and installs secure-boot-init)"
+    echo -e "      4. ${BOLD}sudo secure-boot-init${RESET}"
   fi
 
   echo ""
