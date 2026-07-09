@@ -56,14 +56,18 @@ let
     else
       cleaned;
 in
-lib.mkMerge [
-  withoutLuks
-  {
-    # ROG Strix X870-I: USB-C controller modules required in initrd for FIDO2
-    # key detection at boot. xhci_pci/usbhid already come from the generated config.
-    boot.initrd.availableKernelModules = [
-      "ucsi_acpi"
-      "typec_ucsi"
-    ];
-  }
-]
+withoutLuks
+// {
+  # ROG Strix X870-I: USB-C controller modules required in initrd for FIDO2
+  # key detection at boot. xhci_pci/usbhid already come from the generated config.
+  boot = (withoutLuks.boot or { }) // {
+    initrd = ((withoutLuks.boot or { }).initrd or { }) // {
+      availableKernelModules =
+        ((withoutLuks.boot or { }).initrd or { }).availableKernelModules or [ ]
+        ++ [
+          "ucsi_acpi"
+          "typec_ucsi"
+        ];
+    };
+  };
+}

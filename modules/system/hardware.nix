@@ -20,26 +20,28 @@
 { config, pkgs, lib, ... }:
 
 {
-  # CPU microcode updates — loaded at early boot, patches security vulnerabilities.
-  hardware.cpu.amd.updateMicrocode = lib.mkIf (config.features.hardware.cpu == "amd") true;
-  hardware.cpu.intel.updateMicrocode = lib.mkIf (config.features.hardware.cpu == "intel") true;
+  hardware = {
+    # CPU microcode updates — loaded at early boot, patches security vulnerabilities.
+    cpu.amd.updateMicrocode = lib.mkIf (config.features.hardware.cpu == "amd") true;
+    cpu.intel.updateMicrocode = lib.mkIf (config.features.hardware.cpu == "intel") true;
 
-  # Enable graphics support whenever a GPU is configured.
-  # VA-API drivers are set here so hardware video decoding works in all contexts
-  # (browser, video players) — not just when gaming is enabled.
-  hardware.graphics = lib.mkIf (config.features.hardware.gpu != null) {
-    enable = true;
+    # Enable graphics support whenever a GPU is configured.
+    # VA-API drivers are set here so hardware video decoding works in all contexts
+    # (browser, video players) — not just when gaming is enabled.
+    graphics = lib.mkIf (config.features.hardware.gpu != null) {
+      enable = true;
 
-    extraPackages =
-      if config.features.hardware.gpu == "amd" then
-        [ pkgs.libvdpau-va-gl ]
-      else if config.features.hardware.gpu == "intel" then
-        with pkgs; [
-          intel-media-driver # iHD VA-API driver (Broadwell+)
-          libvdpau-va-gl
-        ]
-      else
-        [ ];
+      extraPackages =
+        if config.features.hardware.gpu == "amd" then
+          [ pkgs.libvdpau-va-gl ]
+        else if config.features.hardware.gpu == "intel" then
+          with pkgs; [
+            intel-media-driver # iHD VA-API driver (Broadwell+)
+            libvdpau-va-gl
+          ]
+        else
+          [ ];
+    };
   };
 
   environment.sessionVariables = lib.mkIf (config.features.hardware.gpu != null) (
