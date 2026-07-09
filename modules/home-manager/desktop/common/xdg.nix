@@ -91,6 +91,8 @@ in
     # Keep declarative defaults authoritative for Plasma sessions.
     configFile."mimeapps.list".force = isKde;
 
+    # German directory names are intentional — all hosts belong to the same German-speaking user.
+    # To add a non-German host: override these in the host's home.nix.
     userDirs = {
       enable = true;
       createDirectories = true;

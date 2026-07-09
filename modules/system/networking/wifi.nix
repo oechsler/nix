@@ -83,7 +83,7 @@ let
           key-mgmt = "wpa-eap";
         };
          "802-1x" = {
-           eap = "peap;";
+           eap = "peap";
            identity = "\${WIFI_${lib.toUpper name}_IDENTITY}";
            password = "\${WIFI_${lib.toUpper name}_PASSWORD}";
            phase2-auth = "mschapv2";

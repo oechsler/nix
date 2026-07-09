@@ -190,7 +190,7 @@
     }
 
     #---------------------------
-    # 2. GTK Dark Theme for Root Apps
+    # 2. GTK Dark Theme for Root Apps (desktop only)
     #---------------------------
     # Why: Apps run with pkexec (gparted, partition manager, etc.) run as root
     # and need dark theme configuration to match the user's theme.
@@ -207,7 +207,7 @@
     # - We write gtk-application-prefer-dark-theme=1 to all relevant locations
     # - This ensures root apps (GTK 2/3/4) use dark theme when flavor != "latte"
 
-    (lib.mkIf (config.theme.catppuccin.flavor != "latte") {
+    (lib.mkIf (config.features.desktop.enable && config.theme.catppuccin.flavor != "latte") {
       # System-wide GTK dark preference
       environment.etc = {
         "gtk-2.0/gtkrc".text = ''
@@ -251,8 +251,8 @@
         '';
     })
 
-    # Light theme: Remove root GTK dark settings
-    (lib.mkIf (config.theme.catppuccin.flavor == "latte") {
+    # Light theme: Remove root GTK dark settings (desktop only)
+    (lib.mkIf (config.features.desktop.enable && config.theme.catppuccin.flavor == "latte") {
       programs.dconf = {
         enable = true;
         profiles.user.databases = [
@@ -286,7 +286,7 @@
     #
     # Note: Only on Hyprland — KDE Plasma manages Qt theming itself via Plasma integration
 
-    (lib.mkIf (config.features.desktop.wm != "kde") {
+    (lib.mkIf (config.features.desktop.enable && config.features.desktop.wm != "kde") {
       # Global Qt configuration for root apps
       qt = {
         enable = true;

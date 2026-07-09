@@ -143,7 +143,7 @@ let
         for i in $(seq 1 5); do
           # Timeout after 10 seconds to prevent hanging
           if timeout 10 mount -t cifs "${path}" "${user.home}/smb/$LABEL" \
-            -o credentials=${creds},uid=$MOUNT_UID,gid=$MOUNT_GID,forceuid,forcegid,hard,file_mode=0644,dir_mode=0755; then
+            -o credentials=${creds},uid=$MOUNT_UID,gid=$MOUNT_GID,forceuid,forcegid,soft,file_mode=0644,dir_mode=0755; then
             MOUNTED=true
             break
           fi
@@ -227,10 +227,10 @@ in
         #---------------------------
         # 4. SMB Mount Service
         #---------------------------
-        # Runs at boot after network is ready. Uses hard mounts so the CIFS
-        # kernel client retries indefinitely on connection loss and reconnects
-        # automatically (re-resolving DNS) when the network comes back —
-        # no external watcher needed.
+        # Runs at boot after network is ready. Uses soft mounts so the CIFS
+        # kernel client gives up after a timeout rather than hanging indefinitely
+        # if the server becomes unavailable. The retry loop in the script handles
+        # reconnection on network recovery.
         smb-mount = {
           description = "Mount SMB Shares";
 

@@ -31,14 +31,20 @@ DRY_RUN=false
 DO_FORMAT=false
 DO_INSTALL=false
 DO_POST_INSTALL=false
+ORIGINAL_ARGS=("$@")
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
-# On an installed system the script may be invoked via PATH — fall back to the
-# standard repo location derived from the invoking user's home directory.
+# When invoked via PATH (not from the repo directory), resolve the repo location
+# from the running system's nixos-upgrade unit — same source of truth as quickstart.sh.
 if [[ ! -f "$REPO_DIR/flake.nix" ]]; then
-  USER_HOME="$(getent passwd "${SUDO_USER:-$USER}" | cut -d: -f6)"
-  REPO_DIR="$USER_HOME/repos/nix"
+  REPO_DIR=$(systemctl show nixos-upgrade.service --property=ExecStart 2>/dev/null \
+    | grep -o -- '--flake [^ ]*' | awk '{print $2}' | sed 's/#.*//' || true)
+  if [[ -z "$REPO_DIR" || ! -f "$REPO_DIR/flake.nix" ]]; then
+    USER_HOME="$(getent passwd "${SUDO_USER:-$USER}" | cut -d: -f6)"
+    REPO_DIR="$USER_HOME/repos/nix"
+  fi
 fi
 STATE_FILE="/tmp/install.env"
+trap 'rm -f /tmp/luks-password "$STATE_FILE"' EXIT
 
 show_help() {
   cat <<'EOF'
@@ -109,9 +115,9 @@ STEP_CURRENT=0
 STEP_TOTAL=0
 
 info()    { echo -e "${BLUE}==>${RESET} ${BOLD}$*${RESET}"; }
-success() { echo -e "    ${GREEN}$*${RESET}"; }
-warn()    { echo -e "${YELLOW}!!${RESET} $*"; }
-error()   { echo -e "${RED}ERROR:${RESET} $*" >&2; exit 1; }
+success() { echo -e "    ${GREEN}✓${RESET} $*"; }
+warn()    { echo -e "    ${YELLOW}!${RESET} $*"; }
+error()   { echo -e "${RED}Error:${RESET} $*" >&2; exit 1; }
 step()    { STEP_CURRENT=$((STEP_CURRENT + 1)); echo ""; info "[$STEP_CURRENT/$STEP_TOTAL] $*"; }
 
 label_bool() { [[ "$1" == "true" ]] && echo -e "${GREEN}enabled${RESET}" || echo -e "${DIM}disabled${RESET}"; }
@@ -189,7 +195,7 @@ phase_validate() {
   echo ""
 
   if [[ $EUID -ne 0 ]]; then
-    exec sudo "$0" "$@"
+    exec sudo "$0" "${ORIGINAL_ARGS[@]}"
   fi
 
   if [[ ! -e /etc/NIXOS ]]; then
@@ -293,7 +299,6 @@ CONFIG_USERNAME=""
 CONFIG_PASSWORD_LOCKED=false
 LUKS_DEVICES=()
 TPM_ENROLLED=false
-FIDO2_LUKS_ENROLLED=false
 
 phase_detect_features() {
   echo ""
@@ -378,7 +383,15 @@ USER_PASSWORD_HASH=""
 
 phase_collect_inputs() {
   # --- LUKS Password ---
-  if [[ "$FEAT_ENCRYPTION" == "true" ]] && [[ "$DO_FORMAT" == true || "$DO_INSTALL" == true || "$DO_POST_INSTALL" == true ]]; then
+  # Needed for: format (disko), install (nixos-install), TPM enrollment (post-install).
+  # Not needed for: post-install-only when no TPM, YubiKey-LUKS, or TPM-Secure-Boot deferral.
+  local need_luks=false
+  [[ "$DO_FORMAT" == true || "$DO_INSTALL" == true ]] && need_luks=true
+  if [[ "$DO_POST_INSTALL" == true && "$FEAT_ENCRYPTION" == "true" && \
+        "$FEAT_YUBIKEY_LUKS" != "true" && "$FEAT_SECURE_BOOT" != "true" ]]; then
+    need_luks=true
+  fi
+  if [[ "$FEAT_ENCRYPTION" == "true" ]] && [[ "$need_luks" == true ]]; then
     echo ""
     if [[ -n "$LUKS_PASSWORD" ]]; then
       success "LUKS password ready (cached)"
@@ -388,8 +401,8 @@ phase_collect_inputs() {
       info "LUKS Disk Encryption"
       echo ""
       local pass pass_confirm
-      read -rsp "    Enter LUKS password: " pass; echo
-      read -rsp "    Confirm password:    " pass_confirm; echo
+      read -rsp "Enter LUKS password: " pass; echo
+      read -rsp "Confirm password: " pass_confirm; echo
       [[ "$pass" == "$pass_confirm" ]] || error "Passwords do not match."
       LUKS_PASSWORD="$pass"
       success "Password saved"
@@ -446,8 +459,8 @@ phase_collect_inputs() {
       info "User Password"
       echo ""
       local pass pass_confirm
-      read -rsp "    Enter password for $CONFIG_USERNAME: " pass; echo
-      read -rsp "    Confirm password:    " pass_confirm; echo
+      read -rsp "Enter password for $CONFIG_USERNAME: " pass; echo
+      read -rsp "Confirm password: " pass_confirm; echo
       [[ "$pass" == "$pass_confirm" ]] || error "Passwords do not match."
       if command -v mkpasswd &>/dev/null; then
         USER_PASSWORD_HASH="$(echo "$pass" | mkpasswd -m sha-512 -s)"
@@ -505,7 +518,7 @@ phase_summary() {
       echo -e "      TOTP 2FA:     will be configured"
     fi
     if [[ "$FEAT_YUBIKEY" == "true" ]]; then
-      echo -e "      YubiKey:      will be configured"
+      echo -e "      YubiKey:      registration required after first boot"
     fi
     echo ""
   fi
@@ -546,15 +559,38 @@ phase_state_version() {
       "$host_dir/home.nix"
   fi
 
-  # Write generated password hash into host config
+  # Write generated password hash into host config.
+  # Use python for the substitution — sed interprets $ in the replacement string
+  # as a back-reference, which breaks sha-512 hashes that start with $6$.
   if [[ -n "$USER_PASSWORD_HASH" ]]; then
     if grep -q 'user\.hashedPassword' "$host_dir/configuration.nix"; then
-      sed -i "s|user\.hashedPassword = \"[^\"]*\"|user.hashedPassword = \"$USER_PASSWORD_HASH\"|" \
-        "$host_dir/configuration.nix"
+      python3 - "$host_dir/configuration.nix" "$USER_PASSWORD_HASH" <<'PYEOF'
+import sys, re
+path, hash_val = sys.argv[1], sys.argv[2]
+with open(path) as f:
+    content = f.read()
+content = re.sub(
+    r'user\.hashedPassword = "[^"]*"',
+    f'user.hashedPassword = "{hash_val}"',
+    content
+)
+with open(path, 'w') as f:
+    f.write(content)
+PYEOF
     else
-      # Append before closing brace
-      sed -i "\$i\\  user.hashedPassword = \"$USER_PASSWORD_HASH\";" \
-        "$host_dir/configuration.nix"
+      python3 - "$host_dir/configuration.nix" "$USER_PASSWORD_HASH" <<'PYEOF'
+import sys
+path, hash_val = sys.argv[1], sys.argv[2]
+with open(path) as f:
+    lines = f.readlines()
+# Insert before the last closing brace
+for i in range(len(lines)-1, -1, -1):
+    if lines[i].strip() == '}':
+        lines.insert(i, f'  user.hashedPassword = "{hash_val}";\n')
+        break
+with open(path, 'w') as f:
+    f.writelines(lines)
+PYEOF
     fi
     success "Password hash written to configuration.nix"
   fi
@@ -613,7 +649,7 @@ phase_install() {
   echo ""
   nixos-generate-config --root /mnt --show-hardware-config > "$host_dir/hardware-configuration.generated.nix"
   nix flake lock "$REPO_DIR"
-  git -C "$REPO_DIR" add --all
+  git -C "$REPO_DIR" add "$host_dir/hardware-configuration.generated.nix" "$REPO_DIR/flake.lock"
   success "Hardware configuration generated"
   echo ""
 
@@ -653,7 +689,7 @@ phase_install() {
 #===========================
 
 setup_ssh() {
-  AGE_KEY="$(nix-shell -p ssh-to-age --run "ssh-to-age -private-key -i $SSH_KEY_FILE")"
+  AGE_KEY="$(nix-shell -p ssh-to-age --run "ssh-to-age -private-key -i $(printf '%q' "$SSH_KEY_FILE")")"
 
   local ssh_dir="/mnt/home/$CONFIG_USERNAME/.ssh"
   mkdir -p "$ssh_dir"
@@ -688,8 +724,8 @@ setup_totp() {
 
   oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"
   mkdir -p "$(dirname "$oath_file")"
+  install -m 600 /dev/null "$oath_file"
   echo "HOTP/T30/6 $CONFIG_USERNAME - $secret_hex" > "$oath_file"
-  chmod 600 "$oath_file"
 
   echo ""
   info "Scan this QR code with your authenticator app:"
@@ -722,31 +758,6 @@ setup_totp() {
   success "TOTP configured"
 }
 
-setup_yubikey() {
-  local mappings_file="/mnt${PERSIST_PREFIX}/etc/u2f_mappings"
-  mkdir -p "$(dirname "$mappings_file")"
-
-  info "YubiKey PAM Registration"
-  echo ""
-  echo -e "    Insert your YubiKey now, then press Enter to start."
-  echo -e "    The key will ${BOLD}flash${RESET} — touch it to register."
-  echo ""
-  read -rp "    Press Enter when ready..." _
-  echo ""
-
-  local credentials
-  # Pass the target hostname as origin so credentials work on the installed system.
-  # pam_u2f uses pam://$hostname as origin by default — must match at registration time.
-  credentials=$(nix-shell -p pam_u2f --run "pamu2fcfg -u $CONFIG_USERNAME -o pam://$HOST -i pam://$HOST")
-  if [[ -z "$credentials" ]]; then
-    return 1
-  fi
-
-  echo "$credentials" > "$mappings_file"
-  chmod 600 "$mappings_file"
-
-  success "YubiKey registered for $CONFIG_USERNAME"
-}
 
 setup_tpm() {
   # TPM hardware present?
@@ -775,47 +786,6 @@ setup_tpm() {
   TPM_ENROLLED=true
 }
 
-setup_yubikey_luks() {
-  # YubiKey must be present
-  if ! command -v systemd-cryptenroll &>/dev/null; then
-    warn "systemd-cryptenroll not available, skipping FIDO2 enrollment."
-    return 1
-  fi
-
-  local password_file
-  password_file="$(luks_password_file)"
-
-  echo ""
-  info "YubiKey FIDO2 LUKS Enrollment"
-  echo ""
-  echo -e "    The key will ${BOLD}flash${RESET} — touch it to confirm each enrollment."
-  echo ""
-  read -rp "    Press Enter to start..." _
-
-  for dev in "${LUKS_DEVICES[@]}"; do
-    local enrolled=false
-    for attempt in 1 2 3; do
-      info "Enrolling FIDO2 on $(basename "$dev")... (attempt $attempt/3)"
-      echo ""
-      if systemd-cryptenroll "$dev" --fido2-device=auto --fido2-with-client-pin=no --unlock-key-file="$password_file"; then
-        success "$(basename "$dev") enrolled"
-        enrolled=true
-        break
-      fi
-      if [[ "$attempt" -lt 3 ]]; then
-        echo ""
-        warn "Enrollment failed. Make sure your FIDO2 key is plugged in."
-        read -rp "    Press Enter to retry..." _
-      fi
-    done
-    if [[ "$enrolled" != "true" ]]; then
-      warn "$(basename "$dev") enrollment failed after 3 attempts"
-      return 1
-    fi
-  done
-
-  FIDO2_LUKS_ENROLLED=true
-}
 
 copy_config() {
   local dest="/mnt/home/$CONFIG_USERNAME/repos/nix"
@@ -844,22 +814,16 @@ phase_post_install() {
     fi
   fi
 
-  if [[ "$FEAT_YUBIKEY" == "true" ]]; then
-    local mappings_file="/mnt${PERSIST_PREFIX}/etc/u2f_mappings"
-    if [[ -f "$mappings_file" ]]; then
-      success "YubiKey already configured (cached)"
-    elif ! setup_yubikey; then
-      warn "YubiKey setup failed. Run 'yubikey-init' after first boot."
-    fi
-  fi
-
-  if [[ "$FEAT_YUBIKEY_LUKS" == "true" && "$FEAT_ENCRYPTION" == "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
-    if ! setup_yubikey_luks; then
-      warn "FIDO2 LUKS enrollment skipped. Run 'yubikey-luks-init' after first boot."
-    fi
-  elif [[ "$FEAT_ENCRYPTION" == "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
-    if ! setup_tpm; then
-      warn "TPM enrollment skipped. Run 'sudo tpm-luks-init' after first boot."
+  if [[ "$FEAT_ENCRYPTION" == "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
+    if [[ "$FEAT_YUBIKEY_LUKS" != "true" ]]; then
+      if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
+        # TPM PCR 7 measures Secure Boot state — enrolling now (Secure Boot OFF) would
+        # produce a seal that breaks once Secure Boot is enabled after secure-boot-init.
+        # Defer to first boot, after Secure Boot is fully set up.
+        true
+      elif ! setup_tpm; then
+        warn "TPM enrollment skipped. Run 'sudo tpm-luks-init' after first boot."
+      fi
     fi
   fi
 
@@ -879,57 +843,282 @@ phase_post_install() {
 #===========================
 
 phase_complete() {
+  # Collect any post-boot tasks so we can show them in one place.
+  # Order matters: Secure Boot before TPM (PCR 7 seals against SB state).
+  local post_boot_tasks=()
+  local tpm_deferred=false
+
+  if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
+    post_boot_tasks+=("secure-boot-init    — sign boot files and enroll Secure Boot keys")
+  fi
+  if [[ "$FEAT_YUBIKEY_LUKS" == "true" && "$FEAT_ENCRYPTION" == "true" ]]; then
+    post_boot_tasks+=("yubikey-luks-init   — enroll YubiKey FIDO2 for LUKS unlock at boot")
+  fi
+  if [[ "$FEAT_YUBIKEY" == "true" ]]; then
+    post_boot_tasks+=("yubikey-init        — register YubiKey for sudo / SSH")
+  fi
+  # TPM was enrolled during install only if Secure Boot is disabled.
+  # With Secure Boot: deferred so the seal is made against the final SB state (PCR 7).
+  if [[ "$TPM_ENROLLED" != "true" && "$FEAT_ENCRYPTION" == "true" && \
+        "$FEAT_YUBIKEY_LUKS" != "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
+    tpm_deferred=true
+    post_boot_tasks+=("tpm-luks-init       — enroll TPM2 for automatic LUKS unlock at boot")
+  fi
+
+  # ASUS board detection for Secure Boot instructions
+  local board_vendor sys_vendor is_asus=false
+  board_vendor="$(cat /sys/class/dmi/id/board_vendor 2>/dev/null || true)"
+  sys_vendor="$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)"
+  if [[ "$board_vendor" == *"ASUSTeK"* || "$board_vendor" == *"ASUS"* || \
+        "$sys_vendor" == *"ASUSTeK"* || "$sys_vendor" == *"ASUS"* ]]; then
+    is_asus=true
+  fi
+
   echo ""
   echo -e "${BOLD}============================================${RESET}"
   echo -e "${GREEN}${BOLD}  Installation complete!${RESET}"
   echo -e "${BOLD}============================================${RESET}"
-  echo ""
 
+  # ---- What was set up ----
+  echo ""
+  echo -e "  ${BOLD}What was set up:${RESET}"
+  echo ""
+  echo -e "    NixOS installed for ${BOLD}$HOST${RESET} (${CONFIG_USERNAME})"
   if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
-    echo "    LUKS: Enter disk encryption password at boot"
-    if [[ "$FIDO2_LUKS_ENROLLED" == "true" ]]; then
-      echo "    FIDO2: YubiKey LUKS enrollment done — plug in and tap at boot"
-    elif [[ "$TPM_ENROLLED" == "true" ]]; then
-      echo "    TPM:  Auto-unlock enrolled (password still works as fallback)"
+    if [[ "$TPM_ENROLLED" == "true" ]]; then
+      echo -e "    Disk encryption:  ${GREEN}LUKS + TPM2 auto-unlock${RESET}  ${DIM}(password fallback works)${RESET}"
+    elif [[ "$FEAT_YUBIKEY_LUKS" == "true" ]]; then
+      echo -e "    Disk encryption:  ${GREEN}LUKS${RESET}  ${DIM}(YubiKey FIDO2 enrollment pending — password at boot until then)${RESET}"
+    elif [[ "$tpm_deferred" == "true" ]]; then
+      echo -e "    Disk encryption:  ${GREEN}LUKS${RESET}  ${DIM}(TPM2 enrollment pending — password at boot until then)${RESET}"
+    else
+      echo -e "    Disk encryption:  ${GREEN}LUKS${RESET}  ${DIM}(password required at boot)${RESET}"
+    fi
+  fi
+  if [[ "$FEAT_TOTP" == "true" ]]; then
+    echo -e "    TOTP 2FA:         ${GREEN}configured${RESET}  ${DIM}(use your authenticator app for sudo/SSH)${RESET}"
+  fi
+  echo -e "    SSH key:          ${GREEN}installed${RESET}"
+  echo -e "    SOPS age key:     ${GREEN}installed${RESET}"
+
+  # ---- What to do after first boot ----
+  if [[ ${#post_boot_tasks[@]} -gt 0 ]]; then
+    echo ""
+    echo -e "  ${BOLD}${YELLOW}After first boot, run these commands:${RESET}"
+    echo ""
+    local i=1
+    for task in "${post_boot_tasks[@]}"; do
+      local cmd="${task%%—*}"
+      local desc="${task#*—}"
+      echo -e "    ${BOLD}$((i++)).${RESET} ${BOLD}${cmd}${RESET} ${DIM}—${desc}${RESET}"
+    done
+    echo ""
+    if [[ "$tpm_deferred" == "true" && "$FEAT_SECURE_BOOT" == "true" ]]; then
+      echo -e "    ${DIM}Run secure-boot-init first — TPM enrollment seals against the active${RESET}"
+      echo -e "    ${DIM}Secure Boot state (PCR 7). Wrong order = broken auto-unlock.${RESET}"
+    else
+      echo -e "    ${DIM}Until enrolled: LUKS uses password, sudo uses password fallback.${RESET}"
     fi
   fi
 
-  echo "    Login: Password is set in NixOS config"
-
-  if [[ "$FEAT_TOTP" == "true" ]]; then
-    echo "    TOTP: Use the code from your authenticator app"
-  fi
-
-  if [[ "$FEAT_YUBIKEY" == "true" ]]; then
-    echo "    YubiKey: Touch your key at login prompt"
-  fi
-
+  # ---- Secure Boot UEFI instructions ----
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
     echo ""
-    echo -e "    ${YELLOW}${BOLD}⚠ Secure Boot — setup required after first boot:${RESET}"
-    echo -e "      1. In UEFI: disable Secure Boot, enable ${BOLD}Setup Mode${RESET}"
-    echo -e "      2. Boot into NixOS"
-    echo -e "      3. ${BOLD}sudo secure-boot-init${RESET}"
+    echo -e "  ${BOLD}Secure Boot — UEFI steps before running secure-boot-init:${RESET}"
+    echo ""
+    echo -e "    ${DIM}NixOS will boot normally with Secure Boot OFF until you complete these steps.${RESET}"
+    echo ""
+    if [[ "$is_asus" == "true" ]]; then
+      echo -e "    ${YELLOW}! ASUS board — Setup Mode not supported. Use Custom Mode instead.${RESET}"
+      echo ""
+      echo -e "    ${BOLD}Step A${RESET} — In UEFI (Boot → Secure Boot):"
+      echo -e "      OS Type:          ${BOLD}Other OS${RESET}"
+      echo -e "      Secure Boot Mode: ${BOLD}Custom${RESET}"
+      echo -e "      Key Management:   ${DIM}leave keys untouched — do NOT clear them${RESET}"
+      echo ""
+      echo -e "    ${BOLD}Step B${RESET} — Boot into NixOS and run ${BOLD}secure-boot-init${RESET}"
+      echo ""
+      echo -e "    ${BOLD}Step C${RESET} — In UEFI: activate Secure Boot:"
+      echo -e "      OS Type:          ${BOLD}Windows UEFI mode${RESET}"
+      echo -e "      Secure Boot Mode: ${BOLD}Standard${RESET}  ${DIM}(or keep Custom)${RESET}"
+      echo -e "      ${DIM}→ Secure Boot state will show: On${RESET}"
+    else
+      echo -e "    ${BOLD}Step A${RESET} — In UEFI: disable Secure Boot, enable ${BOLD}Setup Mode${RESET}"
+      echo -e "      ${DIM}This clears existing keys — required for custom key enrollment.${RESET}"
+      echo ""
+      echo -e "    ${BOLD}Step B${RESET} — Boot into NixOS and run ${BOLD}secure-boot-init${RESET}"
+      echo ""
+      echo -e "    ${BOLD}Step C${RESET} — In UEFI: enable ${BOLD}Secure Boot${RESET}"
+    fi
   fi
 
   echo ""
-  if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
-    if [[ "$YES" != true ]]; then
-      local confirm
+  echo -e "${BOLD}============================================${RESET}"
+  echo ""
+
+  # ---- Reboot prompt ----
+  if [[ "$YES" != true ]]; then
+    if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
       read -rp "    Reboot into UEFI firmware setup now? [Y/n]: " confirm
-      if [[ "$confirm" =~ ^[nN]$ ]]; then
-        echo "    Reboot manually when ready."
-      else
+      if [[ ! "${confirm:-}" =~ ^[nN]$ ]]; then
         systemctl reboot --firmware-setup
+      else
+        echo "    Reboot manually when ready."
       fi
-    fi
-  else
-    if [[ "$YES" != true ]]; then
-      local confirm
+    else
       read -rp "    Reboot now? [Y/n]: " confirm
-      [[ "$confirm" =~ ^[nN]$ ]] || reboot
+      [[ "${confirm:-}" =~ ^[nN]$ ]] || reboot
     fi
   fi
+  echo ""
+}
+
+#===========================
+# Phase Upgrade (installed system)
+#===========================
+
+phase_upgrade() {
+  # Mirror what the auto-upgrade service does:
+  # 1. Reset flake.lock to HEAD (discard local experiments)
+  # 2. Pull latest changes from remote
+  # 3. nixos-rebuild switch (activate immediately, unlike the service which uses boot)
+
+  local invoking_user="${SUDO_USER:-$USER}"
+
+  info "Syncing repository..."
+  echo ""
+  if git -C "$REPO_DIR" remote get-url origin &>/dev/null; then
+    sudo -u "$invoking_user" git -C "$REPO_DIR" checkout flake.lock
+    sudo -u "$invoking_user" git -C "$REPO_DIR" pull --ff-only
+    success "Repository up to date"
+  else
+    warn "No git remote configured — skipping pull"
+  fi
+  echo ""
+
+  info "Rebuilding system..."
+  echo ""
+
+  local avail_gb max_jobs
+  avail_gb=$(awk '/^MemAvailable:/{printf "%d", $2/1024/1024}' /proc/meminfo)
+  max_jobs=$(( avail_gb / 4 ))
+  (( max_jobs < 1 )) && max_jobs=1
+  success "RAM available: ${avail_gb} GB — using --max-jobs ${max_jobs}"
+  echo ""
+
+  # lanzaboote requires /var/lib/sbctl/keys to exist at build time.
+  # If secure-boot-init hasn't run yet, disable lanzaboote for this rebuild
+  # so the system can still be upgraded. secure-boot-init will re-enable it.
+  local sb_keys_exist=false
+  [[ -f /var/lib/sbctl/keys/db/db.pem ]] && sb_keys_exist=true
+
+  local sb_config_enabled
+  sb_config_enabled="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.config.features.secureBoot.enable" 2>/dev/null || echo "false")"
+
+  if [[ "$sb_config_enabled" == "true" && "$sb_keys_exist" != "true" ]]; then
+    warn "Secure Boot keys not yet generated — disabling lanzaboote for this rebuild."
+    warn "Run secure-boot-init after the upgrade to activate Secure Boot."
+    echo ""
+    local host_dir="$REPO_DIR/hosts/$HOST"
+    local override_nix="$host_dir/secure-boot-upgrade-override.nix"
+    printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }\n' > "$override_nix"
+    sed -i "/imports = \[/a\\    .\/secure-boot-upgrade-override.nix" "$host_dir/configuration.nix"
+
+    local rebuild_ok=true
+    nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" || rebuild_ok=false
+
+    sed -i '/secure-boot-upgrade-override\.nix/d' "$host_dir/configuration.nix"
+    rm -f "$override_nix"
+
+    [[ "$rebuild_ok" == true ]] || error "nixos-rebuild failed. Check the output above."
+  else
+    nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" || error "nixos-rebuild failed. Check the output above."
+  fi
+
+  echo ""
+  success "System upgraded."
+
+  # ---- Post-upgrade status: check what still needs attention ----
+  # Read config values from the built system
+  local json
+  json=$(nix eval --json "$REPO_DIR#nixosConfigurations.${HOST}.config" --apply '
+    cfg: {
+      secureBoot    = cfg.features.secureBoot.enable;
+      yubikey       = cfg.features.auth.yubikey.enable;
+      yubikeyLuks   = cfg.features.encryption.unlockMethod == "yubikey";
+      totp          = cfg.features.auth.totp.enable;
+      encryption    = cfg.features.encryption.enable;
+      persistPrefix = cfg.features.impermanence.persistPrefix;
+    }
+  ' 2>/dev/null) || json="{}"
+
+  local feat_sb feat_yubikey feat_yubikey_luks feat_totp feat_enc persist_prefix
+  feat_sb=$(echo "$json"           | jq -r '.secureBoot    // false')
+  feat_yubikey=$(echo "$json"      | jq -r '.yubikey       // false')
+  feat_yubikey_luks=$(echo "$json" | jq -r '.yubikeyLuks   // false')
+  feat_totp=$(echo "$json"         | jq -r '.totp          // false')
+  feat_enc=$(echo "$json"          | jq -r '.encryption    // false')
+  persist_prefix=$(echo "$json"    | jq -r '.persistPrefix // ""')
+
+  # Live state checks
+  local sb_active=false yubikey_luks_enrolled=false yubikey_pam_enrolled=false totp_enrolled=false
+  if [[ "$feat_sb" == "true" ]]; then
+    local sb_state
+    sb_state=$(bootctl status 2>/dev/null | awk '/Secure Boot:/{print $3}')
+    [[ "$sb_state" == "enabled" ]] && sb_active=true
+  fi
+  if [[ "$feat_yubikey_luks" == "true" && "$feat_enc" == "true" ]]; then
+    local first_dev
+    first_dev=$(lsblk -rno NAME,TYPE | awk '$2=="crypt"{print "/dev/"$1; exit}')
+    if [[ -n "$first_dev" ]] && systemd-cryptenroll "$first_dev" 2>/dev/null | grep -q "fido2"; then
+      yubikey_luks_enrolled=true
+    fi
+  fi
+  if [[ "$feat_yubikey" == "true" ]]; then
+    local u2f_file="${persist_prefix}/etc/u2f_mappings"
+    local invoking_username="${SUDO_USER:-$USER}"
+    [[ -f "$u2f_file" ]] && grep -q "^${invoking_username}:" "$u2f_file" 2>/dev/null && yubikey_pam_enrolled=true
+  fi
+  if [[ "$feat_totp" == "true" ]]; then
+    local oath_file="${persist_prefix}/etc/users.oath"
+    local invoking_username="${SUDO_USER:-$USER}"
+    [[ -f "$oath_file" ]] && grep -q "^HOTP.*${invoking_username}" "$oath_file" 2>/dev/null && totp_enrolled=true
+  fi
+
+  # Collect pending tasks
+  local pending_tasks=()
+  [[ "$feat_sb" == "true" && "$sb_active" != "true" ]] && \
+    pending_tasks+=("secure-boot-init    — sign boot files and enroll Secure Boot keys")
+  [[ "$feat_yubikey_luks" == "true" && "$yubikey_luks_enrolled" != "true" ]] && \
+    pending_tasks+=("yubikey-luks-init   — enroll YubiKey FIDO2 for LUKS unlock at boot")
+  [[ "$feat_yubikey" == "true" && "$yubikey_pam_enrolled" != "true" ]] && \
+    pending_tasks+=("yubikey-init        — register YubiKey for sudo / SSH")
+  [[ "$feat_totp" == "true" && "$totp_enrolled" != "true" ]] && \
+    pending_tasks+=("totp-init           — configure TOTP 2FA for sudo / SSH")
+
+  echo ""
+  echo -e "${BOLD}============================================${RESET}"
+  echo -e "${GREEN}${BOLD}  Upgrade complete!${RESET}"
+  echo -e "${BOLD}============================================${RESET}"
+  echo ""
+
+  if [[ ${#pending_tasks[@]} -eq 0 ]]; then
+    success "All features are fully set up — nothing to do."
+  else
+    echo -e "  ${BOLD}${YELLOW}Pending setup:${RESET}"
+    echo ""
+    local i=1
+    for task in "${pending_tasks[@]}"; do
+      local cmd="${task%%—*}"
+      local desc="${task#*—}"
+      echo -e "    ${BOLD}$((i++)).${RESET} ${BOLD}${cmd}${RESET}${DIM}—${desc}${RESET}"
+    done
+    echo ""
+    echo -e "    ${DIM}Each script guides you through the process interactively.${RESET}"
+  fi
+
+  echo ""
+  echo -e "${BOLD}============================================${RESET}"
   echo ""
 }
 
@@ -942,35 +1131,37 @@ main() {
   phase_validate
   phase_select_host
 
-  # On an installed system: only upgrade makes sense
+  # On an installed system: only upgrade makes sense.
+  # --format and --install are ignored here — they require a live ISO environment.
   if [[ "$IS_LIVE" != true ]]; then
-    if [[ "$YES" == true ]]; then
-      nixos-rebuild switch --flake "$REPO_DIR#$HOST"
-      exit 0
+    if [[ "$DO_FORMAT" == true || "$DO_INSTALL" == true ]]; then
+      warn "--format and --install are only available on a live ISO. Running upgrade instead."
+      echo ""
     fi
-
     local sb_enabled
     sb_enabled="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.config.features.secureBoot.enable" 2>/dev/null || echo "false")"
 
     echo ""
-    info "Upgrade"
+    info "System Upgrade"
     echo ""
-    echo -e "    Running on an installed system — only upgrade is available here."
-    echo -e "    For auth setup use: ${BOLD}totp-init${RESET}, ${BOLD}yubikey-init${RESET}, ${BOLD}yubikey-luks-init${RESET}, ${BOLD}tpm-luks-init${RESET}"
+    echo -e "    ${DIM}Pulls latest changes from git and rebuilds the system.${RESET}"
+    echo ""
+    echo -e "    For auth setup:        ${BOLD}totp-init${RESET}  ${BOLD}yubikey-init${RESET}  ${BOLD}yubikey-luks-init${RESET}  ${BOLD}tpm-luks-init${RESET}"
     if [[ "$sb_enabled" == "true" ]]; then
-      echo -e "    For Secure Boot setup use: ${BOLD}secure-boot-init${RESET}"
+      echo -e "    For Secure Boot setup: ${BOLD}secure-boot-init${RESET}"
     fi
     echo ""
+
+    if [[ "$YES" == true ]]; then
+      phase_upgrade
+      exit 0
+    fi
+
     local confirm
-    read -rp "    Run nixos-rebuild switch now? [Y/n]: " confirm
+    read -rp "Run upgrade now? [Y/n]: " confirm
     echo ""
-    if [[ ! "$confirm" =~ ^[nN]$ ]]; then
-      info "Upgrading system..."
-      echo ""
-      nixos-rebuild switch --flake "$REPO_DIR#$HOST"
-      echo ""
-      success "System upgraded."
-    fi
+    [[ ! "$confirm" =~ ^[nN]$ ]] || exit 0
+    phase_upgrade
     exit 0
   fi
 
@@ -1013,9 +1204,6 @@ main() {
   fi
 
   phase_complete
-
-  # Cleanup
-  rm -f /tmp/luks-password /tmp/install.env
 }
 
 main
