@@ -218,12 +218,15 @@ phase_validate() {
     echo ""
   fi
 
-  # shellcheck disable=SC2046
-  echo -e "    Steps: ${BOLD}$(printf '%s ' \
-    $([[ "$DO_FORMAT" == true ]] && echo "format") \
-    $([[ "$DO_INSTALL" == true ]] && echo "install") \
-    $([[ "$DO_POST_INSTALL" == true ]] && echo "post-install"))${RESET}"
-  echo ""
+  # Only show step flags on live ISO — on installed system the mode is always upgrade
+  if [[ "${IS_LIVE:-false}" == true ]]; then
+    # shellcheck disable=SC2046
+    echo -e "    Steps: ${BOLD}$(printf '%s ' \
+      $([[ "$DO_FORMAT" == true ]] && echo "format") \
+      $([[ "$DO_INSTALL" == true ]] && echo "install") \
+      $([[ "$DO_POST_INSTALL" == true ]] && echo "post-install"))${RESET}"
+    echo ""
+  fi
 
   if [[ ! -e /etc/NIXOS ]]; then
     error "Not a NixOS system. Boot from a NixOS ISO first."
@@ -1239,12 +1242,18 @@ main() {
     echo ""
     info "System Upgrade"
     echo ""
-    echo -e "    ${DIM}Pulls latest changes from git and rebuilds the system.${RESET}"
+    echo -e "    ${DIM}Pulls the latest configuration from git and rebuilds the system.${RESET}"
+    echo -e "    ${DIM}Activate immediately — no reboot required.${RESET}"
     echo ""
-    echo -e "    For auth setup:        ${BOLD}totp-init${RESET}  ${BOLD}yubikey-init${RESET}  ${BOLD}yubikey-luks-init${RESET}  ${BOLD}tpm-luks-init${RESET}"
+    echo -e "  ${BOLD}Post-setup commands${RESET} ${DIM}(run after upgrade if not yet done):${RESET}"
+    echo ""
     if [[ "$sb_enabled" == "true" ]]; then
-      echo -e "    For Secure Boot setup: ${BOLD}secure-boot-init${RESET}"
+      echo -e "    ${BOLD}secure-boot-init${RESET}      ${DIM}Sign boot files and enroll Secure Boot keys into firmware${RESET}"
     fi
+    echo -e "    ${BOLD}yubikey-luks-init${RESET}     ${DIM}Enroll YubiKey FIDO2 for automatic disk unlock at boot${RESET}"
+    echo -e "    ${BOLD}yubikey-init${RESET}          ${DIM}Register YubiKey for sudo and SSH authentication${RESET}"
+    echo -e "    ${BOLD}totp-init${RESET}             ${DIM}Set up TOTP two-factor authentication for sudo and SSH${RESET}"
+    echo -e "    ${BOLD}tpm-luks-init${RESET}         ${DIM}Enroll TPM2 chip for automatic disk unlock at boot${RESET}"
     echo ""
 
     if [[ "$YES" == true ]]; then
