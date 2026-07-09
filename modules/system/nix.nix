@@ -134,17 +134,33 @@
             ${pkgs.libnotify}/bin/notify-send "$@"
         '';
 
-        # Pre-upgrade script: Sync with remote
-        # Steps:
-        # 1. Reset flake.lock to git HEAD (discard local experimental changes)
-        # 2. Pull latest changes from remote (git pull --ff-only)
-        #    This includes the CI-tested flake.lock — no local flake update needed.
-        #
-        # Note: All operations run as user (sudo -u) not root, to preserve git ownership
+        # Pre-upgrade script: Sync with remote, then apply Secure Boot override if needed.
+        # lanzaboote requires /var/lib/sbctl/keys to exist at build time.
+        # If secure-boot-init hasn't run yet, inject a mkForce false override so the
+        # build succeeds. The override is cleaned up after the build in ExecStartPost.
         updateFlake = pkgs.writeShellScript "nixos-upgrade-update-flake" ''
           cd ${flakeDir}
           ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git checkout flake.lock
           ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git pull --ff-only
+
+          # Inject Secure Boot override when keys are missing
+          if grep -q 'secureBoot\.enable = true' ${flakeDir}/hosts/$(hostname)/configuration.nix 2>/dev/null \
+            && [ ! -f /var/lib/sbctl/keys/db/db.pem ]; then
+            OVERRIDE="${flakeDir}/hosts/$(hostname)/secure-boot-upgrade-override.nix"
+            printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }\n' > "$OVERRIDE"
+            sed -i '/imports = \[/a\    .\/secure-boot-upgrade-override.nix' \
+              ${flakeDir}/hosts/$(hostname)/configuration.nix
+          fi
+        '';
+
+        # Post-upgrade cleanup: remove Secure Boot override if it was injected
+        cleanupOverride = pkgs.writeShellScript "nixos-upgrade-cleanup-override" ''
+          OVERRIDE="${flakeDir}/hosts/$(hostname)/secure-boot-upgrade-override.nix"
+          if [ -f "$OVERRIDE" ]; then
+            sed -i '/secure-boot-upgrade-override\.nix/d' \
+              ${flakeDir}/hosts/$(hostname)/configuration.nix
+            rm -f "$OVERRIDE"
+          fi
         '';
 
         # Post-upgrade success script
@@ -168,10 +184,10 @@
         '';
       in
       {
-        path = [ pkgs.git ];
+        path = [ pkgs.git pkgs.gnused ];
 
         serviceConfig.ExecStartPre = lib.mkBefore [ "${updateFlake}" ];
-        serviceConfig.ExecStartPost = "${successScript}";
+        serviceConfig.ExecStartPost = [ "${cleanupOverride}" "${successScript}" ];
 
         # Trigger failure notification service on upgrade failure
         unitConfig.OnFailure = [ "nixos-upgrade-notify-failure.service" ];
