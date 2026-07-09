@@ -13,7 +13,9 @@ This clones the repo and launches the interactive installer. It will:
 1. Show available hosts and let you pick one
 2. Read the host's config to detect enabled features
 3. Prompt only for what's needed (LUKS password, SSH key)
-4. Partition, install, and set up post-install (SSH, SOPS, TOTP, YubiKey)
+4. Partition, install, and set up post-install (SSH, SOPS, TOTP)
+
+> **Note:** YubiKey enrollment (both LUKS and PAM) is **not done during install** — it must be run after first boot using `sudo yubikey-luks-init` and `sudo yubikey-init`. The installer shows you exactly which commands to run at the end.
 
 CLI flags are passed through to `install.sh`:
 
@@ -60,7 +62,7 @@ Steps are combinable. Without step flags, all three run. The installer reads hos
 
 ## Disk Layout
 
-Both hosts use LUKS full disk encryption with btrfs subvolumes:
+All hosts use LUKS full disk encryption with btrfs subvolumes:
 
 ```
 /dev/nvme...
@@ -68,11 +70,11 @@ Both hosts use LUKS full disk encryption with btrfs subvolumes:
 └── root (rest)
     └── LUKS (cryptroot)
         └── btrfs (label: nixos)
-            ├── @          → /
-            ├── @home      → /home
-            ├── @nix       → /nix
-            ├── @persist   → /persist (survives root wipe)
-            └── @snapshots → /.snapshots
+            ├── @          → /              (ephemeral — wiped on boot when impermanence enabled)
+            ├── @home      → /home          (permanent user data)
+            ├── @nix       → /nix           (permanent Nix store)
+            ├── @persist   → /persist       (permanent state — only with impermanence enabled)
+            └── @snapshots → mounted at /mnt/btrfs-root/@snapshots by btrbk
 ```
 
 samuels-pc has an additional encrypted games disk:
@@ -131,32 +133,62 @@ In your host's `configuration.nix`:
 features.secureBoot.enable = true;
 ```
 
-### 2. Prepare UEFI
+### 2. Run `secure-boot-init` after first boot
 
-Boot into UEFI/BIOS and:
-- Disable Secure Boot
-- Enable "Setup Mode" (or clear existing keys)
-
-### 3. Enroll keys
-
-The installer (`install.sh`) generates sbctl keys automatically before `nixos-install`.
-After booting into the new system:
+The installer skips Secure Boot key enrollment (keys don't exist yet at install time). After the first normal boot, run:
 
 ```bash
-# Enroll keys (--microsoft keeps Windows/firmware compatibility)
-sudo sbctl enroll-keys --microsoft
+sudo secure-boot-init
 ```
 
-### 4. Enable Secure Boot
+The script auto-detects your board and guides you through the correct steps. It handles everything: generating keys, signing boot files, enrolling into firmware.
 
-Reboot into UEFI/BIOS, enable Secure Boot, then boot normally.
+### Standard boards
+
+Before running `secure-boot-init`, in UEFI:
+1. Disable Secure Boot
+2. Enable **Setup Mode** (clears existing keys — required for custom key enrollment)
+
+The script then calls:
+```bash
+sbctl enroll-keys --microsoft   # keeps Windows/firmware compatibility
+```
+
+Then re-enable Secure Boot in UEFI.
+
+### ASUS boards (non-standard)
+
+ASUS firmware disables Secure Boot instead of entering Setup Mode when keys are cleared. `secure-boot-init` detects this automatically and uses `--force` to bypass the Setup Mode requirement.
+
+Before running `secure-boot-init`, in UEFI (Boot → Secure Boot):
+- **OS Type:** Other OS
+- **Secure Boot Mode:** Custom
+- **Key Management:** leave keys untouched — do NOT clear them
+
+The script then calls:
+```bash
+sbctl enroll-keys --microsoft --force
+```
+
+Afterwards, in UEFI: set OS Type → Windows UEFI mode, Secure Boot → On.
+
+### Verify
 
 ```bash
-# Verify it's working
-bootctl status
+bootctl status   # should show "Secure Boot: enabled"
+sudo secure-boot-init   # re-run to verify all files are signed
 ```
 
-Should show "Secure Boot: enabled".
+### TPM + Secure Boot ordering
+
+If you use TPM2 auto-unlock **and** Secure Boot, always enroll TPM **after** Secure Boot is fully active. PCR 7 seals against the Secure Boot state — enrolling before activation produces a seal that breaks once Secure Boot is turned on.
+
+```
+1. sudo secure-boot-init   # activate Secure Boot first
+2. sudo tpm-luks-init      # then enroll TPM
+```
+
+`secure-boot-init` and the installer both remind you of this ordering.
 
 ## LUKS Unlock
 
