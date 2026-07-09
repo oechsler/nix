@@ -289,6 +289,7 @@ FEAT_TOTP=false
 FEAT_YUBIKEY=false
 FEAT_YUBIKEY_LUKS=false
 FEAT_SECURE_BOOT=false
+CONFIG_KEYBOARD="us"
 FEAT_DESKTOP=false
 FEAT_WM=""
 FEAT_SERVER=false
@@ -318,6 +319,7 @@ phase_detect_features() {
       server = cfg.features.server;
       userName = cfg.user.name;
       passwordLocked = cfg.user.hashedPassword == "!";
+      keyboard = cfg.locale.keyboard;
       luksDevices = builtins.attrValues (builtins.mapAttrs (name: dev: dev.device) cfg.boot.initrd.luks.devices);
     }
   ') || error "Failed to evaluate configuration. Check flake syntax."
@@ -329,15 +331,20 @@ phase_detect_features() {
 
   read -r FEAT_ENCRYPTION FEAT_IMPERMANENCE PERSIST_PREFIX FEAT_TOTP \
           FEAT_YUBIKEY FEAT_YUBIKEY_LUKS FEAT_SECURE_BOOT FEAT_DESKTOP FEAT_WM FEAT_SERVER \
-          CONFIG_USERNAME CONFIG_PASSWORD_LOCKED \
+          CONFIG_USERNAME CONFIG_PASSWORD_LOCKED CONFIG_KEYBOARD \
     < <(echo "$json" | jq -r '[
       .encryption, .impermanence, .persistPrefix, .totp,
       .yubikey, .yubikeyLuks, .secureBoot, .desktop, .wm, .server, .userName,
-      .passwordLocked
+      .passwordLocked, .keyboard
     ] | @tsv')
 
   # Parse LUKS device paths into array
   mapfile -t LUKS_DEVICES < <(echo "$json" | jq -r '.luksDevices[]')
+
+  # Apply host keyboard layout so passwords are typed correctly on the live ISO
+  if [[ "$IS_LIVE" == true ]] && command -v loadkeys &>/dev/null; then
+    loadkeys "$CONFIG_KEYBOARD" 2>/dev/null || true
+  fi
 
   echo -e "    Host:          ${BOLD}$HOST${RESET}"
   echo -e "    Username:      ${BOLD}$CONFIG_USERNAME${RESET}"
