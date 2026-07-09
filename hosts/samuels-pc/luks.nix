@@ -22,9 +22,9 @@
 
 let
   unlockOpts = {
-    yubikey = [ "fido2-device=auto" ];
-    tpm2 = [ "tpm2-device=auto" ];
-    password = [ ];
+    yubikey = [ "fido2-device=auto" "tries=0" ];
+    tpm2 = [ "tpm2-device=auto" "tries=0" ];
+    password = [ "tries=0" ];
   };
 in
 {
