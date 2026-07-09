@@ -137,16 +137,18 @@ let
 
       #--- Step 2: activate lanzaboote + sign boot entries ---
       # Keys must exist before this rebuild so impermanence persists /var/lib/sbctl.
-      # Skip if already enrolled — rebuild already happened on a previous run.
-      if [[ "$keys_enrolled" == true ]]; then
-        step 2 3 "System already rebuilt with Secure Boot active — skipping."
-        echo ""
-      else
+      # Skip rebuild if already enrolled — but always sign to catch unsigned files.
+      if [[ "$keys_enrolled" != true ]]; then
         step 2 3 "Rebuilding system with Secure Boot active (persists keys across reboots)..."
         echo ""
         "$REPO_DIR/install.sh" --yes --quiet
         echo ""
+      else
+        step 2 3 "Signing all boot files..."
+        echo ""
       fi
+      sbctl sign-all
+      echo ""
 
       #--- Step 3: enroll keys ---
       if [[ "$keys_enrolled" != true ]]; then
