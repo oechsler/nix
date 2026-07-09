@@ -35,7 +35,7 @@ let
       success() { echo -e "    ''${GREEN}✓''${RESET} $*"; }
       warn()    { echo -e "    ''${YELLOW}!''${RESET} $*"; }
       error()   { echo -e "''${RED}Error:''${RESET} $*" >&2; exit 1; }
-      step()    { echo -e "\n''${BOLD}[$1/$2]''${RESET} $3"; }
+      step()    { echo ""; info "[$1/$2] $3"; }
 
       echo ""
       echo -e "''${BOLD}TPM2 LUKS Setup''${RESET}"
