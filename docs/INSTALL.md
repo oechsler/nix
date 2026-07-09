@@ -158,16 +158,16 @@ Then re-enable Secure Boot in UEFI.
 
 ### ASUS boards (non-standard)
 
-ASUS firmware disables Secure Boot instead of entering Setup Mode when keys are cleared. Setting **Custom Mode** in UEFI allows enrollment without requiring Setup Mode — `secure-boot-init` detects ASUS boards and prompts for this automatically.
+ASUS firmware requires you to explicitly delete all Secure Boot variables to enter Setup Mode. `secure-boot-init` detects ASUS boards and guides you through this.
 
 Before running `secure-boot-init`, in UEFI (Boot → Secure Boot):
-- **OS Type:** Other OS
-- **Secure Boot Mode:** Custom
-- **Key Management:** leave keys untouched — do NOT clear them
+1. **Secure Boot Mode:** Custom
+2. **Key Management:** Delete All Secure Boot Variables ← this enables Setup Mode
+3. Save and reboot into NixOS
 
 The script then calls:
 ```bash
-sbctl enroll-keys --microsoft --firmware-builtin --yes-this-might-brick-my-machine
+sbctl enroll-keys --microsoft --firmware-builtin
 ```
 
 Afterwards, in UEFI: set OS Type → Windows UEFI mode, Secure Boot → On.
