@@ -16,8 +16,8 @@
 # - Nix-Logo wallpaper
 #
 # Monitor layout:
-# - DP-1 (right): Workspaces 1-4
-# - DP-2 (left): Workspaces 5-8
+# - DP-2 (right): Workspaces 1-4
+# - DP-3 (left): Workspaces 5-8
 
 { ... }:
 
@@ -39,7 +39,7 @@
 
   displays.monitors = [
     {
-      name = "DP-1";
+      name = "DP-2";
       width = 2560;
       height = 1440;
       refreshRate = 165;
@@ -54,7 +54,7 @@
       ];
     }
     {
-      name = "DP-2";
+      name = "DP-3";
       width = 2560;
       height = 1440;
       refreshRate = 165;
