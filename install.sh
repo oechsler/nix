@@ -333,6 +333,11 @@ phase_detect_features() {
     echo ""
     success "Features loaded from cache (host: $HOST)"
     echo ""
+    # Still apply keyboard layout — loadkeys is normally called at the end of
+    # this function, but the cache path skips it
+    if [[ "$IS_LIVE" == true ]] && command -v loadkeys &>/dev/null; then
+      loadkeys "$CONFIG_KEYBOARD" 2>/dev/null || true
+    fi
     return
   fi
 
