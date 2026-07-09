@@ -338,8 +338,11 @@ phase_detect_features() {
     # Still apply keyboard layout — normally called at end of this function
     local keyboard="${KEYBOARD_OVERRIDE:-$CONFIG_KEYBOARD}"
     if [[ "$IS_LIVE" == true ]] && command -v loadkeys &>/dev/null; then
-      loadkeys "$keyboard" 2>/dev/null && success "Keyboard layout set to: $keyboard" || \
+      if loadkeys "$keyboard" 2>/dev/null || loadkeys "${keyboard}-latin1" 2>/dev/null; then
+        success "Keyboard layout set to: $keyboard"
+      else
         warn "Could not set keyboard layout '$keyboard'"
+      fi
     fi
     return
   fi
@@ -397,14 +400,20 @@ phase_detect_features() {
   # Uses --keyboard override if given, otherwise falls back to host config.
   local keyboard="${KEYBOARD_OVERRIDE:-$CONFIG_KEYBOARD}"
   if [[ "$IS_LIVE" == true ]]; then
+    local loaded=false
     if command -v loadkeys &>/dev/null; then
+      # Try exact name first, then common variants (de → de-latin1)
       if loadkeys "$keyboard" 2>/dev/null; then
-        success "Keyboard layout set to: $keyboard"
-      else
-        warn "Could not set keyboard layout '$keyboard' — passwords use ISO default (us)"
+        loaded=true
+      elif loadkeys "${keyboard}-latin1" 2>/dev/null; then
+        loaded=true
       fi
+    fi
+    if [[ "$loaded" == true ]]; then
+      success "Keyboard layout set to: $keyboard"
     else
-      warn "loadkeys not found — passwords use ISO default (us)"
+      warn "Could not set keyboard layout '$keyboard' — passwords use ISO default (us)"
+      warn "Use --keyboard to override, e.g. --keyboard de-latin1"
     fi
   fi
 
