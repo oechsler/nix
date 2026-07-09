@@ -199,7 +199,7 @@ let
           echo ""
           success "Keys enrolled."
           echo ""
-          warn "Step A complete. Now activate Secure Boot in UEFI:"
+          warn "Step B complete. Now activate Secure Boot (Step C):"
           warn "  1. Reboot into UEFI firmware setup"
           warn "  2. Enable Secure Boot"
           warn "  3. Save and reboot into NixOS"
@@ -210,8 +210,18 @@ let
       else
         step 3 3 "Keys already enrolled."
         echo ""
-        warn "Enable Secure Boot in UEFI/BIOS if not already done."
-        warn "Then run: sudo secure-boot-init  (to verify signatures)"
+        if [[ "$ASUS_BOARD" == "true" ]]; then
+          warn "Step B complete. Now activate Secure Boot (Step C) in UEFI (Boot → Secure Boot):"
+          warn "  OS Type:           Windows UEFI mode"
+          warn "  Secure Boot Mode:  Standard  (or keep Custom)"
+          warn "  → Secure Boot state will show: On"
+        else
+          warn "Step B complete. Now activate Secure Boot (Step C) in UEFI:"
+          warn "  1. Enable Secure Boot"
+          warn "  2. Save and reboot into NixOS"
+        fi
+        echo ""
+        warn "Then run: sudo secure-boot-init  (to verify all files are signed)"
         reboot_to_uefi
       fi
       echo ""
