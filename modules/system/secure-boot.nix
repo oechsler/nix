@@ -109,18 +109,24 @@ in
     enable = lib.mkEnableOption "Secure Boot via lanzaboote";
   };
 
-  config = lib.mkIf cfg.enable {
-    # Lanzaboote replaces systemd-boot
-    boot.loader.systemd-boot.enable = lib.mkForce false;
+  config = lib.mkMerge [
+    (lib.mkIf cfg.enable {
+      # Lanzaboote replaces systemd-boot
+      boot.loader.systemd-boot.enable = lib.mkForce false;
 
-    boot.lanzaboote = {
-      enable = true;
-      pkiBundle = "/var/lib/sbctl";
-    };
+      boot.lanzaboote = {
+        enable = true;
+        pkiBundle = "/var/lib/sbctl";
+      };
+    })
 
-    environment.systemPackages = [
-      pkgs.sbctl
-      secure-boot-init
-    ];
-  };
+    # Always install sbctl and secure-boot-init so the script is available
+    # even when Secure Boot is temporarily disabled (e.g. during initial install).
+    {
+      environment.systemPackages = [
+        pkgs.sbctl
+        secure-boot-init
+      ];
+    }
+  ];
 }

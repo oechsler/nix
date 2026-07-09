@@ -621,62 +621,8 @@ phase_install() {
   mkdir -p /mnt/tmp
   export TMPDIR=/mnt/tmp
 
-  if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
-    # Secure Boot install is a 3-step process:
-    # 1. Install without lanzaboote (no keys yet)
-    # 2. Generate sbctl keys inside the installed chroot
-    # 3. Rebuild inside the chroot with lanzaboote enabled to sign boot entries
-    local override_nix="$host_dir/secure-boot-install-override.nix"
-    cat > "$override_nix" <<'NIXEOF'
-{ lib, pkgs, ... }: {
-  features.secureBoot.enable = lib.mkForce false;
-  # Include sbctl so keys can be generated in the chroot after install
-  environment.systemPackages = [ pkgs.sbctl ];
-}
-NIXEOF
-    sed -i "/imports = \[/a\\    .\/secure-boot-install-override.nix" "$host_dir/configuration.nix"
-    git -C "$REPO_DIR" add "$override_nix" "$host_dir/configuration.nix"
-
-    info "Installing base system (Secure Boot disabled for initial install)..."
-    echo ""
-    local install_ok=true
-    nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs" \
-      || install_ok=false
-
-    # Remove override regardless of install result
-    sed -i '/secure-boot-install-override\.nix/d' "$host_dir/configuration.nix"
-    rm -f "$override_nix"
-    git -C "$REPO_DIR" add "$host_dir/configuration.nix"
-    git -C "$REPO_DIR" rm --cached "$override_nix" 2>/dev/null || true
-
-    [[ "$install_ok" == true ]] || error "nixos-install failed. Check the output above."
-
-    # Step 2: generate sbctl keys inside the installed chroot.
-    # sbctl is included via the override module so it's available in /run/current-system/sw/bin.
-    local sbctl_db="${PERSIST_PREFIX}/var/lib/sbctl"
-    info "Generating Secure Boot keys..."
-    echo ""
-    nixos-enter --root /mnt -c "mkdir -p ${sbctl_db} && sbctl create-keys --database-path ${sbctl_db}"
-    success "Secure Boot keys generated"
-    echo ""
-
-    # Step 3: rebuild with lanzaboote enabled so boot entries get signed
-    info "Rebuilding with Secure Boot enabled..."
-    echo ""
-    local rebuild_ok=true
-    nixos-enter --root /mnt -c \
-      "nixos-rebuild boot --flake /home/${CONFIG_USERNAME}/repos/nix#${HOST}" \
-      || rebuild_ok=false
-
-    if [[ "$rebuild_ok" != true ]]; then
-      warn "Secure Boot rebuild failed — keys are generated, run secure-boot-init after first boot."
-    else
-      success "Secure Boot enabled and boot entries signed"
-    fi
-  else
-    if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs"; then
-      error "nixos-install failed. Check the output above."
-    fi
+  if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs"; then
+    error "nixos-install failed. Check the output above."
   fi
 
   success "NixOS installed"
@@ -938,11 +884,10 @@ phase_complete() {
 
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
     echo ""
-    echo -e "    ${YELLOW}${BOLD}⚠ Secure Boot — enrollment required after first boot:${RESET}"
+    echo -e "    ${YELLOW}${BOLD}⚠ Secure Boot — setup required after first boot:${RESET}"
     echo -e "      1. In UEFI: disable Secure Boot, enable ${BOLD}Setup Mode${RESET}"
     echo -e "      2. Boot into NixOS"
     echo -e "      3. ${BOLD}sudo secure-boot-init${RESET}"
-    echo -e "         (keys already generated — only enrollment remains)"
   fi
 
   echo ""
