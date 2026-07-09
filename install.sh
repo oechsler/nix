@@ -1180,11 +1180,14 @@ phase_upgrade() {
   local sb_keys_exist=false
   [[ -f /var/lib/sbctl/keys/db/db.pem ]] && sb_keys_exist=true
 
-  local sb_config_enabled
-  sb_config_enabled="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.config.features.secureBoot.enable" 2>/dev/null || echo "false")"
-  # Debug: show what we detected so failures are diagnosable
-  success "Secure Boot in config: $sb_config_enabled — keys on disk: $sb_keys_exist"
-  echo ""
+  # Check if secureBoot is enabled by grepping the host config directly —
+  # more reliable than nix eval which can fail for various reasons on an
+  # installed system (missing flake registry, network, etc.)
+  local sb_config_enabled=false
+  local host_config="$REPO_DIR/hosts/$HOST/configuration.nix"
+  if grep -q 'secureBoot\.enable\s*=\s*true' "$host_config" 2>/dev/null; then
+    sb_config_enabled=true
+  fi
 
   if [[ "$sb_config_enabled" == "true" && "$sb_keys_exist" != "true" ]]; then
     warn "Secure Boot keys not yet generated — disabling lanzaboote for this rebuild."
@@ -1233,8 +1236,8 @@ main() {
 
   # On an installed system: always upgrade — step flags are ignored.
   if [[ "$IS_LIVE" != true ]]; then
-    local sb_enabled
-    sb_enabled="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.config.features.secureBoot.enable" 2>/dev/null || echo "false")"
+    local sb_enabled=false
+    grep -q 'secureBoot\.enable\s*=\s*true' "$REPO_DIR/hosts/$HOST/configuration.nix" 2>/dev/null && sb_enabled=true
 
     echo -e "    ${DIM}Pulls the latest configuration from git and rebuilds the system.${RESET}"
     echo -e "    ${DIM}Activates immediately — no reboot required.${RESET}"
