@@ -108,28 +108,23 @@ let
       fi
 
       #--- Step 1: generate keys ---
-      if [[ "$keys_exist" != true ]]; then
-        step 1 3 "Generating Secure Boot keys..."
-        echo ""
-        if command -v sbctl &>/dev/null; then
-          sbctl create-keys
-        else
-          # sbctl not yet installed (system not rebuilt yet) — run via nix
-          nix run nixpkgs#sbctl -- create-keys
-        fi
-        # Copy keys to /persist immediately so the impermanence bind-mount
-        # that activates during the next rebuild (step 2) finds them there.
-        # Without this, the bind-mount replaces /var/lib/sbctl with the
-        # empty /persist/var/lib/sbctl and the keys are lost.
-        if [[ -d /var/lib/sbctl/keys && -d /persist ]]; then
-          mkdir -p /persist/var/lib/sbctl
-          cp -a /var/lib/sbctl/keys /persist/var/lib/sbctl/
-        fi
-        echo ""
+      # Always regenerate — avoids stale/incomplete key state from previous runs.
+      step 1 3 "Generating Secure Boot keys..."
+      echo ""
+      rm -rf /var/lib/sbctl/keys /persist/var/lib/sbctl/keys 2>/dev/null || true
+      if command -v sbctl &>/dev/null; then
+        sbctl create-keys
       else
-        step 1 3 "Keys already present — skipping key generation."
-        echo ""
+        # sbctl not yet installed (system not rebuilt yet) — run via nix
+        nix run nixpkgs#sbctl -- create-keys
       fi
+      # Copy keys to /persist immediately so the impermanence bind-mount
+      # that activates during the next rebuild (step 2) finds them there.
+      if [[ -d /var/lib/sbctl/keys && -d /persist ]]; then
+        mkdir -p /persist/var/lib/sbctl
+        cp -a /var/lib/sbctl/keys /persist/var/lib/sbctl/
+      fi
+      echo ""
 
       #--- Step 2: activate lanzaboote + sign boot entries ---
       # Keys must exist before this rebuild so impermanence persists /var/lib/sbctl.
