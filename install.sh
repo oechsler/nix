@@ -945,11 +945,18 @@ main() {
       nixos-rebuild switch --flake "$REPO_DIR#$HOST"
       exit 0
     fi
+
+    local sb_enabled
+    sb_enabled="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.config.features.secureBoot.enable" 2>/dev/null || echo "false")"
+
     echo ""
     info "Upgrade"
     echo ""
     echo -e "    Running on an installed system — only upgrade is available here."
     echo -e "    For auth setup use: ${BOLD}totp-init${RESET}, ${BOLD}yubikey-init${RESET}, ${BOLD}yubikey-luks-init${RESET}, ${BOLD}tpm-luks-init${RESET}"
+    if [[ "$sb_enabled" == "true" ]]; then
+      echo -e "    For Secure Boot setup use: ${BOLD}secure-boot-init${RESET}"
+    fi
     echo ""
     local confirm
     read -rp "    Run nixos-rebuild switch now? [Y/n]: " confirm
