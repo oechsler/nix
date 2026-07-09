@@ -32,6 +32,12 @@ DO_FORMAT=false
 DO_INSTALL=false
 DO_POST_INSTALL=false
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+# On an installed system the script may be invoked via PATH — fall back to the
+# standard repo location derived from the invoking user's home directory.
+if [[ ! -f "$REPO_DIR/flake.nix" ]]; then
+  USER_HOME="$(getent passwd "${SUDO_USER:-$USER}" | cut -d: -f6)"
+  REPO_DIR="$USER_HOME/repos/nix"
+fi
 STATE_FILE="/tmp/install.env"
 
 show_help() {
