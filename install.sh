@@ -201,11 +201,6 @@ phase_validate() {
   IS_LIVE=false
   [[ "$root_fstype" == "tmpfs" ]] && IS_LIVE=true
 
-  # --format is only safe on a live ISO — silently disable it on installed systems
-  if [[ "$DO_FORMAT" == true && "$IS_LIVE" != true ]]; then
-    warn "--format disabled (not on live ISO)"
-    DO_FORMAT=false
-  fi
 
   command -v nix &>/dev/null || error "Nix is not available."
 
@@ -944,32 +939,29 @@ main() {
   phase_validate
   phase_select_host
 
-  # On an installed system: offer to upgrade instead of reinstall
-  if [[ "$IS_LIVE" != true && "$YES" != true ]]; then
+  # On an installed system: only upgrade makes sense
+  if [[ "$IS_LIVE" != true ]]; then
+    if [[ "$YES" == true ]]; then
+      nixos-rebuild switch --flake "$REPO_DIR#$HOST"
+      exit 0
+    fi
     echo ""
-    warn "Running on an installed NixOS system (not a live ISO)."
+    info "Upgrade"
     echo ""
-    echo -e "    ${BOLD}[1]${RESET} Upgrade existing system (nixos-rebuild switch)"
-    echo -e "    ${BOLD}[2]${RESET} Continue with installer (e.g. re-run post-install)"
+    echo -e "    Running on an installed system — only upgrade is available here."
+    echo -e "    For auth setup use: ${BOLD}totp-init${RESET}, ${BOLD}yubikey-init${RESET}, ${BOLD}yubikey-luks-init${RESET}, ${BOLD}tpm-luks-init${RESET}"
     echo ""
-    local choice
-    read -rp "    Choice [1-2]: " choice
+    local confirm
+    read -rp "    Run nixos-rebuild switch now? [Y/n]: " confirm
     echo ""
-    case "$choice" in
-      1)
-        info "Upgrading system..."
-        echo ""
-        nixos-rebuild switch --flake "$REPO_DIR#$HOST"
-        echo ""
-        success "System upgraded."
-        exit 0
-        ;;
-      2)
-        ;;
-      *)
-        error "Invalid choice."
-        ;;
-    esac
+    if [[ ! "$confirm" =~ ^[nN]$ ]]; then
+      info "Upgrading system..."
+      echo ""
+      nixos-rebuild switch --flake "$REPO_DIR#$HOST"
+      echo ""
+      success "System upgraded."
+    fi
+    exit 0
   fi
 
   phase_detect_features
