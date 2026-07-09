@@ -69,7 +69,6 @@ find_installed_repo() {
 }
 
 INSTALLED_REPO="$(find_installed_repo)"
-echo ""
 # On an installed system: hand off to install.sh which handles the upgrade flow
 if [[ -f "$INSTALLED_REPO/flake.nix" ]]; then
   success "Existing installation found at $INSTALLED_REPO"
