@@ -201,9 +201,10 @@ phase_validate() {
   IS_LIVE=false
   [[ "$root_fstype" == "tmpfs" ]] && IS_LIVE=true
 
-  # --format is only safe on a live ISO (would wipe a running system)
+  # --format is only safe on a live ISO — silently disable it on installed systems
   if [[ "$DO_FORMAT" == true && "$IS_LIVE" != true ]]; then
-    error "--format is only allowed on the NixOS live ISO, not on an installed system."
+    warn "--format disabled (not on live ISO)"
+    DO_FORMAT=false
   fi
 
   command -v nix &>/dev/null || error "Nix is not available."
