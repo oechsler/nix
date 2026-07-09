@@ -59,5 +59,9 @@ in
     };
 
     console.keyMap = cfg.keyboard;
+    # Apply keyboard layout in initrd so LUKS password prompt uses correct layout
+    boot.initrd.systemd.contents."/etc/vconsole.conf".text = ''
+      KEYMAP=${cfg.keyboard}
+    '';
   };
 }
