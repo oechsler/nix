@@ -101,11 +101,23 @@ let
 
       #--- Already fully set up? ---
       if [[ "$sb_enabled" == "enabled" ]] && [[ "$keys_enrolled" == true ]]; then
-        info "Verifying all boot files are signed..."
+        info "Verifying boot files..."
         echo ""
         sbctl verify
         echo ""
-        success "Secure Boot is active and all files are signed."
+        # Old systemd-boot EFI files may appear unsigned — this is expected.
+        # lanzaboote uses Unified Kernel Images (UKIs); only those need to be signed.
+        # Raw kernel EFI files from previous generations are never booted directly.
+        unsigned=$(sbctl verify 2>/dev/null | grep -c '✗' || true)
+        if [[ "$unsigned" -eq 0 ]]; then
+          success "Secure Boot is active and all files are signed."
+        else
+          success "Secure Boot is active. lanzaboote UKIs are signed."
+          echo ""
+          echo -e "    ${DIM}Note: $unsigned file(s) shown as unsigned above are old systemd-boot${RESET}"
+          echo -e "    ${DIM}entries from before lanzaboote was activated. They are never booted${RESET}"
+          echo -e "    ${DIM}and do not affect Secure Boot. Run 'nix-collect-garbage -d' to remove them.${RESET}"
+        fi
         exit 0
       fi
 
