@@ -32,7 +32,7 @@
 
   options.terminal.exec = lib.mkOption {
     type = lib.types.str;
-    default = "kitty --title";
+    default = "kitty --hold --title";
     readOnly = true;
     description = "Command prefix to launch a TUI app in the terminal (usage: exec 'title' -e 'command')";
   };
