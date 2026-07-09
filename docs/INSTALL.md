@@ -167,7 +167,7 @@ Before running `secure-boot-init`, in UEFI (Boot → Secure Boot):
 
 The script then calls:
 ```bash
-sbctl enroll-keys --microsoft
+sbctl enroll-keys --microsoft --yes-this-might-brick-my-machine
 ```
 
 Afterwards, in UEFI: set OS Type → Windows UEFI mode, Secure Boot → On.
