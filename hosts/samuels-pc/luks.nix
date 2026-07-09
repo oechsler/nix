@@ -5,9 +5,9 @@
 # - cryptgames: Games partition (Steam library)
 #
 # Unlock method:
-#   features.encryption.unlockMethod = "yubikey"  → fido2-device=auto (YubiKey FIDO2 touch at boot)
-#   features.encryption.unlockMethod = "tpm2"     → tpm2-device=auto  (TPM2 auto-unlock, default)
-#   features.encryption.unlockMethod = "password" → prompt for LUKS passphrase
+#   features.encryption.unlockMethod = "yubikey"  → FIDO2 touch at boot
+#   features.encryption.unlockMethod = "tpm2"     → TPM2 auto-unlock
+#   features.encryption.unlockMethod = "password" → LUKS passphrase prompt
 #
 # Setup:
 #   YubiKey: yubikey-luks-init
@@ -22,35 +22,29 @@
 
 let
   method = config.features.encryption.unlockMethod;
-  luksDevice = name: device: {
-    boot.initrd.luks.devices.${name} = {
-      inherit device;
-      allowDiscards = true;
-      crypttabExtraOpts = [ "tries=0" ];
+  mkLuksDevice = device: {
+    inherit device;
+    allowDiscards = true;
+    crypttabExtraOpts = [ "tries=0" ];
+    fido2 = lib.mkIf (method == "yubikey") {
+      enable = true;
+      credential = "auto";
+      passwordLessMode = false;
     };
-    boot.initrd.systemd.luks.devices.${name} = lib.mkMerge [
-      (lib.mkIf (method == "yubikey") {
-        fido2 = {
-          enable = true;
-          device = "auto";
-          credential = "auto";
-        };
-      })
-      (lib.mkIf (method == "tpm2") {
-        tpm2.enable = true;
-      })
-    ];
+    tpm2 = lib.mkIf (method == "tpm2") {
+      enable = true;
+    };
   };
 in
-lib.mkMerge [
-  (luksDevice "cryptroot" "/dev/disk/by-partlabel/disk-main-root")
-  (luksDevice "cryptgames" "/dev/disk/by-partlabel/disk-games-games")
+{
+  boot.initrd.luks.devices = {
+    "cryptroot" = mkLuksDevice "/dev/disk/by-partlabel/disk-main-root";
+    "cryptgames" = mkLuksDevice "/dev/disk/by-partlabel/disk-games-games";
+  };
 
-  {
-    # On FIDO2 timeout/failure: fall back to password prompt instead of rebooting.
-    boot.initrd.systemd.services."systemd-cryptsetup@cryptroot" = {
-      overrideStrategy = "asDropin";
-      unitConfig.FailureAction = "none";
-    };
-  }
-]
+  # On FIDO2 timeout/failure: fall back to password prompt instead of rebooting.
+  boot.initrd.systemd.services."systemd-cryptsetup@cryptroot" = {
+    overrideStrategy = "asDropin";
+    unitConfig.FailureAction = "none";
+  };
+}
