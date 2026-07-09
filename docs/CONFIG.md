@@ -26,7 +26,7 @@ features.ssh.enable = true;
 | `features.audio.enable` | `true` | PipeWire audio (ALSA, PulseAudio compat) |
 | `features.bluetooth.enable` | `true` | Bluetooth support (power on boot) |
 | `features.gaming.enable` | `true` | Steam + Proton-GE, GameMode, Gamescope, MangoHud, ProtonUp-Qt |
-| `features.hardware.gpu` | `null` | GPU vendor (`"amd"` / `"intel"`) — enables graphics support and VA-API hardware decoding for all contexts (browser, video players). AMD also gets 32-bit libs when `gaming.enable = true`. |
+| `features.hardware.gpu` | `null` | GPU vendor (`"amd"` / `"intel"`) — enables graphics support and VA-API hardware decoding for all contexts (browser, video players). AMD also gets 32-bit libs when `gaming.enable = true`. **NVIDIA is not supported** — the enum only accepts `"amd"` and `"intel"`. |
 | `features.ipv6PrivacyExtensions.enable` | `!server` | IPv6 privacy extensions for NetworkManager profiles |
 | `features.virtualisation.enable` | `true` | Docker daemon + user group |
 | `features.smb.enable` | `true` | SMB network share mounts (auto-mount with retry) |
