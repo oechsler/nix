@@ -40,9 +40,20 @@ let
       # Guard: refuse to run if Secure Boot is not enabled in the flake config.
       # Read at runtime from the flake so the install-time override (mkForce false)
       # does not permanently disable this script on the installed system.
+      REPO_DIR="$(eval echo ~"''${SUDO_USER:-''${USER}}")/repos/nix"
+
       sb_in_config=$(nix eval --raw "$FLAKE.config.features.secureBoot.enable" 2>/dev/null || echo "false")
       if [[ "$sb_in_config" != "true" ]]; then
-        error "features.secureBoot.enable is not set for this host. Enable it in hosts/$(hostname)/configuration.nix and rebuild first."
+        warn "features.secureBoot.enable is not set for this host."
+        warn ""
+        warn "To fix:"
+        warn "  1. Edit $REPO_DIR/hosts/$(hostname)/configuration.nix"
+        warn "     and set: features.secureBoot.enable = true;"
+        warn "  2. Re-run the installer to apply the change:"
+        warn "     sudo $REPO_DIR/install.sh"
+        warn "  3. Then run this script again: sudo secure-boot-init"
+        echo ""
+        exit 1
       fi
 
       reboot_to_uefi() {
