@@ -14,11 +14,6 @@
 {
 set -euo pipefail
 
-REPO_URL="${REPO:-https://github.com/oechsler/nix.git}"
-BRANCH="${BRANCH:-main}"
-CLONE_DIR="/tmp/nix-config"
-USER_HOME="$(getent passwd "${SUDO_USER:-$USER}" | cut -d: -f6)"
-
 if [[ -t 1 ]]; then
   RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[0;33m'
   BLUE='\033[0;34m' BOLD='\033[1m' DIM='\033[2m' RESET='\033[0m'
@@ -30,6 +25,26 @@ info()    { echo -e "${BLUE}==>${RESET} ${BOLD}$*${RESET}"; }
 success() { echo -e "    ${GREEN}✓${RESET} $*"; }
 warn()    { echo -e "    ${YELLOW}!${RESET} $*"; }
 error()   { echo -e "${RED}Error:${RESET} $*" >&2; exit 1; }
+
+info "NixOS Quickstart"
+echo ""
+
+# Guard: must run on NixOS and as root before doing anything else
+command -v nixos-version &>/dev/null || error "Not a NixOS system."
+
+# Self-elevate when run as a file; error when piped (curl | bash needs sudo explicitly)
+if [[ $EUID -ne 0 ]]; then
+  if [[ -f "$0" ]]; then
+    exec sudo "$0" "$@"
+  else
+    error "Must run as root. Use: curl -sL ... | sudo bash"
+  fi
+fi
+
+REPO_URL="${REPO:-https://github.com/oechsler/nix.git}"
+BRANCH="${BRANCH:-main}"
+CLONE_DIR="/tmp/nix-config"
+USER_HOME="$(getent passwd "${SUDO_USER:-$USER}" | cut -d: -f6)"
 
 # Resolve the repo path from the running system's nixos-upgrade unit.
 # The flake path is baked in as --flake /path/to/repo#hostname by install.sh.
@@ -54,19 +69,6 @@ find_installed_repo() {
 }
 
 INSTALLED_REPO="$(find_installed_repo)"
-
-info "NixOS Quickstart"
-echo ""
-
-# Self-elevate when run as a file; error when piped (curl | bash needs sudo explicitly)
-if [[ $EUID -ne 0 ]]; then
-  if [[ -f "$0" ]]; then
-    exec sudo "$0" "$@"
-  else
-    error "Must run as root. Use: curl -sL ... | sudo bash"
-  fi
-fi
-command -v nixos-version &>/dev/null || error "Not a NixOS system."
 echo ""
 # On an installed system: hand off to install.sh which handles the upgrade flow
 if [[ -f "$INSTALLED_REPO/flake.nix" ]]; then

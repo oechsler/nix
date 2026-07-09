@@ -205,12 +205,12 @@ phase_validate() {
     $([[ "$DO_POST_INSTALL" == true ]] && echo "post-install"))${RESET}"
   echo ""
 
-  if [[ $EUID -ne 0 ]]; then
-    exec sudo "$0" "${ORIGINAL_ARGS[@]}"
+  if [[ ! -e /etc/NIXOS ]]; then
+    error "Not a NixOS system. Boot from a NixOS ISO first."
   fi
 
-  if [[ ! -e /etc/NIXOS ]]; then
-    error "This installer must run on a NixOS system. Boot from a NixOS ISO first."
+  if [[ $EUID -ne 0 ]]; then
+    exec sudo "$0" "${ORIGINAL_ARGS[@]}"
   fi
 
   local root_fstype
