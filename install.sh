@@ -188,7 +188,9 @@ phase_validate() {
     $([[ "$DO_POST_INSTALL" == true ]] && echo "post-install"))${RESET}"
   echo ""
 
-  [[ $EUID -eq 0 ]] || error "Must run as root."
+  if [[ $EUID -ne 0 ]]; then
+    exec sudo "$0" "$@"
+  fi
 
   if [[ ! -e /etc/NIXOS ]]; then
     error "This installer must run on a NixOS system. Boot from a NixOS ISO first."

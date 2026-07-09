@@ -35,7 +35,9 @@ error()   { echo -e "${RED}ERROR:${RESET} $*" >&2; exit 1; }
 info "NixOS Quickstart"
 echo ""
 
-[[ $EUID -eq 0 ]] || error "Must run as root."
+if [[ $EUID -ne 0 ]]; then
+  exec sudo "$0" "$@"
+fi
 command -v nixos-version &>/dev/null || error "Not a NixOS system."
 
 # On an installed system: use the existing repo instead of cloning
