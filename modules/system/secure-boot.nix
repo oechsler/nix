@@ -42,7 +42,9 @@ let
       # does not permanently disable this script on the installed system.
       REPO_DIR="$(eval echo ~"''${SUDO_USER:-''${USER}}")/repos/nix"
 
-      sb_in_config=$(nix eval --raw "$FLAKE.config.features.secureBoot.enable" 2>/dev/null || echo "false")
+      sb_in_config=false
+      grep -q 'secureBoot\.enable\s*=\s*true' "$REPO_DIR/hosts/$(hostname)/configuration.nix" 2>/dev/null \
+        && sb_in_config=true
       if [[ "$sb_in_config" != "true" ]]; then
         warn "features.secureBoot.enable is not set for this host."
         warn ""
