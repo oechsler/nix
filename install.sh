@@ -218,7 +218,7 @@ phase_validate() {
   fi
 
   if [[ $EUID -ne 0 ]]; then
-    exec sudo "$0" "${ORIGINAL_ARGS[@]}"
+    exec sudo env _HEADER_PRINTED=1 "$0" "${ORIGINAL_ARGS[@]}"
   fi
 
   if [[ "$DRY_RUN" == true ]]; then
