@@ -26,7 +26,7 @@ features.ssh.enable = true;
 | `features.audio.enable` | `true` | PipeWire audio (ALSA, PulseAudio compat) |
 | `features.bluetooth.enable` | `true` | Bluetooth support (power on boot) |
 | `features.gaming.enable` | `true` | Steam + Proton-GE, GameMode, Gamescope, MangoHud, ProtonUp-Qt |
-| `features.hardware.gpu` | `null` | GPU vendor (`"amd"` / `"intel"`) — loads driver early, enables graphics + VA-API hardware encoding |
+| `features.hardware.gpu` | `null` | GPU vendor (`"amd"` / `"intel"`) — enables graphics support and VA-API hardware decoding for all contexts (browser, video players). AMD also gets 32-bit libs when `gaming.enable = true`. |
 | `features.ipv6PrivacyExtensions.enable` | `!server` | IPv6 privacy extensions for NetworkManager profiles |
 | `features.virtualisation.enable` | `true` | Docker daemon + user group |
 | `features.smb.enable` | `true` | SMB network share mounts (auto-mount with retry) |
@@ -45,7 +45,7 @@ features.ssh.enable = true;
 | `features.secureBoot.enable` | `false` | UEFI Secure Boot via lanzaboote |
 | `features.ssh.enable` | `false` | OpenSSH server + GitHub key sync (every 15 min) |
 | `features.snapshots.enable` | `true` | Automatic btrfs snapshots (hourly, see [SNAPSHOTS.md](SNAPSHOTS.md)) |
-| `features.kernel` | `"cachyos"` | Kernel variant (`"cachyos"` / `"cachyos-lts"` / `"cachyos-server"` / `"default"`) |
+| `features.kernel` | `"cachyos"` | Kernel variant: `"cachyos"` (x86_64-v3, latest) / `"cachyos-v3"` (explicit x86_64-v3) / `"cachyos-v4"` (x86_64-v4, Zen 4+) / `"cachyos-lts"` / `"cachyos-server"` / `"default"` (NixOS stock) |
 
 ## SOPS Options
 
@@ -182,11 +182,10 @@ Set in `home.nix`:
 | `autostart.apps` | Proton Pass, Vesktop, CoolerControl (+ conditional) | Apps to start on login (works on Hyprland + KDE) |
 
 Default autostart apps are extended based on feature toggles:
-- Nextcloud is added on Hyprland (KDE manages its own autostart)
-- `features.apps.enable` adds Pika Backup Monitor, Spotify (Hyprland only)
-- `features.development.enable` adds JetBrains Toolbox
-- `features.tailscale.enable` adds Trayscale
+- Nextcloud is always added (via XDG autostart `.desktop` — works on both Hyprland and KDE)
+- `features.apps.enable` adds Proton Pass, Vesktop, Nheko, Mumble
 - `features.gaming.enable` adds Steam
+- `features.tailscale.enable` adds Trayscale
 
 Each entry is `{ name = "..."; exec = "..."; }` — on KDE these generate XDG autostart `.desktop` files, on Hyprland they're launched via `exec-once`.
 
@@ -259,8 +258,8 @@ See [SNAPSHOTS.md](SNAPSHOTS.md) for snapshot management (restore, browse, clean
 
 ### Defaults
 
-- BTRFS subvolumes: `@`, `@home`, `@nix`, `@snapshots`
-- Optional subvolume: `@persist` when impermanence is enabled
+- BTRFS subvolumes: `@` (root), `@home` (/home), `@nix` (/nix), `@snapshots` (snapshot target)
+- `@persist` (/persist) — required when `features.impermanence.enable = true` (the default)
 - LUKS2 full disk encryption
 - Impermanent root filesystem
 

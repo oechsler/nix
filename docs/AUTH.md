@@ -76,8 +76,7 @@ sudo with TOTP only:   OTP (3 attempts) → Password
 sudo with both:        YubiKey → OTP (3 attempts) → Password
 ```
 
-**Setup**: run `sudo totp-init`, scan the QR code with your authenticator app,
-then `sudo nixos-rebuild switch`.
+**Setup**: run `sudo totp-init` and scan the QR code with your authenticator app. No rebuild needed — PAM reads the secret file directly.
 
 **Adding a second device**: run `sudo totp-init` again and choose "Re-enroll".
 Scan the QR code on both devices. The old secret is replaced — previous device
@@ -107,7 +106,7 @@ Then register your key:
 sudo yubikey-init
 ```
 
-This writes credentials to `/etc/u2f_mappings` (or `/persist/etc/u2f_mappings` with impermanence). Rebuild to activate.
+This writes credentials to `/persist/etc/u2f_mappings` (or `/etc/u2f_mappings` without impermanence). No rebuild needed — PAM reads the file directly at login time.
 
 To register a backup key, run `sudo yubikey-init` again and choose **Add another key**.
 
