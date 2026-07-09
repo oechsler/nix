@@ -145,16 +145,21 @@ The script auto-detects your board and guides you through the correct steps. It 
 
 ### Standard boards
 
-Before running `secure-boot-init`, in UEFI:
+**Step A** — In UEFI: enter Setup Mode:
 1. Disable Secure Boot
-2. Enable **Setup Mode** (clears existing keys — required for custom key enrollment)
+2. Enable **Setup Mode** (sometimes called "Reset to Setup Mode") — this clears existing keys
+3. Save and reboot into NixOS
 
-The script then calls:
+**Step B** — Run `secure-boot-init`:
+```bash
+sudo secure-boot-init
+```
+The script generates keys, rebuilds with lanzaboote active, and enrolls:
 ```bash
 sbctl enroll-keys --microsoft --firmware-builtin
 ```
 
-Then re-enable Secure Boot in UEFI.
+**Step C** — In UEFI: enable Secure Boot. Then run `sudo secure-boot-init` once more to verify all files are signed.
 
 ### ASUS boards (non-standard)
 

@@ -1030,12 +1030,16 @@ phase_complete() {
       echo -e "      Secure Boot: ${BOLD}Enabled${RESET}"
       echo -e "      ${DIM}→ Secure Boot state will show: On${RESET}"
     else
-      echo -e "    ${BOLD}Step A${RESET} — In UEFI: disable Secure Boot, enable ${BOLD}Setup Mode${RESET}"
-      echo -e "      ${DIM}This clears existing keys — required for custom key enrollment.${RESET}"
+      echo -e "    ${BOLD}Step A${RESET} — In UEFI: enter Setup Mode:"
+      echo -e "      Disable Secure Boot"
+      echo -e "      Enable ${BOLD}Setup Mode${RESET}  ${DIM}(or 'Reset to Setup Mode' — clears existing keys)${RESET}"
+      echo -e "      Save and reboot into NixOS"
       echo ""
-      echo -e "    ${BOLD}Step B${RESET} — Boot into NixOS and run ${BOLD}secure-boot-init${RESET}"
+      echo -e "    ${BOLD}Step B${RESET} — Run ${BOLD}secure-boot-init${RESET}"
+      echo -e "      ${DIM}Generates keys, rebuilds with lanzaboote, enrolls into firmware.${RESET}"
       echo ""
       echo -e "    ${BOLD}Step C${RESET} — In UEFI: enable ${BOLD}Secure Boot${RESET}"
+      echo -e "      ${DIM}Then run secure-boot-init once more to verify all files are signed.${RESET}"
     fi
   fi
 
