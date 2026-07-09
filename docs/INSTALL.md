@@ -163,22 +163,30 @@ sbctl enroll-keys --microsoft --firmware-builtin
 
 ### ASUS boards (non-standard)
 
-ASUS firmware requires you to explicitly delete all Secure Boot variables to enter Setup Mode. `secure-boot-init` detects ASUS boards and guides you through this.
+ASUS firmware incorrectly reports SetupMode=0 after key deletion. `secure-boot-init` detects ASUS boards and uses partial enrollment to bypass the SetupMode check.
 
-Before running `secure-boot-init`, in UEFI (Boot → Secure Boot):
+**Step A** — In UEFI (Boot → Secure Boot): clear existing keys:
 1. **OS Type:** Other OS
 2. **Secure Boot Mode:** Custom
 3. **Key Management:** Clear Secure Boot Keys
 4. Save and reboot into NixOS
 
-The script uses partial enrollment to bypass the SetupMode check (ASUS incorrectly reports SetupMode=0 even after key deletion):
+**Step B** — Run `secure-boot-init`:
 ```bash
-sbctl enroll-keys --partial db  --microsoft --firmware-builtin
-sbctl enroll-keys --partial KEK --microsoft --firmware-builtin
-sbctl enroll-keys --partial PK
+sudo secure-boot-init
+```
+The script generates keys, rebuilds with lanzaboote active, and enrolls via partial enrollment:
+```bash
+sbctl enroll-keys --partial db  --microsoft --firmware-builtin --ignore-immutable --yes-this-might-brick-my-machine
+sbctl enroll-keys --partial KEK --microsoft --firmware-builtin --ignore-immutable --yes-this-might-brick-my-machine
+sbctl enroll-keys --partial PK  --ignore-immutable --yes-this-might-brick-my-machine
 ```
 
-Afterwards, in UEFI: set OS Type → Windows UEFI mode, Secure Boot → On.
+**Step C** — In UEFI: activate Secure Boot:
+1. **OS Type:** Windows UEFI mode
+2. **Secure Boot:** Enabled
+
+Then run `sudo secure-boot-init` once more to verify all files are signed.
 
 ### Verify
 
