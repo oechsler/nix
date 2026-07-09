@@ -210,9 +210,10 @@ luks_password_file() {
 }
 
 phase_validate() {
+  info "NixOS Installer"
+  echo ""
+
   if [[ "$DRY_RUN" == true ]]; then
-    info "NixOS Installer"
-    echo ""
     warn "Dry-run mode: no changes will be made"
     echo ""
   fi
@@ -1250,8 +1251,6 @@ main() {
     exit 0
   fi
 
-  info "NixOS Installer"
-  echo ""
   # shellcheck disable=SC2046
   echo -e "    Steps: ${BOLD}$(printf '%s ' \
     $([[ "$DO_FORMAT" == true ]] && echo "format") \
