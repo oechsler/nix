@@ -1193,7 +1193,6 @@ phase_upgrade() {
 
   if [[ "$sb_config_enabled" == "true" && "$sb_keys_exist" != "true" ]]; then
     warn "Secure Boot keys not yet generated — disabling lanzaboote for this rebuild."
-    warn "Run secure-boot-init after the upgrade to activate Secure Boot."
     echo ""
     local host_dir="$REPO_DIR/hosts/$HOST"
     local override_nix="$host_dir/secure-boot-upgrade-override.nix"
