@@ -26,7 +26,7 @@ set -euo pipefail
 
 HOST=""
 SSH_KEY=""
-LUKS_PASSWORD=""
+LUKS_PASSWORD="${LUKS_PASSWORD:-}"
 YES=false
 DRY_RUN=false
 DO_FORMAT=false
@@ -61,15 +61,19 @@ Steps (combinable, default: all):
 
 Options:
   --host HOST           Pre-select host configuration
-  -s, --ssh-key PATH    Path to SSH private key (use "-" to read from stdin)
+  -s, --ssh-key PATH    Path to SSH private key
   -p, --luks-password   LUKS disk encryption password
   --skip-totp           Skip TOTP setup (deferred to totp-init after first boot)
   -y, --yes             Skip all confirmation prompts (non-interactive mode)
   --dry-run             Show summary and exit without making changes
   -h, --help            Show this help
 
-Non-interactive example (CI / scripted install):
+Non-interactive examples:
   install.sh --host samuels-terra -s /path/to/key.pem -p luks-pw --skip-totp -y
+
+  NIXOS_LUKS_PASSWORD=secret \
+  NIXOS_SSH_KEY=/path/to/key \
+  install.sh --host samuels-terra --skip-totp -y
 
 Step combinations:
   install.sh                              Full install (all steps)
@@ -394,6 +398,11 @@ AGE_KEY=""
 USER_PASSWORD_HASH=""
 
 phase_collect_inputs() {
+  # Env-var fallbacks — useful for scripted/CI installs without exposing
+  # values in the process list. CLI flags take priority over env vars.
+  [[ -z "$LUKS_PASSWORD" && -n "${NIXOS_LUKS_PASSWORD:-}" ]] && LUKS_PASSWORD="$NIXOS_LUKS_PASSWORD"
+  [[ -z "$SSH_KEY"       && -n "${NIXOS_SSH_KEY:-}"       ]] && SSH_KEY="$NIXOS_SSH_KEY"
+
   # --- LUKS Password ---
   # Needed for: format (disko), install (nixos-install), TPM enrollment (post-install).
   # Not needed for: post-install-only when no TPM, YubiKey-LUKS, or TPM-Secure-Boot deferral.
@@ -428,19 +437,12 @@ phase_collect_inputs() {
     echo ""
     if [[ -n "$SSH_KEY_FILE" && -f "$SSH_KEY_FILE" ]]; then
       success "SSH key ready (cached)"
-    elif [[ "$SSH_KEY" == "-" ]]; then
-      # Read from stdin (useful for piped / CI usage)
-      SSH_KEY_FILE="$(mktemp)"
-      cat > "$SSH_KEY_FILE"
-      chmod 600 "$SSH_KEY_FILE"
-      [[ -s "$SSH_KEY_FILE" ]] || error "No SSH key content received on stdin."
-      success "SSH key ready (from stdin)"
     elif [[ -n "$SSH_KEY" ]]; then
       SSH_KEY_FILE="$SSH_KEY"
       [[ -f "$SSH_KEY_FILE" ]] || error "SSH key file not found: $SSH_KEY_FILE"
       success "SSH key ready"
     elif [[ "$YES" == true ]]; then
-      error "SSH key required for post-install. Use -s /path/to/key or -s - to read from stdin."
+      error "SSH key required for post-install. Use -s /path/to/key or set NIXOS_SSH_KEY."
     else
       echo -e "    ${BOLD}[1]${RESET} Enter file path"
       echo -e "    ${BOLD}[2]${RESET} Paste key content"
