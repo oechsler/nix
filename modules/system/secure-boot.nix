@@ -155,15 +155,16 @@ let
           # are still writable. sbctl's full enrollment rejects this, but --partial
           # bypasses the SetupMode check and writes directly to each EFI hierarchy.
           # Enroll db and KEK first, PK last (PK activates Secure Boot protection).
-          step 3 3 "Enrolling keys (ASUS board — partial enrollment to bypass SetupMode check)..."
+          step 3 3 "Enrolling keys (ASUS board)..."
           echo ""
-          warn "Before continuing, configure your UEFI (Boot → Secure Boot):"
-          warn "  1. OS Type:           Other OS"
-          warn "  2. Secure Boot Mode:  Custom"
-          warn "  3. Key Management:    Clear Secure Boot Keys"
-          warn "  4. Save and reboot into NixOS"
+          echo -e "    Before continuing, configure your UEFI (Boot → Secure Boot):"
           echo ""
-          read -rp "Confirm keys are cleared and you are back in NixOS, then press Enter..." _
+          echo -e "      OS Type:          ''${BOLD}Other OS''${RESET}"
+          echo -e "      Secure Boot Mode: ''${BOLD}Custom''${RESET}"
+          echo -e "      Key Management:   ''${BOLD}Clear Secure Boot Keys''${RESET}"
+          echo -e "      ''${DIM}Save and reboot into NixOS before pressing Enter.''${RESET}"
+          echo ""
+          read -rp "    Confirm keys are cleared and you are back in NixOS, then press Enter..." _
           echo ""
           sbctl enroll-keys --partial db  --microsoft --firmware-builtin --ignore-immutable --yes-this-might-brick-my-machine
           sbctl enroll-keys --partial KEK --microsoft --firmware-builtin --ignore-immutable --yes-this-might-brick-my-machine
@@ -171,24 +172,25 @@ let
           echo ""
           success "Keys enrolled."
           echo ""
-          warn "Now reboot into UEFI and activate Secure Boot:"
-          warn "  OS Type:           Windows UEFI mode"
-          warn "  Secure Boot Mode:  Standard  (or keep Custom)"
-          warn "  → Secure Boot state will show: On"
+          echo -e "    Step B complete. Now activate Secure Boot (Step C) in UEFI:"
           echo ""
-          warn "Then run: sudo secure-boot-init  (to verify signatures)"
+          echo -e "      OS Type:          ''${BOLD}Windows UEFI mode''${RESET}"
+          echo -e "      Secure Boot Mode: ''${BOLD}Standard''${RESET}  ''${DIM}(or keep Custom)''${RESET}"
+          echo -e "      ''${DIM}→ Secure Boot state will show: On''${RESET}"
+          echo ""
+          echo -e "    Then run: ''${BOLD}sudo secure-boot-init''${RESET}  ''${DIM}(to verify all files are signed)''${RESET}"
           reboot_to_uefi
         elif [[ "$setup_mode" != "yes" ]]; then
           step 3 3 "Enrolling keys into firmware..."
           echo ""
-          warn "UEFI is not in Setup Mode — cannot enroll keys."
-          warn ""
-          warn "To enter Setup Mode, reboot into UEFI and:"
-          warn "  1. Disable Secure Boot"
-          warn "  2. Find the 'Setup Mode' or 'Reset to Setup Mode' option"
-          warn "     (this clears existing keys — required for custom key enrollment)"
-          warn "  3. Save and reboot into NixOS"
-          warn "  4. Run: sudo secure-boot-init"
+          echo -e "    UEFI is not in Setup Mode — cannot enroll keys."
+          echo ""
+          echo -e "    To enter Setup Mode, reboot into UEFI and:"
+          echo ""
+          echo -e "      1. Disable Secure Boot"
+          echo -e "      2. Enable ''${BOLD}Setup Mode''${RESET}  ''${DIM}(or 'Reset to Setup Mode' — clears existing keys)''${RESET}"
+          echo -e "      3. Save and reboot into NixOS"
+          echo -e "      4. Run: ''${BOLD}sudo secure-boot-init''${RESET}"
           echo ""
           reboot_to_uefi
           error "Enroll aborted — UEFI not in Setup Mode."
@@ -199,29 +201,31 @@ let
           echo ""
           success "Keys enrolled."
           echo ""
-          warn "Step B complete. Now activate Secure Boot (Step C):"
-          warn "  1. Reboot into UEFI firmware setup"
-          warn "  2. Enable Secure Boot"
-          warn "  3. Save and reboot into NixOS"
+          echo -e "    Step B complete. Now activate Secure Boot (Step C) in UEFI:"
           echo ""
-          warn "Then run: sudo secure-boot-init  (to verify all files are signed)"
+          echo -e "      1. Enable ''${BOLD}Secure Boot''${RESET}"
+          echo -e "      2. Save and reboot into NixOS"
+          echo ""
+          echo -e "    Then run: ''${BOLD}sudo secure-boot-init''${RESET}  ''${DIM}(to verify all files are signed)''${RESET}"
           reboot_to_uefi
         fi
       else
         step 3 3 "Keys already enrolled."
         echo ""
         if [[ "$ASUS_BOARD" == "true" ]]; then
-          warn "Step B complete. Now activate Secure Boot (Step C) in UEFI (Boot → Secure Boot):"
-          warn "  OS Type:           Windows UEFI mode"
-          warn "  Secure Boot Mode:  Standard  (or keep Custom)"
-          warn "  → Secure Boot state will show: On"
+          echo -e "    Step B complete. Now activate Secure Boot (Step C) in UEFI (Boot → Secure Boot):"
+          echo ""
+          echo -e "      OS Type:          ''${BOLD}Windows UEFI mode''${RESET}"
+          echo -e "      Secure Boot Mode: ''${BOLD}Standard''${RESET}  ''${DIM}(or keep Custom)''${RESET}"
+          echo -e "      ''${DIM}→ Secure Boot state will show: On''${RESET}"
         else
-          warn "Step B complete. Now activate Secure Boot (Step C) in UEFI:"
-          warn "  1. Enable Secure Boot"
-          warn "  2. Save and reboot into NixOS"
+          echo -e "    Step B complete. Now activate Secure Boot (Step C) in UEFI:"
+          echo ""
+          echo -e "      1. Enable ''${BOLD}Secure Boot''${RESET}"
+          echo -e "      2. Save and reboot into NixOS"
         fi
         echo ""
-        warn "Then run: sudo secure-boot-init  (to verify all files are signed)"
+        echo -e "    Then run: ''${BOLD}sudo secure-boot-init''${RESET}  ''${DIM}(to verify all files are signed)''${RESET}"
         reboot_to_uefi
       fi
       echo ""
