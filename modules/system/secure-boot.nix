@@ -148,9 +148,9 @@ let
           echo ""
           read -rp "Confirm keys are cleared and you are back in NixOS, then press Enter..." _
           echo ""
-          sbctl enroll-keys --partial db --microsoft --firmware-builtin
-          sbctl enroll-keys --partial KEK --microsoft --firmware-builtin
-          sbctl enroll-keys --partial PK
+          sbctl enroll-keys --partial db  --microsoft --firmware-builtin --ignore-immutable
+          sbctl enroll-keys --partial KEK --microsoft --firmware-builtin --ignore-immutable
+          sbctl enroll-keys --partial PK  --ignore-immutable
           echo ""
           success "Keys enrolled."
           info "Now reboot into UEFI and activate Secure Boot:"
