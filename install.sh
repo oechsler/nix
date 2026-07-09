@@ -165,15 +165,32 @@ load_state() {
 
 save_state() {
   {
+    # Inputs
     printf 'HOST=%q\n' "$HOST"
-    printf 'USER_PASSWORD_HASH=%q\n' "${USER_PASSWORD_HASH:-}"
     printf 'LUKS_PASSWORD=%q\n' "${LUKS_PASSWORD:-}"
-    # Store key content (not path) so resume works after reboot
+    printf 'USER_PASSWORD_HASH=%q\n' "${USER_PASSWORD_HASH:-}"
+    # Store key content (not path) so resume works within the same session
     if [[ -n "${SSH_KEY_FILE:-}" && -f "$SSH_KEY_FILE" ]]; then
       printf 'SSH_KEY_CONTENT=%q\n' "$(cat "$SSH_KEY_FILE")"
     else
       printf 'SSH_KEY_CONTENT=%q\n' "${SSH_KEY_CONTENT:-}"
     fi
+    # Detected features — cached to avoid re-running nix eval on resume
+    printf 'FEAT_ENCRYPTION=%q\n' "${FEAT_ENCRYPTION:-false}"
+    printf 'FEAT_IMPERMANENCE=%q\n' "${FEAT_IMPERMANENCE:-false}"
+    printf 'PERSIST_PREFIX=%q\n' "${PERSIST_PREFIX:-}"
+    printf 'FEAT_TOTP=%q\n' "${FEAT_TOTP:-false}"
+    printf 'FEAT_YUBIKEY=%q\n' "${FEAT_YUBIKEY:-false}"
+    printf 'FEAT_YUBIKEY_LUKS=%q\n' "${FEAT_YUBIKEY_LUKS:-false}"
+    printf 'FEAT_SECURE_BOOT=%q\n' "${FEAT_SECURE_BOOT:-false}"
+    printf 'FEAT_DESKTOP=%q\n' "${FEAT_DESKTOP:-false}"
+    printf 'FEAT_WM=%q\n' "${FEAT_WM:-}"
+    printf 'FEAT_SERVER=%q\n' "${FEAT_SERVER:-false}"
+    printf 'CONFIG_USERNAME=%q\n' "${CONFIG_USERNAME:-}"
+    printf 'CONFIG_PASSWORD_LOCKED=%q\n' "${CONFIG_PASSWORD_LOCKED:-false}"
+    printf 'CONFIG_KEYBOARD=%q\n' "${CONFIG_KEYBOARD:-us}"
+    # Progress — prevents double-enrollment if installer crashes after TPM enroll
+    printf 'TPM_ENROLLED=%q\n' "${TPM_ENROLLED:-false}"
   } > "$STATE_FILE"
   chmod 600 "$STATE_FILE"
 }
@@ -312,6 +329,14 @@ LUKS_DEVICES=()
 TPM_ENROLLED=false
 
 phase_detect_features() {
+  # Skip nix eval if features were already detected and cached in the state file
+  if [[ -n "$CONFIG_USERNAME" ]]; then
+    echo ""
+    success "Features loaded from cache (host: $HOST)"
+    echo ""
+    return
+  fi
+
   echo ""
   info "Reading configuration for $HOST..."
   echo ""
@@ -386,6 +411,7 @@ phase_detect_features() {
   fi
   echo ""
   success "Features detected"
+  save_state
 }
 
 #===========================
@@ -811,6 +837,7 @@ setup_tpm() {
   done
 
   TPM_ENROLLED=true
+  save_state
 }
 
 
