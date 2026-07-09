@@ -227,6 +227,19 @@ phase_select_host() {
 
   [[ ${#hosts[@]} -gt 0 ]] || error "No hosts found in $REPO_DIR/hosts/"
 
+  # On an installed system: auto-detect host from current hostname
+  if [[ -z "$HOST" && "$IS_LIVE" != true ]]; then
+    local current_hostname
+    current_hostname="$(hostname)"
+    for h in "${hosts[@]}"; do
+      if [[ "$h" == "$current_hostname" ]]; then
+        HOST="$current_hostname"
+        success "Host detected from hostname: $HOST"
+        return
+      fi
+    done
+  fi
+
   # Validate pre-selected host
   if [[ -n "$HOST" ]]; then
     local found=false
