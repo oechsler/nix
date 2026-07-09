@@ -5,17 +5,18 @@
 # which features are enabled, and only prompts for relevant setup steps.
 #
 # Usage:
-#   ./install.sh                              # Full install (all steps)
-#   ./install.sh --host mythinkpad            # Pre-select host
-#   ./install.sh --install --post-install     # Reinstall without formatting
-#   ./install.sh --post-install               # Re-run post-install only
-#   ./install.sh --dry-run                    # Show summary and exit
-#   ./install.sh -h                           # Show help
+#   ./install.sh                                        # Full install, all prompts
+#   ./install.sh --host samuels-terra                   # Pre-select host
+#   ./install.sh --host foo -s key.pem -p luks -y       # Fully non-interactive
+#   ./install.sh --install --post-install               # Reinstall without formatting
+#   ./install.sh --post-install                         # Re-run post-install only
+#   ./install.sh --dry-run                              # Show summary and exit
+#   ./install.sh -h                                     # Show help
 #
 # Steps (combinable, default: all):
 #   --format        Partition and format disks (disko)
 #   --install       Install NixOS (nixos-install)
-#   --post-install  Post-install setup (SSH, SOPS, TOTP, YubiKey, TPM/FIDO2)
+#   --post-install  Post-install setup (SSH, SOPS, TOTP, TPM/FIDO2)
 
 set -euo pipefail
 
@@ -31,6 +32,7 @@ DRY_RUN=false
 DO_FORMAT=false
 DO_INSTALL=false
 DO_POST_INSTALL=false
+SKIP_TOTP=false
 ORIGINAL_ARGS=("$@")
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 # When invoked via PATH (not from the repo directory), resolve the repo location
@@ -53,23 +55,27 @@ NixOS Interactive Installer
 Usage: install.sh [options]
 
 Steps (combinable, default: all):
-  --format           Partition and format disks (disko)
-  --install          Install NixOS (nixos-install)
-  --post-install     Post-install setup (SSH, SOPS, TOTP, YubiKey, TPM/FIDO2)
+  --format              Partition and format disks (disko)
+  --install             Install NixOS (nixos-install)
+  --post-install        Post-install setup (SSH, SOPS, TOTP, TPM/FIDO2)
 
 Options:
-  --host HOST        Pre-select host configuration
-  -s, --ssh-key PATH Path to SSH private key
-  -p, --luks-password PWD  LUKS encryption password
-  -y, --yes          Skip confirmation prompts
-  --dry-run          Show summary and exit
-  -h, --help         Show this help
+  --host HOST           Pre-select host configuration
+  -s, --ssh-key PATH    Path to SSH private key (use "-" to read from stdin)
+  -p, --luks-password   LUKS disk encryption password
+  --skip-totp           Skip TOTP setup (deferred to totp-init after first boot)
+  -y, --yes             Skip all confirmation prompts (non-interactive mode)
+  --dry-run             Show summary and exit without making changes
+  -h, --help            Show this help
 
-Examples:
+Non-interactive example (CI / scripted install):
+  install.sh --host samuels-terra -s /path/to/key.pem -p luks-pw --skip-totp -y
+
+Step combinations:
   install.sh                              Full install (all steps)
-  install.sh --host mythinkpad            Pre-select host
   install.sh --install --post-install     Reinstall without formatting
   install.sh --post-install               Re-run post-install only
+  install.sh --dry-run                    Show what would happen, no changes
 EOF
   exit 0
 }
@@ -80,6 +86,7 @@ while [[ $# -gt 0 ]]; do
     --host)              HOST="$2"; shift 2 ;;
     -s|--ssh-key)        SSH_KEY="$2"; shift 2 ;;
     -p|--luks-password)  LUKS_PASSWORD="$2"; shift 2 ;;
+    --skip-totp)         SKIP_TOTP=true; shift ;;
     -y|--yes)            YES=true; shift ;;
     --dry-run)           DRY_RUN=true; shift ;;
     --format)            DO_FORMAT=true; shift ;;
@@ -421,12 +428,19 @@ phase_collect_inputs() {
     echo ""
     if [[ -n "$SSH_KEY_FILE" && -f "$SSH_KEY_FILE" ]]; then
       success "SSH key ready (cached)"
+    elif [[ "$SSH_KEY" == "-" ]]; then
+      # Read from stdin (useful for piped / CI usage)
+      SSH_KEY_FILE="$(mktemp)"
+      cat > "$SSH_KEY_FILE"
+      chmod 600 "$SSH_KEY_FILE"
+      [[ -s "$SSH_KEY_FILE" ]] || error "No SSH key content received on stdin."
+      success "SSH key ready (from stdin)"
     elif [[ -n "$SSH_KEY" ]]; then
       SSH_KEY_FILE="$SSH_KEY"
       [[ -f "$SSH_KEY_FILE" ]] || error "SSH key file not found: $SSH_KEY_FILE"
       success "SSH key ready"
     elif [[ "$YES" == true ]]; then
-      error "SSH key required. Use -s /path/to/key."
+      error "SSH key required for post-install. Use -s /path/to/key or -s - to read from stdin."
     else
       echo -e "    ${BOLD}[1]${RESET} Enter file path"
       echo -e "    ${BOLD}[2]${RESET} Paste key content"
@@ -522,7 +536,11 @@ phase_summary() {
     echo -e "      SSH key:      will be installed"
     echo -e "      SOPS:         age key from SSH key"
     if [[ "$FEAT_TOTP" == "true" ]]; then
-      echo -e "      TOTP 2FA:     will be configured"
+      if [[ "$SKIP_TOTP" == "true" || "$YES" == "true" ]]; then
+        echo -e "      TOTP 2FA:     deferred (run totp-init after first boot)"
+      else
+        echo -e "      TOTP 2FA:     will be configured interactively"
+      fi
     fi
     if [[ "$FEAT_YUBIKEY" == "true" ]]; then
       echo -e "      YubiKey:      registration required after first boot"
@@ -816,6 +834,8 @@ phase_post_install() {
     local oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"
     if [[ -f "$oath_file" ]]; then
       success "TOTP already configured (cached)"
+    elif [[ "$SKIP_TOTP" == "true" || "$YES" == "true" ]]; then
+      warn "TOTP setup skipped. Run 'totp-init' after first boot."
     elif ! setup_totp; then
       warn "TOTP setup failed. Run 'totp-init' after first boot."
     fi
@@ -863,6 +883,11 @@ phase_complete() {
   fi
   if [[ "$FEAT_YUBIKEY" == "true" ]]; then
     post_boot_tasks+=("yubikey-init        — register YubiKey for sudo / SSH")
+  fi
+  # TOTP deferred when skipped interactively or via --skip-totp / -y
+  local oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"
+  if [[ "$FEAT_TOTP" == "true" && ! -f "$oath_file" ]]; then
+    post_boot_tasks+=("totp-init           — configure TOTP 2FA for sudo / SSH")
   fi
   # TPM was enrolled during install only if Secure Boot is disabled.
   # With Secure Boot: deferred so the seal is made against the final SB state (PCR 7).
