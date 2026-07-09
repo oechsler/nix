@@ -41,9 +41,10 @@ in
     };
   };
 
-  # cryptroot failing → reboot (system can't boot without it)
+  # On FIDO2 timeout/failure: fall back to password prompt instead of rebooting.
+  # reboot-force would cause an endless loop if the YubiKey is not detected.
   boot.initrd.systemd.services."systemd-cryptsetup@cryptroot" = {
     overrideStrategy = "asDropin";
-    unitConfig.FailureAction = "reboot-force";
+    unitConfig.FailureAction = "none";
   };
 }
