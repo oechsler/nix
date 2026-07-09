@@ -35,8 +35,6 @@ let
       echo -e "''${DIM}Sign boot files and enroll keys into firmware''${RESET}"
       echo ""
 
-      FLAKE="$(eval echo ~"''${SUDO_USER:-''${USER}}")/repos/nix#$(hostname)"
-
       # Guard: refuse to run if Secure Boot is not enabled in the flake config.
       # Read at runtime from the flake so the install-time override (mkForce false)
       # does not permanently disable this script on the installed system.
