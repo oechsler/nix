@@ -137,20 +137,22 @@ let
       #--- Step 3: enroll keys ---
       if [[ "$keys_enrolled" != true ]]; then
         if [[ "$ASUS_BOARD" == "true" ]]; then
-          # ASUS firmware: to enter Setup Mode you must delete all Secure Boot
-          # variables under Key Management. This disables Secure Boot but puts
-          # the system in Setup Mode so sbctl can enroll keys.
-          step 3 3 "Enrolling keys (ASUS board)..."
+          # ASUS firmware sets SetupMode=0 after key deletion even though EFI vars
+          # are still writable. sbctl's full enrollment rejects this, but --partial
+          # bypasses the SetupMode check and writes directly to each EFI hierarchy.
+          # Enroll db and KEK first, PK last (PK activates Secure Boot protection).
+          step 3 3 "Enrolling keys (ASUS board — partial enrollment to bypass SetupMode check)..."
           echo ""
-          warn "Before continuing, enter Setup Mode in UEFI (Boot → Secure Boot):"
+          warn "Before continuing, configure your UEFI (Boot → Secure Boot):"
           warn "  1. Secure Boot Mode:  Custom"
           warn "  2. Key Management:    Delete All Secure Boot Variables"
-          warn "     (this puts the system in Setup Mode — Secure Boot will be Off)"
           warn "  3. Save and reboot into NixOS"
           echo ""
-          read -rp "Confirm system is in Setup Mode, then press Enter..." _
+          read -rp "Confirm keys are cleared and you are back in NixOS, then press Enter..." _
           echo ""
-          sbctl enroll-keys --microsoft --firmware-builtin
+          sbctl enroll-keys --partial db --microsoft --firmware-builtin
+          sbctl enroll-keys --partial KEK --microsoft --firmware-builtin
+          sbctl enroll-keys --partial PK
           echo ""
           success "Keys enrolled."
           info "Now reboot into UEFI and activate Secure Boot:"

@@ -162,12 +162,14 @@ ASUS firmware requires you to explicitly delete all Secure Boot variables to ent
 
 Before running `secure-boot-init`, in UEFI (Boot → Secure Boot):
 1. **Secure Boot Mode:** Custom
-2. **Key Management:** Delete All Secure Boot Variables ← this enables Setup Mode
+2. **Key Management:** Delete All Secure Boot Variables
 3. Save and reboot into NixOS
 
-The script then calls:
+The script uses partial enrollment to bypass the SetupMode check (ASUS incorrectly reports SetupMode=0 even after key deletion):
 ```bash
-sbctl enroll-keys --microsoft --firmware-builtin
+sbctl enroll-keys --partial db  --microsoft --firmware-builtin
+sbctl enroll-keys --partial KEK --microsoft --firmware-builtin
+sbctl enroll-keys --partial PK
 ```
 
 Afterwards, in UEFI: set OS Type → Windows UEFI mode, Secure Boot → On.
