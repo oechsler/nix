@@ -5,8 +5,8 @@
 # Intended for use on a NixOS ISO (fresh install environment).
 #
 # Usage (on NixOS ISO):
-#   curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | sudo bash
-#   curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | sudo bash -s -- [FLAGS]
+#   curl -sL https://bin.at.oechsler.it/u/bmxl3a | sudo bash
+#   curl -sL https://bin.at.oechsler.it/u/bmxl3a | sudo bash -s -- [FLAGS]
 #
 # Environment variables:
 #   BRANCH  — Git branch to clone (default: main)
