@@ -210,20 +210,21 @@ luks_password_file() {
 }
 
 phase_validate() {
-  info "NixOS Installer"
-  echo ""
-
-  if [[ "$DRY_RUN" == true ]]; then
-    warn "Dry-run mode: no changes will be made"
-    echo ""
-  fi
-
   if [[ ! -e /etc/NIXOS ]]; then
     error "Not a NixOS system. Boot from a NixOS ISO first."
   fi
 
   if [[ $EUID -ne 0 ]]; then
     exec sudo "$0" "${ORIGINAL_ARGS[@]}"
+  fi
+
+  # Print header after sudo re-elevation so it appears exactly once
+  info "NixOS Installer"
+  echo ""
+
+  if [[ "$DRY_RUN" == true ]]; then
+    warn "Dry-run mode: no changes will be made"
+    echo ""
   fi
 
   local root_fstype
