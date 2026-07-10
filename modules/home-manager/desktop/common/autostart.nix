@@ -88,8 +88,9 @@ in
             exec = "mumble";
           }
         ]
-        # Trayscale/CoolerControl are explicit systemd services (portal ordering, tray detection)
-        ++ lib.optionals features.gaming.enable [
+        # Hyprland starts Steam via a dedicated delayed service below so Steam
+        # Input sees the fully initialized Wayland/uinput session.
+        ++ lib.optionals (features.gaming.enable && isKde) [
           {
             name = "Steam";
             exec = "steam -silent";
@@ -155,6 +156,29 @@ in
           ExecStart = "${pkgs.trayscale}/bin/trayscale --hide-window";
           Restart = "on-failure";
           RestartSec = 3;
+        };
+        Install.WantedBy = [ "graphical-session.target" ];
+      };
+    })
+
+    #---------------------------
+    # Steam systemd service (Hyprland)
+    #---------------------------
+    (lib.mkIf (features.gaming.enable && !isKde) {
+      systemd.user.services.steam = {
+        Unit = {
+          Description = "Steam - gaming platform";
+          After = [ "graphical-session.target" ];
+          PartOf = [ "graphical-session.target" ];
+        };
+        Service = {
+          ExecStart = "${pkgs.bash}/bin/sh -lc 'sleep 20; exec steam -silent'";
+          Environment = "PATH=/etc/profiles/per-user/${config.home.username}/bin:/run/current-system/sw/bin";
+          Type = "exec";
+          Restart = "on-failure";
+          RestartPreventExitStatus = 1;
+          RestartSec = 3;
+          TimeoutStopSec = 10;
         };
         Install.WantedBy = [ "graphical-session.target" ];
       };
