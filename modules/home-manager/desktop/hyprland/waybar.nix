@@ -27,6 +27,7 @@
   theme,
   locale,
   displays,
+  features,
   lib,
   ...
 }:
@@ -107,7 +108,7 @@ in
             "tray"
             "network"
           ]
-          ++ lib.optionals config.features.bluetooth.enable [ "bluetooth" ]
+          ++ lib.optionals features.bluetooth.enable [ "bluetooth" ]
           ++ [
             "pulseaudio"
             "power-profiles-daemon"
