@@ -1152,11 +1152,20 @@ phase_upgrade() {
 
   # Stop the auto-upgrade service while we build to avoid concurrent Nix store
   # access which can cause "getting attributes of path" errors mid-build.
+  # Stop both the timer and the service to prevent concurrent Nix store access.
+  # If the service is actively building, wait for it to finish first.
   local upgrade_was_active=false
-  if systemctl is-active --quiet nixos-upgrade.service 2>/dev/null; then
+  if systemctl is-active --quiet nixos-upgrade.timer 2>/dev/null \
+      || systemctl is-active --quiet nixos-upgrade.service 2>/dev/null; then
     upgrade_was_active=true
-    info "Stopping nixos-upgrade.service to avoid concurrent store access..."
-    systemctl stop nixos-upgrade.service
+    if systemctl is-active --quiet nixos-upgrade.service 2>/dev/null; then
+      info "nixos-upgrade.service is running — waiting for it to finish..."
+      systemctl stop nixos-upgrade.service 2>/dev/null || true
+    fi
+    info "Stopping nixos-upgrade.timer..."
+    systemctl stop nixos-upgrade.timer 2>/dev/null || true
+    info "Verifying Nix store integrity..."
+    nix-store --verify --repair 2>/dev/null || true
   fi
 
   local avail_gb max_jobs
@@ -1199,18 +1208,18 @@ phase_upgrade() {
     git -C "$REPO_DIR" add "$host_dir/configuration.nix"
 
     if [[ "$upgrade_was_active" == "true" ]]; then
-      info "Restarting nixos-upgrade.service..."
-      systemctl start nixos-upgrade.service
+      info "Restarting nixos-upgrade.timer..."
+      systemctl start nixos-upgrade.timer
     fi
     [[ "$rebuild_ok" == true ]] || error "nixos-rebuild failed. Check the output above."
   else
     nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" ${REPAIR:+--repair} \
-      || { if [[ "$upgrade_was_active" == "true" ]]; then info "Restarting nixos-upgrade.service..."; systemctl start nixos-upgrade.service; fi; error "nixos-rebuild failed. Check the output above."; }
+      || { if [[ "$upgrade_was_active" == "true" ]]; then info "Restarting nixos-upgrade.timer..."; systemctl start nixos-upgrade.timer; fi; error "nixos-rebuild failed. Check the output above."; }
   fi
 
   if [[ "$upgrade_was_active" == "true" ]]; then
-    info "Restarting nixos-upgrade.service..."
-    systemctl start nixos-upgrade.service
+    info "Restarting nixos-upgrade.timer..."
+    systemctl start nixos-upgrade.timer
   fi
 
   echo ""
