@@ -1155,6 +1155,7 @@ phase_upgrade() {
   local upgrade_was_active=false
   if systemctl is-active --quiet nixos-upgrade.service 2>/dev/null; then
     upgrade_was_active=true
+    info "Stopping nixos-upgrade.service to avoid concurrent store access..."
     systemctl stop nixos-upgrade.service
   fi
 
@@ -1197,14 +1198,20 @@ phase_upgrade() {
     git -C "$REPO_DIR" rm --cached "$override_nix" 2>/dev/null || true
     git -C "$REPO_DIR" add "$host_dir/configuration.nix"
 
-    [[ "$upgrade_was_active" == "true" ]] && systemctl start nixos-upgrade.service
+    if [[ "$upgrade_was_active" == "true" ]]; then
+      info "Restarting nixos-upgrade.service..."
+      systemctl start nixos-upgrade.service
+    fi
     [[ "$rebuild_ok" == true ]] || error "nixos-rebuild failed. Check the output above."
   else
     nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" ${REPAIR:+--repair} \
-      || { [[ "$upgrade_was_active" == "true" ]] && systemctl start nixos-upgrade.service; error "nixos-rebuild failed. Check the output above."; }
+      || { if [[ "$upgrade_was_active" == "true" ]]; then info "Restarting nixos-upgrade.service..."; systemctl start nixos-upgrade.service; fi; error "nixos-rebuild failed. Check the output above."; }
   fi
 
-  [[ "$upgrade_was_active" == "true" ]] && systemctl start nixos-upgrade.service
+  if [[ "$upgrade_was_active" == "true" ]]; then
+    info "Restarting nixos-upgrade.service..."
+    systemctl start nixos-upgrade.service
+  fi
 
   echo ""
   success "System upgraded."
