@@ -102,14 +102,17 @@ in
           "hyprland/window"
         ];
         modules-center = [ ];
-        modules-right = [
-          "tray"
-          "network"
-          "bluetooth"
-          "pulseaudio"
-          "battery"
-          "clock"
-        ];
+        modules-right =
+          [
+            "tray"
+            "network"
+          ]
+          ++ lib.optionals config.features.bluetooth.enable [ "bluetooth" ]
+          ++ [
+            "pulseaudio"
+            "battery"
+            "clock"
+          ];
 
         "custom/launcher" = {
           format = "<span size='x-large' rise='-2000'>󱄅</span>";
