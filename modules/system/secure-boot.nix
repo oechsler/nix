@@ -131,20 +131,24 @@ let
       else
         step 1 3 "Generating Secure Boot keys..."
         echo ""
+        # Unmount the impermanence bind-mount first if active, then wipe both
+        # sides. If we only rm -rf the mount point, the mount stub survives and
+        # sbctl cannot mkdir keys/ inside it.
+        if mountpoint -q /var/lib/sbctl 2>/dev/null; then
+          umount /var/lib/sbctl
+        fi
         rm -rf /var/lib/sbctl /persist/var/lib/sbctl 2>/dev/null || true
+        mkdir -p /var/lib/sbctl
         if command -v sbctl &>/dev/null; then
           sbctl create-keys
         else
           nix run nixpkgs#sbctl -- create-keys
         fi
         # Copy entire sbctl dir (keys/ + GUID) to /persist so it survives
-        # the impermanence bind-mount activation during the next rebuild.
-        # Skip if /var/lib/sbctl is already a bind-mount (post-rebuild state).
-        if [[ -d /var/lib/sbctl && -d /persist ]]; then
-          if ! mountpoint -q /var/lib/sbctl 2>/dev/null; then
-            mkdir -p /persist/var/lib
-            cp -a /var/lib/sbctl /persist/var/lib/
-          fi
+        # the next rebuild (which re-activates the impermanence bind-mount).
+        if [[ -d /persist ]]; then
+          mkdir -p /persist/var/lib
+          cp -a /var/lib/sbctl /persist/var/lib/
         fi
         echo ""
       fi
