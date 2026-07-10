@@ -70,6 +70,7 @@ in
         # System State (always)
         "/var/lib/nixos" # NixOS state (users, groups, etc.)
         "/var/lib/sops" # SOPS secrets
+        "/var/lib/power-profiles-daemon" # Active power profile
         "/var/lib/systemd/rfkill" # Radio kill switch state
         "/var/lib/systemd/timers" # Systemd timer state
         "/var/lib/systemd/coredump" # Core dumps
