@@ -82,7 +82,6 @@ withoutLuks
         ++ [
           "ucsi_acpi"
           "typec_ucsi"
-          "hidraw" # required for FIDO2 communication with YubiKey in initrd
         ];
     };
   };

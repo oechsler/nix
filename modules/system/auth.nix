@@ -589,10 +589,13 @@ in
       # mkDefault: impermanence.nix can override if both are enabled
       boot.initrd.systemd.enable = lib.mkDefault true;
 
-      # pcsclite is dynamically loaded by systemd-cryptsetup for FIDO2 token
-      # communication. Without it in the initrd store the library load fails
-      # and the YubiKey is not recognised even though the USB device is present.
-      boot.initrd.systemd.storePaths = [ pkgs.pcsclite.lib ];
+      # These libraries are dynamically loaded by systemd-cryptsetup for FIDO2.
+      # Without them in the initrd store the YubiKey times out at boot despite
+      # the USB device being visible.
+      boot.initrd.systemd.storePaths = [
+        pkgs.pcsclite.lib
+        pkgs.libfido2
+      ];
     })
 
   ];
