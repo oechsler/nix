@@ -597,11 +597,11 @@ in
         pkgs.libfido2
       ];
 
-      # udev rules so the kernel exposes the FIDO2 HID interface to systemd-cryptsetup.
-      # Without these rules the hidraw device has wrong permissions and FIDO2 auth fails.
-      boot.initrd.services.udev.rules = ''
-        KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1050", TAG+="uaccess"
-      '';
+      # Include libfido2 udev rules in the initrd so systemd-cryptsetup can
+      # identify the YubiKey as a FIDO2 token (not just a HID keyboard).
+      # services.udev.extraRules only applies to the running system, not initrd.
+      boot.initrd.systemd.contents."/etc/udev/rules.d/70-fido2.rules".source =
+        "${pkgs.libfido2}/lib/udev/rules.d/70-u2f.rules";
     })
 
   ];
