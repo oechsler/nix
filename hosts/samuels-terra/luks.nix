@@ -20,9 +20,9 @@
 
 let
   unlockOpts = {
-    yubikey = [ "fido2-device=auto" "tries=0" ];
-    tpm2    = [ "tpm2-device=auto"  "tries=0" ];
-    password = [ "tries=0" ];
+    yubikey = [ "fido2-device=auto" "token-timeout=10s" ];
+    tpm2    = [ "tpm2-device=auto" ];
+    password = [ ];
   };
 in
 {
@@ -32,7 +32,7 @@ in
     crypttabExtraOpts = unlockOpts.${config.features.encryption.unlockMethod};
   };
 
-  # On FIDO2 timeout/failure: fall back to password prompt instead of rebooting.
+  # Do not reboot the machine when FIDO2 unlock fails or times out.
   boot.initrd.systemd.services."systemd-cryptsetup@cryptroot" = {
     overrideStrategy = "asDropin";
     unitConfig.FailureAction = "none";

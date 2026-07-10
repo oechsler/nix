@@ -155,6 +155,7 @@ in
       '';
 
       pointerCursor = {
+        enable = true;
         name = cursorName;
         package = cursorPackage;
         size = cursorSize;

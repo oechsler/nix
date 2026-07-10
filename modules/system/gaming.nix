@@ -6,6 +6,7 @@
 # - Gamescope             — Wayland compositor for gaming (frame limiting, upscaling)
 # - MangoHud              — in-game FPS/GPU/CPU overlay
 # - ProtonUp-Qt           — GUI to manage Proton-GE versions
+# - Steam Controller wake — allow the Valve wireless receiver to wake from standby
 #
 # VA-API drivers are configured in hardware.nix and apply to all desktop systems with a GPU,
 # independent of gaming. gaming.nix only adds 32-bit libs (AMD) and diagnostic tools.
@@ -59,6 +60,11 @@ in
           mangohud # in-game overlay: FPS, GPU/CPU load, temps, VRAM
           protonup-qt # GUI to install/manage Proton-GE versions
         ];
+
+        services.udev.extraRules = ''
+          # Steam Controller Wireless Receiver: allow the controller power button to wake the PC.
+          ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="28de", ATTR{idProduct}=="1142", ATTR{power/wakeup}="enabled"
+        '';
 
         boot.kernel.sysctl = {
           # Reduce swap pressure during gaming (zram is fast, but still adds latency)
