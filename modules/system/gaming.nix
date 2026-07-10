@@ -34,14 +34,14 @@ in
       #---------------------------
       # Base gaming config
       #---------------------------
-      {
-        programs.steam = {
-          enable = true;
-          # Open UDP 27031-27036 + TCP 27036-27037 for Steam Remote Play
-          remotePlay.openFirewall = true;
-          # Proton-GE: better compatibility than stock Proton for many games
-          extraCompatPackages = [ pkgs.proton-ge-bin ];
-        };
+       {
+         programs.steam = {
+           enable = true;
+           # Open UDP 27031-27036 + TCP 27036-27037 for Steam Remote Play
+           remotePlay.openFirewall = true;
+           # Proton-GE: better compatibility than stock Proton for many games
+           extraCompatPackages = [ pkgs.proton-ge-bin ];
+         };
 
         programs.gamemode = {
           enable = true;

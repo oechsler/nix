@@ -216,7 +216,11 @@ in
             After = [ "graphical-session.target" ];
           };
           Service = {
-            ExecStart = "${pkgs.sc-controller}/bin/sc-controller --touchpad-as-mouse";
+            # --exclusive: Grab the controller first so Steam doesn't take it
+            # --touchpad-as-mouse: Enable touchpad mouse emulation
+            # Steam Input will still work in games because sc-controller
+            # releases the controller when a game starts (via SDL2)
+            ExecStart = "${pkgs.sc-controller}/bin/sc-controller --touchpad-as-mouse --exclusive";
             Restart = "on-failure";
             TimeoutStopSec = 5;
             Environment = [
