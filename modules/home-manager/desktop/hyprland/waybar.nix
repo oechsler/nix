@@ -110,7 +110,7 @@ in
           ]
           ++ lib.optionals features.bluetooth.enable [ "bluetooth" ]
           ++ [
-            "power-profiles-daemon"
+            "custom/power-profile"
             "battery"
             "pulseaudio"
             "clock"
@@ -192,15 +192,20 @@ in
           tooltip-format = "{desc}";
         };
 
-        "power-profiles-daemon" = {
-          format = "{icon}";
-          tooltip-format = "{profile}";
-          format-icons = {
-            performance = "<span size='large'>󱐋</span>";
-            balanced = "<span size='large'>󰾆</span>";
-            power-saver = "<span size='large'>󰌪</span>";
-          };
+        "custom/power-profile" = {
+          exec = pkgs.writeShellScript "waybar-power-profile" ''
+            profile=$(${pkgs.power-profiles-daemon}/bin/powerprofilesctl get)
+            case "$profile" in
+              performance) echo '{"text": "<span size=\"large\">󱐋</span>", "tooltip": "Leistung"}' ;;
+              power-saver)  echo '{"text": "<span size=\"large\">󰌪</span>", "tooltip": "Energiesparen"}' ;;
+              *)             echo '{"text": "<span size=\"large\">󰾆</span>", "tooltip": "Ausgewogen"}' ;;
+            esac
+          '';
+          exec-if = "command -v powerprofilesctl";
+          return-type = "json";
+          interval = 5;
           on-click = "${config.rofi.powerProfile}";
+          tooltip = true;
         };
 
         "battery" = {
