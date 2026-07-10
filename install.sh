@@ -1150,10 +1150,8 @@ phase_upgrade() {
   info "Rebuilding system..."
   echo ""
 
-  # Stop the auto-upgrade service while we build to avoid concurrent Nix store
-  # access which can cause "getting attributes of path" errors mid-build.
-  # Stop both the timer and the service to prevent concurrent Nix store access.
-  # If the service is actively building, wait for it to finish first.
+  # Stop the auto-upgrade timer (and service if currently building) to prevent
+  # concurrent Nix store access which causes "getting attributes of path" errors.
   local upgrade_was_active=false
   if systemctl is-active --quiet nixos-upgrade.timer 2>/dev/null \
       || systemctl is-active --quiet nixos-upgrade.service 2>/dev/null; then
@@ -1161,11 +1159,11 @@ phase_upgrade() {
     if systemctl is-active --quiet nixos-upgrade.service 2>/dev/null; then
       info "nixos-upgrade.service is running — waiting for it to finish..."
       systemctl stop nixos-upgrade.service 2>/dev/null || true
+      info "Verifying Nix store integrity..."
+      nix-store --verify --repair 2>/dev/null || true
     fi
     info "Stopping nixos-upgrade.timer..."
     systemctl stop nixos-upgrade.timer 2>/dev/null || true
-    info "Verifying Nix store integrity..."
-    nix-store --verify --repair 2>/dev/null || true
   fi
 
   local avail_gb max_jobs
@@ -1186,10 +1184,9 @@ phase_upgrade() {
   # installed system (missing flake registry, network, etc.)
   local sb_config_enabled=false
   local host_config="$REPO_DIR/hosts/$HOST/configuration.nix"
-  if grep -q 'secureBoot\.enable\s*=\s*true' "$host_config" 2>/dev/null; then
-    sb_config_enabled=true
-  fi
+  grep -q 'secureBoot\.enable\s*=\s*true' "$host_config" 2>/dev/null && sb_config_enabled=true
 
+  local rebuild_ok=true
   if [[ "$sb_config_enabled" == "true" && "$sb_keys_exist" != "true" ]]; then
     warn "Secure Boot keys not yet generated — disabling lanzaboote for this rebuild."
     echo ""
@@ -1199,28 +1196,22 @@ phase_upgrade() {
     sed -i "/imports = \[/a\\    .\/secure-boot-upgrade-override.nix" "$host_dir/configuration.nix"
     git -C "$REPO_DIR" add "$override_nix" "$host_dir/configuration.nix"
 
-    local rebuild_ok=true
     nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" ${REPAIR:+--repair} || rebuild_ok=false
 
     sed -i '/secure-boot-upgrade-override\.nix/d' "$host_dir/configuration.nix"
     rm -f "$override_nix"
     git -C "$REPO_DIR" rm --cached "$override_nix" 2>/dev/null || true
     git -C "$REPO_DIR" add "$host_dir/configuration.nix"
-
-    if [[ "$upgrade_was_active" == "true" ]]; then
-      info "Restarting nixos-upgrade.timer..."
-      systemctl start nixos-upgrade.timer
-    fi
-    [[ "$rebuild_ok" == true ]] || error "nixos-rebuild failed. Check the output above."
   else
-    nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" ${REPAIR:+--repair} \
-      || { if [[ "$upgrade_was_active" == "true" ]]; then info "Restarting nixos-upgrade.timer..."; systemctl start nixos-upgrade.timer; fi; error "nixos-rebuild failed. Check the output above."; }
+    nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" ${REPAIR:+--repair} || rebuild_ok=false
   fi
 
   if [[ "$upgrade_was_active" == "true" ]]; then
     info "Restarting nixos-upgrade.timer..."
     systemctl start nixos-upgrade.timer
   fi
+
+  [[ "$rebuild_ok" == true ]] || error "nixos-rebuild failed. Check the output above."
 
   echo ""
   success "System upgraded."
