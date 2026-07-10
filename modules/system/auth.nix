@@ -596,6 +596,12 @@ in
         pkgs.pcsclite.lib
         pkgs.libfido2
       ];
+
+      # udev rules so the kernel exposes the FIDO2 HID interface to systemd-cryptsetup.
+      # Without these rules the hidraw device has wrong permissions and FIDO2 auth fails.
+      boot.initrd.services.udev.rules = ''
+        KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1050", TAG+="uaccess"
+      '';
     })
 
   ];
