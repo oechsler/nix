@@ -105,20 +105,8 @@ let
         echo ""
         sbctl verify
         echo ""
-        # Old systemd-boot EFI files may appear unsigned — this is expected.
-        # lanzaboote uses Unified Kernel Images (UKIs); only those need to be signed.
-        # Raw kernel EFI files from previous generations are never booted directly.
-        unsigned=$(sbctl verify 2>/dev/null | grep -c '✗' || true)
-        if [[ "$unsigned" -eq 0 ]]; then
-          success "Secure Boot is active and all files are signed."
-        else
-          success "Secure Boot is active. lanzaboote UKIs are signed."
-          echo ""
-          echo -e "    ''${DIM}Cleaning up old systemd-boot entries (unsigned legacy files)...''${RESET}"
-          nix-collect-garbage -d
-          echo ""
-          success "Old generations removed. All remaining files are signed."
-        fi
+        success "Secure Boot is active. lanzaboote UKIs are signed."
+        warn "Unsigned entries above are old systemd-boot EFI files — expected, never booted directly."
         exit 0
       fi
 
