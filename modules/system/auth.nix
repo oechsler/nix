@@ -597,11 +597,13 @@ in
         pkgs.libfido2
       ];
 
-      # Include libfido2 udev rules in the initrd so systemd-cryptsetup can
+      # Include FIDO2 udev rules in the initrd so systemd-cryptsetup can
       # identify the YubiKey as a FIDO2 token (not just a HID keyboard).
       # services.udev.extraRules only applies to the running system, not initrd.
-      boot.initrd.systemd.contents."/etc/udev/rules.d/70-fido2.rules".source =
-        "${pkgs.libfido2}/lib/udev/rules.d/70-u2f.rules";
+      boot.initrd.systemd.contents."/etc/udev/rules.d/70-fido2.rules".text = ''
+        KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="1050", TAG+="uaccess", GROUP="plugdev", MODE="0660"
+        KERNEL=="hidraw*", SUBSYSTEM=="hidraw", ATTRS{idVendor}=="096e", TAG+="uaccess", GROUP="plugdev", MODE="0660"
+      '';
     })
 
   ];
