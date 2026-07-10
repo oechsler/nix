@@ -193,12 +193,12 @@ in
         };
 
         "power-profiles-daemon" = {
-          format = "{icon}";
+          format = "<span size='large'>{icon}</span>";
           tooltip-format = "{profile}";
           format-icons = {
-            performance = "<span size='large'>󱐋</span>";
-            balanced = "<span size='large'>󰾆</span>";
-            power-saver = "<span size='large'>󰌪</span>";
+            performance = "󱐋";
+            balanced = "󰾆";
+            power-saver = "󰌪";
           };
           on-click = "${config.rofi.powerProfile}";
         };
