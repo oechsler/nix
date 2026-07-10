@@ -93,8 +93,9 @@
       # Pinned: nix flake update must not silently bump the kernel version.
       # Bump this together with nixpkgs-kernel when upgrading the kernel.
       # See: github.com/xddxdd/nix-cachyos-kernel (version.json tracks kernel versions)
-      # Current: rev 60e1ef60 (2026-07-01), kernel 7.1.2
-      url = "github:xddxdd/nix-cachyos-kernel/60e1ef60f0f01dd54ef5d26c251537a99779f9b6";
+      # Current: rev 0e6a9807 (2026-07-09), kernel 7.1.3
+      # MT7927 (WiFi/BT on samuels-terra) requires kernel 7.2+ — bump when available.
+      url = "github:xddxdd/nix-cachyos-kernel/0e6a9807df99b634b2fb49729b02d15a17aabc46";
       inputs.nixpkgs.follows = "nixpkgs-kernel";
     };
 

@@ -23,7 +23,8 @@
 # - Firmware settings
 #
 # Manual overrides (hardware not detected by nixos-generate-config):
-# - ucsi_acpi, typec_ucsi: USB-C controller modules for FIDO2 key detection at boot
+# - ucsi_acpi, typec_ucsi: USB-C controller in initrd.kernelModules (not availableKernelModules)
+#   so they are loaded immediately at initrd start — before LUKS FIDO2 unlock prompt
 # - mt7925e: MediaTek MT7925 WiFi 7 + Bluetooth 5.4 (ROG Strix X870-I onboard adapter)
 
 {
@@ -72,9 +73,12 @@ withoutLuks
       ((withoutLuks.boot or { }).kernelModules or [ ]) ++ [ "mt7925e" ];
 
     initrd = ((withoutLuks.boot or { }).initrd or { }) // {
-      # USB-C controller modules required in initrd for FIDO2 key detection at boot
-      availableKernelModules =
-        ((withoutLuks.boot or { }).initrd or { }).availableKernelModules or [ ]
+      # Force-load USB-C controller modules at initrd start so the YubiKey
+      # is visible before systemd-cryptsetup asks for FIDO2 touch.
+      # availableKernelModules = load-on-demand (too late for LUKS unlock).
+      # kernelModules = load immediately (required here).
+      kernelModules =
+        ((withoutLuks.boot or { }).initrd or { }).kernelModules or [ ]
         ++ [
           "ucsi_acpi"
           "typec_ucsi"
