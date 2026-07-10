@@ -63,7 +63,11 @@ in
 withoutLuks
 // {
   boot = (withoutLuks.boot or { }) // {
-    # MediaTek MT7925 WiFi 7 + Bluetooth 5.4 — not auto-detected, must be loaded explicitly
+    # MediaTek MT7927 (Filogic 380) WiFi 7 + BT 5.4 — PCI ID 14c3:7927.
+    # MT7927 support was merged upstream on 2026-06-09 (Linux 7.2+).
+    # mt7925e is the correct module (MT7927 shares the driver); the PCI ID
+    # 14c3:7927 will be recognised once CachyOS ships a kernel >= that commit.
+    # Until then WiFi/BT are non-functional — update flake when 7.2 is available.
     kernelModules =
       ((withoutLuks.boot or { }).kernelModules or [ ]) ++ [ "mt7925e" ];
 
