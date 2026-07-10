@@ -34,14 +34,16 @@ in
       #---------------------------
       # Base gaming config
       #---------------------------
-       {
-         programs.steam = {
-           enable = true;
-           # Open UDP 27031-27036 + TCP 27036-27037 for Steam Remote Play
-           remotePlay.openFirewall = true;
-           # Proton-GE: better compatibility than stock Proton for many games
-           extraCompatPackages = [ pkgs.proton-ge-bin ];
-         };
+      {
+        programs.steam = {
+          enable = true;
+          # Translate Steam Input's desktop mouse/keyboard events to uinput on Wayland.
+          extest.enable = true;
+          # Open UDP 27031-27036 + TCP 27036-27037 for Steam Remote Play
+          remotePlay.openFirewall = true;
+          # Proton-GE: better compatibility than stock Proton for many games
+          extraCompatPackages = [ pkgs.proton-ge-bin ];
+        };
 
         programs.gamemode = {
           enable = true;
@@ -64,10 +66,6 @@ in
         services.udev.extraRules = ''
           # Steam Controller Wireless Receiver: allow the controller power button to wake the PC.
           ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="28de", ATTR{idProduct}=="1142", ATTR{power/wakeup}="enabled"
-          
-          # Steam Controller: allow users to access the device (for sc-controller)
-          ACTION=="add|change", SUBSYSTEM=="input", ATTR{name}=="Steam Controller*", MODE="0666"
-          ACTION=="add|change", SUBSYSTEM=="input", ATTR{name}=="Valve Software Steam Controller*", MODE="0666"
         '';
 
         boot.kernel.sysctl = {
