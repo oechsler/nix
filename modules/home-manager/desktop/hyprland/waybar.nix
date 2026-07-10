@@ -157,7 +157,7 @@ in
           ];
           tooltip-format = "{gwaddr}";
           tooltip-format-wifi = "{essid} ({signalStrength}%)";
-          on-click = "${config.terminal.exec} impala -e impala";
+          on-click = "${config.terminal.exec} impala";
         };
 
         "bluetooth" = {
@@ -168,7 +168,7 @@ in
           tooltip-format = "{controller_alias}\t{controller_address}";
           tooltip-format-connected = "{controller_alias}\t{controller_address}\n\n{device_enumerate}";
           tooltip-format-enumerate-connected = "{device_alias}\t{device_address}";
-          on-click = "${config.terminal.exec} bluetui -e bluetui";
+          on-click = "${config.terminal.exec} bluetui";
         };
 
         "pulseaudio" = {
