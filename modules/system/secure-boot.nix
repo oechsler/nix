@@ -131,18 +131,19 @@ let
       else
         step 1 3 "Generating Secure Boot keys..."
         echo ""
-        rm -rf /var/lib/sbctl/keys /persist/var/lib/sbctl/keys 2>/dev/null || true
+        rm -rf /var/lib/sbctl /persist/var/lib/sbctl 2>/dev/null || true
         if command -v sbctl &>/dev/null; then
           sbctl create-keys
         else
           nix run nixpkgs#sbctl -- create-keys
         fi
-        # Copy keys to /persist so they survive the impermanence bind-mount
-        # activation during the next rebuild. Skip if already a bind-mount.
-        if [[ -d /var/lib/sbctl/keys && -d /persist ]]; then
+        # Copy entire sbctl dir (keys/ + GUID) to /persist so it survives
+        # the impermanence bind-mount activation during the next rebuild.
+        # Skip if /var/lib/sbctl is already a bind-mount (post-rebuild state).
+        if [[ -d /var/lib/sbctl && -d /persist ]]; then
           if ! mountpoint -q /var/lib/sbctl 2>/dev/null; then
-            mkdir -p /persist/var/lib/sbctl
-            cp -a /var/lib/sbctl/keys /persist/var/lib/sbctl/
+            mkdir -p /persist/var/lib
+            cp -a /var/lib/sbctl /persist/var/lib/
           fi
         fi
         echo ""
