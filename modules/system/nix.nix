@@ -4,7 +4,7 @@
 # 1. Nix flakes and experimental features
 # 2. Unfree package support
 # 3. Automatic garbage collection (weekly, 14 days)
-# 4. Store optimization (deduplication)
+# 4. Store optimization (weekly, after GC — never concurrent with builds)
 # 5. Automatic system upgrades with notifications
 #
 # Automatic upgrades:
@@ -47,9 +47,10 @@
         "nix-command"
         "flakes"
       ];
-      # Deduplicate identical files in /nix/store
-      # Saves disk space by hardlinking duplicate files
-      auto-optimise-store = true;
+      # auto-optimise-store is intentionally disabled — it runs inline during
+      # builds and can corrupt the store when concurrent builds are happening.
+      # Store optimisation is done via a dedicated weekly systemd service instead.
+      auto-optimise-store = false;
     };
 
     #---------------------------
@@ -60,6 +61,28 @@
       automatic = true;
       dates = "weekly";
       options = "--delete-older-than 14d"; # Keep last 14 days
+    };
+  };
+
+  # Store optimisation runs after GC to deduplicate store paths via hardlinks.
+  # Runs as a separate weekly service so it never races with active builds.
+  systemd.services.nix-store-optimise = {
+    description = "Nix store optimisation (deduplication)";
+    after = [ "nix-gc.service" ];
+    wants = [ "nix-gc.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = "${pkgs.nix}/bin/nix store optimise";
+      Nice = 19;
+      IOSchedulingClass = "idle";
+    };
+  };
+  systemd.timers.nix-store-optimise = {
+    wantedBy = [ "timers.target" ];
+    timerConfig = {
+      OnCalendar = "weekly";
+      Persistent = true;
+      RandomizedDelaySec = "1h";
     };
   };
 
