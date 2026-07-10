@@ -99,6 +99,7 @@ window#waybar {
 #network,
 #bluetooth,
 #pulseaudio,
+#power-profiles-daemon,
 #battery,
 #clock {
   background-color: alpha(@base, 0.85);
@@ -116,6 +117,7 @@ window#waybar {
 #network,
 #bluetooth,
 #pulseaudio,
+#power-profiles-daemon,
 #battery {
   background-image: linear-gradient(alpha(@blue, separator_alpha), alpha(@blue, separator_alpha));
   background-size: 2px 50%;
