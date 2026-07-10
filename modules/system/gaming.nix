@@ -64,6 +64,10 @@ in
         services.udev.extraRules = ''
           # Steam Controller Wireless Receiver: allow the controller power button to wake the PC.
           ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="28de", ATTR{idProduct}=="1142", ATTR{power/wakeup}="enabled"
+          
+          # Steam Controller: allow users to access the device (for sc-controller)
+          ACTION=="add|change", SUBSYSTEM=="input", ATTR{name}=="Steam Controller*", MODE="0666"
+          ACTION=="add|change", SUBSYSTEM=="input", ATTR{name}=="Valve Software Steam Controller*", MODE="0666"
         '';
 
         boot.kernel.sysctl = {
