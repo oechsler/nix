@@ -99,7 +99,7 @@ window#waybar {
 #network,
 #bluetooth,
 #pulseaudio,
-#power-profiles-daemon,
+#custom-power-profile,
 #battery,
 #clock {
   background-color: alpha(@base, 0.85);
@@ -117,7 +117,7 @@ window#waybar {
 #network,
 #bluetooth,
 #pulseaudio,
-#power-profiles-daemon,
+#custom-power-profile,
 #battery {
   background-image: linear-gradient(alpha(@blue, separator_alpha), alpha(@blue, separator_alpha));
   background-size: 2px 50%;
@@ -158,6 +158,6 @@ window#waybar {
   color: @red;
 }
 
-#power-profiles-daemon {
+#custom-power-profile {
   padding: 0.35em 1.15em 0.35em 0.85em;
 }
