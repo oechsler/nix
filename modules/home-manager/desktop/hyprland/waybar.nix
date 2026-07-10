@@ -110,6 +110,7 @@ in
           ++ lib.optionals config.features.bluetooth.enable [ "bluetooth" ]
           ++ [
             "pulseaudio"
+            "power-profiles-daemon"
             "battery"
             "clock"
           ];
@@ -190,6 +191,17 @@ in
           tooltip-format = "{desc}";
         };
 
+        "power-profiles-daemon" = {
+          format = "{icon}";
+          tooltip-format = "{profile}";
+          format-icons = {
+            performance = "<span size='large'>󱐋</span>";
+            balanced = "<span size='large'>󰾆</span>";
+            power-saver = "<span size='large'>󰌪</span>";
+          };
+          on-click = "${config.rofi.powerProfile}";
+        };
+
         "battery" = {
           states = {
             warning = 30;
@@ -211,7 +223,6 @@ in
             "<span size='large'>󰂂</span>"
             "<span size='large'>󰁹</span>"
           ];
-          on-click = "${config.rofi.powerProfile}";
         };
 
         "clock" = {
