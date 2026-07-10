@@ -1170,6 +1170,7 @@ phase_upgrade() {
   avail_gb=$(awk '/^MemAvailable:/{printf "%d", $2/1024/1024}' /proc/meminfo)
   max_jobs=$(( avail_gb / 4 ))
   (( max_jobs < 1 )) && max_jobs=1
+  echo ""
   success "RAM available: ${avail_gb} GB — using --max-jobs ${max_jobs}"
   echo ""
 
