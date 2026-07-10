@@ -162,7 +162,7 @@ in
           ];
           tooltip-format = "{gwaddr}";
           tooltip-format-wifi = "{essid} ({signalStrength}%)";
-          on-click = "${config.terminal.exec} impala";
+          on-click = lib.mkIf features.wifi.enable "${config.terminal.exec} impala";
         };
 
         "bluetooth" = {
