@@ -600,6 +600,54 @@ in
       # Add libfido2 as an initrd package so systemd-udevd picks up its
       # udev rules (70-u2f.rules) and identifies the YubiKey as FIDO2.
       boot.initrd.systemd.packages = [ pkgs.libfido2 ];
+
+      # USB/FIDO2 enumeration can lag behind cryptsetup startup in initrd.
+      # Poll only for Yubico hidraw devices; full udev settle is too slow on
+      # desktops with many USB/HID devices and can wait for unrelated hardware.
+      boot.initrd.systemd.services =
+        {
+          "fido2-yubikey-wait" = {
+            description = "Wait for FIDO2 security token enumeration";
+            unitConfig.DefaultDependencies = "no";
+            after = [
+              "systemd-udevd.service"
+              "systemd-udev-trigger.service"
+            ];
+            wants = [
+              "systemd-udevd.service"
+              "systemd-udev-trigger.service"
+            ];
+            serviceConfig.Type = "oneshot";
+            script = ''
+              deadline=$((SECONDS + 6))
+              while [ "$SECONDS" -lt "$deadline" ]; do
+                for dev in /dev/hidraw*; do
+                  [ -e "$dev" ] || continue
+                  props="$(udevadm info --query=property --name="$dev" 2>/dev/null || true)"
+                  case "$props" in
+                    *ID_VENDOR_ID=1050*) exit 0 ;;
+                  esac
+                done
+                sleep 0.2
+              done
+            '';
+          };
+
+          # Late non-boot-critical USB/HID devices can keep initrd udev workers
+          # busy after LUKS is already unlocked. Do not let that delay switch-root;
+          # userspace udev coldplugs devices again after boot continues.
+          "systemd-udevd" = {
+            overrideStrategy = "asDropin";
+            serviceConfig.TimeoutStopSec = "2s";
+          };
+        }
+        // lib.mapAttrs' (name: _:
+          lib.nameValuePair "systemd-cryptsetup@${name}" {
+            overrideStrategy = "asDropin";
+            after = [ "fido2-yubikey-wait.service" ];
+            wants = [ "fido2-yubikey-wait.service" ];
+          }
+        ) config.boot.initrd.luks.devices;
     })
 
   ];

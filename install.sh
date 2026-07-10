@@ -65,7 +65,7 @@ Options:
   --host HOST           Pre-select host configuration
   -s, --ssh-key PATH    Path to SSH private key
   -p, --luks-password   LUKS disk encryption password
-  --repair              Force rebuild of already-cached derivations (nixos-rebuild --repair)
+  --repair              Verify/repair the Nix store before rebuilding (requires root)
   --skip-totp           Skip TOTP setup (deferred to totp-init after first boot)
   -y, --yes             Skip all confirmation prompts (non-interactive mode)
   --dry-run             Show summary and exit without making changes
@@ -1150,6 +1150,16 @@ phase_upgrade() {
   info "Rebuilding system..."
   echo ""
 
+  if [[ "$REPAIR" == "true" ]]; then
+    if [[ $EUID -eq 0 ]]; then
+      info "Repairing Nix store before rebuild..."
+      nix-store --verify --repair || true
+    else
+      warn "--repair requires root/trusted-user privileges; continuing without repair."
+    fi
+    echo ""
+  fi
+
   # Stop the auto-upgrade timer (and service if currently building) to prevent
   # concurrent Nix store access which causes "getting attributes of path" errors.
   local upgrade_was_active=false
@@ -1197,14 +1207,14 @@ phase_upgrade() {
     sed -i "/imports = \[/a\\    .\/secure-boot-upgrade-override.nix" "$host_dir/configuration.nix"
     git -C "$REPO_DIR" add "$override_nix" "$host_dir/configuration.nix"
 
-    nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" ${REPAIR:+--repair} || rebuild_ok=false
+    nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" || rebuild_ok=false
 
     sed -i '/secure-boot-upgrade-override\.nix/d' "$host_dir/configuration.nix"
     rm -f "$override_nix"
     git -C "$REPO_DIR" rm --cached "$override_nix" 2>/dev/null || true
     git -C "$REPO_DIR" add "$host_dir/configuration.nix"
   else
-    nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" ${REPAIR:+--repair} || rebuild_ok=false
+    nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" || rebuild_ok=false
   fi
 
   if [[ "$upgrade_was_active" == "true" ]]; then

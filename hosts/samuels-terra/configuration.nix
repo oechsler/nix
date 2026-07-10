@@ -88,5 +88,5 @@
     wifi.networks = [ { name = "home"; ssid = "Oechsler!Box"; } ];
   };
 
-  system.stateVersion = "25.11";
+  system.stateVersion = "26.11";
 }
