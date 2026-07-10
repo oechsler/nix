@@ -1150,6 +1150,14 @@ phase_upgrade() {
   info "Rebuilding system..."
   echo ""
 
+  # Stop the auto-upgrade service while we build to avoid concurrent Nix store
+  # access which can cause "getting attributes of path" errors mid-build.
+  local upgrade_was_active=false
+  if systemctl is-active --quiet nixos-upgrade.service 2>/dev/null; then
+    upgrade_was_active=true
+    systemctl stop nixos-upgrade.service
+  fi
+
   local avail_gb max_jobs
   avail_gb=$(awk '/^MemAvailable:/{printf "%d", $2/1024/1024}' /proc/meminfo)
   max_jobs=$(( avail_gb / 4 ))
@@ -1189,10 +1197,14 @@ phase_upgrade() {
     git -C "$REPO_DIR" rm --cached "$override_nix" 2>/dev/null || true
     git -C "$REPO_DIR" add "$host_dir/configuration.nix"
 
+    [[ "$upgrade_was_active" == "true" ]] && systemctl start nixos-upgrade.service
     [[ "$rebuild_ok" == true ]] || error "nixos-rebuild failed. Check the output above."
   else
-    nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" ${REPAIR:+--repair} || error "nixos-rebuild failed. Check the output above."
+    nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" ${REPAIR:+--repair} \
+      || { [[ "$upgrade_was_active" == "true" ]] && systemctl start nixos-upgrade.service; error "nixos-rebuild failed. Check the output above."; }
   fi
+
+  [[ "$upgrade_was_active" == "true" ]] && systemctl start nixos-upgrade.service
 
   echo ""
   success "System upgraded."
