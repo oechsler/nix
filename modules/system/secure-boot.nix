@@ -140,9 +140,9 @@ let
         rm -rf /var/lib/sbctl /persist/var/lib/sbctl 2>/dev/null || true
         mkdir -p /var/lib/sbctl
         if command -v sbctl &>/dev/null; then
-          sbctl create-keys
+          sbctl create-keys 2>&1 | sed 's/^/    /'
         else
-          nix run nixpkgs#sbctl -- create-keys
+          nix run nixpkgs#sbctl -- create-keys 2>&1 | sed 's/^/    /'
         fi
         # Copy entire sbctl dir (keys/ + GUID) to /persist so it survives
         # the next rebuild (which re-activates the impermanence bind-mount).
