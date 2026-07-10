@@ -208,6 +208,23 @@ in
           };
           Install.WantedBy = [ "graphical-session.target" ];
         };
+
+        sc-controller = lib.mkIf features.gaming.enable {
+          Unit = {
+            Description = "Steam Controller with touchpad as mouse";
+            PartOf = [ "graphical-session.target" ];
+            After = [ "graphical-session.target" ];
+          };
+          Service = {
+            ExecStart = "${pkgs.sc-controller}/bin/sc-controller --touchpad-as-mouse";
+            Restart = "on-failure";
+            TimeoutStopSec = 5;
+            Environment = [
+              "SDL_GAMECONTROLLERCONFIG=${pkgs.sc-controller}/share/sdl_controller_config.txt"
+            ];
+          };
+          Install.WantedBy = [ "graphical-session.target" ];
+        };
       };
 
     # Reduce default stop timeout for user session
@@ -227,6 +244,8 @@ in
       # otherwise xdg-desktop-portal won't find gtk.portal and the
       # Settings interface (dark mode, color-scheme) won't work.
       pkgs.xdg-desktop-portal-gtk
+    ] ++ lib.optionals features.gaming.enable [
+      pkgs.sc-controller # Steam Controller with touchpad as mouse
     ];
 
     wayland.windowManager.hyprland = {

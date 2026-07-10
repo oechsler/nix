@@ -1253,9 +1253,6 @@ main() {
 
   # On an installed system: always upgrade — step flags are ignored.
   if [[ "$IS_LIVE" != true ]]; then
-    local sb_enabled=false
-    grep -q 'secureBoot\.enable\s*=\s*true' "$REPO_DIR/hosts/$HOST/configuration.nix" 2>/dev/null && sb_enabled=true
-
     echo -e "    ${DIM}Pulls the latest configuration from git and rebuilds the system.${RESET}"
     echo -e "    ${DIM}Activates immediately — no reboot required.${RESET}"
     echo ""

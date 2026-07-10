@@ -64,27 +64,8 @@
     };
   };
 
-  # Store optimisation runs after GC to deduplicate store paths via hardlinks.
-  # Runs as a separate weekly service so it never races with active builds.
-  systemd.services.nix-store-optimise = {
-    description = "Nix store optimisation (deduplication)";
-    after = [ "nix-gc.service" ];
-    wants = [ "nix-gc.service" ];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = "${pkgs.nix}/bin/nix store optimise";
-      Nice = 19;
-      IOSchedulingClass = "idle";
-    };
-  };
-  systemd.timers.nix-store-optimise = {
-    wantedBy = [ "timers.target" ];
-    timerConfig = {
-      OnCalendar = "weekly";
-      Persistent = true;
-      RandomizedDelaySec = "1h";
-    };
-  };
+   # Store optimisation runs after GC to deduplicate store paths via hardlinks.
+   # Runs as a separate weekly service so it never races with active builds.
 
   # Allow unfree packages (e.g., Discord, Spotify, proprietary drivers)
   nixpkgs.config.allowUnfree = true;
@@ -116,6 +97,25 @@
   '';
 
   systemd = {
+    services.nix-store-optimise = {
+      description = "Nix store optimisation (deduplication)";
+      after = [ "nix-gc.service" ];
+      wants = [ "nix-gc.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${pkgs.nix}/bin/nix store optimise";
+        Nice = 19;
+        IOSchedulingClass = "idle";
+      };
+    };
+    timers.nix-store-optimise = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "weekly";
+        Persistent = true;
+        RandomizedDelaySec = "1h";
+      };
+    };
     # Upgrade schedule
     timers.nixos-upgrade = {
       timerConfig = {
@@ -142,8 +142,9 @@
     # - ExecStart: Run nixos-rebuild boot (default behavior)
     # - ExecStartPost: Check if reboot is needed and notify
     # - OnFailure: Trigger failure notification service
-
-    services.nixos-upgrade =
+    
+    services = {
+      nixos-upgrade =
       let
         flakeDir = "${config.users.users.${config.user.name}.home}/repos/nix";
         user = config.user.name;
@@ -210,42 +211,43 @@
               "Das System ist bereits auf dem neuesten Stand."
           fi
         '';
-      in
-      {
-        path = [ pkgs.git pkgs.gnused ];
+       in
+       {
+         path = [ pkgs.git pkgs.gnused ];
 
-        serviceConfig.ExecStartPre = lib.mkBefore [ "${updateFlake}" ];
-        serviceConfig.ExecStartPost = [ "${cleanupOverride}" "${successScript}" ];
+         serviceConfig.ExecStartPre = lib.mkBefore [ "${updateFlake}" ];
+         serviceConfig.ExecStartPost = [ "${cleanupOverride}" "${successScript}" ];
 
-        # Trigger failure notification service on upgrade failure
-        unitConfig.OnFailure = [ "nixos-upgrade-notify-failure.service" ];
-      };
-
-    #---------------------------
-    # 7. Upgrade Failure Notification
-    #---------------------------
-    # Triggered when nixos-upgrade service fails
-    # Shows last 5 error lines from journal in critical notification
-    services.nixos-upgrade-notify-failure =
-      let
-        notify = pkgs.writeShellScript "nixos-upgrade-notify-failure" ''
-          # Extract last 5 error lines from nixos-upgrade journal
-          error=$(${pkgs.systemd}/bin/journalctl -u nixos-upgrade.service -b --no-pager -p err -o cat | tail -5)
-
-          # Send critical notification to user session
-          ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
-            --user --pipe --quiet --collect \
-            ${pkgs.libnotify}/bin/notify-send -u critical \
-              "Systemaktualisierung fehlgeschlagen" \
-              "Die automatische Aktualisierung konnte nicht durchgeführt werden.\n\n$error"
-        '';
-      in
-      {
-        description = "Notify on NixOS upgrade failure";
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = "${notify}";
+          # Trigger failure notification service on upgrade failure
+          unitConfig.OnFailure = [ "nixos-upgrade-notify-failure.service" ];
         };
-      };
+
+      #---------------------------
+      # 7. Upgrade Failure Notification
+      #---------------------------
+      # Triggered when nixos-upgrade service fails
+      # Shows last 5 error lines from journal in critical notification
+      nixos-upgrade-notify-failure =
+        let
+          notify = pkgs.writeShellScript "nixos-upgrade-notify-failure" ''
+            # Extract last 5 error lines from nixos-upgrade journal
+            error=$(${pkgs.systemd}/bin/journalctl -u nixos-upgrade.service -b --no-pager -p err -o cat | tail -5)
+
+            # Send critical notification to user session
+            ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
+              --user --pipe --quiet --collect \
+              ${pkgs.libnotify}/bin/notify-send -u critical \
+                "Systemaktualisierung fehlgeschlagen" \
+                "Die automatische Aktualisierung konnte nicht durchgeführt werden.\n\n$error"
+            '';
+        in
+        {
+          description = "Notify on NixOS upgrade failure";
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = "${notify}";
+          };
+        };
+    };
   };
 }
