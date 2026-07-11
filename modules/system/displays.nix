@@ -41,6 +41,11 @@
               type = lib.types.str;
               description = "Connector name (e.g. DP-1, HDMI-A-1, eDP-1)";
             };
+            edidHash = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Optional SHA-256 hash of this monitor's EDID for exact SDDM layout matching";
+            };
             width = lib.mkOption {
               type = lib.types.int;
               default = 1920;
