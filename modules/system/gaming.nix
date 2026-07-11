@@ -44,8 +44,6 @@ let
     STEAM_DISABLE_MANGOAPP_ATOM_WORKAROUND = "1";
   };
 
-  steamMachineSessionTarget = ''"''${XDG_RUNTIME_DIR:-/tmp}/steam-machine-session-target"'';
-
   sessionSelect = pkgs.writeShellScriptBin "steamos-session-select" ''
     set -eu
 
@@ -58,15 +56,9 @@ let
         ;;
     esac
 
-    if [ "$target" = desktop ] || [ "$target" = switch-to-desktop ]; then
-      printf '%s\n' desktop > ${steamMachineSessionTarget}
-      ${pkgs.procps}/bin/pkill -TERM -x steam || true
-      ${pkgs.procps}/bin/pkill -TERM -x steamwebhelper || true
-      exit 0
-    fi
-
-    printf '%s\n' steam > ${steamMachineSessionTarget}
-    ${pkgs.procps}/bin/pkill -TERM -x Hyprland || true
+    # Switching out of the Steam session is intentionally unsupported here.
+    # Rebooting is the reliable escape hatch for this console-like session.
+    exit 0
   '';
 
   steamosctl = pkgs.writeShellScriptBin "steamosctl" ''
@@ -109,23 +101,12 @@ let
         "-gamepadui"
         "-pipewire-dmabuf"
       ];
-      desktopExec =
-        if config.features.desktop.wm == "kde" then
-          "exec ${pkgs.kdePackages.plasma-workspace}/bin/startplasma-wayland"
-        else
-          "exec ${pkgs.uwsm}/bin/uwsm start -e -D Hyprland hyprland.desktop";
       steamGamescope = pkgs.writeShellScriptBin "steam-gamescope" ''
         set -eu
 
         ${lib.concatStringsSep "\n" exports}
 
-        rm -f ${steamMachineSessionTarget}
-        ${pkgs.gamescope}/bin/gamescope --steam ${gamescopeArgs} -- ${config.programs.steam.package}/bin/steam ${steamArgs}
-
-        if [ "$(cat ${steamMachineSessionTarget} 2>/dev/null || true)" = desktop ]; then
-          rm -f ${steamMachineSessionTarget}
-          ${desktopExec}
-        fi
+        exec ${pkgs.gamescope}/bin/gamescope --steam ${gamescopeArgs} -- ${config.programs.steam.package}/bin/steam ${steamArgs}
       '';
     in
     (pkgs.writeTextDir "share/wayland-sessions/steam.desktop" ''

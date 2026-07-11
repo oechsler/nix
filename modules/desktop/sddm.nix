@@ -16,7 +16,7 @@
 # - Themeable with Catppuccin
 #
 # Multi-monitor setup:
-# - Uses the configured layout only when all configured outputs are connected
+# - Uses the configured layout only when all configured outputs match
 # - Falls back to SDDM/KWin auto-detection for unknown or partial monitor setups
 #
 # HiDPI handling:
@@ -90,6 +90,29 @@ let
   );
 
   configuredOutputNames = lib.escapeShellArgs (map (m: m.name) monitors);
+  monitorsWithEdid = lib.filter (m: m.edidHash != null) monitors;
+  configuredOutputEdids = lib.escapeShellArgs (map (m: "${m.name}:${m.edidHash}") monitorsWithEdid);
+  configuredOutputEdidChecks = lib.optionalString (monitorsWithEdid != [ ]) ''
+    for identity in ${configuredOutputEdids}; do
+      output=''${identity%%:*}
+      expected_edid=''${identity#*:}
+      matched_edid=0
+
+      for edid_file in /sys/class/drm/*-"$output"/edid; do
+        status_file=''${edid_file%/edid}/status
+        if [ -s "$edid_file" ] && [ -e "$status_file" ] && [ "$(cat "$status_file")" = connected ]; then
+          actual_edid=$(${pkgs.coreutils}/bin/sha256sum "$edid_file" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+          if [ "$actual_edid" = "$expected_edid" ]; then
+            matched_edid=1
+          fi
+        fi
+      done
+
+      if [ "$matched_edid" -ne 1 ]; then
+        all_connected=0
+      fi
+    done
+  '';
 
   configureSddmDisplays = pkgs.writeShellScript "configure-sddm-displays" ''
     set -eu
@@ -115,6 +138,8 @@ let
       fi
     done
 
+    ${configuredOutputEdidChecks}
+
     if [ "$all_connected" -eq 1 ]; then
       install -o sddm -g sddm -m 0644 ${sddmDisplayConfigFile} "$config_file"
     else
@@ -138,9 +163,9 @@ in
           settings = {
             General.GreeterEnvironment =
               if isKde then
-                "XCURSOR_THEME=${cursorTheme},XCURSOR_SIZE=${toString cursorSize}"
+                "KWIN_FORCE_SW_CURSOR=1,XCURSOR_THEME=${cursorTheme},XCURSOR_SIZE=${toString cursorSize}"
               else
-                "QT_FONT_DPI=${toString scaledDpi},XCURSOR_THEME=${cursorTheme},XCURSOR_SIZE=${toString scaledCursorSize}";
+                "KWIN_FORCE_SW_CURSOR=1,QT_FONT_DPI=${toString scaledDpi},XCURSOR_THEME=${cursorTheme},XCURSOR_SIZE=${toString scaledCursorSize}";
             Theme = {
               CursorTheme = cursorTheme;
               CursorSize = if isKde then cursorSize else scaledCursorSize;
@@ -156,22 +181,28 @@ in
     };
 
     # SDDM uses kwin_wayland. Keep the home greeter layout only when the full
-    # configured monitor set is present; otherwise remove stale KScreen config so
+    # configured monitor set matches; otherwise remove stale KScreen config so
     # unknown monitor setups can auto-detect safely.
-    systemd.services.sddm-display-config = lib.mkIf (monitors != [ ]) {
-      description = "Configure SDDM monitor layout";
-      before = [ "display-manager.service" ];
-      wantedBy = [ "display-manager.service" ];
-      serviceConfig = {
-        Type = "oneshot";
-        ExecStart = configureSddmDisplays;
-      };
-    };
+    systemd = {
+      services = {
+        display-manager.environment.KWIN_FORCE_SW_CURSOR = "1";
 
-    systemd.tmpfiles.rules = [
-      "d /var/lib/sddm/.config 0755 sddm sddm -"
-      "r /var/lib/sddm/.config/kwinoutputconfig.json - - - - -"
-    ];
+        sddm-display-config = lib.mkIf (monitors != [ ]) {
+          description = "Configure SDDM monitor layout";
+          before = [ "display-manager.service" ];
+          wantedBy = [ "display-manager.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = configureSddmDisplays;
+          };
+        };
+      };
+
+      tmpfiles.rules = [
+        "d /var/lib/sddm/.config 0755 sddm sddm -"
+        "r /var/lib/sddm/.config/kwinoutputconfig.json - - - - -"
+      ];
+    };
 
     catppuccin.sddm = {
       enable = true;
