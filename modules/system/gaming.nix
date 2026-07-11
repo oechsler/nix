@@ -44,6 +44,8 @@ let
     STEAM_DISABLE_MANGOAPP_ATOM_WORKAROUND = "1";
   };
 
+  steamMachineSessionTarget = ''"''${XDG_RUNTIME_DIR:-/tmp}/steam-machine-session-target"'';
+
   sessionSelect = pkgs.writeShellScriptBin "steamos-session-select" ''
     set -eu
 
@@ -56,13 +58,15 @@ let
         ;;
     esac
 
-    if [ -n "''${XDG_SESSION_ID:-}" ]; then
-      ${pkgs.systemd}/bin/systemd-run --user --collect --on-active=1s \
-        ${pkgs.systemd}/bin/loginctl terminate-session "$XDG_SESSION_ID" >/dev/null
-    else
-      ${pkgs.systemd}/bin/systemd-run --user --collect --on-active=1s \
-        ${pkgs.systemd}/bin/loginctl terminate-user "''${USER:-${config.user.name}}" >/dev/null
+    if [ "$target" = desktop ] || [ "$target" = switch-to-desktop ]; then
+      printf '%s\n' desktop > ${steamMachineSessionTarget}
+      ${pkgs.procps}/bin/pkill -TERM -x steam || true
+      ${pkgs.procps}/bin/pkill -TERM -x steamwebhelper || true
+      exit 0
     fi
+
+    printf '%s\n' steam > ${steamMachineSessionTarget}
+    ${pkgs.procps}/bin/pkill -TERM -x Hyprland || true
   '';
 
   steamosctl = pkgs.writeShellScriptBin "steamosctl" ''
@@ -92,6 +96,48 @@ let
       steamosctl
     ];
   };
+
+  steamGamescopeSession =
+    let
+      exports = lib.mapAttrsToList (name: value: "export ${name}=${lib.escapeShellArg value}") steamMachineEnv;
+      gamescopeArgs = lib.escapeShellArgs [
+        "--xwayland-count"
+        "2"
+        "--force-windows-fullscreen"
+      ];
+      steamArgs = lib.escapeShellArgs [
+        "-gamepadui"
+        "-pipewire-dmabuf"
+      ];
+      desktopExec =
+        if config.features.desktop.wm == "kde" then
+          "exec ${pkgs.kdePackages.plasma-workspace}/bin/startplasma-wayland"
+        else
+          "exec ${pkgs.uwsm}/bin/uwsm start -e -D Hyprland hyprland.desktop";
+      steamGamescope = pkgs.writeShellScriptBin "steam-gamescope" ''
+        set -eu
+
+        ${lib.concatStringsSep "\n" exports}
+
+        rm -f ${steamMachineSessionTarget}
+        ${pkgs.gamescope}/bin/gamescope --steam ${gamescopeArgs} -- ${config.programs.steam.package}/bin/steam ${steamArgs}
+
+        if [ "$(cat ${steamMachineSessionTarget} 2>/dev/null || true)" = desktop ]; then
+          rm -f ${steamMachineSessionTarget}
+          ${desktopExec}
+        fi
+      '';
+    in
+    (pkgs.writeTextDir "share/wayland-sessions/steam.desktop" ''
+      [Desktop Entry]
+      Name=Steam
+      Comment=A digital distribution platform
+      Exec=${steamGamescope}/bin/steam-gamescope
+      Type=Application
+    '').overrideAttrs
+      (_: {
+        passthru.providedSessions = [ "steam" ];
+      });
 in
 {
   options.features.gaming = {
@@ -110,42 +156,30 @@ in
       # Base gaming config
       #---------------------------
       {
-        programs.steam = {
-          enable = true;
-          gamescopeSession = {
-            inherit (steamMachineCfg) enable;
-            args = lib.mkIf steamMachineCfg.enable [
-              "--xwayland-count"
-              "2"
-              "--force-windows-fullscreen"
-            ];
-            env = lib.mkIf steamMachineCfg.enable steamMachineEnv;
-            steamArgs = lib.mkIf steamMachineCfg.enable [
-              "-gamepadui"
-              "-steamos3"
-              "-steampal"
-              "-steamdeck"
-              "-pipewire-dmabuf"
-            ];
+        programs = {
+          steam = {
+            enable = true;
+            # Translate Steam Input's desktop mouse/keyboard events to uinput on Wayland.
+            extest.enable = true;
+            # Open UDP 27031-27036 + TCP 27036-27037 for Steam Remote Play
+            remotePlay.openFirewall = true;
+            # Proton-GE: better compatibility than stock Proton for many games
+            extraCompatPackages = [ pkgs.proton-ge-bin ];
           };
-          # Translate Steam Input's desktop mouse/keyboard events to uinput on Wayland.
-          extest.enable = true;
-          # Open UDP 27031-27036 + TCP 27036-27037 for Steam Remote Play
-          remotePlay.openFirewall = true;
-          # Proton-GE: better compatibility than stock Proton for many games
-          extraCompatPackages = [ pkgs.proton-ge-bin ];
-        };
 
-        programs.gamemode = {
-          enable = true;
-          settings = {
-            general = {
-              # Raise game process priority (nice -10 = significantly more CPU time)
-              renice = 10;
-              # Give realtime scheduling to the game when the system can handle it
-              softrealtime = "auto";
+          gamemode = {
+            enable = true;
+            settings = {
+              general = {
+                # Raise game process priority (nice -10 = significantly more CPU time)
+                renice = 10;
+                # Give realtime scheduling to the game when the system can handle it
+                softrealtime = "auto";
+              };
             };
           };
+
+          gamescope.enable = lib.mkIf steamMachineCfg.enable true;
         };
 
         environment.systemPackages = with pkgs; [
@@ -153,6 +187,10 @@ in
           mangohud # in-game overlay: FPS, GPU/CPU load, temps, VRAM
           protonup-qt # GUI to install/manage Proton-GE versions
         ] ++ lib.optional steamMachineCfg.enable steamMachineTools;
+
+        services.displayManager.sessionPackages = lib.mkIf steamMachineCfg.enable [
+          steamGamescopeSession
+        ];
 
         services.udev.extraRules = ''
           # Steam Controller Wireless Receiver: allow the controller power button to wake the PC.
