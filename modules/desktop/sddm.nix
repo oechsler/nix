@@ -148,6 +148,19 @@ let
     fi
   '';
 
+  triggerSddmDrmRescan = pkgs.writeShellScript "sddm-drm-rescan" ''
+    set -eu
+
+    # Some monitors only get a visible cursor in KWin's Wayland greeter after a
+    # physical hotplug. Re-emit DRM change events after SDDM is up to force the
+    # same output re-probe without touching the cable.
+    sleep 2
+    ${pkgs.systemd}/bin/udevadm trigger --subsystem-match=drm --action=change || true
+    ${pkgs.systemd}/bin/udevadm settle --timeout=5 || true
+    sleep 1
+    ${pkgs.systemd}/bin/udevadm trigger --subsystem-match=drm --action=change || true
+  '';
+
   isKde = config.features.desktop.wm == "kde";
 in
 {
@@ -195,6 +208,16 @@ in
           serviceConfig = {
             Type = "oneshot";
             ExecStart = configureSddmDisplays;
+          };
+        };
+
+        sddm-drm-rescan = {
+          description = "Rescan DRM outputs after SDDM starts";
+          after = [ "display-manager.service" ];
+          wantedBy = [ "display-manager.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = triggerSddmDrmRescan;
           };
         };
       };
