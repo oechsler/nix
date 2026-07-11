@@ -4,6 +4,7 @@
 # - Steam + Proton-GE     — gaming platform with enhanced Windows compatibility
 # - Gamemode              — CPU governor + realtime scheduling when a game runs
 # - Gamescope             — Wayland compositor for gaming (frame limiting, upscaling)
+# - Steam Gamescope session (optional) — console-like Steam session for Steam Machine use
 # - MangoHud              — in-game FPS/GPU/CPU overlay
 # - ProtonUp-Qt           — GUI to manage Proton-GE versions
 # - Steam Controller wake — allow the Valve wireless receiver to wake from standby
@@ -20,11 +21,132 @@
 
 let
   cfg = config.features.gaming;
+  steamMachineCfg = cfg.steamMachine;
+  isSteamMachineAutologin = steamMachineCfg.enable && config.features.desktop.login == "autologin";
+  desktopModeMarker = "steam-machine-desktop-mode";
+
+  desktopSession =
+    if config.features.desktop.wm == "kde" then
+      "plasma"
+    else
+      "hyprland-uwsm";
+
+  steamMachineEnv = {
+    SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS = "0";
+    HOMETEST_DESKTOP = "1";
+    HOMETEST_DESKTOP_SESSION = desktopSession;
+    SRT_URLOPEN_PREFER_STEAM = "1";
+    STEAM_DISABLE_AUDIO_DEVICE_SWITCHING = "1";
+    STEAM_MULTIPLE_XWAYLANDS = "1";
+    STEAM_GAMESCOPE_HAS_TEARING_SUPPORT = "1";
+    STEAM_GAMESCOPE_NIS_SUPPORTED = "1";
+    STEAM_GAMESCOPE_TEARING_SUPPORTED = "1";
+    STEAM_GAMESCOPE_VRR_SUPPORTED = "1";
+    STEAM_GAMESCOPE_FANCY_SCALING_SUPPORT = "1";
+    STEAM_DISABLE_MANGOAPP_ATOM_WORKAROUND = "1";
+  };
+
+  sessionSelect = pkgs.writeShellScriptBin "steamos-session-select" ''
+    set -eu
+
+    target="''${1:-desktop}"
+    case "$target" in
+      desktop|switch-to-desktop|plasma|hyprland|hyprland-uwsm|kde|gamescope|gamescope-wayland|steam|gaming|return-to-gaming-mode)
+        ;;
+      *)
+        echo "steamos-session-select: unsupported target '$target', ending current session anyway" >&2
+        ;;
+    esac
+
+    if [ "''${STEAM_MACHINE_AUTOLOGIN:-0}" = "1" ]; then
+      marker="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}/${desktopModeMarker}"
+      case "$target" in
+        gaming|steam|gamescope|gamescope-wayland|return-to-gaming-mode)
+          ${pkgs.coreutils}/bin/rm -f "$marker"
+          ;;
+        *)
+          ${pkgs.coreutils}/bin/touch "$marker"
+          ;;
+      esac
+    fi
+
+    if [ -n "''${XDG_SESSION_ID:-}" ]; then
+      ${pkgs.systemd}/bin/systemd-run --user --collect --on-active=1s \
+        ${pkgs.systemd}/bin/loginctl terminate-session "$XDG_SESSION_ID" >/dev/null
+    else
+      ${pkgs.systemd}/bin/systemd-run --user --collect --on-active=1s \
+        ${pkgs.systemd}/bin/loginctl terminate-user "''${USER:-${config.user.name}}" >/dev/null
+    fi
+  '';
+
+  steamosctl = pkgs.writeShellScriptBin "steamosctl" ''
+    set -eu
+
+    command="''${1:-}"
+    case "$command" in
+      set-default-desktop-session)
+        # SteamOS uses this to tell steamos-manager which desktop to launch.
+        # Our lightweight implementation returns to SDDM instead.
+        exit 0
+        ;;
+      switch-to-desktop|desktop|switch-to-gaming-mode|gaming)
+        exec ${sessionSelect}/bin/steamos-session-select "$command"
+        ;;
+      *)
+        echo "steamosctl: unsupported command '$command'" >&2
+        exit 0
+        ;;
+    esac
+  '';
+
+  steamMachineTools = pkgs.symlinkJoin {
+    name = "steam-machine-session-tools";
+    paths = [
+      sessionSelect
+      steamosctl
+    ];
+  };
+
+  desktopExec =
+    if config.features.desktop.wm == "kde" then
+      "exec ${pkgs.kdePackages.plasma-workspace}/bin/startplasma-wayland"
+    else
+      "exec ${pkgs.uwsm}/bin/uwsm start -e -D Hyprland hyprland.desktop";
+
+  steamMachineSession =
+    (pkgs.writeTextDir "share/wayland-sessions/steam-machine.desktop" ''
+      [Desktop Entry]
+      Name=Steam Machine
+      Comment=Steam Gamescope session with desktop handoff
+      Exec=${steamMachineSessionScript}/bin/steam-machine-session
+      Type=Application
+    '').overrideAttrs
+      (_: {
+        passthru.providedSessions = [ "steam-machine" ];
+      });
+
+  steamMachineSessionScript = pkgs.writeShellScriptBin "steam-machine-session" ''
+    set -eu
+
+    export PATH=${steamMachineTools}/bin:/run/current-system/sw/bin:$PATH
+
+    marker="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}/${desktopModeMarker}"
+    if [ -e "$marker" ]; then
+      ${pkgs.coreutils}/bin/rm -f "$marker"
+      ${desktopExec}
+    fi
+
+    export STEAM_MACHINE_AUTOLOGIN=1
+    exec steam-gamescope
+  '';
 in
 {
   options.features.gaming = {
     enable = (lib.mkEnableOption "gaming support (Steam, Gamemode, Gamescope)") // {
       default = true;
+    };
+    steamMachine = {
+      enable = lib.mkEnableOption "Steam Machine mode with a selectable Steam session in SDDM";
     };
   };
 
@@ -37,6 +159,10 @@ in
       {
         programs.steam = {
           enable = true;
+          gamescopeSession = {
+            enable = steamMachineCfg.enable;
+            env = lib.mkIf steamMachineCfg.enable steamMachineEnv;
+          };
           # Translate Steam Input's desktop mouse/keyboard events to uinput on Wayland.
           extest.enable = true;
           # Open UDP 27031-27036 + TCP 27036-27037 for Steam Remote Play
@@ -61,7 +187,7 @@ in
           gamescope
           mangohud # in-game overlay: FPS, GPU/CPU load, temps, VRAM
           protonup-qt # GUI to install/manage Proton-GE versions
-        ];
+        ] ++ lib.optional steamMachineCfg.enable steamMachineTools;
 
         services.udev.extraRules = ''
           # Steam Controller Wireless Receiver: allow the controller power button to wake the PC.
@@ -79,6 +205,15 @@ in
           "net.ipv4.tcp_congestion_control" = "bbr";
         };
       }
+
+      (lib.mkIf steamMachineCfg.enable {
+        services.displayManager.sessionPackages = [ steamMachineSession ];
+      })
+
+      (lib.mkIf isSteamMachineAutologin {
+        services.displayManager.defaultSession = lib.mkForce "steam-machine";
+        services.displayManager.sddm.autoLogin.relogin = true;
+      })
 
       #---------------------------
       # AMD GPU: 32-bit graphics for Steam Remote Play

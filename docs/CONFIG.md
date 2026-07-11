@@ -7,6 +7,7 @@ Most desktop-oriented features default to enabled. Some toggles inherit their pa
 ```nix
 features.server = true;          # Disables all desktop-related features at once
 features.gaming.enable = false;
+features.gaming.steamMachine.enable = true;
 features.desktop.wm = "kde";
 features.desktop.fileManager = "terminal";
 features.ssh.enable = true;
@@ -26,6 +27,7 @@ features.ssh.enable = true;
 | `features.audio.enable` | `true` | PipeWire audio (ALSA, PulseAudio compat) |
 | `features.bluetooth.enable` | `true` | Bluetooth support (power on boot) |
 | `features.gaming.enable` | `true` | Steam + Proton-GE, GameMode, Gamescope, MangoHud, ProtonUp-Qt |
+| `features.gaming.steamMachine.enable` | `false` | Adds a Steam Gamescope session to SDDM. With `desktop.login = "greeter"`, Desktop Mode returns to SDDM. With `desktop.login = "autologin"`, the system boots into Steam and Desktop Mode opens the configured desktop. |
 | `features.hardware.cpu` | `null` | CPU vendor (`"amd"` / `"intel"`) — enables the correct microcode update package loaded at early boot (security patches from AMD/Intel). |
 | `features.hardware.gpu` | `null` | GPU vendor (`"amd"` / `"intel"`) — enables graphics support and VA-API hardware decoding for all contexts (browser, video players). AMD also gets 32-bit libs when `gaming.enable = true`. **NVIDIA is not supported** — the enum only accepts `"amd"` and `"intel"`. |
 | `features.ipv6PrivacyExtensions.enable` | `!server` | IPv6 privacy extensions for NetworkManager profiles |

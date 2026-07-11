@@ -38,6 +38,7 @@ Common per-host overrides:
 features.server = true;                         # Minimal server (no desktop, optimized kernel)
 features.impermanence.enable = false;           # Disable root wipe on boot
 features.gaming.enable = false;                 # No Steam/gaming
+features.gaming.steamMachine.enable = true;     # Steam Gamescope session / Steam Machine mode
 features.desktop.wm = "kde";                    # Hyprland or KDE
 features.desktop.fileManager = "terminal";       # Yazi instead of GUI file manager
 ```

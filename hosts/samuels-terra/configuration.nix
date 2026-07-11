@@ -76,6 +76,7 @@
     hardware.gpu = "amd"; # RX 9070 XT (RDNA4)
     secureBoot.enable = true;
     encryption.unlockMethod = "yubikey";
+    gaming.steamMachine.enable = true;
     desktop.login = "greeter";
     desktop.fileManager = "terminal";
     smb.shares = [
