@@ -114,7 +114,19 @@ in
           enable = true;
           gamescopeSession = {
             inherit (steamMachineCfg) enable;
+            args = lib.mkIf steamMachineCfg.enable [
+              "--xwayland-count"
+              "2"
+              "--force-windows-fullscreen"
+            ];
             env = lib.mkIf steamMachineCfg.enable steamMachineEnv;
+            steamArgs = lib.mkIf steamMachineCfg.enable [
+              "-gamepadui"
+              "-steamos3"
+              "-steampal"
+              "-steamdeck"
+              "-pipewire-dmabuf"
+            ];
           };
           # Translate Steam Input's desktop mouse/keyboard events to uinput on Wayland.
           extest.enable = true;
