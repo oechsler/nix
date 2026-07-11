@@ -77,19 +77,21 @@ let
   # - 󰍃 Abmelden (Logout) - Exit Hyprland
   # - 󰜉 Neustart (Reboot) - Reboot system
   # - 󰐥 Herunterfahren (Shutdown) - Power off system
+  # - 󰘚 UEFI (Firmware Setup) - Reboot into UEFI firmware settings
   powerMenu = pkgs.writeShellScript "rofi-power-menu" ''
     if pgrep -x rofi > /dev/null && pgrep -fa "rofi -dmenu -p power" > /dev/null; then
       pkill -x rofi
       exit 0
     fi
     pgrep -x rofi > /dev/null && exit 0
-    choice=$(printf "󰌾  Sperren\n󰒲  Standby\n󰍃  Abmelden\n󰜉  Neustart\n󰐥  Herunterfahren" | rofi -dmenu -p "Energie" -i -no-custom)
+    choice=$(printf "󰌾  Sperren\n󰒲  Standby\n󰍃  Abmelden\n󰜉  Neustart\n󰐥  Herunterfahren\n󰘚  Firmware Setup" | rofi -dmenu -p "Energie" -i -no-custom)
     case "$choice" in
       "󰌾  Sperren")        hyprlock ;;
       "󰒲  Standby")       loginctl lock-session && sleep 2 && systemctl suspend ;;
       "󰍃  Abmelden")      hyprctl dispatch exit ;;
       "󰜉  Neustart")       systemctl reboot ;;
       "󰐥  Herunterfahren") systemctl poweroff ;;
+      "󰘚  Firmware Setup") systemctl reboot --firmware-setup ;;
     esac
   '';
 
