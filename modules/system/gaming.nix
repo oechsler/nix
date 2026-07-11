@@ -92,8 +92,6 @@ let
       steamosctl
     ];
   };
-
-  steamControllerDesktopProfile = "${pkgs.sc-controller}/share/scc/default_profiles/Desktop.sccprofile";
 in
 {
   options.features.gaming = {
@@ -147,6 +145,7 @@ in
         services.udev.extraRules = ''
           # Steam Controller Wireless Receiver: allow the controller power button to wake the PC.
           ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="28de", ATTR{idProduct}=="1142", ATTR{power/wakeup}="enabled"
+          ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="28de", ATTR{idProduct}=="1304", ATTR{power/wakeup}="enabled"
         '';
 
         boot.kernel.sysctl = {
@@ -160,25 +159,6 @@ in
           "net.ipv4.tcp_congestion_control" = "bbr";
         };
       }
-
-      (lib.mkIf steamMachineCfg.enable {
-        systemd.services.steam-controller-greeter = {
-          description = "Steam Controller desktop input for SDDM";
-          wantedBy = [ "display-manager.service" ];
-          before = [ "display-manager.service" ];
-          environment = {
-            HOME = "/var/lib/steam-controller-greeter";
-            XDG_CONFIG_HOME = "/var/lib/steam-controller-greeter/.config";
-          };
-          serviceConfig = {
-            Type = "simple";
-            ExecStart = "${pkgs.sc-controller}/bin/scc-daemon --foreground --alone ${steamControllerDesktopProfile} start";
-            Restart = "on-failure";
-            StateDirectory = "steam-controller-greeter";
-            WorkingDirectory = "/var/lib/steam-controller-greeter";
-          };
-        };
-      })
 
       #---------------------------
       # AMD GPU: 32-bit graphics for Steam Remote Play
