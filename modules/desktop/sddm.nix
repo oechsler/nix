@@ -43,7 +43,6 @@ let
   sddmGreeterEnvironment = lib.concatStringsSep "," (
     [
       "QT_WAYLAND_SHELL_INTEGRATION=layer-shell"
-      "KWIN_FORCE_SW_CURSOR=1"
     ]
     ++ lib.optionals (!isKde) [ "QT_FONT_DPI=${toString scaledDpi}" ]
     ++ [
@@ -207,11 +206,6 @@ in
     # enough because unknown monitors can appear on the same DP ports.
     systemd = {
       services = {
-        display-manager.environment = {
-          KWIN_FORCE_SW_CURSOR = "1";
-          KWIN_DRM_NO_AMS = "1";
-        };
-
         sddm-display-config = lib.mkIf hasExactMonitorIdentities {
           description = "Configure SDDM monitor layout";
           before = [ "display-manager.service" ];
