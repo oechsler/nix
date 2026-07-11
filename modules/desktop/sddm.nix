@@ -5,7 +5,7 @@
 # Features:
 # - Wayland session support
 # - Catppuccin theming (matches desktop theme)
-# - Home monitor layout in the greeter with automatic fallback
+# - KWin Wayland greeter with monitor fallback
 # - DPI scaling for Hyprland (calculated from primary monitor)
 # - Cursor theme and size (scaled for HiDPI)
 # - Login mode (features.desktop.login: "greeter" shows login, "autologin" skips it)
@@ -40,6 +40,17 @@ let
   cursorTheme = config.theme.cursor.name;
   cursorSize = config.theme.cursor.size;
   uiFont = config.fonts.defaults.ui;
+  sddmGreeterEnvironment = lib.concatStringsSep "," (
+    [
+      "QT_WAYLAND_SHELL_INTEGRATION=layer-shell"
+      "KWIN_FORCE_SW_CURSOR=1"
+    ]
+    ++ lib.optionals (!isKde) [ "QT_FONT_DPI=${toString scaledDpi}" ]
+    ++ [
+      "XCURSOR_THEME=${cursorTheme}"
+      "XCURSOR_SIZE=${toString (if isKde then cursorSize else scaledCursorSize)}"
+    ]
+  );
 
   primaryScale = if monitors != [ ] then (builtins.head monitors).scale else config.theme.scale;
   scaledDpi = builtins.floor (96 * primaryScale);
@@ -174,12 +185,9 @@ in
         sddm = {
           enable = true;
           wayland.enable = true;
+          wayland.compositor = "kwin";
           settings = {
-            General.GreeterEnvironment =
-              if isKde then
-                "KWIN_FORCE_SW_CURSOR=1,XCURSOR_THEME=${cursorTheme},XCURSOR_SIZE=${toString cursorSize}"
-              else
-                "KWIN_FORCE_SW_CURSOR=1,QT_FONT_DPI=${toString scaledDpi},XCURSOR_THEME=${cursorTheme},XCURSOR_SIZE=${toString scaledCursorSize}";
+            General.GreeterEnvironment = sddmGreeterEnvironment;
             Theme = {
               CursorTheme = cursorTheme;
               CursorSize = if isKde then cursorSize else scaledCursorSize;
@@ -199,7 +207,10 @@ in
     # enough because unknown monitors can appear on the same DP ports.
     systemd = {
       services = {
-        display-manager.environment.KWIN_FORCE_SW_CURSOR = "1";
+        display-manager.environment = {
+          KWIN_FORCE_SW_CURSOR = "1";
+          KWIN_DRM_NO_AMS = "1";
+        };
 
         sddm-display-config = lib.mkIf hasExactMonitorIdentities {
           description = "Configure SDDM monitor layout";
