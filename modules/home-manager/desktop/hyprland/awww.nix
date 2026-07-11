@@ -12,8 +12,8 @@
 # 1. Start awww-daemon in background
 # 2. Wait 2 seconds for daemon to be ready
 # 3. Set wallpaper(s) via awww img command
-# 4. Per-monitor: Set specific wallpaper for each monitor
-# 5. Fallback: Set wallpaper on all monitors if no monitor config
+# 4. Set default wallpaper on all monitors
+# 5. Per-monitor: Override wallpaper for explicitly configured monitors
 #
 # Scripts exposed:
 #   config.awww.start - Start daemon and set wallpaper (used by hyprland.nix)
@@ -30,16 +30,15 @@
 let
   awwwPkg = pkgs.awww;
 
-  # Generate wallpaper set commands
-  # - Per-monitor: Set specific wallpaper for each monitor
-  # - Fallback: Set wallpaper on all monitors
+  # Generate wallpaper set commands.
+  # Set the default wallpaper on all outputs first so unknown monitors are covered,
+  # then override explicitly configured monitors with their per-monitor wallpaper.
   wallpaperCommands =
-    if displays.monitors == [ ] then
-      # No monitor config: Set on all monitors
-      "${awwwPkg}/bin/awww img ${theme.wallpaperPath} --transition-type fade --transition-duration 1"
-    else
-      # Per-monitor: Set specific wallpaper for each monitor
-      lib.concatStringsSep "\n" (
+    lib.concatStringsSep "\n" (
+      [
+        "${awwwPkg}/bin/awww img ${theme.wallpaperPath} --transition-type fade --transition-duration 1"
+      ]
+      ++ lib.optionals (displays.monitors != [ ]) (
         map (
           m:
           let
@@ -47,7 +46,8 @@ let
           in
           "${awwwPkg}/bin/awww img ${wp} --outputs ${m.name} --transition-type fade --transition-duration 1"
         ) displays.monitors
-      );
+      )
+    );
 
   # Start script: Launch daemon and set wallpaper
   startScript = pkgs.writeShellScript "awww-start" ''
