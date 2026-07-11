@@ -113,7 +113,7 @@ in
         programs.steam = {
           enable = true;
           gamescopeSession = {
-            enable = steamMachineCfg.enable;
+            inherit (steamMachineCfg) enable;
             env = lib.mkIf steamMachineCfg.enable steamMachineEnv;
           };
           # Translate Steam Input's desktop mouse/keyboard events to uinput on Wayland.

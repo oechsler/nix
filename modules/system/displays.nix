@@ -4,6 +4,7 @@
 # Used by: Hyprland, SDDM, and other display managers.
 #
 # Configuration example:
+#   displays.defaultWorkspaceCount = 4;
 #   displays.monitors = [
 #     {
 #       name = "DP-1";
@@ -26,6 +27,12 @@
   #===========================
 
   options.displays = {
+    defaultWorkspaceCount = lib.mkOption {
+      type = lib.types.int;
+      default = 4;
+      description = "Default number of workspaces for monitors without an explicit workspace list";
+    };
+
     monitors = lib.mkOption {
       type = lib.types.listOf (
         lib.types.submodule {

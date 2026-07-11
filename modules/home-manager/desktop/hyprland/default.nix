@@ -71,13 +71,15 @@ let
     .${rot};
   rotSuffix = m: if m.rotation == "normal" then "" else ", transform, ${hyprTransform m.rotation}";
 
-  # Generate monitor configuration lines
-  # Format: "name, widthxheight@refreshRate, xPos x yPos, scale"
-  # Example: "DP-1, 2560x1440@144, 0x0, 1.0"
+  # Generate monitor configuration lines.
+  # Use the output's preferred mode instead of forcing a fixed resolution/refresh
+  # rate so unknown monitors on known connectors still come up.
+  # Format: "name, preferred, xPos x yPos, scale"
+  # Example: "DP-1, preferred, 0x0, 1.0"
   monitorLines =
     (map (
       m:
-      "${m.name}, ${toString m.width}x${toString m.height}@${toString m.refreshRate}, ${toString m.x}x${toString m.y}, ${toString m.scale}${rotSuffix m}"
+      "${m.name}, preferred, ${toString m.x}x${toString m.y}, ${toString m.scale}${rotSuffix m}"
     ) displays.monitors)
     ++ [ ", preferred, auto, ${toString theme.scale}" ]; # Fallback for unknown monitors
 
