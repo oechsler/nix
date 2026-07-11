@@ -51,13 +51,14 @@ let
 
   # Generate persistent-workspaces configuration per monitor.
   # The "*" fallback prevents Waybar from using its own default for unknown outputs.
-  # Example: { "*" = 4; "DP-1" = [1 2 3 4]; "HDMI-A-1" = [5 6 7 8]; }
+  # Example: { "*" = [1 2 3 4]; "DP-1" = [1 2 3 4]; "HDMI-A-1" = [5 6 7 8]; }
+  defaultWorkspaces = lib.range 1 displays.defaultWorkspaceCount;
   persistentWorkspaces =
-    { "*" = displays.defaultWorkspaceCount; }
+    { "*" = defaultWorkspaces; }
     // lib.listToAttrs (
       map (m: {
         inherit (m) name;
-        value = if m.workspaces == [ ] then displays.defaultWorkspaceCount else m.workspaces;
+        value = if m.workspaces == [ ] then defaultWorkspaces else m.workspaces;
       }) displays.monitors
     );
 
