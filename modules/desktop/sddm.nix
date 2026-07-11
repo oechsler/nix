@@ -5,7 +5,7 @@
 # Features:
 # - Wayland session support
 # - Catppuccin theming (matches desktop theme)
-# - Multi-monitor configuration (via kwinoutputconfig.json)
+# - Home monitor layout in the greeter with automatic fallback
 # - DPI scaling for Hyprland (calculated from primary monitor)
 # - Cursor theme and size (scaled for HiDPI)
 # - Login mode (features.desktop.login: "greeter" shows login, "autologin" skips it)
@@ -16,9 +16,8 @@
 # - Themeable with Catppuccin
 #
 # Multi-monitor setup:
-# - Reads displays.monitors configuration
-# - Generates kwinoutputconfig.json for KWin (SDDM uses kwin_wayland)
-# - Ensures login screen shows on correct monitor with correct resolution
+# - Uses the configured layout only when all configured outputs are connected
+# - Falls back to SDDM/KWin auto-detection for unknown or partial monitor setups
 #
 # HiDPI handling:
 # - KDE: Uses cursor size as-is
@@ -90,6 +89,39 @@ let
     ]
   );
 
+  configuredOutputNames = lib.escapeShellArgs (map (m: m.name) monitors);
+
+  configureSddmDisplays = pkgs.writeShellScript "configure-sddm-displays" ''
+    set -eu
+
+    config_dir=/var/lib/sddm/.config
+    config_file=$config_dir/kwinoutputconfig.json
+
+    mkdir -p "$config_dir"
+    chown sddm:sddm "$config_dir"
+    chmod 0755 "$config_dir"
+
+    all_connected=1
+    for output in ${configuredOutputNames}; do
+      connected=0
+      for status_file in /sys/class/drm/*-"$output"/status; do
+        if [ -e "$status_file" ] && [ "$(cat "$status_file")" = connected ]; then
+          connected=1
+        fi
+      done
+
+      if [ "$connected" -ne 1 ]; then
+        all_connected=0
+      fi
+    done
+
+    if [ "$all_connected" -eq 1 ]; then
+      install -o sddm -g sddm -m 0644 ${sddmDisplayConfigFile} "$config_file"
+    else
+      rm -f "$config_file"
+    fi
+  '';
+
   isKde = config.features.desktop.wm == "kde";
 in
 {
@@ -123,10 +155,22 @@ in
       };
     };
 
-    # SDDM uses kwin_wayland — copy kscreen config so monitors are positioned correctly.
-    systemd.tmpfiles.rules = lib.mkIf (monitors != [ ]) [
+    # SDDM uses kwin_wayland. Keep the home greeter layout only when the full
+    # configured monitor set is present; otherwise remove stale KScreen config so
+    # unknown monitor setups can auto-detect safely.
+    systemd.services.sddm-display-config = lib.mkIf (monitors != [ ]) {
+      description = "Configure SDDM monitor layout";
+      before = [ "display-manager.service" ];
+      wantedBy = [ "display-manager.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = configureSddmDisplays;
+      };
+    };
+
+    systemd.tmpfiles.rules = [
       "d /var/lib/sddm/.config 0755 sddm sddm -"
-      "C+ /var/lib/sddm/.config/kwinoutputconfig.json 0644 sddm sddm - ${sddmDisplayConfigFile}"
+      "r /var/lib/sddm/.config/kwinoutputconfig.json - - - - -"
     ];
 
     catppuccin.sddm = {
