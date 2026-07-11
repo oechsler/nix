@@ -121,14 +121,15 @@ in
       };
 
       # GTK4 ignores the theme package — it loads CSS from ~/.config/gtk-4.0/ directly.
-      # KDE rewrites these files, so force Home Manager ownership for Plasma sessions.
+      # These files are generated theme artifacts. The Flatpak activation below
+      # turns them into real files, so Home Manager must reclaim them on updates.
       configFile."gtk-4.0/gtk.css" = {
         source = "${catppuccinGtk}/share/themes/${themeName}/gtk-4.0/gtk.css";
-        force = isKde;
+        force = true;
       };
       configFile."gtk-4.0/gtk-dark.css" = {
         source = "${catppuccinGtk}/share/themes/${themeName}/gtk-4.0/gtk-dark.css";
-        force = isKde;
+        force = true;
       };
     };
 
@@ -147,6 +148,7 @@ in
       # (copied-from-Nix files are read-only; chmod first)
       activation.cleanupBackups = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
         rm -f ~/.gtkrc-2.0.bak
+        rm -f ~/.config/gtk-4.0/gtk.css.bak ~/.config/gtk-4.0/gtk-dark.css.bak
         for f in ~/.local/share/themes/*.bak; do
           [ -e "$f" ] || continue
           chmod -R u+w "$f" 2>/dev/null || true
