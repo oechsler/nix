@@ -22,8 +22,6 @@
 let
   cfg = config.features.gaming;
   steamMachineCfg = cfg.steamMachine;
-  isSteamMachineAutologin = steamMachineCfg.enable && config.features.desktop.login == "autologin";
-  desktopModeMarker = "steam-machine-desktop-mode";
 
   desktopSession =
     if config.features.desktop.wm == "kde" then
@@ -57,18 +55,6 @@ let
         echo "steamos-session-select: unsupported target '$target', ending current session anyway" >&2
         ;;
     esac
-
-    if [ "''${STEAM_MACHINE_AUTOLOGIN:-0}" = "1" ]; then
-      marker="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}/${desktopModeMarker}"
-      case "$target" in
-        gaming|steam|gamescope|gamescope-wayland|return-to-gaming-mode)
-          ${pkgs.coreutils}/bin/rm -f "$marker"
-          ;;
-        *)
-          ${pkgs.coreutils}/bin/touch "$marker"
-          ;;
-      esac
-    fi
 
     if [ -n "''${XDG_SESSION_ID:-}" ]; then
       ${pkgs.systemd}/bin/systemd-run --user --collect --on-active=1s \
@@ -107,38 +93,7 @@ let
     ];
   };
 
-  desktopExec =
-    if config.features.desktop.wm == "kde" then
-      "exec ${pkgs.kdePackages.plasma-workspace}/bin/startplasma-wayland"
-    else
-      "exec ${pkgs.uwsm}/bin/uwsm start -e -D Hyprland hyprland.desktop";
-
-  steamMachineSession =
-    (pkgs.writeTextDir "share/wayland-sessions/steam-machine.desktop" ''
-      [Desktop Entry]
-      Name=Steam Machine
-      Comment=Steam Gamescope session with desktop handoff
-      Exec=${steamMachineSessionScript}/bin/steam-machine-session
-      Type=Application
-    '').overrideAttrs
-      (_: {
-        passthru.providedSessions = [ "steam-machine" ];
-      });
-
-  steamMachineSessionScript = pkgs.writeShellScriptBin "steam-machine-session" ''
-    set -eu
-
-    export PATH=${steamMachineTools}/bin:/run/current-system/sw/bin:$PATH
-
-    marker="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}/${desktopModeMarker}"
-    if [ -e "$marker" ]; then
-      ${pkgs.coreutils}/bin/rm -f "$marker"
-      ${desktopExec}
-    fi
-
-    export STEAM_MACHINE_AUTOLOGIN=1
-    exec steam-gamescope
-  '';
+  steamControllerDesktopProfile = "${pkgs.sc-controller}/share/scc/default_profiles/Desktop.sccprofile";
 in
 {
   options.features.gaming = {
@@ -207,12 +162,22 @@ in
       }
 
       (lib.mkIf steamMachineCfg.enable {
-        services.displayManager.sessionPackages = [ steamMachineSession ];
-      })
-
-      (lib.mkIf isSteamMachineAutologin {
-        services.displayManager.defaultSession = lib.mkForce "steam-machine";
-        services.displayManager.sddm.autoLogin.relogin = true;
+        systemd.services.steam-controller-greeter = {
+          description = "Steam Controller desktop input for SDDM";
+          wantedBy = [ "display-manager.service" ];
+          before = [ "display-manager.service" ];
+          environment = {
+            HOME = "/var/lib/steam-controller-greeter";
+            XDG_CONFIG_HOME = "/var/lib/steam-controller-greeter/.config";
+          };
+          serviceConfig = {
+            Type = "simple";
+            ExecStart = "${pkgs.sc-controller}/bin/scc-daemon --foreground --alone ${steamControllerDesktopProfile} start";
+            Restart = "on-failure";
+            StateDirectory = "steam-controller-greeter";
+            WorkingDirectory = "/var/lib/steam-controller-greeter";
+          };
+        };
       })
 
       #---------------------------
