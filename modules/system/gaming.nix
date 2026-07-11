@@ -96,7 +96,6 @@ let
         "--xwayland-count"
         "2"
         "--force-windows-fullscreen"
-        "--allow-deferred-backend"
       ];
       steamArgs = lib.escapeShellArgs [
         "-gamepadui"
@@ -106,18 +105,6 @@ let
         set -eu
 
         ${lib.concatStringsSep "\n" exports}
-
-        # SDDM can hand off to the session before DRM outputs are fully settled.
-        # Starting gamescope too early can leave it blank until a physical hotplug.
-        for _ in $(seq 1 20); do
-          for status_file in /sys/class/drm/*/status; do
-            [ -e "$status_file" ] || continue
-            if [ "$(cat "$status_file")" = connected ]; then
-              exec ${pkgs.gamescope}/bin/gamescope --steam ${gamescopeArgs} -- ${config.programs.steam.package}/bin/steam ${steamArgs}
-            fi
-          done
-          sleep 0.25
-        done
 
         exec ${pkgs.gamescope}/bin/gamescope --steam ${gamescopeArgs} -- ${config.programs.steam.package}/bin/steam ${steamArgs}
       '';
