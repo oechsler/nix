@@ -16,7 +16,7 @@
 # - Themeable with Catppuccin
 #
 # Multi-monitor setup:
-# - Uses the configured layout only when all configured outputs match
+# - Uses the configured layout only when all configured outputs have matching EDIDs
 # - Falls back to SDDM/KWin auto-detection for unknown or partial monitor setups
 #
 # HiDPI handling:
@@ -91,8 +91,9 @@ let
 
   configuredOutputNames = lib.escapeShellArgs (map (m: m.name) monitors);
   monitorsWithEdid = lib.filter (m: m.edidHash != null) monitors;
+  hasExactMonitorIdentities = monitors != [ ] && monitorsWithEdid == monitors;
   configuredOutputEdids = lib.escapeShellArgs (map (m: "${m.name}:${m.edidHash}") monitorsWithEdid);
-  configuredOutputEdidChecks = lib.optionalString (monitorsWithEdid != [ ]) ''
+  configuredOutputEdidChecks = ''
     for identity in ${configuredOutputEdids}; do
       output=''${identity%%:*}
       expected_edid=''${identity#*:}
@@ -180,14 +181,14 @@ in
       };
     };
 
-    # SDDM uses kwin_wayland. Keep the home greeter layout only when the full
-    # configured monitor set matches; otherwise remove stale KScreen config so
-    # unknown monitor setups can auto-detect safely.
+    # SDDM uses kwin_wayland. Keep the home greeter layout only when every
+    # configured monitor has a matching EDID; connector names alone are not
+    # enough because unknown monitors can appear on the same DP ports.
     systemd = {
       services = {
         display-manager.environment.KWIN_FORCE_SW_CURSOR = "1";
 
-        sddm-display-config = lib.mkIf (monitors != [ ]) {
+        sddm-display-config = lib.mkIf hasExactMonitorIdentities {
           description = "Configure SDDM monitor layout";
           before = [ "display-manager.service" ];
           wantedBy = [ "display-manager.service" ];
