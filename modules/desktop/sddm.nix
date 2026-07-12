@@ -199,29 +199,6 @@ let
     done
   '';
 
-  startSddmKeyboard = pkgs.writeShellScript "start-sddm-keyboard" ''
-    set -eu
-
-    sleep 2
-
-    export XDG_RUNTIME_DIR=/run/user/$(${pkgs.coreutils}/bin/id -u sddm)
-
-    for socket in "$XDG_RUNTIME_DIR"/wayland-*; do
-      [ -S "$socket" ] || continue
-      case "$socket" in
-        *.lock) continue ;;
-      esac
-
-      export WAYLAND_DISPLAY=$(${pkgs.coreutils}/bin/basename "$socket")
-      exec ${pkgs.wvkbd}/bin/wvkbd-mobintl --hidden --landscape-layers full,special -L 320
-    done
-  '';
-
-  toggleSddmKeyboard = pkgs.writeShellScriptBin "sddm-toggle-keyboard" ''
-    set -eu
-    ${pkgs.procps}/bin/pkill -USR2 -u sddm -x wvkbd-mobintl
-  '';
-
   isKde = config.features.desktop.wm == "kde";
 in
 {
@@ -237,9 +214,7 @@ in
           wayland.enable = true;
           wayland.compositor = "kwin";
           settings = {
-            General = {
-              GreeterEnvironment = sddmGreeterEnvironment;
-            };
+            General.GreeterEnvironment = sddmGreeterEnvironment;
             Theme = {
               CursorTheme = cursorTheme;
               CursorSize = if isKde then cursorSize else scaledCursorSize;
@@ -280,18 +255,6 @@ in
           };
         };
 
-        sddm-keyboard = {
-          description = "Hidden on-screen keyboard for SDDM";
-          after = [ "display-manager.service" ];
-          wantedBy = [ "display-manager.service" ];
-          serviceConfig = {
-            User = "sddm";
-            ExecStart = startSddmKeyboard;
-            Restart = "on-failure";
-            RestartSec = 2;
-          };
-        };
-
       };
 
       tmpfiles.rules = [
@@ -312,7 +275,6 @@ in
 
     environment.systemPackages = [
       config.theme.cursor.package
-      toggleSddmKeyboard
     ];
   };
 }
