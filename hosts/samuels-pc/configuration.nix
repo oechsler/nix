@@ -46,6 +46,9 @@
   displays.monitors = [
     {
       name = "DP-1";
+      make = "LG Electronics";
+      model = "LG ULTRAGEAR";
+      serial = "312NTBKE2229";
       width = 2560;
       height = 1440;
       refreshRate = 165;
@@ -61,6 +64,9 @@
     }
     {
       name = "DP-2";
+      make = "LG Electronics";
+      model = "LG ULTRAGEAR";
+      serial = "312NTVSE2231";
       width = 2560;
       height = 1440;
       refreshRate = 165;
