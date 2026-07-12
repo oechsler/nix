@@ -186,17 +186,20 @@ in
           ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="28de", ATTR{idProduct}=="1304", ATTR{power/wakeup}="enabled"
         '';
 
-        boot.kernelModules = [ "hid-steam" ];
+        boot = {
+          initrd.kernelModules = [ "hid-steam" ];
+          kernelModules = [ "hid-steam" ];
 
-        boot.kernel.sysctl = {
-          # Reduce swap pressure during gaming (zram is fast, but still adds latency)
-          "vm.swappiness" = 10;
-          # Network buffer tuning for Steam Remote Play over LAN
-          # CachyOS kernel has BBR support; fq qdisc pairs with it for best throughput.
-          "net.core.rmem_max" = 134217728; # 128 MB receive buffer
-          "net.core.wmem_max" = 134217728; # 128 MB send buffer
-          "net.core.default_qdisc" = "fq";
-          "net.ipv4.tcp_congestion_control" = "bbr";
+          kernel.sysctl = {
+            # Reduce swap pressure during gaming (zram is fast, but still adds latency)
+            "vm.swappiness" = 10;
+            # Network buffer tuning for Steam Remote Play over LAN
+            # CachyOS kernel has BBR support; fq qdisc pairs with it for best throughput.
+            "net.core.rmem_max" = 134217728; # 128 MB receive buffer
+            "net.core.wmem_max" = 134217728; # 128 MB send buffer
+            "net.core.default_qdisc" = "fq";
+            "net.ipv4.tcp_congestion_control" = "bbr";
+          };
         };
       }
 
