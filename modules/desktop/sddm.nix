@@ -101,9 +101,9 @@ let
 
   configuredOutputNames = lib.escapeShellArgs (map (m: m.name) monitors);
   monitorsWithEdid = lib.filter (m: m.edidHash != null) monitors;
-  hasExactMonitorIdentities = monitors != [ ] && monitorsWithEdid == monitors;
+  shouldManageSddmLayout = monitors != [ ] && (monitorsWithEdid == [ ] || monitorsWithEdid == monitors);
   configuredOutputEdids = lib.escapeShellArgs (map (m: "${m.name}:${m.edidHash}") monitorsWithEdid);
-  configuredOutputEdidChecks = ''
+  configuredOutputEdidChecks = lib.optionalString (monitorsWithEdid != [ ]) ''
     for identity in ${configuredOutputEdids}; do
       output=''${identity%%:*}
       expected_edid=''${identity#*:}
@@ -201,12 +201,12 @@ in
       };
     };
 
-    # SDDM uses kwin_wayland. Keep the home greeter layout only when every
-    # configured monitor has a matching EDID; connector names alone are not
-    # enough because unknown monitors can appear on the same DP ports.
+    # SDDM uses kwin_wayland. Without EDID hashes, keep the configured layout
+    # when all configured connectors are present. If EDID hashes are configured,
+    # require all monitors to match exactly.
     systemd = {
       services = {
-        sddm-display-config = lib.mkIf hasExactMonitorIdentities {
+        sddm-display-config = lib.mkIf shouldManageSddmLayout {
           description = "Configure SDDM monitor layout";
           before = [ "display-manager.service" ];
           wantedBy = [ "display-manager.service" ];
