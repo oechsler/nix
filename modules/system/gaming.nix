@@ -184,6 +184,8 @@ in
           # Steam Controller Wireless Receiver: allow the controller power button to wake the PC.
           ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="28de", ATTR{idProduct}=="1142", ATTR{power/wakeup}="enabled"
           ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="28de", ATTR{idProduct}=="1304", ATTR{power/wakeup}="enabled"
+          # Ensure hid-steam claims the Steam Controller instead of hid-generic
+          ACTION=="add", SUBSYSTEM=="hid", ATTRS{idVendor}=="28de", ATTRS{idProduct}=="1304", RUN+="${pkgs.coreutils}/bin/sh -c 'echo $kernel > /sys/bus/hid/drivers/hid-generic/unbind 2>/dev/null; echo $kernel > /sys/bus/hid/drivers/hid-steam/bind 2>/dev/null'"
         '';
 
         boot = {
