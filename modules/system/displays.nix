@@ -46,6 +46,21 @@
               default = null;
               description = "Optional SHA-256 hash of this monitor's EDID for exact SDDM layout matching";
             };
+            make = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Optional display manufacturer as reported by the compositor";
+            };
+            model = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Optional display model as reported by the compositor";
+            };
+            serial = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Optional display serial number as reported by the compositor";
+            };
             width = lib.mkOption {
               type = lib.types.int;
               default = 1920;
