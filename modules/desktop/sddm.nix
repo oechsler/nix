@@ -65,6 +65,9 @@ let
     }
     .${rot};
 
+  monitorsByPosition = lib.sort (a: b: a.x < b.x || (a.x == b.x && a.y < b.y)) monitors;
+  monitorPriorities = lib.listToAttrs (lib.imap0 (i: m: lib.nameValuePair m.name i) monitors);
+
   sddmDisplayConfigFile = pkgs.writeText "kwinoutputconfig.json" (
     builtins.toJSON [
       {
@@ -80,7 +83,7 @@ let
           overscan = 0;
           rgbRange = "Automatic";
           vrrPolicy = "Automatic";
-        }) monitors;
+        }) monitorsByPosition;
       }
       {
         name = "setups";
@@ -91,8 +94,8 @@ let
               enabled = true;
               outputIndex = i;
               position = { inherit (m) x y; };
-              priority = i;
-            }) monitors;
+              priority = monitorPriorities.${m.name};
+            }) monitorsByPosition;
           }
         ];
       }
