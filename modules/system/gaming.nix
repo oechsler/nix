@@ -186,6 +186,8 @@ in
           ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="28de", ATTR{idProduct}=="1304", ATTR{power/wakeup}="enabled"
         '';
 
+        boot.kernelModules = [ "hid-steam" ];
+
         boot.kernel.sysctl = {
           # Reduce swap pressure during gaming (zram is fast, but still adds latency)
           "vm.swappiness" = 10;
