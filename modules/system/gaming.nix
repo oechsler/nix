@@ -92,11 +92,18 @@ let
   steamGamescopeSession =
     let
       exports = lib.mapAttrsToList (name: value: "export ${name}=${lib.escapeShellArg value}") steamMachineEnv;
-      gamescopeArgs = lib.escapeShellArgs [
-        "--xwayland-count"
-        "2"
-        "--force-windows-fullscreen"
-      ];
+      preferredOutputs = lib.concatStringsSep "," (map (m: m.name) config.displays.monitors);
+      gamescopeArgList =
+        [
+          "--xwayland-count"
+          "2"
+          "--force-windows-fullscreen"
+        ]
+        ++ lib.optionals (preferredOutputs != "") [
+          "--prefer-output"
+          preferredOutputs
+        ];
+      gamescopeArgs = lib.escapeShellArgs gamescopeArgList;
       steamArgs = lib.escapeShellArgs [
         "-gamepadui"
         "-pipewire-dmabuf"
