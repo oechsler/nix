@@ -213,8 +213,12 @@ in
           enable = true;
           wayland.enable = true;
           wayland.compositor = "kwin";
+          extraPackages = [ pkgs.kdePackages.qtvirtualkeyboard ];
           settings = {
-            General.GreeterEnvironment = sddmGreeterEnvironment;
+            General = {
+              GreeterEnvironment = sddmGreeterEnvironment;
+              InputMethod = "qtvirtualkeyboard";
+            };
             Theme = {
               CursorTheme = cursorTheme;
               CursorSize = if isKde then cursorSize else scaledCursorSize;
