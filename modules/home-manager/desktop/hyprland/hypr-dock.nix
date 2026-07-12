@@ -55,7 +55,7 @@ in
         PartOf = [ "graphical-session.target" ];
       };
       Service = {
-        ExecStart = "${pkgs.bash}/bin/sh -c 'sleep 2; exec ${pkgs.hypr-dock}/bin/hypr-dock'";
+        ExecStart = "${pkgs.bash}/bin/sh -c 'sleep 0.5; exec ${pkgs.hypr-dock}/bin/hypr-dock'";
         Restart = "on-failure";
         RestartSec = 2;
         # Only kill the dock process, not apps launched from it

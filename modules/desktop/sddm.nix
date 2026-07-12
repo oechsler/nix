@@ -67,6 +67,24 @@ let
 
   monitorsByPosition = lib.sort (a: b: a.x < b.x || (a.x == b.x && a.y < b.y)) monitors;
   monitorPriorities = lib.listToAttrs (lib.imap0 (i: m: lib.nameValuePair m.name i) monitors);
+  kscreenRotation =
+    rot:
+    {
+      "normal" = "normal";
+      "90" = "right";
+      "180" = "inverted";
+      "270" = "left";
+    }
+    .${rot};
+  sddmKscreenArgs = lib.concatMapStringsSep " " (
+    m:
+    lib.concatStringsSep " " [
+      "output.${m.name}.scale.${toString m.scale}"
+      "output.${m.name}.mode.${toString m.width}x${toString m.height}@${toString m.refreshRate}"
+      "output.${m.name}.position.${toString m.x},${toString m.y}"
+      "output.${m.name}.rotation.${kscreenRotation m.rotation}"
+    ]
+  ) monitors;
 
   sddmDisplayConfigFile = pkgs.writeText "kwinoutputconfig.json" (
     builtins.toJSON [
@@ -161,6 +179,26 @@ let
     fi
   '';
 
+  applySddmDisplayConfig = pkgs.writeShellScript "apply-sddm-display-config" ''
+    set -eu
+
+    sleep 2
+
+    sddm_uid=$(${pkgs.coreutils}/bin/id -u sddm)
+    export XDG_RUNTIME_DIR=/run/user/$sddm_uid
+    export DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus
+
+    for socket in "$XDG_RUNTIME_DIR"/wayland-*; do
+      [ -S "$socket" ] || continue
+      case "$socket" in
+        *.lock) continue ;;
+      esac
+
+      export WAYLAND_DISPLAY=$(${pkgs.coreutils}/bin/basename "$socket")
+      ${pkgs.kdePackages.libkscreen}/bin/kscreen-doctor ${sddmKscreenArgs} && exit 0
+    done
+  '';
+
   isKde = config.features.desktop.wm == "kde";
 in
 {
@@ -203,6 +241,17 @@ in
           serviceConfig = {
             Type = "oneshot";
             ExecStart = configureSddmDisplays;
+          };
+        };
+
+        sddm-apply-display-config = lib.mkIf shouldManageSddmLayout {
+          description = "Apply SDDM monitor layout after KWin starts";
+          after = [ "display-manager.service" ];
+          wantedBy = [ "display-manager.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            User = "sddm";
+            ExecStart = applySddmDisplayConfig;
           };
         };
 
