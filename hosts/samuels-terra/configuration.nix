@@ -86,13 +86,26 @@
     desktop.login = "greeter";
     desktop.fileManager = "terminal";
     smb.shares = [
-      { name = "personal-drive"; label = "Personal-drive"; path = "//unas.srv.oechsler.it/Personal-drive"; }
-      { name = "pika";           label = "Pika";           path = "//unas.srv.oechsler.it/Pika"; }
+      {
+        name = "personal-drive";
+        label = "Personal-drive";
+        path = "//unas.srv.oechsler.it/Personal-drive";
+      }
+      {
+        name = "pika";
+        label = "Pika";
+        path = "//unas.srv.oechsler.it/Pika";
+      }
     ];
     # MT7927 (Filogic 380) WiFi/BT non-functional until kernel 7.2+ — disable for now
     wifi.enable = false;
     bluetooth.enable = false;
-    wifi.networks = [ { name = "home"; ssid = "Oechsler!Box"; } ];
+    wifi.networks = [
+      {
+        name = "home";
+        ssid = "Oechsler!Box";
+      }
+    ];
   };
 
   system.stateVersion = "26.11";
