@@ -88,13 +88,27 @@
     hardware.gpu = "amd"; # RX 7900 XTX (RDNA3)
     secureBoot.enable = true;
     encryption.unlockMethod = "yubikey";
+    gaming.steamMachine.enable = true;
     desktop.login = "greeter";
     desktop.fileManager = "terminal";
     smb.shares = [
-      { name = "personal-drive"; label = "Personal-drive"; path = "//unas.srv.oechsler.it/Personal-drive"; }
-      { name = "pika";           label = "Pika";           path = "//unas.srv.oechsler.it/Pika"; }
+      {
+        name = "personal-drive";
+        label = "Personal-drive";
+        path = "//unas.srv.oechsler.it/Personal-drive";
+      }
+      {
+        name = "pika";
+        label = "Pika";
+        path = "//unas.srv.oechsler.it/Pika";
+      }
     ];
-    wifi.networks = [ { name = "home"; ssid = "Oechsler!Box"; } ];
+    wifi.networks = [
+      {
+        name = "home";
+        ssid = "Oechsler!Box";
+      }
+    ];
   };
 
   system.stateVersion = "25.11";
