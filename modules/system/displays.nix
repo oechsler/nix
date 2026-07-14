@@ -5,7 +5,7 @@
 #
 # Configuration example:
 #   displays.defaultWorkspaceCount = 4;
-#   displays.defaults.vrr = 1;        # Default for hotplugged/unlisted monitors where supported
+#   displays.defaults.vrr = 2;        # Default for hotplugged/unlisted monitors where supported
 #   displays.defaults.hdr = true;     # Default for hotplugged/unlisted monitors where supported
 #   displays.monitors = [
 #     {
@@ -16,7 +16,7 @@
 #       x = 0;
 #       y = 0;
 #       scale = 1.0;
-#       vrr = 1;                      # VRR/FreeSync: 0=off, 1=always, 2=fullscreen/automatic
+#       vrr = 2;                      # VRR/FreeSync: 0=off, 1=always, 2=fullscreen/automatic
 #       hdr = true;                   # HDR-capable display
 #       hdrSdrMaxLuminance = 450;     # SDR white level in nits for HDR output conversion
 #       workspaces = [ 1 2 3 4 5 ];  # Hyprland only: bind workspaces to this monitor
@@ -44,7 +44,7 @@
           1
           2
         ];
-        default = 1;
+        default = 2;
         description = "Default Variable Refresh Rate mode for hotplugged/unlisted monitors where the compositor can apply output-independent defaults: 0=off, 1=always, 2=fullscreen/automatic";
       };
       hdr = lib.mkOption {
