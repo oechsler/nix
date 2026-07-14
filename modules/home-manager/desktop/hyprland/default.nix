@@ -81,9 +81,8 @@ let
     output = m.name;
     mode = "preferred";
     position = "${toString m.x}x${toString m.y}";
-    scale = m.scale;
+    inherit (m) scale vrr;
     transform = hyprTransform m.rotation;
-    vrr = m.vrr;
   }
   // lib.optionalAttrs m.hdr {
     bitdepth = 10;
