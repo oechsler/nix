@@ -393,7 +393,6 @@ in
         }
         // lib.optionalAttrs hasHDR {
           cm_enabled = true;
-          cm_sdr_eotf = "gamma22";
         };
 
         windowrule = [
