@@ -37,6 +37,7 @@
 {
   pkgs,
   features,
+  displays,
   lib,
   theme,
   fonts,
@@ -44,21 +45,25 @@
 }:
 
 let
+  hasHDR = lib.any (monitor: monitor.hdr) displays.monitors;
   isKde = features.desktop.wm == "kde";
   isLight = theme.catppuccin.flavor == "latte";
   chromiumFlags = "--use-gl=egl";
   wrapChromiumApp =
     package: binary:
-    pkgs.symlinkJoin {
-      name = "${binary}-chromium-hdr-sdr";
-      paths = [ package ];
-      nativeBuildInputs = [ pkgs.makeWrapper ];
-      postBuild = ''
-        rm -f "$out/bin/${binary}"
-        makeWrapper "${package}/bin/${binary}" "$out/bin/${binary}" \
-          --add-flags "${chromiumFlags}"
-      '';
-    };
+    if hasHDR then
+      pkgs.symlinkJoin {
+        name = "${binary}-chromium-hdr-sdr";
+        paths = [ package ];
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          rm -f "$out/bin/${binary}"
+          makeWrapper "${package}/bin/${binary}" "$out/bin/${binary}" \
+            --add-flags "${chromiumFlags}"
+        '';
+      }
+    else
+      package;
 in
 {
   #===========================
