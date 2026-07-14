@@ -139,7 +139,7 @@ let
         # Let Gamescope finish applying HDR on the DRM output before Steam
         # initializes its client-side HDR/color pipeline. Without this, Steam can
         # start washed out until HDR is toggled off/on in Game Mode.
-        ${pkgs.coreutils}/bin/sleep 1
+        ${pkgs.coreutils}/bin/sleep 2
       '';
       steamGamescope = pkgs.writeShellScriptBin "steam-gamescope" ''
         set -eu
