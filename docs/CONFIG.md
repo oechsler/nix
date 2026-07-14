@@ -146,7 +146,6 @@ kscreen-doctor -o
 displays.defaults = {
   vrr = 1;                     # Hotplug/unlisted default: 0=off, 1=always, 2=fullscreen/automatic
   hdr = true;                  # Treat hotplug/unlisted outputs as HDR-capable where supported
-  hdrSdrMaxLuminance = 450;    # SDR white level in nits for HDR conversion where supported
 };
 
 displays.monitors = [
@@ -159,7 +158,6 @@ displays.monitors = [
 |--------|---------|-------------|
 | `displays.defaults.vrr` | `1` | Default VRR mode for hotplugged/unlisted monitors where output-independent defaults are supported: `0` off, `1` always, `2` fullscreen/automatic |
 | `displays.defaults.hdr` | `true` | Default HDR capability for hotplugged/unlisted monitors where output-independent defaults are supported |
-| `displays.defaults.hdrSdrMaxLuminance` | `450` | Default SDR white level in nits for HDR conversion where supported |
 | `displays.monitors` | `[]` | List of monitor configurations |
 | `monitors.*.name` | — | Connector name (`"DP-1"`, `"HDMI-A-1"`, `"eDP-1"`) |
 | `monitors.*.width` | `1920` | Horizontal resolution |
@@ -177,10 +175,10 @@ displays.monitors = [
 
 Default behavior and limitations:
 
-- Steam Machine/Gamescope uses `displays.defaults.vrr` and `displays.defaults.hdr` as session-wide fallbacks, so a Steam session can enable adaptive sync and HDR even when the connected output is not listed in `displays.monitors`.
+- Steam Machine/Gamescope uses `displays.defaults.vrr` and `displays.defaults.hdr` as session-wide fallbacks, so a Steam session can enable adaptive sync and HDR even when the connected output is not listed in `displays.monitors`. It does not override Gamescope color management, virtual white, SDR brightness, or gamut behavior.
 - Hyprland uses `displays.defaults.vrr` for its global VRR mode, so hotplugged/unlisted monitors get VRR behavior by default.
 - Hyprland enables color management when either a listed monitor has HDR or `displays.defaults.hdr = true`; full per-output HDR metadata (`bitdepth`, `cm`, SDR luminance) still requires a listed monitor because Hyprland's `monitorv2` configuration is output-specific.
-- KDE and SDDM apply HDR/VRR through `kscreen-doctor`, which needs concrete output names. Unknown outputs keep compositor auto-detection until they are added to `displays.monitors`.
+- KDE and SDDM apply HDR/VRR through `kscreen-doctor`, which needs concrete output names. HDR is enabled with the configured SDR brightness, but without overriding color profile or wide-gamut behavior. Unknown outputs keep compositor auto-detection until they are added to `displays.monitors`.
 - Set `displays.defaults.hdr = false` on hosts that commonly connect SDR-only projectors/TVs and should not advertise HDR by default.
 
 On Hyprland, a catch-all fallback rule (`preferred, auto, theme.scale`) is always added for hotplugged/unlisted monitors. On KDE, `kscreen-doctor` is run at login via an XDG autostart entry to apply the monitor layout for known outputs.
