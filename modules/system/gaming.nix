@@ -103,17 +103,22 @@ let
   steamGamescopeSession =
     let
       exports = lib.mapAttrsToList (name: value: "export ${name}=${lib.escapeShellArg value}") steamMachineEnv;
-      configuredOutputs = lib.escapeShellArgs (map (m: m.name) config.displays.monitors);
-      gamescopeArgList = [
-        "--xwayland-count"
-        "2"
-        "--force-windows-fullscreen"
-      ];
+      primaryOutput = if config.displays.monitors != [ ] then (lib.head config.displays.monitors).name else "";
+      gamescopeArgList =
+        [
+          "--backend"
+          "drm"
+          "--xwayland-count"
+          "2"
+          "--force-windows-fullscreen"
+        ]
+        ++ lib.optionals (primaryOutput != "") [
+          "--prefer-output"
+          primaryOutput
+        ];
       gamescopeArgs = lib.escapeShellArgs gamescopeArgList;
       steamArgs = lib.escapeShellArgs [
         "-steamos3"
-        "-steampal"
-        "-steamdeck"
         "-gamepadui"
         "-pipewire-dmabuf"
       ];
@@ -122,54 +127,71 @@ let
 
         ${lib.concatStringsSep "\n" exports}
 
+        if [ -z "''${XDG_RUNTIME_DIR:-}" ]; then
+          echo "steam-gamescope: XDG_RUNTIME_DIR is not set" >&2
+          exit 1
+        fi
+
+        export XDG_SESSION_TYPE=x11
+        ${pkgs.dbus}/bin/dbus-update-activation-environment --systemd \
+          DESKTOP_SESSION XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_RUNTIME_DIR || true
+
+        session_dir="$(${pkgs.coreutils}/bin/mktemp -p "$XDG_RUNTIME_DIR" -d -t steam-machine.XXXXXXX)"
+        startup_socket="$session_dir/startup.socket"
+        stats_pipe="$session_dir/stats.pipe"
+        ${pkgs.coreutils}/bin/mkfifo "$startup_socket" "$stats_pipe"
+
         exit_file="''${XDG_RUNTIME_DIR:-/tmp}/steam-machine-session-exit"
         export STEAM_MACHINE_SESSION_EXIT_FILE="$exit_file"
         rm -f "$exit_file"
 
-        gamescope_args=(${gamescopeArgs})
-        selected_output=
+        export GAMESCOPE_MODE_SAVE_FILE="''${XDG_CONFIG_HOME:-$HOME/.config}/gamescope/modes.cfg"
+        export GAMESCOPE_PATCHED_EDID_FILE="''${XDG_CONFIG_HOME:-$HOME/.config}/gamescope/edid.bin"
+        export GAMESCOPE_LIMITER_FILE="$session_dir/limiter"
+        export GAMESCOPE_STATS="$stats_pipe"
+        export ENABLE_GAMESCOPE_WSI=1
 
-        for output in ${configuredOutputs}; do
-          for status_file in /sys/class/drm/*-"$output"/status; do
-            [ -e "$status_file" ] || continue
-            [ "$(<"$status_file")" = connected ] || continue
-            selected_output="$output"
-            break 2
-          done
-        done
+        mkdir -p "$(${pkgs.coreutils}/bin/dirname "$GAMESCOPE_MODE_SAVE_FILE")"
+        touch "$GAMESCOPE_MODE_SAVE_FILE"
+        touch "$GAMESCOPE_PATCHED_EDID_FILE"
+        touch "$GAMESCOPE_LIMITER_FILE"
 
-        if [ -z "$selected_output" ]; then
-          for status_file in /sys/class/drm/*/status; do
-            [ -e "$status_file" ] || continue
-            [ "$(<"$status_file")" = connected ] || continue
-            output_dir="$(${pkgs.coreutils}/bin/dirname "$status_file")"
-            connector="''${output_dir##*/}"
-            selected_output="''${connector#*-}"
-            break
-          done
+        ${pkgs.coreutils}/bin/cat "$stats_pipe" >/dev/null &
+        stats_pid=$!
+
+        cleanup() {
+          ${pkgs.procps}/bin/pkill -TERM -P "$$" || true
+          [ -n "''${gamescope_pid:-}" ] && kill "$gamescope_pid" 2>/dev/null || true
+          [ -n "''${stats_pid:-}" ] && kill "$stats_pid" 2>/dev/null || true
+          rm -f "$exit_file"
+          rm -rf "$session_dir"
+        }
+        trap cleanup EXIT HUP INT TERM
+
+        gamescope_bin=/run/wrappers/bin/gamescope
+        [ -x "$gamescope_bin" ] || gamescope_bin=${pkgs.gamescope}/bin/gamescope
+
+        "$gamescope_bin" --steam ${gamescopeArgs} \
+          --generate-drm-mode fixed \
+          --default-touch-mode 4 \
+          --hide-cursor-delay 3000 \
+          -e -R "$startup_socket" -T "$stats_pipe" &
+        gamescope_pid=$!
+
+        if read -r -t 10 response_x_display response_wl_display <> "$startup_socket"; then
+          export DISPLAY="$response_x_display"
+          export GAMESCOPE_WAYLAND_DISPLAY="$response_wl_display"
+          export WAYLAND_DISPLAY="$response_wl_display"
+          env > "$XDG_RUNTIME_DIR/gamescope-environment"
+        else
+          echo "steam-gamescope: gamescope did not report startup displays" >&2
         fi
 
-        if [ -n "$selected_output" ]; then
-          gamescope_args+=(--prefer-output "$selected_output")
-
-          for modes_file in /sys/class/drm/*-"$selected_output"/modes; do
-            [ -s "$modes_file" ] || continue
-            read -r mode < "$modes_file"
-            case "$mode" in
-              [0-9]*x[0-9]*)
-                width="''${mode%x*}"
-                height="''${mode#*x}"
-                height="''${height%%[^0-9]*}"
-                gamescope_args+=(-W "$width" -H "$height")
-                ;;
-            esac
-            break
-          done
-        fi
-
-        ${pkgs.gamescope}/bin/gamescope --steam "''${gamescope_args[@]}" -- ${config.programs.steam.package}/bin/steam ${steamArgs}
+        ${config.programs.steam.package}/bin/steam ${steamArgs}
         status=$?
-        rm -f "$exit_file"
+
+        kill "$gamescope_pid" 2>/dev/null || true
+        wait "$gamescope_pid" 2>/dev/null || true
         exit "$status"
       '';
     in
@@ -232,6 +254,18 @@ in
           mangohud # in-game overlay: FPS, GPU/CPU load, temps, VRAM
           protonup-qt # GUI to install/manage Proton-GE versions
         ] ++ lib.optional steamMachineCfg.enable steamMachineTools;
+
+        security.wrappers.gamescope = lib.mkIf steamMachineCfg.enable {
+          owner = "root";
+          group = "root";
+          source = "${pkgs.gamescope}/bin/gamescope";
+          capabilities = "cap_sys_nice+pie";
+        };
+
+        hardware.graphics = lib.mkIf steamMachineCfg.enable {
+          extraPackages = [ pkgs.gamescope-wsi ];
+          extraPackages32 = [ pkgs.pkgsi686Linux.gamescope-wsi ];
+        };
 
         services.displayManager.sessionPackages = lib.mkIf steamMachineCfg.enable [
           steamGamescopeSession
