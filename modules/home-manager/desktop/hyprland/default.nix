@@ -63,25 +63,36 @@ let
   hyprTransform =
     rot:
     {
-      "normal" = "0";
-      "90" = "1";
-      "180" = "2";
-      "270" = "3";
+      "normal" = 0;
+      "90" = 1;
+      "180" = 2;
+      "270" = 3;
     }
     .${rot};
-  rotSuffix = m: if m.rotation == "normal" then "" else ", transform, ${hyprTransform m.rotation}";
 
   # Generate monitor configuration lines.
   # Use the output's preferred mode instead of forcing a fixed resolution/refresh
   # rate so unknown monitors on known connectors still come up.
   # Format: "name, preferred, xPos x yPos, scale"
   # Example: "DP-1, preferred, 0x0, 1.0"
-  monitorLines =
-    (map (
-      m:
-      "${m.name}, preferred, ${toString m.x}x${toString m.y}, ${toString m.scale}${rotSuffix m}"
-    ) displays.monitors)
-    ++ [ ", preferred, auto, ${toString theme.scale}" ]; # Fallback for unknown monitors
+  monitorLines = [ ", preferred, auto, ${toString theme.scale}" ]; # Fallback for unknown monitors
+
+  monitorV2Lines = map (m: {
+    output = m.name;
+    mode = "preferred";
+    position = "${toString m.x}x${toString m.y}";
+    scale = m.scale;
+    transform = hyprTransform m.rotation;
+    vrr = m.vrr;
+  }
+  // lib.optionalAttrs m.hdr {
+    bitdepth = 10;
+    cm = "hdredid";
+    sdr_max_luminance = m.hdrSdrMaxLuminance;
+  }) displays.monitors;
+
+  vrrMode = lib.foldl' (mode: monitor: lib.max mode monitor.vrr) 0 displays.monitors;
+  hasHDR = lib.any (monitor: monitor.hdr) displays.monitors;
 
   # Workspace bindings: Bind specific workspaces to specific monitors
   # Example: If monitor DP-1 has workspaces [1,2,3], generate:
@@ -244,6 +255,7 @@ in
         "$surface0" = surface0Color;
 
         monitor = monitorLines;
+        monitorv2 = monitorV2Lines;
         workspace = workspaceRules;
         wsbind = workspaceBindings;
 
@@ -359,9 +371,9 @@ in
         misc = {
           force_default_wallpaper = 0;
           disable_hyprland_logo = true;
-          # vrr=2: fullscreen-only VRR — global vrr=1 destabilizes compositing and
-          # breaks Steam Remote Play frame timing (variable refresh confuses the encoder).
-          vrr = if lib.any (m: m.vrr) displays.monitors then 2 else 0;
+          # 0=off, 1=always, 2=fullscreen-only. Hyprland exposes this globally,
+          # so use the highest requested mode from the configured monitors.
+          vrr = vrrMode;
         };
 
         ecosystem = {
@@ -371,6 +383,9 @@ in
         render = {
           direct_scanout = 0;
           non_shader_cm = 0;
+        }
+        // lib.optionalAttrs hasHDR {
+          cm_enabled = true;
         };
 
         windowrule = [

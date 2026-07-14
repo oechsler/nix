@@ -54,7 +54,8 @@
       refreshRate = 165;
       x = 2560;
       y = 0;
-      vrr = true;
+      vrr = 1;
+      hdr = true;
       workspaces = [
         1
         2
@@ -72,7 +73,8 @@
       refreshRate = 165;
       x = 0;
       y = 0;
-      vrr = true;
+      vrr = 1;
+      hdr = true;
       workspaces = [
         5
         6

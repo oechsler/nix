@@ -100,7 +100,15 @@ let
           transform = kdeTransform m.rotation;
           overscan = 0;
           rgbRange = "Automatic";
-          vrrPolicy = "Automatic";
+          vrrPolicy =
+            if m.vrr == 1 then
+              "Always"
+            else if m.vrr == 2 then
+              "Automatic"
+            else
+              "Never";
+          highDynamicRange = m.hdr;
+          wideColorGamut = m.hdr;
         }) monitorsByPosition;
       }
       {

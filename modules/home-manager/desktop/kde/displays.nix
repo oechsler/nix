@@ -13,7 +13,8 @@
 # - Position: x,y coordinates
 # - Scale: DPI scaling factor
 # - Rotation: normal, 90, 180, 270
-# - VRR: vrr = true → vrrpolicy.always
+# - VRR: vrr = 0/1/2 → vrrpolicy.never/always/automatic
+# - HDR: hdr = true → highDynamicRange + wideColorGamut + SDR white level when supported by KScreen
 #
 # Note: Only active when features.desktop.wm == "kde" and displays.monitors is not empty
 
@@ -48,7 +49,14 @@ let
         "output.${m.name}.position.${toString m.x},${toString m.y}"
         "output.${m.name}.rotation.${kscreenRotation m.rotation}"
       ]
-      ++ lib.optional m.vrr "output.${m.name}.vrrpolicy.always"
+      ++ lib.optional (m.vrr == 0) "output.${m.name}.vrrpolicy.never"
+      ++ lib.optional (m.vrr == 1) "output.${m.name}.vrrpolicy.always"
+      ++ lib.optional (m.vrr == 2) "output.${m.name}.vrrpolicy.automatic"
+      ++ lib.optionals m.hdr [
+        "output.${m.name}.highDynamicRange.enable"
+        "output.${m.name}.wideColorGamut.enable"
+        "output.${m.name}.sdr-brightness.${toString m.hdrSdrMaxLuminance}"
+      ]
     )
   ) displays.monitors;
 
