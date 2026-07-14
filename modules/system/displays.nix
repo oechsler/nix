@@ -14,7 +14,9 @@
 #       x = 0;
 #       y = 0;
 #       scale = 1.0;
-#       vrr = true;                   # VRR/FreeSync — Hyprland: misc.vrr, KDE: vrrpolicy.always
+#       vrr = 1;                      # VRR/FreeSync: 0=off, 1=always, 2=fullscreen/automatic
+#       hdr = true;                   # HDR-capable display — Steam Gamescope HDR flags
+#       hdrSdrMaxLuminance = 400;     # SDR white level in nits for HDR output conversion
 #       workspaces = [ 1 2 3 4 5 ];  # Hyprland only: bind workspaces to this monitor
 #     }
 #   ];
@@ -112,9 +114,23 @@
               description = "Workspace IDs to bind to this monitor (Hyprland only, e.g. [1 2 3 4 5])";
             };
             vrr = lib.mkOption {
+              type = lib.types.enum [
+                0
+                1
+                2
+              ];
+              default = 0;
+              description = "Variable Refresh Rate mode: 0=off, 1=always, 2=fullscreen/automatic";
+            };
+            hdr = lib.mkOption {
               type = lib.types.bool;
               default = false;
-              description = "Enable Variable Refresh Rate (VRR/FreeSync/G-Sync) for this monitor";
+              description = "Mark this monitor as HDR-capable for Steam Gamescope sessions";
+            };
+            hdrSdrMaxLuminance = lib.mkOption {
+              type = lib.types.ints.between 100 1000;
+              default = 400;
+              description = "SDR white level in nits for HDR output conversion";
             };
           };
         }

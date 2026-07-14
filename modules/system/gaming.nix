@@ -29,28 +29,43 @@ let
     else
       "hyprland-uwsm";
 
-  steamMachineEnv = {
-    SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS = "0";
-    HOMETEST_DESKTOP = "1";
-    HOMETEST_DESKTOP_SESSION = desktopSession;
-    STEAM_ALLOW_DRIVE_ADOPT = "0";
-    STEAM_ALLOW_DRIVE_UNMOUNT = "1";
-    STEAM_ENABLE_VOLUME_HANDLER = "1";
-    STEAM_GAMESCOPE_COLOR_MANAGED = "1";
-    STEAM_GAMESCOPE_DYNAMIC_FPSLIMITER = "1";
-    STEAM_GAMESCOPE_DYNAMIC_REFRESH_IN_STEAM_SUPPORTED = "1";
-    STEAM_GAMESCOPE_HDR_SUPPORTED = "1";
-    STEAM_GAMESCOPE_VIRTUAL_WHITE = "1";
-    SRT_URLOPEN_PREFER_STEAM = "1";
-    STEAM_DISABLE_AUDIO_DEVICE_SWITCHING = "1";
-    STEAM_MULTIPLE_XWAYLANDS = "1";
-    STEAM_GAMESCOPE_HAS_TEARING_SUPPORT = "1";
-    STEAM_GAMESCOPE_NIS_SUPPORTED = "1";
-    STEAM_GAMESCOPE_TEARING_SUPPORTED = "1";
-    STEAM_GAMESCOPE_VRR_SUPPORTED = "1";
-    STEAM_GAMESCOPE_FANCY_SCALING_SUPPORT = "1";
-    STEAM_DISABLE_MANGOAPP_ATOM_WORKAROUND = "1";
-  };
+  # Desktop compositors distinguish vrr=1 (always) from vrr=2 (fullscreen/automatic).
+  # Steam Machine mode is a dedicated fullscreen gamescope session, so any non-zero
+  # monitor VRR mode means adaptive sync should be enabled there.
+  steamMachineVrr = lib.any (m: m.vrr != 0) config.displays.monitors;
+  hasHdrDisplay = lib.any (m: m.hdr) config.displays.monitors;
+  hdrSdrMaxLuminance = lib.foldl' (
+    n: m:
+    if m.hdr then lib.max n m.hdrSdrMaxLuminance else n
+  ) 203 config.displays.monitors;
+
+  steamMachineEnv =
+    {
+      SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS = "0";
+      HOMETEST_DESKTOP = "1";
+      HOMETEST_DESKTOP_SESSION = desktopSession;
+      STEAM_ALLOW_DRIVE_ADOPT = "0";
+      STEAM_ALLOW_DRIVE_UNMOUNT = "1";
+      STEAM_ENABLE_VOLUME_HANDLER = "1";
+      STEAM_GAMESCOPE_DYNAMIC_FPSLIMITER = "1";
+      SRT_URLOPEN_PREFER_STEAM = "1";
+      STEAM_DISABLE_AUDIO_DEVICE_SWITCHING = "1";
+      STEAM_MULTIPLE_XWAYLANDS = "1";
+      STEAM_GAMESCOPE_HAS_TEARING_SUPPORT = "1";
+      STEAM_GAMESCOPE_NIS_SUPPORTED = "1";
+      STEAM_GAMESCOPE_TEARING_SUPPORTED = "1";
+      STEAM_GAMESCOPE_FANCY_SCALING_SUPPORT = "1";
+      STEAM_DISABLE_MANGOAPP_ATOM_WORKAROUND = "1";
+    }
+    // lib.optionalAttrs steamMachineVrr {
+      STEAM_GAMESCOPE_DYNAMIC_REFRESH_IN_STEAM_SUPPORTED = "1";
+      STEAM_GAMESCOPE_VRR_SUPPORTED = "1";
+    }
+    // lib.optionalAttrs hasHdrDisplay {
+      STEAM_GAMESCOPE_COLOR_MANAGED = "1";
+      STEAM_GAMESCOPE_HDR_SUPPORTED = "1";
+      STEAM_GAMESCOPE_VIRTUAL_WHITE = "1";
+    };
 
   sessionSelect = pkgs.writeShellScriptBin "steamos-session-select" ''
     set -eu
@@ -112,9 +127,17 @@ let
           "2"
           "--force-windows-fullscreen"
         ]
+        ++ lib.optionals steamMachineVrr [
+          "--adaptive-sync"
+        ]
         ++ lib.optionals (primaryOutput != "") [
           "--prefer-output"
           primaryOutput
+        ]
+        ++ lib.optionals hasHdrDisplay [
+          "--hdr-enabled"
+          "--hdr-sdr-content-nits"
+          (toString hdrSdrMaxLuminance)
         ];
       gamescopeArgs = lib.escapeShellArgs gamescopeArgList;
       steamArgs = lib.escapeShellArgs [
