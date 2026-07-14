@@ -24,7 +24,8 @@
   # nixpkgs NIXOS_OZONE_WL wrapper behavior.
   xdg.configFile."electron-flags.conf" = lib.mkIf features.desktop.enable {
     text = ''
-      --ozone-platform=wayland
+      --ozone-platform-hint=auto
+      --force-color-profile=srgb
     '';
   };
 }
