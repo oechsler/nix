@@ -200,21 +200,26 @@ let
   applySddmDisplayConfig = pkgs.writeShellScript "apply-sddm-display-config" ''
     set -eu
 
-    sleep 2
-
     sddm_uid=$(${pkgs.coreutils}/bin/id -u sddm)
     export XDG_RUNTIME_DIR=/run/user/$sddm_uid
     export DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus
 
-    for socket in "$XDG_RUNTIME_DIR"/wayland-*; do
-      [ -S "$socket" ] || continue
-      case "$socket" in
-        *.lock) continue ;;
-      esac
+    for attempt in $(${pkgs.coreutils}/bin/seq 1 50); do
+      for socket in "$XDG_RUNTIME_DIR"/wayland-*; do
+        [ -S "$socket" ] || continue
+        case "$socket" in
+          *.lock) continue ;;
+        esac
 
-      export WAYLAND_DISPLAY=$(${pkgs.coreutils}/bin/basename "$socket")
-      ${pkgs.kdePackages.libkscreen}/bin/kscreen-doctor ${sddmKscreenArgs} && exit 0
+        export WAYLAND_DISPLAY=$(${pkgs.coreutils}/bin/basename "$socket")
+        ${pkgs.kdePackages.libkscreen}/bin/kscreen-doctor ${sddmKscreenArgs} && exit 0
+      done
+
+      ${pkgs.coreutils}/bin/sleep 0.1
     done
+
+    echo "apply-sddm-display-config: no usable SDDM Wayland socket found" >&2
+    exit 1
   '';
 
   isKde = config.features.desktop.wm == "kde";

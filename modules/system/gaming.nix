@@ -34,14 +34,6 @@ let
   # monitor VRR mode means adaptive sync should be enabled there.
   steamMachineVrr = lib.any (m: m.vrr != 0) config.displays.monitors;
   hasHdrDisplay = lib.any (m: m.hdr) config.displays.monitors;
-  hdrSdrMaxLuminance = lib.foldl' (
-    n: m:
-    if m.hdr then lib.max n m.hdrSdrMaxLuminance else n
-  ) 203 config.displays.monitors;
-  hdrSdrGamutWideness = lib.foldl' (
-    n: m:
-    if m.hdr then lib.max n m.hdrSdrGamutWideness else n
-  ) 0.0 config.displays.monitors;
 
   steamMachineEnv =
     {
@@ -140,10 +132,6 @@ let
         ]
         ++ lib.optionals hasHdrDisplay [
           "--hdr-enabled"
-          "--hdr-sdr-content-nits"
-          (toString hdrSdrMaxLuminance)
-          "--sdr-gamut-wideness"
-          (toString hdrSdrGamutWideness)
         ];
       gamescopeArgs = lib.escapeShellArgs gamescopeArgList;
       steamArgs = lib.escapeShellArgs [
