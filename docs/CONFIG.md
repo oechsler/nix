@@ -144,19 +144,19 @@ kscreen-doctor -o
 
 ```nix
 displays.defaults = {
-  vrr = 1;                     # Hotplug/unlisted default: 0=off, 1=always, 2=fullscreen/automatic
+  vrr = 2;                     # Hotplug/unlisted default: 0=off, 1=always, 2=fullscreen/automatic
   hdr = true;                  # Treat hotplug/unlisted outputs as HDR-capable where supported
 };
 
 displays.monitors = [
-  { name = "DP-1"; width = 2560; height = 1440; refreshRate = 165; x = 0; y = 0; vrr = 1; hdr = true; }
-  { name = "DP-2"; width = 2560; height = 1440; refreshRate = 165; x = 2560; y = 0; vrr = 1; hdr = true; }
+  { name = "DP-1"; width = 2560; height = 1440; refreshRate = 165; x = 0; y = 0; vrr = 2; hdr = true; }
+  { name = "DP-2"; width = 2560; height = 1440; refreshRate = 165; x = 2560; y = 0; vrr = 2; hdr = true; }
 ];
 ```
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `displays.defaults.vrr` | `1` | Default VRR mode for hotplugged/unlisted monitors where output-independent defaults are supported: `0` off, `1` always, `2` fullscreen/automatic |
+| `displays.defaults.vrr` | `2` | Default VRR mode for hotplugged/unlisted monitors where output-independent defaults are supported: `0` off, `1` always, `2` fullscreen/automatic |
 | `displays.defaults.hdr` | `true` | Default HDR capability for hotplugged/unlisted monitors where output-independent defaults are supported |
 | `displays.monitors` | `[]` | List of monitor configurations |
 | `monitors.*.name` | — | Connector name (`"DP-1"`, `"HDMI-A-1"`, `"eDP-1"`) |
