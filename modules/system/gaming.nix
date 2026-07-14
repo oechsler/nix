@@ -64,13 +64,12 @@ let
         ;;
     esac
 
-    if [ -n "''${XDG_SESSION_ID:-}" ]; then
-      ${pkgs.systemd}/bin/systemd-run --user --collect --on-active=1s \
-        ${pkgs.systemd}/bin/loginctl terminate-session "$XDG_SESSION_ID" >/dev/null
-    else
-      ${pkgs.systemd}/bin/systemd-run --user --collect --on-active=1s \
-        ${pkgs.systemd}/bin/loginctl terminate-user "''${USER:-${config.user.name}}" >/dev/null
-    fi
+    exit_file="''${STEAM_MACHINE_SESSION_EXIT_FILE:-''${XDG_RUNTIME_DIR:-/tmp}/steam-machine-session-exit}"
+    mkdir -p "$(${pkgs.coreutils}/bin/dirname "$exit_file")"
+    : > "$exit_file"
+
+    ${pkgs.systemd}/bin/systemd-run --user --collect --on-active=1s \
+      ${pkgs.runtimeShell} -c '${pkgs.procps}/bin/pkill -TERM -x steam || true; ${pkgs.procps}/bin/pkill -TERM -x steamwebhelper || true; sleep 5; ${pkgs.procps}/bin/pkill -TERM -x gamescope || true' >/dev/null
   '';
 
   steamosctl = pkgs.writeShellScriptBin "steamosctl" ''
@@ -104,16 +103,16 @@ let
   steamGamescopeSession =
     let
       exports = lib.mapAttrsToList (name: value: "export ${name}=${lib.escapeShellArg value}") steamMachineEnv;
-      preferredOutputs = lib.concatStringsSep "," (map (m: m.name) config.displays.monitors);
+      preferredOutput = if config.displays.monitors != [ ] then (lib.head config.displays.monitors).name else "";
       gamescopeArgList =
         [
           "--xwayland-count"
           "2"
           "--force-windows-fullscreen"
         ]
-        ++ lib.optionals (preferredOutputs != "") [
+        ++ lib.optionals (preferredOutput != "") [
           "--prefer-output"
-          preferredOutputs
+          preferredOutput
         ];
       gamescopeArgs = lib.escapeShellArgs gamescopeArgList;
       steamArgs = lib.escapeShellArgs [
@@ -128,7 +127,14 @@ let
 
         ${lib.concatStringsSep "\n" exports}
 
-        exec ${pkgs.gamescope}/bin/gamescope --steam ${gamescopeArgs} -- ${config.programs.steam.package}/bin/steam ${steamArgs}
+        exit_file="''${XDG_RUNTIME_DIR:-/tmp}/steam-machine-session-exit"
+        export STEAM_MACHINE_SESSION_EXIT_FILE="$exit_file"
+        rm -f "$exit_file"
+
+        ${pkgs.gamescope}/bin/gamescope --steam ${gamescopeArgs} -- ${config.programs.steam.package}/bin/steam ${steamArgs}
+        status=$?
+        rm -f "$exit_file"
+        exit "$status"
       '';
     in
     (pkgs.writeTextDir "share/wayland-sessions/steam.desktop" ''
