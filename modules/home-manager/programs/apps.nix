@@ -46,6 +46,19 @@
 let
   isKde = features.desktop.wm == "kde";
   isLight = theme.catppuccin.flavor == "latte";
+  chromiumFlags = "--use-gl=egl";
+  wrapChromiumApp =
+    package: binary:
+    pkgs.symlinkJoin {
+      name = "${binary}-chromium-hdr-sdr";
+      paths = [ package ];
+      nativeBuildInputs = [ pkgs.makeWrapper ];
+      postBuild = ''
+        rm -f "$out/bin/${binary}"
+        makeWrapper "${package}/bin/${binary}" "$out/bin/${binary}" \
+          --add-flags "${chromiumFlags}"
+      '';
+    };
 in
 {
   #===========================
@@ -65,16 +78,16 @@ in
             alsa-scarlett-gui
             mumble
             nheko
-            vesktop
+            (wrapChromiumApp vesktop "vesktop")
             freecad
             libreoffice
             nextcloud-client
-            obsidian
+            (wrapChromiumApp obsidian "obsidian")
             pika-backup
             prusa-slicer
-            spotify
+            (wrapChromiumApp spotify "spotify")
           ]
-          ++ lib.optional features.apps.winboat.enable winboat;
+          ++ lib.optional features.apps.winboat.enable (wrapChromiumApp winboat "winboat");
 
         # Mumble theme: don't set explicitly — uses system Qt theme (Catppuccin via Kvantum)
 

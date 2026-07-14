@@ -37,6 +37,18 @@
   ...
 }:
 
+let
+  protonPass = pkgs.symlinkJoin {
+    name = "proton-pass-electron-hdr-sdr";
+    paths = [ pkgs.proton-pass ];
+    nativeBuildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      rm -f "$out/bin/proton-pass"
+      makeWrapper "${pkgs.proton-pass}/bin/proton-pass" "$out/bin/proton-pass" \
+        --add-flags "--use-gl=egl"
+    '';
+  };
+in
 {
   #===========================
   # Configuration
@@ -98,7 +110,7 @@
     # Desktop App
     #---------------------------
     (lib.mkIf features.apps.enable {
-      home.packages = [ pkgs.proton-pass ];
+      home.packages = [ protonPass ];
     })
 
     #---------------------------
