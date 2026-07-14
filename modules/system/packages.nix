@@ -103,6 +103,13 @@ in
           $FLATPAK override --system --env=QTWEBENGINE_CHROMIUM_FLAGS=--use-gl=egl
           $FLATPAK override --system --env=ELECTRON_OZONE_PLATFORM_HINT=auto
         fi
+      ''
+      + lib.optionalString (!hasHDR) ''
+        if [ -x "$FLATPAK" ]; then
+          $FLATPAK override --system --unset-env=CHROMIUM_FLAGS
+          $FLATPAK override --system --unset-env=QTWEBENGINE_CHROMIUM_FLAGS
+          $FLATPAK override --system --unset-env=ELECTRON_OZONE_PLATFORM_HINT
+        fi
       '';
 
       # Make Flatpak apps visible in application launchers
