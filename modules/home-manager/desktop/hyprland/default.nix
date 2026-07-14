@@ -89,6 +89,7 @@ let
     bitdepth = 10;
     cm = "hdredid";
     sdr_max_luminance = m.hdrSdrMaxLuminance;
+    sdrsaturation = m.hdrSdrSaturation;
   }) displays.monitors;
 
   vrrMode = lib.foldl' (mode: monitor: lib.max mode monitor.vrr) 0 displays.monitors;
