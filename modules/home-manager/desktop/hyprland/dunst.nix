@@ -39,7 +39,8 @@ let
   accent = palette.${config.catppuccin.accent}.hex;
 
   # Show notifications on primary monitor (empty list = dunst picks automatically)
-  primaryMonitorName = if displays.monitors != [ ] then (lib.head displays.monitors).name else "";
+  displayHelpers = import ../../../lib/displays.nix { inherit lib; };
+  primaryMonitorName = displayHelpers.primaryName displays.monitors;
 in
 {
   #===========================

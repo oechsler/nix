@@ -23,45 +23,41 @@ let
   cfg = config.features.gaming;
   steamMachineCfg = cfg.steamMachine;
 
-  desktopSession =
-    if config.features.desktop.wm == "kde" then
-      "plasma"
-    else
-      "hyprland-uwsm";
+  desktopSession = if config.features.desktop.wm == "kde" then "plasma" else "hyprland-uwsm";
 
   # Desktop compositors distinguish vrr=1 (always) from vrr=2 (fullscreen/automatic).
   # Steam Machine mode is a dedicated fullscreen gamescope session, so any non-zero
   # monitor VRR mode means adaptive sync should be enabled there.
-  steamMachineVrr = lib.any (m: m.vrr != 0) config.displays.monitors;
-  hasHdrDisplay = lib.any (m: m.hdr) config.displays.monitors;
+  displayHelpers = import ../lib/displays.nix { inherit lib; };
+  steamMachineVrr = displayHelpers.hasVRR config.displays.monitors;
+  hasHdrDisplay = displayHelpers.hasHDR config.displays.monitors;
 
-  steamMachineEnv =
-    {
-      SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS = "0";
-      HOMETEST_DESKTOP = "1";
-      HOMETEST_DESKTOP_SESSION = desktopSession;
-      STEAM_ALLOW_DRIVE_ADOPT = "0";
-      STEAM_ALLOW_DRIVE_UNMOUNT = "1";
-      STEAM_ENABLE_VOLUME_HANDLER = "1";
-      STEAM_GAMESCOPE_DYNAMIC_FPSLIMITER = "1";
-      SRT_URLOPEN_PREFER_STEAM = "1";
-      STEAM_DISABLE_AUDIO_DEVICE_SWITCHING = "1";
-      STEAM_MULTIPLE_XWAYLANDS = "1";
-      STEAM_GAMESCOPE_HAS_TEARING_SUPPORT = "1";
-      STEAM_GAMESCOPE_NIS_SUPPORTED = "1";
-      STEAM_GAMESCOPE_TEARING_SUPPORTED = "1";
-      STEAM_GAMESCOPE_FANCY_SCALING_SUPPORT = "1";
-      STEAM_DISABLE_MANGOAPP_ATOM_WORKAROUND = "1";
-    }
-    // lib.optionalAttrs steamMachineVrr {
-      STEAM_GAMESCOPE_DYNAMIC_REFRESH_IN_STEAM_SUPPORTED = "1";
-      STEAM_GAMESCOPE_VRR_SUPPORTED = "1";
-    }
-    // lib.optionalAttrs hasHdrDisplay {
-      STEAM_GAMESCOPE_COLOR_MANAGED = "1";
-      STEAM_GAMESCOPE_HDR_SUPPORTED = "1";
-      STEAM_GAMESCOPE_VIRTUAL_WHITE = "1";
-    };
+  steamMachineEnv = {
+    SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS = "0";
+    HOMETEST_DESKTOP = "1";
+    HOMETEST_DESKTOP_SESSION = desktopSession;
+    STEAM_ALLOW_DRIVE_ADOPT = "0";
+    STEAM_ALLOW_DRIVE_UNMOUNT = "1";
+    STEAM_ENABLE_VOLUME_HANDLER = "1";
+    STEAM_GAMESCOPE_DYNAMIC_FPSLIMITER = "1";
+    SRT_URLOPEN_PREFER_STEAM = "1";
+    STEAM_DISABLE_AUDIO_DEVICE_SWITCHING = "1";
+    STEAM_MULTIPLE_XWAYLANDS = "1";
+    STEAM_GAMESCOPE_HAS_TEARING_SUPPORT = "1";
+    STEAM_GAMESCOPE_NIS_SUPPORTED = "1";
+    STEAM_GAMESCOPE_TEARING_SUPPORTED = "1";
+    STEAM_GAMESCOPE_FANCY_SCALING_SUPPORT = "1";
+    STEAM_DISABLE_MANGOAPP_ATOM_WORKAROUND = "1";
+  }
+  // lib.optionalAttrs steamMachineVrr {
+    STEAM_GAMESCOPE_DYNAMIC_REFRESH_IN_STEAM_SUPPORTED = "1";
+    STEAM_GAMESCOPE_VRR_SUPPORTED = "1";
+  }
+  // lib.optionalAttrs hasHdrDisplay {
+    STEAM_GAMESCOPE_COLOR_MANAGED = "1";
+    STEAM_GAMESCOPE_HDR_SUPPORTED = "1";
+    STEAM_GAMESCOPE_VIRTUAL_WHITE = "1";
+  };
 
   sessionSelect = pkgs.writeShellScriptBin "steamos-session-select" ''
     set -eu
@@ -113,26 +109,27 @@ let
 
   steamGamescopeSession =
     let
-      exports = lib.mapAttrsToList (name: value: "export ${name}=${lib.escapeShellArg value}") steamMachineEnv;
-      primaryOutput = if config.displays.monitors != [ ] then (lib.head config.displays.monitors).name else "";
-      gamescopeArgList =
-        [
-          "--backend"
-          "drm"
-          "--xwayland-count"
-          "2"
-          "--force-windows-fullscreen"
-        ]
-        ++ lib.optionals steamMachineVrr [
-          "--adaptive-sync"
-        ]
-        ++ lib.optionals (primaryOutput != "") [
-          "--prefer-output"
-          primaryOutput
-        ]
-        ++ lib.optionals hasHdrDisplay [
-          "--hdr-enabled"
-        ];
+      exports = lib.mapAttrsToList (
+        name: value: "export ${name}=${lib.escapeShellArg value}"
+      ) steamMachineEnv;
+      primaryOutput = displayHelpers.primaryName config.displays.monitors;
+      gamescopeArgList = [
+        "--backend"
+        "drm"
+        "--xwayland-count"
+        "2"
+        "--force-windows-fullscreen"
+      ]
+      ++ lib.optionals steamMachineVrr [
+        "--adaptive-sync"
+      ]
+      ++ lib.optionals (primaryOutput != "") [
+        "--prefer-output"
+        primaryOutput
+      ]
+      ++ lib.optionals hasHdrDisplay [
+        "--hdr-enabled"
+      ];
       gamescopeArgs = lib.escapeShellArgs gamescopeArgList;
       steamArgs = lib.escapeShellArgs [
         "-steamos3"
@@ -266,11 +263,14 @@ in
           gamescope.enable = lib.mkIf steamMachineCfg.enable true;
         };
 
-        environment.systemPackages = with pkgs; [
-          gamescope
-          mangohud # in-game overlay: FPS, GPU/CPU load, temps, VRAM
-          protonup-qt # GUI to install/manage Proton-GE versions
-        ] ++ lib.optional steamMachineCfg.enable steamMachineTools;
+        environment.systemPackages =
+          with pkgs;
+          [
+            gamescope
+            mangohud # in-game overlay: FPS, GPU/CPU load, temps, VRAM
+            protonup-qt # GUI to install/manage Proton-GE versions
+          ]
+          ++ lib.optional steamMachineCfg.enable steamMachineTools;
 
         security.wrappers.gamescope = lib.mkIf steamMachineCfg.enable {
           owner = "root";
