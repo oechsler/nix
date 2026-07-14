@@ -21,6 +21,9 @@
   ...
 }:
 
+let
+  hasHDR = lib.any (monitor: monitor.hdr) config.displays.monitors;
+in
 {
   #===========================
   # Options
@@ -89,6 +92,16 @@
             $FLATPAK install --system --noninteractive flathub "org.kde.KStyle.Kvantum//$KDE_BRANCH" 2>/dev/null || true
           fi
           $FLATPAK override --system --env=QT_STYLE_OVERRIDE=kvantum
+        fi
+      ''
+      + lib.optionalString hasHDR ''
+        if [ -x "$FLATPAK" ]; then
+          # Best-effort for Chromium/Electron/QtWebEngine Flatpaks on HDR desktops.
+          # Flatpak cannot inject universal CLI flags into every app, but these
+          # environment variables are honored by many Chromium-based runtimes.
+          $FLATPAK override --system --env=CHROMIUM_FLAGS=--use-gl=egl
+          $FLATPAK override --system --env=QTWEBENGINE_CHROMIUM_FLAGS=--use-gl=egl
+          $FLATPAK override --system --env=ELECTRON_OZONE_PLATFORM_HINT=auto
         fi
       '';
 
