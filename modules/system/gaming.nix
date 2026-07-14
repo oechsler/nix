@@ -33,6 +33,14 @@ let
     SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS = "0";
     HOMETEST_DESKTOP = "1";
     HOMETEST_DESKTOP_SESSION = desktopSession;
+    STEAM_ALLOW_DRIVE_ADOPT = "0";
+    STEAM_ALLOW_DRIVE_UNMOUNT = "1";
+    STEAM_ENABLE_VOLUME_HANDLER = "1";
+    STEAM_GAMESCOPE_COLOR_MANAGED = "1";
+    STEAM_GAMESCOPE_DYNAMIC_FPSLIMITER = "1";
+    STEAM_GAMESCOPE_DYNAMIC_REFRESH_IN_STEAM_SUPPORTED = "1";
+    STEAM_GAMESCOPE_HDR_SUPPORTED = "1";
+    STEAM_GAMESCOPE_VIRTUAL_WHITE = "1";
     SRT_URLOPEN_PREFER_STEAM = "1";
     STEAM_DISABLE_AUDIO_DEVICE_SWITCHING = "1";
     STEAM_MULTIPLE_XWAYLANDS = "1";
@@ -56,9 +64,13 @@ let
         ;;
     esac
 
-    # Switching out of the Steam session is intentionally unsupported here.
-    # Rebooting is the reliable escape hatch for this console-like session.
-    exit 0
+    if [ -n "''${XDG_SESSION_ID:-}" ]; then
+      ${pkgs.systemd}/bin/systemd-run --user --collect --on-active=1s \
+        ${pkgs.systemd}/bin/loginctl terminate-session "$XDG_SESSION_ID" >/dev/null
+    else
+      ${pkgs.systemd}/bin/systemd-run --user --collect --on-active=1s \
+        ${pkgs.systemd}/bin/loginctl terminate-user "''${USER:-${config.user.name}}" >/dev/null
+    fi
   '';
 
   steamosctl = pkgs.writeShellScriptBin "steamosctl" ''
@@ -105,6 +117,9 @@ let
         ];
       gamescopeArgs = lib.escapeShellArgs gamescopeArgList;
       steamArgs = lib.escapeShellArgs [
+        "-steamos3"
+        "-steampal"
+        "-steamdeck"
         "-gamepadui"
         "-pipewire-dmabuf"
       ];
