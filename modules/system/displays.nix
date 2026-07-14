@@ -17,7 +17,7 @@
 #       y = 0;
 #       scale = 1.0;
 #       vrr = 1;                      # VRR/FreeSync: 0=off, 1=always, 2=fullscreen/automatic
-#       hdr = true;                   # HDR-capable display — Steam Gamescope HDR flags
+#       hdr = true;                   # HDR-capable display
 #       hdrSdrMaxLuminance = 450;     # SDR white level in nits for HDR output conversion
 #       workspaces = [ 1 2 3 4 5 ];  # Hyprland only: bind workspaces to this monitor
 #     }
@@ -51,11 +51,6 @@
         type = lib.types.bool;
         default = true;
         description = "Default HDR capability for hotplugged/unlisted monitors where the compositor/session can apply output-independent defaults";
-      };
-      hdrSdrMaxLuminance = lib.mkOption {
-        type = lib.types.ints.between 100 1000;
-        default = 450;
-        description = "Default SDR white level in nits for HDR output conversion on hotplugged/unlisted monitors where supported";
       };
     };
 

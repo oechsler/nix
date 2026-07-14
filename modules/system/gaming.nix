@@ -55,9 +55,7 @@ let
     STEAM_GAMESCOPE_VRR_SUPPORTED = "1";
   }
   // lib.optionalAttrs hasHdrDisplay {
-    STEAM_GAMESCOPE_COLOR_MANAGED = "1";
     STEAM_GAMESCOPE_HDR_SUPPORTED = "1";
-    STEAM_GAMESCOPE_VIRTUAL_WHITE = "1";
   };
 
   sessionSelect = pkgs.writeShellScriptBin "steamos-session-select" ''
