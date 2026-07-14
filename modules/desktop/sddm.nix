@@ -78,12 +78,22 @@ let
     .${rot};
   sddmKscreenArgs = lib.concatMapStringsSep " " (
     m:
-    lib.concatStringsSep " " [
-      "output.${m.name}.scale.${toString m.scale}"
-      "output.${m.name}.mode.${toString m.width}x${toString m.height}@${toString m.refreshRate}"
-      "output.${m.name}.position.${toString m.x},${toString m.y}"
-      "output.${m.name}.rotation.${kscreenRotation m.rotation}"
-    ]
+    lib.concatStringsSep " " (
+      [
+        "output.${m.name}.scale.${toString m.scale}"
+        "output.${m.name}.mode.${toString m.width}x${toString m.height}@${toString m.refreshRate}"
+        "output.${m.name}.position.${toString m.x},${toString m.y}"
+        "output.${m.name}.rotation.${kscreenRotation m.rotation}"
+      ]
+      ++ lib.optional (m.vrr == 0) "output.${m.name}.vrrpolicy.never"
+      ++ lib.optional (m.vrr == 1) "output.${m.name}.vrrpolicy.always"
+      ++ lib.optional (m.vrr == 2) "output.${m.name}.vrrpolicy.automatic"
+      ++ lib.optionals m.hdr [
+        "output.${m.name}.hdr.enable"
+        "output.${m.name}.wcg.enable"
+        "output.${m.name}.sdr-brightness.${toString m.hdrSdrMaxLuminance}"
+      ]
+    )
   ) monitors;
 
   sddmDisplayConfigFile = pkgs.writeText "kwinoutputconfig.json" (
