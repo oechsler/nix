@@ -18,32 +18,22 @@
 # - cryptroot: disk-main-root
 # - cryptgames: disk-games-games
 
-{ config, ... }:
+{ config, lib, ... }:
 
 let
-  unlockOpts = {
-    yubikey = [ "fido2-device=auto" "token-timeout=10s" ];
-    tpm2    = [ "tpm2-device=auto" ];
-    password = [ ];
-  };
+  luks = import ../../modules/lib/luks.nix { inherit config lib; };
 in
 {
-  boot.initrd.luks.devices = {
-    "cryptroot" = {
-      device = "/dev/disk/by-partlabel/disk-main-root";
-      allowDiscards = true;
-      crypttabExtraOpts = unlockOpts.${config.features.encryption.unlockMethod};
+  boot.initrd = luks.mkInitrd {
+    devices = {
+      cryptroot = {
+        disk = "main";
+        partition = "root";
+      };
+      cryptgames = {
+        disk = "games";
+        partition = "games";
+      };
     };
-    "cryptgames" = {
-      device = "/dev/disk/by-partlabel/disk-games-games";
-      allowDiscards = true;
-      crypttabExtraOpts = unlockOpts.${config.features.encryption.unlockMethod};
-    };
-  };
-
-  # Do not reboot the machine when FIDO2 unlock fails or times out.
-  boot.initrd.systemd.services."systemd-cryptsetup@cryptroot" = {
-    overrideStrategy = "asDropin";
-    unitConfig.FailureAction = "none";
   };
 }

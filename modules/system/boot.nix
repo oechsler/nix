@@ -75,6 +75,18 @@ in
       systemd.settings.Manager.DefaultMemoryInotifyMax = "524288";
     }
 
+    (lib.mkIf
+      (config.features.encryption.enable && config.features.encryption.unlockMethod == "yubikey")
+      {
+        # Load USB HID before systemd-cryptsetup scans for FIDO2 devices.
+        # Otherwise a YubiKey can appear after the LUKS prompt has already timed out.
+        boot.initrd.kernelModules = [
+          "usbhid"
+          "hid_generic"
+        ];
+      }
+    )
+
     (lib.mkIf config.features.desktop.enable {
       boot = {
         plymouth.enable = true;
