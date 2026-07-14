@@ -152,6 +152,7 @@ let
         session_dir="$(${pkgs.coreutils}/bin/mktemp -p "$XDG_RUNTIME_DIR" -d -t steam-machine.XXXXXXX)"
         startup_socket="$session_dir/startup.socket"
         stats_pipe="$session_dir/stats.pipe"
+        mangohud_config="$session_dir/mangohud.config"
         ${pkgs.coreutils}/bin/mkfifo "$startup_socket" "$stats_pipe"
 
         exit_file="''${XDG_RUNTIME_DIR:-/tmp}/steam-machine-session-exit"
@@ -163,16 +164,26 @@ let
         export GAMESCOPE_LIMITER_FILE="$session_dir/limiter"
         export GAMESCOPE_STATS="$stats_pipe"
         export ENABLE_GAMESCOPE_WSI=1
+        export STEAM_MANGOAPP_PRESETS_SUPPORTED=1
+        export STEAM_USE_MANGOAPP=1
+        export STEAM_MANGOAPP_HORIZONTAL_SUPPORTED=1
+        export MANGOHUD_CONFIGFILE="$mangohud_config"
 
         mkdir -p "$(${pkgs.coreutils}/bin/dirname "$GAMESCOPE_MODE_SAVE_FILE")"
         touch "$GAMESCOPE_MODE_SAVE_FILE"
         touch "$GAMESCOPE_PATCHED_EDID_FILE"
         touch "$GAMESCOPE_LIMITER_FILE"
+        printf 'no_display\n' > "$MANGOHUD_CONFIGFILE"
+
+        rm -f "$XDG_RUNTIME_DIR/gamescope-stats"
+        ln -s "$session_dir" "$XDG_RUNTIME_DIR/gamescope-stats"
 
         cleanup() {
           ${pkgs.procps}/bin/pkill -TERM -P "$$" || true
           [ -n "''${gamescope_pid:-}" ] && kill "$gamescope_pid" 2>/dev/null || true
+          [ -n "''${mangoapp_pid:-}" ] && kill "$mangoapp_pid" 2>/dev/null || true
           rm -f "$exit_file"
+          rm -f "$XDG_RUNTIME_DIR/gamescope-stats"
           rm -rf "$session_dir"
         }
         trap cleanup EXIT HUP INT TERM
@@ -195,6 +206,9 @@ let
         else
           echo "steam-gamescope: gamescope did not report startup displays" >&2
         fi
+
+        ${pkgs.mangohud}/bin/mangoapp &
+        mangoapp_pid=$!
 
         ${config.programs.steam.package}/bin/steam ${steamArgs}
         status=$?
