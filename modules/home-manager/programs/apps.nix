@@ -46,19 +46,6 @@
 let
   isKde = features.desktop.wm == "kde";
   isLight = theme.catppuccin.flavor == "latte";
-  electronFlags = "--ozone-platform-hint=auto --force-color-profile=srgb";
-  wrapElectronApp =
-    package: binary:
-    pkgs.symlinkJoin {
-      name = "${binary}-electron-srgb";
-      paths = [ package ];
-      nativeBuildInputs = [ pkgs.makeWrapper ];
-      postBuild = ''
-        rm -f "$out/bin/${binary}"
-        makeWrapper "${package}/bin/${binary}" "$out/bin/${binary}" \
-          --add-flags "${electronFlags}"
-      '';
-    };
 in
 {
   #===========================
@@ -78,16 +65,16 @@ in
             alsa-scarlett-gui
             mumble
             nheko
-            (wrapElectronApp vesktop "vesktop")
+            vesktop
             freecad
             libreoffice
             nextcloud-client
-            (wrapElectronApp obsidian "obsidian")
+            obsidian
             pika-backup
             prusa-slicer
             spotify
           ]
-          ++ lib.optional features.apps.winboat.enable (wrapElectronApp winboat "winboat");
+          ++ lib.optional features.apps.winboat.enable winboat;
 
         # Mumble theme: don't set explicitly — uses system Qt theme (Catppuccin via Kvantum)
 
