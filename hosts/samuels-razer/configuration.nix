@@ -49,6 +49,10 @@
       ];
     }
   ];
+  displays.defaults = {
+    vrr = 0;
+    hdr = false;
+  };
 
   features = {
     kernel = "cachyos-v3"; # Intel Core i7-8550U (Kaby Lake-R) — x86_64-v3 optimized build
@@ -65,10 +69,23 @@
     gaming.enable = false;
     auth.yubikey.enable = true;
     smb.shares = [
-      { name = "personal-drive"; label = "Personal-drive"; path = "//unas.srv.oechsler.it/Personal-drive"; }
-      { name = "pika";           label = "Pika";           path = "//unas.srv.oechsler.it/Pika"; }
+      {
+        name = "personal-drive";
+        label = "Personal-drive";
+        path = "//unas.srv.oechsler.it/Personal-drive";
+      }
+      {
+        name = "pika";
+        label = "Pika";
+        path = "//unas.srv.oechsler.it/Pika";
+      }
     ];
-    wifi.networks = [ { name = "home"; ssid = "Oechsler!Box"; } ];
+    wifi.networks = [
+      {
+        name = "home";
+        ssid = "Oechsler!Box";
+      }
+    ];
   };
 
   fonts.defaults.terminalSize = 10;

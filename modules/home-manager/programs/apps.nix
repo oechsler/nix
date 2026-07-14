@@ -46,7 +46,7 @@
 
 let
   displayHelpers = import ../../lib/displays.nix { inherit lib; };
-  hasHDR = displayHelpers.hasHDR displays.monitors;
+  hasHDR = displayHelpers.hasHDR displays.monitors || displays.defaults.hdr;
   isKde = features.desktop.wm == "kde";
   isLight = theme.catppuccin.flavor == "latte";
   chromium = import ../../lib/chromium.nix { inherit pkgs; };

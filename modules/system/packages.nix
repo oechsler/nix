@@ -23,7 +23,7 @@
 
 let
   displayHelpers = import ../lib/displays.nix { inherit lib; };
-  hasHDR = displayHelpers.hasHDR config.displays.monitors;
+  hasHDR = displayHelpers.hasHDR config.displays.monitors || config.displays.defaults.hdr;
 in
 {
   #===========================

@@ -5,6 +5,8 @@
 #
 # Configuration example:
 #   displays.defaultWorkspaceCount = 4;
+#   displays.defaults.vrr = 1;        # Default for hotplugged/unlisted monitors where supported
+#   displays.defaults.hdr = true;     # Default for hotplugged/unlisted monitors where supported
 #   displays.monitors = [
 #     {
 #       name = "DP-1";
@@ -33,6 +35,28 @@
       type = lib.types.int;
       default = 4;
       description = "Default number of workspaces for monitors without an explicit workspace list";
+    };
+
+    defaults = {
+      vrr = lib.mkOption {
+        type = lib.types.enum [
+          0
+          1
+          2
+        ];
+        default = 1;
+        description = "Default Variable Refresh Rate mode for hotplugged/unlisted monitors where the compositor can apply output-independent defaults: 0=off, 1=always, 2=fullscreen/automatic";
+      };
+      hdr = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Default HDR capability for hotplugged/unlisted monitors where the compositor/session can apply output-independent defaults";
+      };
+      hdrSdrMaxLuminance = lib.mkOption {
+        type = lib.types.ints.between 100 1000;
+        default = 450;
+        description = "Default SDR white level in nits for HDR output conversion on hotplugged/unlisted monitors where supported";
+      };
     };
 
     monitors = lib.mkOption {
