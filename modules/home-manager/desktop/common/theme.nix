@@ -109,7 +109,7 @@ in
       # (Vesktop is a Discord client, but we want to call it "Discord")
       desktopEntries.vesktop = lib.mkIf features.apps.enable {
         name = "Discord";
-        exec = "vesktop --ozone-platform=wayland %U";
+        exec = "vesktop %U";
         icon = "discord";
         categories = [
           "Network"

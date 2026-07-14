@@ -73,11 +73,11 @@ in
         lib.optionals features.apps.enable [
           {
             name = "Proton Pass";
-            exec = "proton-pass --hidden --ozone-platform=wayland";
+            exec = "proton-pass --hidden";
           }
           {
             name = "Vesktop";
-            exec = "vesktop --ozone-platform=wayland --start-minimized";
+            exec = "vesktop --start-minimized";
           }
           {
             name = "Nheko";

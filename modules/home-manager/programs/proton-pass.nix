@@ -37,6 +37,18 @@
   ...
 }:
 
+let
+  protonPass = pkgs.symlinkJoin {
+    name = "proton-pass-electron-srgb";
+    paths = [ pkgs.proton-pass ];
+    nativeBuildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      rm -f "$out/bin/proton-pass"
+      makeWrapper "${pkgs.proton-pass}/bin/proton-pass" "$out/bin/proton-pass" \
+        --add-flags "--ozone-platform-hint=auto --force-color-profile=srgb"
+    '';
+  };
+in
 {
   #===========================
   # Configuration
@@ -98,7 +110,7 @@
     # Desktop App
     #---------------------------
     (lib.mkIf features.apps.enable {
-      home.packages = [ pkgs.proton-pass ];
+      home.packages = [ protonPass ];
     })
 
     #---------------------------
