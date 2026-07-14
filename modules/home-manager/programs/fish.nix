@@ -43,8 +43,6 @@
   programs.fish = {
     enable = true;
     shellInit = ''
-      # Electron apps: native Wayland (NIXOS_OZONE_WL not available via sessionVariables in NixOS module mode)
-      set -gx NIXOS_OZONE_WL 1
       fish_add_path --prepend --global \
         ${pkgs.bat}/bin \
         ${pkgs.eza}/bin \

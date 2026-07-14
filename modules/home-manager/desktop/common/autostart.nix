@@ -77,7 +77,7 @@ in
           }
           {
             name = "Vesktop";
-            exec = "vesktop --start-minimized";
+            exec = "vesktop --ozone-platform=wayland --start-minimized";
           }
           {
             name = "Nheko";
