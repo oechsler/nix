@@ -269,7 +269,10 @@ in
             mangohud # in-game overlay: FPS, GPU/CPU load, temps, VRAM
             protonup-qt # GUI to install/manage Proton-GE versions
           ]
-          ++ lib.optional steamMachineCfg.enable steamMachineTools;
+          ++ lib.optionals steamMachineCfg.enable [
+            boilr # Add non-Steam games and launchers to Steam library
+            steamMachineTools
+          ];
 
         security.wrappers.gamescope = lib.mkIf steamMachineCfg.enable {
           owner = "root";
