@@ -29,25 +29,25 @@
 
 let
   awwwPkg = pkgs.awww;
+  displayHelpers = import ../../../lib/displays.nix { inherit lib; };
 
   # Generate wallpaper set commands.
   # Set the default wallpaper on all outputs first so unknown monitors are covered,
   # then override explicitly configured monitors with their per-monitor wallpaper.
-  wallpaperCommands =
-    lib.concatStringsSep "\n" (
-      [
-        "${awwwPkg}/bin/awww img ${theme.wallpaperPath} --transition-type fade --transition-duration 1"
-      ]
-      ++ lib.optionals (displays.monitors != [ ]) (
-        map (
-          m:
-          let
-            wp = if m.wallpaper != null then m.wallpaper else theme.wallpaperPath;
-          in
-          "${awwwPkg}/bin/awww img ${wp} --outputs ${m.name} --transition-type fade --transition-duration 1"
-        ) displays.monitors
-      )
-    );
+  wallpaperCommands = lib.concatStringsSep "\n" (
+    [
+      "${awwwPkg}/bin/awww img ${theme.wallpaperPath} --transition-type fade --transition-duration 1"
+    ]
+    ++ lib.optionals (displays.monitors != [ ]) (
+      map (
+        m:
+        let
+          wp = displayHelpers.monitorWallpaper theme m;
+        in
+        "${awwwPkg}/bin/awww img ${wp} --outputs ${m.name} --transition-type fade --transition-duration 1"
+      ) displays.monitors
+    )
+  );
 
   # Start script: Launch daemon and set wallpaper
   startScript = pkgs.writeShellScript "awww-start" ''

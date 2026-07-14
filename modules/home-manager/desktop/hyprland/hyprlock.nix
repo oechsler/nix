@@ -24,12 +24,16 @@
 # - Text: Text color
 
 {
+  lib,
   theme,
   fonts,
   displays,
   ...
 }:
 
+let
+  displayHelpers = import ../../../lib/displays.nix { inherit lib; };
+in
 {
   #===========================
   # Configuration
@@ -69,7 +73,7 @@
           # Per-monitor wallpaper support
           map (m: {
             monitor = m.name;
-            path = "${if m.wallpaper != null then m.wallpaper else theme.wallpaperPath}";
+            path = "${displayHelpers.monitorWallpaper theme m}";
             blur_passes = 3; # Number of blur passes (more = stronger blur)
             blur_size = 8; # Blur radius
           }) displays.monitors;

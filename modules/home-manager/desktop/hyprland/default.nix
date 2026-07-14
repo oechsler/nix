@@ -55,6 +55,7 @@ let
   stripHash = hex: lib.removePrefix "#" hex;
   accentColor = "rgba(${stripHash palette.${config.catppuccin.accent}.hex}ff)";
   surface0Color = "rgba(${stripHash palette.surface0.hex}ff)";
+  displayHelpers = import ../../../lib/displays.nix { inherit lib; };
 
   # ============================================================================
   # MONITOR CONFIGURATION
@@ -77,21 +78,24 @@ let
   # Example: "DP-1, preferred, 0x0, 1.0"
   monitorLines = [ ", preferred, auto, ${toString theme.scale}" ]; # Fallback for unknown monitors
 
-  monitorV2Lines = map (m: {
-    output = m.name;
-    mode = "preferred";
-    position = "${toString m.x}x${toString m.y}";
-    inherit (m) scale vrr;
-    transform = hyprTransform m.rotation;
-  }
-  // lib.optionalAttrs m.hdr {
-    bitdepth = 10;
-    cm = "hdredid";
-    sdr_max_luminance = m.hdrSdrMaxLuminance;
-  }) displays.monitors;
+  monitorV2Lines = map (
+    m:
+    {
+      output = m.name;
+      mode = "preferred";
+      position = "${toString m.x}x${toString m.y}";
+      inherit (m) scale vrr;
+      transform = hyprTransform m.rotation;
+    }
+    // lib.optionalAttrs m.hdr {
+      bitdepth = 10;
+      cm = "hdredid";
+      sdr_max_luminance = m.hdrSdrMaxLuminance;
+    }
+  ) displays.monitors;
 
   vrrMode = lib.foldl' (mode: monitor: lib.max mode monitor.vrr) 0 displays.monitors;
-  hasHDR = lib.any (monitor: monitor.hdr) displays.monitors;
+  hasHDR = displayHelpers.hasHDR displays.monitors;
 
   # Workspace bindings: Bind specific workspaces to specific monitors
   # Example: If monitor DP-1 has workspaces [1,2,3], generate:
@@ -105,10 +109,12 @@ let
   # Workspace rules: Assign workspaces to monitors + set default workspace per monitor
   # defaultWorkspace prevents Hyprland from creating a stray workspace on startup
   workspaceRules = lib.flatten (
-    map (m:
+    map (
+      m:
       (map (ws: "${toString ws}, monitor:${m.name}") m.workspaces)
-      ++ (lib.optional (m.workspaces != [])
-        "${toString (builtins.head m.workspaces)}, monitor:${m.name}, default:true")
+      ++ (lib.optional (
+        m.workspaces != [ ]
+      ) "${toString (builtins.head m.workspaces)}, monitor:${m.name}, default:true")
     ) displays.monitors
   );
 

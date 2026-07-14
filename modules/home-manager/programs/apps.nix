@@ -45,25 +45,17 @@
 }:
 
 let
-  hasHDR = lib.any (monitor: monitor.hdr) displays.monitors;
+  displayHelpers = import ../../lib/displays.nix { inherit lib; };
+  hasHDR = displayHelpers.hasHDR displays.monitors;
   isKde = features.desktop.wm == "kde";
   isLight = theme.catppuccin.flavor == "latte";
-  chromiumFlags = "--use-gl=egl";
+  chromium = import ../../lib/chromium.nix { inherit pkgs; };
   wrapChromiumApp =
     package: binary:
-    if hasHDR then
-      pkgs.symlinkJoin {
-        name = "${binary}-chromium-hdr-sdr";
-        paths = [ package ];
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-        postBuild = ''
-          rm -f "$out/bin/${binary}"
-          makeWrapper "${package}/bin/${binary}" "$out/bin/${binary}" \
-            --add-flags "${chromiumFlags}"
-        '';
-      }
-    else
-      package;
+    chromium.wrapHdrSdrApp {
+      inherit package binary;
+      enable = hasHDR;
+    };
 in
 {
   #===========================

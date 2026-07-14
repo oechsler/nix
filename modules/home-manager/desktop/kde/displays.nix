@@ -28,36 +28,8 @@
 
 let
   isKde = features.desktop.wm == "kde";
-
-  # Convert rotation enum to kscreen format
-  kscreenRotation =
-    rot:
-    {
-      "normal" = "normal";
-      "90" = "right";
-      "180" = "inverted";
-      "270" = "left";
-    }
-    .${rot};
-
-  monitorArgs = lib.concatMapStringsSep " " (
-    m:
-    lib.concatStringsSep " " (
-      [
-        "output.${m.name}.scale.${toString m.scale}"
-        "output.${m.name}.mode.${toString m.width}x${toString m.height}@${toString m.refreshRate}"
-        "output.${m.name}.position.${toString m.x},${toString m.y}"
-        "output.${m.name}.rotation.${kscreenRotation m.rotation}"
-      ]
-      ++ lib.optional (m.vrr == 0) "output.${m.name}.vrrpolicy.never"
-      ++ lib.optional (m.vrr == 1) "output.${m.name}.vrrpolicy.always"
-      ++ lib.optional (m.vrr == 2) "output.${m.name}.vrrpolicy.automatic"
-      ++ lib.optionals m.hdr [
-        "output.${m.name}.hdr.enable"
-        "output.${m.name}.sdr-brightness.${toString m.hdrSdrMaxLuminance}"
-      ]
-    )
-  ) displays.monitors;
+  kscreen = import ../../../lib/kscreen.nix { inherit lib; };
+  monitorArgs = kscreen.monitorArgs displays.monitors;
 
   kscreenDoctor = "${pkgs.kdePackages.libkscreen}/bin/kscreen-doctor";
 in

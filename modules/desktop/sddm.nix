@@ -51,9 +51,11 @@ let
     ]
   );
 
-  primaryScale = if monitors != [ ] then (builtins.head monitors).scale else config.theme.scale;
+  displayHelpers = import ../lib/displays.nix { inherit lib; };
+  primaryScale = displayHelpers.primaryScale config.theme.scale monitors;
   scaledDpi = builtins.floor (96 * primaryScale);
   scaledCursorSize = builtins.floor (cursorSize * primaryScale);
+  kscreen = import ../lib/kscreen.nix { inherit lib; };
 
   kdeTransform =
     rot:
@@ -67,59 +69,36 @@ let
 
   monitorsByPosition = lib.sort (a: b: a.x < b.x || (a.x == b.x && a.y < b.y)) monitors;
   monitorPriorities = lib.listToAttrs (lib.imap0 (i: m: lib.nameValuePair m.name i) monitors);
-  kscreenRotation =
-    rot:
-    {
-      "normal" = "normal";
-      "90" = "right";
-      "180" = "inverted";
-      "270" = "left";
-    }
-    .${rot};
-  sddmKscreenArgs = lib.concatMapStringsSep " " (
-    m:
-    lib.concatStringsSep " " (
-      [
-        "output.${m.name}.scale.${toString m.scale}"
-        "output.${m.name}.mode.${toString m.width}x${toString m.height}@${toString m.refreshRate}"
-        "output.${m.name}.position.${toString m.x},${toString m.y}"
-        "output.${m.name}.rotation.${kscreenRotation m.rotation}"
-      ]
-      ++ lib.optional (m.vrr == 0) "output.${m.name}.vrrpolicy.never"
-      ++ lib.optional (m.vrr == 1) "output.${m.name}.vrrpolicy.always"
-      ++ lib.optional (m.vrr == 2) "output.${m.name}.vrrpolicy.automatic"
-      ++ lib.optionals m.hdr [
-        "output.${m.name}.hdr.enable"
-        "output.${m.name}.sdr-brightness.${toString m.hdrSdrMaxLuminance}"
-      ]
-    )
-  ) monitors;
+  sddmKscreenArgs = kscreen.monitorArgs monitors;
 
   sddmDisplayConfigFile = pkgs.writeText "kwinoutputconfig.json" (
     builtins.toJSON [
       {
         name = "outputs";
-        data = map (m: {
-          connectorName = m.name;
-          mode = {
-            inherit (m) width height;
-            refreshRate = m.refreshRate * 1000;
-          };
-          inherit (m) scale;
-          transform = kdeTransform m.rotation;
-          overscan = 0;
-          rgbRange = "Automatic";
-          vrrPolicy =
-            if m.vrr == 1 then
-              "Always"
-            else if m.vrr == 2 then
-              "Automatic"
-            else
-              "Never";
-        }
-        // lib.optionalAttrs m.hdr {
-          highDynamicRange = true;
-        }) monitorsByPosition;
+        data = map (
+          m:
+          {
+            connectorName = m.name;
+            mode = {
+              inherit (m) width height;
+              refreshRate = m.refreshRate * 1000;
+            };
+            inherit (m) scale;
+            transform = kdeTransform m.rotation;
+            overscan = 0;
+            rgbRange = "Automatic";
+            vrrPolicy =
+              if m.vrr == 1 then
+                "Always"
+              else if m.vrr == 2 then
+                "Automatic"
+              else
+                "Never";
+          }
+          // lib.optionalAttrs m.hdr {
+            highDynamicRange = true;
+          }
+        ) monitorsByPosition;
       }
       {
         name = "setups";
@@ -140,7 +119,8 @@ let
 
   configuredOutputNames = lib.escapeShellArgs (map (m: m.name) monitors);
   monitorsWithEdid = lib.filter (m: m.edidHash != null) monitors;
-  shouldManageSddmLayout = monitors != [ ] && (monitorsWithEdid == [ ] || monitorsWithEdid == monitors);
+  shouldManageSddmLayout =
+    monitors != [ ] && (monitorsWithEdid == [ ] || monitorsWithEdid == monitors);
   configuredOutputEdids = lib.escapeShellArgs (map (m: "${m.name}:${m.edidHash}") monitorsWithEdid);
   configuredOutputEdidChecks = lib.optionalString (monitorsWithEdid != [ ]) ''
     for identity in ${configuredOutputEdids}; do

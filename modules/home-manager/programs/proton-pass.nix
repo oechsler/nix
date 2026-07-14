@@ -39,21 +39,15 @@
 }:
 
 let
-  hasHDR = lib.any (monitor: monitor.hdr) displays.monitors;
-  protonPass =
-    if hasHDR then
-      pkgs.symlinkJoin {
-        name = "proton-pass-electron-hdr-sdr";
-        paths = [ pkgs.proton-pass ];
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-        postBuild = ''
-          rm -f "$out/bin/proton-pass"
-          makeWrapper "${pkgs.proton-pass}/bin/proton-pass" "$out/bin/proton-pass" \
-            --add-flags "--use-gl=egl"
-        '';
-      }
-    else
-      pkgs.proton-pass;
+  displayHelpers = import ../../lib/displays.nix { inherit lib; };
+  hasHDR = displayHelpers.hasHDR displays.monitors;
+  chromium = import ../../lib/chromium.nix { inherit pkgs; };
+  protonPass = chromium.wrapHdrSdrApp {
+    package = pkgs.proton-pass;
+    binary = "proton-pass";
+    enable = hasHDR;
+    name = "proton-pass-electron-hdr-sdr";
+  };
 in
 {
   #===========================
