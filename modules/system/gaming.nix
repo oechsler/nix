@@ -103,17 +103,12 @@ let
   steamGamescopeSession =
     let
       exports = lib.mapAttrsToList (name: value: "export ${name}=${lib.escapeShellArg value}") steamMachineEnv;
-      preferredOutput = if config.displays.monitors != [ ] then (lib.head config.displays.monitors).name else "";
-      gamescopeArgList =
-        [
-          "--xwayland-count"
-          "2"
-          "--force-windows-fullscreen"
-        ]
-        ++ lib.optionals (preferredOutput != "") [
-          "--prefer-output"
-          preferredOutput
-        ];
+      configuredOutputs = lib.escapeShellArgs (map (m: m.name) config.displays.monitors);
+      gamescopeArgList = [
+        "--xwayland-count"
+        "2"
+        "--force-windows-fullscreen"
+      ];
       gamescopeArgs = lib.escapeShellArgs gamescopeArgList;
       steamArgs = lib.escapeShellArgs [
         "-steamos3"
@@ -131,7 +126,48 @@ let
         export STEAM_MACHINE_SESSION_EXIT_FILE="$exit_file"
         rm -f "$exit_file"
 
-        ${pkgs.gamescope}/bin/gamescope --steam ${gamescopeArgs} -- ${config.programs.steam.package}/bin/steam ${steamArgs}
+        gamescope_args=(${gamescopeArgs})
+        selected_output=
+
+        for output in ${configuredOutputs}; do
+          for status_file in /sys/class/drm/*-"$output"/status; do
+            [ -e "$status_file" ] || continue
+            [ "$(<"$status_file")" = connected ] || continue
+            selected_output="$output"
+            break 2
+          done
+        done
+
+        if [ -z "$selected_output" ]; then
+          for status_file in /sys/class/drm/*/status; do
+            [ -e "$status_file" ] || continue
+            [ "$(<"$status_file")" = connected ] || continue
+            output_dir="$(${pkgs.coreutils}/bin/dirname "$status_file")"
+            connector="''${output_dir##*/}"
+            selected_output="''${connector#*-}"
+            break
+          done
+        fi
+
+        if [ -n "$selected_output" ]; then
+          gamescope_args+=(--prefer-output "$selected_output")
+
+          for modes_file in /sys/class/drm/*-"$selected_output"/modes; do
+            [ -s "$modes_file" ] || continue
+            read -r mode < "$modes_file"
+            case "$mode" in
+              [0-9]*x[0-9]*)
+                width="''${mode%x*}"
+                height="''${mode#*x}"
+                height="''${height%%[^0-9]*}"
+                gamescope_args+=(-W "$width" -H "$height")
+                ;;
+            esac
+            break
+          done
+        fi
+
+        ${pkgs.gamescope}/bin/gamescope --steam "''${gamescope_args[@]}" -- ${config.programs.steam.package}/bin/steam ${steamArgs}
         status=$?
         rm -f "$exit_file"
         exit "$status"
