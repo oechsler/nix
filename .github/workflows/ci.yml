@@ -70,6 +70,13 @@ jobs:
             --dry-run \
             --show-trace
 
+      - name: Build samuels-ser9
+        run: |
+          nix build \
+            .#nixosConfigurations.samuels-ser9.config.system.build.toplevel \
+            --dry-run \
+            --show-trace
+
       - name: Build samuels-razer
         run: |
           nix build \

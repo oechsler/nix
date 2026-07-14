@@ -40,7 +40,10 @@ jobs:
 
       - name: Validate configurations (dry-run)
         if: steps.check.outputs.changed == 'true'
-        run: nix build .#nixosConfigurations.samuels-razer.config.system.build.toplevel --dry-run && nix build .#nixosConfigurations.samuels-pc.config.system.build.toplevel --dry-run
+        run: |
+          nix build .#nixosConfigurations.samuels-razer.config.system.build.toplevel --dry-run
+          nix build .#nixosConfigurations.samuels-pc.config.system.build.toplevel --dry-run
+          nix build .#nixosConfigurations.samuels-ser9.config.system.build.toplevel --dry-run
 
       - name: Commit and push
         if: steps.check.outputs.changed == 'true'

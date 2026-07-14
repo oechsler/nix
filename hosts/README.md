@@ -6,6 +6,7 @@ Host-specific configurations.
 |------|--------|-------|
 | `samuels-pc` | Desktop workstation | Ryzen 9 5950X + RX 7900 XTX, dual 1440p, 2x NVMe (system + games) |
 | `samuels-terra` | Desktop workstation | Ryzen 9 9950X3D + RX 9070 XT, dual 1440p, ASUS ROG Strix X870-I |
+| `samuels-ser9` | Beelink SER9 Mini PC | Ryzen AI 9 HX 370 + Radeon 890M, dual 1440p desktop monitors, 1TB NVMe |
 | `samuels-razer` | Razer Blade Stealth 13 (2018) | Intel i7-8550U + UHD 620, 3200×1800 HiDPI, KDE, no Secure Boot |
 
 ## Installation
