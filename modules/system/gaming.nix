@@ -118,6 +118,7 @@ let
         "--xwayland-count"
         "2"
         "--force-windows-fullscreen"
+        "--mangoapp"
       ]
       ++ lib.optionals steamMachineVrr [
         "--adaptive-sync"
