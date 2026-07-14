@@ -67,8 +67,6 @@ let
     }
     .${rot};
 
-  monitorsByPosition = lib.sort (a: b: a.x < b.x || (a.x == b.x && a.y < b.y)) monitors;
-  monitorPriorities = lib.listToAttrs (lib.imap0 (i: m: lib.nameValuePair m.name i) monitors);
   sddmKscreenArgs = kscreen.monitorArgs {
     inherit monitors;
     enableHDR = false;
@@ -95,7 +93,7 @@ let
               "Automatic"
             else
               "Never";
-        }) monitorsByPosition;
+        }) monitors;
       }
       {
         name = "setups";
@@ -106,8 +104,8 @@ let
               enabled = true;
               outputIndex = i;
               position = { inherit (m) x y; };
-              priority = monitorPriorities.${m.name};
-            }) monitorsByPosition;
+              priority = i;
+            }) monitors;
           }
         ];
       }

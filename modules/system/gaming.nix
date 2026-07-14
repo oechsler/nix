@@ -118,7 +118,6 @@ let
         "--xwayland-count"
         "2"
         "--force-windows-fullscreen"
-        "--mangoapp"
       ]
       ++ lib.optionals steamMachineVrr [
         "--adaptive-sync"
@@ -170,13 +169,9 @@ let
         touch "$GAMESCOPE_PATCHED_EDID_FILE"
         touch "$GAMESCOPE_LIMITER_FILE"
 
-        ${pkgs.coreutils}/bin/cat "$stats_pipe" >/dev/null &
-        stats_pid=$!
-
         cleanup() {
           ${pkgs.procps}/bin/pkill -TERM -P "$$" || true
           [ -n "''${gamescope_pid:-}" ] && kill "$gamescope_pid" 2>/dev/null || true
-          [ -n "''${stats_pid:-}" ] && kill "$stats_pid" 2>/dev/null || true
           rm -f "$exit_file"
           rm -rf "$session_dir"
         }
