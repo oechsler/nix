@@ -7,7 +7,7 @@
 #
 # User-level desktop config is in home-manager/desktop/
 
-{ ... }:
+{ config, lib, ... }:
 
 {
   imports = [
@@ -15,4 +15,8 @@
     ./hyprland.nix
     ./kde.nix
   ];
+
+  # Make nixpkgs Electron/Chromium wrappers prefer native Wayland in graphical
+  # sessions. XWayland tends to behave worse with SDR surfaces on HDR desktops.
+  environment.sessionVariables.NIXOS_OZONE_WL = lib.mkIf config.features.desktop.enable "1";
 }
