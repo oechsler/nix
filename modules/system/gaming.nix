@@ -270,7 +270,6 @@ in
             protonup-qt # GUI to install/manage Proton-GE versions
           ]
           ++ lib.optionals steamMachineCfg.enable [
-            boilr # Add non-Steam games and launchers to Steam library
             steamMachineTools
           ];
 
