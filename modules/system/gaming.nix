@@ -38,6 +38,10 @@ let
     n: m:
     if m.hdr then lib.max n m.hdrSdrMaxLuminance else n
   ) 203 config.displays.monitors;
+  hdrSdrGamutWideness = lib.foldl' (
+    n: m:
+    if m.hdr then lib.max n m.hdrSdrGamutWideness else n
+  ) 0.0 config.displays.monitors;
 
   steamMachineEnv =
     {
@@ -138,6 +142,8 @@ let
           "--hdr-enabled"
           "--hdr-sdr-content-nits"
           (toString hdrSdrMaxLuminance)
+          "--sdr-gamut-wideness"
+          (toString hdrSdrGamutWideness)
         ];
       gamescopeArgs = lib.escapeShellArgs gamescopeArgList;
       steamArgs = lib.escapeShellArgs [
