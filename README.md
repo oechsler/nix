@@ -41,6 +41,8 @@ features.gaming.enable = false;                 # No Steam/gaming
 features.gaming.steamMachine.enable = true;     # Steam Gamescope session / Steam Machine mode
 features.desktop.wm = "kde";                    # Hyprland or KDE
 features.desktop.fileManager = "terminal";       # Yazi instead of GUI file manager
+displays.defaults.hdr = true;                    # Treat unknown hotplug displays as HDR-capable where supported
+displays.defaults.vrr = 1;                       # Default VRR for unknown hotplug displays where supported
 ```
 
 ## Using as Flake Input

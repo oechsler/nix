@@ -29,8 +29,9 @@ let
   # Steam Machine mode is a dedicated fullscreen gamescope session, so any non-zero
   # monitor VRR mode means adaptive sync should be enabled there.
   displayHelpers = import ../lib/displays.nix { inherit lib; };
-  steamMachineVrr = displayHelpers.hasVRR config.displays.monitors;
-  hasHdrDisplay = displayHelpers.hasHDR config.displays.monitors;
+  steamMachineVrr =
+    displayHelpers.hasVRR config.displays.monitors || config.displays.defaults.vrr != 0;
+  hasHdrDisplay = displayHelpers.hasHDR config.displays.monitors || config.displays.defaults.hdr;
 
   steamMachineEnv = {
     SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS = "0";

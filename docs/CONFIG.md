@@ -130,7 +130,7 @@ Set in `configuration.nix`:
 
 ## Display Options
 
-Set in `configuration.nix`. Works on both Hyprland and KDE. When `displays.monitors` is empty (the default), the system falls back to `theme.scale`.
+Set in `configuration.nix`. Works on both Hyprland and KDE. When `displays.monitors` is empty, the system falls back to automatic layout detection and `theme.scale`.
 
 To find your connector names, resolution and refresh rate:
 
@@ -143,14 +143,23 @@ kscreen-doctor -o
 ```
 
 ```nix
+displays.defaults = {
+  vrr = 1;                     # Hotplug/unlisted default: 0=off, 1=always, 2=fullscreen/automatic
+  hdr = true;                  # Treat hotplug/unlisted outputs as HDR-capable where supported
+  hdrSdrMaxLuminance = 450;    # SDR white level in nits for HDR conversion where supported
+};
+
 displays.monitors = [
-  { name = "DP-1"; width = 2560; height = 1440; refreshRate = 165; x = 0; y = 0; }
-  { name = "DP-2"; width = 2560; height = 1440; refreshRate = 165; x = 2560; y = 0; }
+  { name = "DP-1"; width = 2560; height = 1440; refreshRate = 165; x = 0; y = 0; vrr = 1; hdr = true; }
+  { name = "DP-2"; width = 2560; height = 1440; refreshRate = 165; x = 2560; y = 0; vrr = 1; hdr = true; }
 ];
 ```
 
 | Option | Default | Description |
 |--------|---------|-------------|
+| `displays.defaults.vrr` | `1` | Default VRR mode for hotplugged/unlisted monitors where output-independent defaults are supported: `0` off, `1` always, `2` fullscreen/automatic |
+| `displays.defaults.hdr` | `true` | Default HDR capability for hotplugged/unlisted monitors where output-independent defaults are supported |
+| `displays.defaults.hdrSdrMaxLuminance` | `450` | Default SDR white level in nits for HDR conversion where supported |
 | `displays.monitors` | `[]` | List of monitor configurations |
 | `monitors.*.name` | — | Connector name (`"DP-1"`, `"HDMI-A-1"`, `"eDP-1"`) |
 | `monitors.*.width` | `1920` | Horizontal resolution |
@@ -162,8 +171,19 @@ displays.monitors = [
 | `monitors.*.rotation` | `"normal"` | Rotation (`"normal"` / `"90"` / `"180"` / `"270"`) |
 | `monitors.*.wallpaper` | `null` | Per-monitor wallpaper (`null` = use `theme.wallpaper`) |
 | `monitors.*.workspaces` | `[]` | Workspace IDs to bind to this monitor (Hyprland only, e.g. `[1 2 3 4 5]`) |
+| `monitors.*.vrr` | `0` | Explicit VRR mode for this monitor: `0` off, `1` always, `2` fullscreen/automatic |
+| `monitors.*.hdr` | `false` | Explicit HDR capability for this monitor |
+| `monitors.*.hdrSdrMaxLuminance` | `450` | SDR white level in nits for HDR conversion on this monitor |
 
-On Hyprland, a catch-all fallback rule (`preferred, auto, theme.scale`) is always added for hotplugged/unlisted monitors. On KDE, `kscreen-doctor` is run at login via an XDG autostart entry to apply the monitor layout.
+Default behavior and limitations:
+
+- Steam Machine/Gamescope uses `displays.defaults.vrr` and `displays.defaults.hdr` as session-wide fallbacks, so a Steam session can enable adaptive sync and HDR even when the connected output is not listed in `displays.monitors`.
+- Hyprland uses `displays.defaults.vrr` for its global VRR mode, so hotplugged/unlisted monitors get VRR behavior by default.
+- Hyprland enables color management when either a listed monitor has HDR or `displays.defaults.hdr = true`; full per-output HDR metadata (`bitdepth`, `cm`, SDR luminance) still requires a listed monitor because Hyprland's `monitorv2` configuration is output-specific.
+- KDE and SDDM apply HDR/VRR through `kscreen-doctor`, which needs concrete output names. Unknown outputs keep compositor auto-detection until they are added to `displays.monitors`.
+- Set `displays.defaults.hdr = false` on hosts that commonly connect SDR-only projectors/TVs and should not advertise HDR by default.
+
+On Hyprland, a catch-all fallback rule (`preferred, auto, theme.scale`) is always added for hotplugged/unlisted monitors. On KDE, `kscreen-doctor` is run at login via an XDG autostart entry to apply the monitor layout for known outputs.
 
 ## Input Options
 

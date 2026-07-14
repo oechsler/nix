@@ -94,8 +94,10 @@ let
     }
   ) displays.monitors;
 
-  vrrMode = lib.foldl' (mode: monitor: lib.max mode monitor.vrr) 0 displays.monitors;
-  hasHDR = displayHelpers.hasHDR displays.monitors;
+  vrrMode = lib.foldl' (
+    mode: monitor: lib.max mode monitor.vrr
+  ) displays.defaults.vrr displays.monitors;
+  hasHDR = displayHelpers.hasHDR displays.monitors || displays.defaults.hdr;
 
   # Workspace bindings: Bind specific workspaces to specific monitors
   # Example: If monitor DP-1 has workspaces [1,2,3], generate:
