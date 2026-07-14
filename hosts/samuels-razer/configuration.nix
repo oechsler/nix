@@ -51,7 +51,7 @@
   ];
   displays.defaults = {
     vrr = 0;
-    hdr = false;
+    hdr = 0;
   };
 
   features = {

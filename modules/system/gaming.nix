@@ -31,7 +31,7 @@ let
   displayHelpers = import ../lib/displays.nix { inherit lib; };
   steamMachineVrr =
     displayHelpers.hasVRR config.displays.monitors || config.displays.defaults.vrr != 0;
-  hasHdrDisplay = displayHelpers.hasHDR config.displays.monitors || config.displays.defaults.hdr;
+  hasHdrDisplay = displayHelpers.hasHDR config.displays.monitors || config.displays.defaults.hdr != 0;
 
   steamMachineEnv = {
     SDL_VIDEO_MINIMIZE_ON_FOCUS_LOSS = "0";

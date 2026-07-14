@@ -55,7 +55,7 @@
       x = 2560;
       y = 0;
       vrr = 2;
-      hdr = true;
+      hdr = 1;
       workspaces = [
         1
         2
@@ -74,7 +74,7 @@
       x = 0;
       y = 0;
       vrr = 2;
-      hdr = true;
+      hdr = 1;
       workspaces = [
         5
         6

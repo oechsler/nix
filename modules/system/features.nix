@@ -147,12 +147,22 @@ in
 
     hardware = {
       cpu = lib.mkOption {
-        type = lib.types.nullOr (lib.types.enum [ "amd" "intel" ]);
+        type = lib.types.nullOr (
+          lib.types.enum [
+            "amd"
+            "intel"
+          ]
+        );
         default = null;
         description = "CPU vendor — enables the correct microcode update package (security patches from AMD/Intel loaded at early boot).";
       };
       gpu = lib.mkOption {
-        type = lib.types.nullOr (lib.types.enum [ "amd" "intel" ]);
+        type = lib.types.nullOr (
+          lib.types.enum [
+            "amd"
+            "intel"
+          ]
+        );
         default = null;
         description = "GPU vendor — enables graphics support and the correct VA-API driver for hardware video decoding. AMD also gets 32-bit libs when gaming is enabled. NVIDIA is not supported.";
       };

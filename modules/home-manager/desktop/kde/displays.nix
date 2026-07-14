@@ -14,7 +14,7 @@
 # - Scale: DPI scaling factor
 # - Rotation: normal, 90, 180, 270
 # - VRR: vrr = 0/1/2 → vrrpolicy.never/always/automatic
-# - HDR: hdr = true → enable HDR and set SDR brightness without overriding color profile
+# - HDR: hdr = 2 → enable HDR and set SDR brightness without overriding color profile
 #
 # Note: Only active when features.desktop.wm == "kde" and displays.monitors is not empty
 
