@@ -40,7 +40,7 @@
 
 let
   displayHelpers = import ../../lib/displays.nix { inherit lib; };
-  hasHDR = displayHelpers.hasHDR displays.monitors || displays.defaults.hdr;
+  hasHDR = displayHelpers.hasDesktopHDR displays.monitors || displays.defaults.hdr == 2;
   chromium = import ../../lib/chromium.nix { inherit pkgs; };
   protonPass = chromium.wrapHdrSdrApp {
     package = pkgs.proton-pass;

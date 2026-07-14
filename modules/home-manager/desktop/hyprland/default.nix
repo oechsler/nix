@@ -87,7 +87,7 @@ let
       inherit (m) scale vrr;
       transform = hyprTransform m.rotation;
     }
-    // lib.optionalAttrs m.hdr {
+    // lib.optionalAttrs (m.hdr == 2) {
       bitdepth = 10;
       cm = "hdredid";
       sdr_max_luminance = m.hdrSdrMaxLuminance;
@@ -97,7 +97,7 @@ let
   vrrMode = lib.foldl' (
     mode: monitor: lib.max mode monitor.vrr
   ) displays.defaults.vrr displays.monitors;
-  hasHDR = displayHelpers.hasHDR displays.monitors || displays.defaults.hdr;
+  hasHDR = displayHelpers.hasDesktopHDR displays.monitors || displays.defaults.hdr == 2;
 
   # Workspace bindings: Bind specific workspaces to specific monitors
   # Example: If monitor DP-1 has workspaces [1,2,3], generate:

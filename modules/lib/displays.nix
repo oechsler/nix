@@ -5,7 +5,9 @@
 { lib }:
 
 {
-  hasHDR = monitors: lib.any (monitor: monitor.hdr) monitors;
+  hasHDR = monitors: lib.any (monitor: monitor.hdr != 0) monitors;
+
+  hasDesktopHDR = monitors: lib.any (monitor: monitor.hdr == 2) monitors;
 
   hasVRR = monitors: lib.any (monitor: monitor.vrr != 0) monitors;
 

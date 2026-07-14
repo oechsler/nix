@@ -42,7 +42,7 @@ in
           "output.${m.name}.rotation.${rotation m.rotation}"
           "output.${m.name}.vrrpolicy.${vrrPolicy m.vrr}"
         ]
-        ++ lib.optionals (enableHDR && m.hdr) [
+        ++ lib.optionals (enableHDR && m.hdr == 2) [
           "output.${m.name}.hdr.enable"
           "output.${m.name}.sdr-brightness.${toString m.hdrSdrMaxLuminance}"
         ]

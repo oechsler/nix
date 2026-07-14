@@ -6,7 +6,7 @@
 # Configuration example:
 #   displays.defaultWorkspaceCount = 4;
 #   displays.defaults.vrr = 2;        # Default for hotplugged/unlisted monitors where supported
-#   displays.defaults.hdr = true;     # Default for hotplugged/unlisted monitors where supported
+#   displays.defaults.hdr = 1;        # 0=off, 1=Steam/Gamescope HDR, 2=full desktop HDR
 #   displays.monitors = [
 #     {
 #       name = "DP-1";
@@ -17,7 +17,7 @@
 #       y = 0;
 #       scale = 1.0;
 #       vrr = 2;                      # VRR/FreeSync: 0=off, 1=always, 2=fullscreen/automatic
-#       hdr = true;                   # HDR-capable display
+#       hdr = 1;                      # 0=off, 1=Steam/Gamescope HDR, 2=full desktop HDR
 #       hdrSdrMaxLuminance = 450;     # SDR white level in nits for HDR output conversion
 #       workspaces = [ 1 2 3 4 5 ];  # Hyprland only: bind workspaces to this monitor
 #     }
@@ -48,9 +48,13 @@
         description = "Default Variable Refresh Rate mode for hotplugged/unlisted monitors where the compositor can apply output-independent defaults: 0=off, 1=always, 2=fullscreen/automatic";
       };
       hdr = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = "Default HDR capability for hotplugged/unlisted monitors where the compositor/session can apply output-independent defaults";
+        type = lib.types.enum [
+          0
+          1
+          2
+        ];
+        default = 1;
+        description = "Default HDR mode for hotplugged/unlisted monitors where supported: 0=off, 1=Steam/Gamescope HDR, 2=full desktop HDR";
       };
     };
 
@@ -142,9 +146,13 @@
               description = "Variable Refresh Rate mode: 0=off, 1=always, 2=fullscreen/automatic";
             };
             hdr = lib.mkOption {
-              type = lib.types.bool;
-              default = false;
-              description = "Mark this monitor as HDR-capable for Steam Gamescope sessions";
+              type = lib.types.enum [
+                0
+                1
+                2
+              ];
+              default = 0;
+              description = "HDR mode: 0=off, 1=Steam/Gamescope HDR, 2=full desktop HDR";
             };
             hdrSdrMaxLuminance = lib.mkOption {
               type = lib.types.ints.between 100 1000;
