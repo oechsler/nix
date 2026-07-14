@@ -260,6 +260,15 @@ in
 
       };
 
+      paths.sddm-apply-display-config = lib.mkIf shouldManageSddmLayout {
+        description = "Re-apply SDDM monitor layout when the greeter Wayland socket appears";
+        wantedBy = [ "display-manager.service" ];
+        pathConfig = {
+          PathExistsGlob = "/run/user/*/wayland-*";
+          Unit = "sddm-apply-display-config.service";
+        };
+      };
+
       tmpfiles.rules = [
         "d /var/lib/sddm/.config 0755 sddm sddm -"
         "r /var/lib/sddm/.config/kwinoutputconfig.json - - - - -"
