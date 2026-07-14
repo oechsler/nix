@@ -29,7 +29,7 @@
 let
   isKde = features.desktop.wm == "kde";
   kscreen = import ../../../lib/kscreen.nix { inherit lib; };
-  monitorArgs = kscreen.monitorArgs displays.monitors;
+  monitorArgs = kscreen.monitorArgs { inherit (displays) monitors; };
 
   kscreenDoctor = "${pkgs.kdePackages.libkscreen}/bin/kscreen-doctor";
 in
