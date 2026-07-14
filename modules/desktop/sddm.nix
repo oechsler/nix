@@ -69,36 +69,33 @@ let
 
   monitorsByPosition = lib.sort (a: b: a.x < b.x || (a.x == b.x && a.y < b.y)) monitors;
   monitorPriorities = lib.listToAttrs (lib.imap0 (i: m: lib.nameValuePair m.name i) monitors);
-  sddmKscreenArgs = kscreen.monitorArgs monitors;
+  sddmKscreenArgs = kscreen.monitorArgs {
+    inherit monitors;
+    enableHDR = false;
+  };
 
   sddmDisplayConfigFile = pkgs.writeText "kwinoutputconfig.json" (
     builtins.toJSON [
       {
         name = "outputs";
-        data = map (
-          m:
-          {
-            connectorName = m.name;
-            mode = {
-              inherit (m) width height;
-              refreshRate = m.refreshRate * 1000;
-            };
-            inherit (m) scale;
-            transform = kdeTransform m.rotation;
-            overscan = 0;
-            rgbRange = "Automatic";
-            vrrPolicy =
-              if m.vrr == 1 then
-                "Always"
-              else if m.vrr == 2 then
-                "Automatic"
-              else
-                "Never";
-          }
-          // lib.optionalAttrs m.hdr {
-            highDynamicRange = true;
-          }
-        ) monitorsByPosition;
+        data = map (m: {
+          connectorName = m.name;
+          mode = {
+            inherit (m) width height;
+            refreshRate = m.refreshRate * 1000;
+          };
+          inherit (m) scale;
+          transform = kdeTransform m.rotation;
+          overscan = 0;
+          rgbRange = "Automatic";
+          vrrPolicy =
+            if m.vrr == 1 then
+              "Always"
+            else if m.vrr == 2 then
+              "Automatic"
+            else
+              "Never";
+        }) monitorsByPosition;
       }
       {
         name = "setups";

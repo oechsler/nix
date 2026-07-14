@@ -28,7 +28,10 @@ in
   inherit rotation vrrPolicy;
 
   monitorArgs =
-    monitors:
+    {
+      monitors,
+      enableHDR ? true,
+    }:
     lib.concatMapStringsSep " " (
       m:
       lib.concatStringsSep " " (
@@ -39,7 +42,7 @@ in
           "output.${m.name}.rotation.${rotation m.rotation}"
           "output.${m.name}.vrrpolicy.${vrrPolicy m.vrr}"
         ]
-        ++ lib.optionals m.hdr [
+        ++ lib.optionals (enableHDR && m.hdr) [
           "output.${m.name}.hdr.enable"
           "output.${m.name}.sdr-brightness.${toString m.hdrSdrMaxLuminance}"
         ]
