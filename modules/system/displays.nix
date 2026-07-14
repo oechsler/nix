@@ -17,8 +17,6 @@
 #       vrr = 1;                      # VRR/FreeSync: 0=off, 1=always, 2=fullscreen/automatic
 #       hdr = true;                   # HDR-capable display — Steam Gamescope HDR flags
 #       hdrSdrMaxLuminance = 450;     # SDR white level in nits for HDR output conversion
-#       hdrSdrSaturation = 1.0;       # SDR saturation when Hyprland runs this output in HDR
-#       hdrSdrGamutWideness = 0.0;    # SDR gamut widening for Steam Gamescope HDR mode
 #       workspaces = [ 1 2 3 4 5 ];  # Hyprland only: bind workspaces to this monitor
 #     }
 #   ];
@@ -133,16 +131,6 @@
               type = lib.types.ints.between 100 1000;
               default = 450;
               description = "SDR white level in nits for HDR output conversion";
-            };
-            hdrSdrSaturation = lib.mkOption {
-              type = lib.types.addCheck lib.types.float (v: v >= 0.0 && v <= 2.0);
-              default = 1.0;
-              description = "SDR color saturation multiplier for Hyprland HDR output conversion";
-            };
-            hdrSdrGamutWideness = lib.mkOption {
-              type = lib.types.addCheck lib.types.float (v: v >= 0.0 && v <= 1.0);
-              default = 0.0;
-              description = "SDR gamut widening for Steam Gamescope HDR mode";
             };
           };
         }
