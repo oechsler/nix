@@ -86,6 +86,7 @@ in
       ]
       ++ lib.optionals config.features.virtualisation.enable [
         "/var/lib/docker" # Docker containers/images
+        "/var/lib/containers" # Podman containers/images
       ]
       ++ lib.optionals config.features.flatpak.enable [
         "/var/lib/flatpak" # Flatpak apps
