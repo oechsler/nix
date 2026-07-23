@@ -1,7 +1,9 @@
-# OpenCode Auto Router Stack
+# OpenCode Auto Router
 #
-# Runs Ollama, LiteLLM, and an OpenAI-compatible auto-router as OCI containers.
-# OpenCode talks only to the auto provider; the router chooses local or cloud backends.
+# Three OCI containers (Ollama, LiteLLM, auto-router) that together provide a
+# single local/* provider for OpenCode. A local Ollama model classifies each
+# request, then the router forwards to the cheapest suitable cloud backend.
+# Enabled on development machines via features.development.enable.
 
 {
   config,
@@ -11,11 +13,14 @@
 }:
 
 let
+  # The Ollama model used for request classification (passed as ROUTER_MODEL env var).
   routerModel = "qwen3:8b";
+
+  # Models to pre-pull into Ollama on startup. Must include routerModel.
+  # Kept as a separate list so additional local models can be pulled without
+  # changing the classifier.
   ollamaModels = [
     "qwen3:8b"
-    "qwen3:14b"
-    "qwen3:32b"
   ];
 
   routerEnv = pkgs.python3.withPackages (ps: [
@@ -129,7 +134,7 @@ in
     };
 
     systemd.services.opencode-auto-router-pull-models = {
-      description = "Pull Ollama models for OpenCode auto-router";
+      description = "Pull Ollama models (qwen3:8b) for the OpenCode auto-router";
       after = [ "podman-opencode-ollama.service" ];
       requires = [ "podman-opencode-ollama.service" ];
       wantedBy = [ "multi-user.target" ];
