@@ -1,0 +1,39 @@
+model_list:
+  - model_name: qwen3-router
+    litellm_params:
+      model: ollama_chat/qwen3:8b
+      api_base: http://127.0.0.1:11434
+
+  - model_name: qwen3-fast
+    litellm_params:
+      model: ollama_chat/qwen3:14b
+      api_base: http://127.0.0.1:11434
+
+  - model_name: qwen3-deep
+    litellm_params:
+      model: ollama_chat/qwen3:32b
+      api_base: http://127.0.0.1:11434
+
+  - model_name: mistral-medium
+    litellm_params:
+      model: mistral/mistral-medium-latest
+      api_key: os.environ/MISTRAL_API_KEY
+
+  - model_name: mistral-small
+    litellm_params:
+      model: mistral/mistral-small-latest
+      api_key: os.environ/MISTRAL_API_KEY
+
+  - model_name: deepseek-v4-pro
+    litellm_params:
+      model: openai/deepseek-v4-pro
+      api_base: https://opencode.ai/zen/go/v1
+      api_key: os.environ/OPENCODE_GO_API_KEY
+
+litellm_settings:
+  drop_params: true
+  request_timeout: 600
+  set_verbose: false
+
+general_settings:
+  master_key: dummy

@@ -9,6 +9,7 @@
 
 {
   imports = [
+    ./opencode-auto-router.nix
     ./terminal.nix
   ];
 }

@@ -80,46 +80,90 @@
 
     # CLI AI Tools (useful on servers and desktops)
     (lib.mkIf features.development.enable {
-      # API keys — decrypted by sops at boot, read by opencode via {file:...} syntax
       # openai uses OAuth (opencode-openai-codex-auth plugin) — no API key needed
-      sops.secrets."opencode/mistral/api-key" = { };
-      sops.secrets."opencode/opencode-go/api-key" = { };
-
       programs.opencode = {
         enable = true;
 
         settings = {
-          # Primary: Mistral (Codestral for code, Mistral Small for light tasks)
-          # Budget: OpenCode Go (DeepSeek, no API key needed)
-          # Fallback: OpenAI (ChatGPT Plus)
+          # OpenCode only exposes this local provider. It can still route to
+          # local Ollama models, Mistral, or ChatGPT through the auto-router.
           enabled_providers = [
-            "mistral"
-            "opencode-go"
-            "openai"
+            "local"
           ];
 
-          model = "mistral/mistral-medium-latest";
-          small_model = "mistral/mistral-small-latest";
+          model = "local/auto";
+          small_model = "local/auto";
 
-          # Other models switchable via /models:
-          #   opencode-go/deepseek-v4-pro
-          #   openai/gpt-5.3-codex
+          # Other models switchable via /models are all exposed by local/*.
 
           plugin = [
             "opencode-openai-codex-auth"
           ];
 
           provider = {
-            opencode-go.options = {
-              timeout = 600000;
-              apiKey = "{file:${config.sops.secrets."opencode/opencode-go/api-key".path}}";
+            local = {
+              npm = "@ai-sdk/openai-compatible";
+              name = "Local";
+              options = {
+                baseURL = "http://127.0.0.1:4000/v1";
+                apiKey = "dummy";
+                timeout = 600000;
+              };
+              models.auto = {
+                name = "Auto";
+                tool_call = true;
+                temperature = true;
+                limit = {
+                  context = 128000;
+                  output = 32768;
+                };
+              };
+              models.qwen3-fast = {
+                name = "Qwen3 14B Local";
+                tool_call = true;
+                temperature = true;
+                limit = {
+                  context = 40960;
+                  output = 16384;
+                };
+              };
+              models.qwen3-deep = {
+                name = "Qwen3 32B Local";
+                tool_call = true;
+                temperature = true;
+                limit = {
+                  context = 40960;
+                  output = 16384;
+                };
+              };
+              models.mistral-medium = {
+                name = "Mistral Medium";
+                tool_call = true;
+                temperature = true;
+                limit = {
+                  context = 128000;
+                  output = 32768;
+                };
+              };
+              models.deepseek-v4-pro = {
+                name = "DeepSeek V4 Pro";
+                tool_call = true;
+                temperature = true;
+                limit = {
+                  context = 128000;
+                  output = 32768;
+                };
+              };
+              models.openai-chatgpt = {
+                name = "ChatGPT 5.5";
+                tool_call = true;
+                temperature = true;
+                limit = {
+                  context = 128000;
+                  output = 32768;
+                };
+              };
             };
-            mistral.options = {
-              timeout = 600000;
-              apiKey = "{file:${config.sops.secrets."opencode/mistral/api-key".path}}";
-            };
-            # openai: no apiKey — authenticated via opencode-openai-codex-auth plugin (OAuth)
-            openai.options.timeout = 600000;
           };
         };
       };
