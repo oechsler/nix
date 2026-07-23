@@ -1,19 +1,4 @@
 model_list:
-  - model_name: qwen3-router
-    litellm_params:
-      model: ollama_chat/qwen3:8b
-      api_base: http://127.0.0.1:11434
-
-  - model_name: qwen3-fast
-    litellm_params:
-      model: ollama_chat/qwen3:14b
-      api_base: http://127.0.0.1:11434
-
-  - model_name: qwen3-deep
-    litellm_params:
-      model: ollama_chat/qwen3:32b
-      api_base: http://127.0.0.1:11434
-
   - model_name: mistral-medium
     litellm_params:
       model: mistral/mistral-medium-latest

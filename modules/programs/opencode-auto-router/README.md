@@ -1,13 +1,11 @@
 # OpenCode Auto Router
 
-This module gives OpenCode one default model, `local/auto`, and routes each request to a local or cloud backend automatically.
+This module gives OpenCode one default model, `local/auto`. A small local Ollama model classifies each request, then the router sends the actual answer request to a cloud backend.
 
 It is enabled automatically on development machines via `features.development.enable`.
 
 Manual model selection is also available through the same OpenCode provider:
 
-- `local/qwen3-fast`
-- `local/qwen3-deep`
 - `local/mistral-medium`
 - `local/deepseek-v4-pro`
 - `local/openai-chatgpt`
@@ -19,13 +17,11 @@ OpenCode
   -> opencode-auto/auto at http://127.0.0.1:4000/v1
   -> opencode-auto-router container
   -> local qwen3:8b router model via Ollama
-  -> selected backend
+  -> selected cloud backend
 ```
 
 Backends currently available to the router:
 
-- `qwen3-fast`: local Ollama model through LiteLLM, used by auto-routing only when local/private/offline handling is explicitly requested and the task is simple.
-- `qwen3-deep`: larger local Ollama model through LiteLLM, used by auto-routing only for harder local/private/offline work.
 - `mistral-small`: Mistral cloud model through LiteLLM, intended for cheap/simple cloud work such as greetings and summaries.
 - `mistral-medium`: Mistral cloud model through LiteLLM, intended for architecture, reviews, analysis, and broad planning.
 - `deepseek-v4-pro`: OpenCode Go cloud model through LiteLLM, intended as the default auto-routed answer model for OpenCode, coding, system administration, debugging, reasoning, and tool-heavy work.
@@ -37,12 +33,17 @@ Auto-routing optimizes for the cheapest model that is likely to complete the tas
 - Most coding, OpenCode agent, shell/system inspection, debugging, NixOS/admin, container, service, log, build, and test work goes to `deepseek-v4-pro`.
 - Broad architecture, design tradeoffs, reviews, planning, and analysis-heavy work goes to `mistral-medium`.
 - The hardest, riskiest, most ambiguous, or high-stakes work goes to `openai-chatgpt`.
-- Local Qwen models are used by auto-routing only when the user explicitly asks for local/private/offline handling.
+- Local Qwen is used only for classification, not for answering.
+
+If a backend fails before the response starts, the router tries fallback models automatically.
+Examples: rate limits, context-limit errors, temporary backend failures, missing ChatGPT auth,
+or upstream 5xx responses. Streaming responses can only fallback before the first upstream
+chunk is sent. Fallbacks are shown in-chat as `Routed to: original -> fallback`.
 
 ## Components
 
-- `opencode-ollama`: serves local models and the routing model on `127.0.0.1:11434`.
-- `opencode-litellm`: exposes local Ollama and Mistral models through an OpenAI-compatible API on `127.0.0.1:8000`.
+- `opencode-ollama`: serves the local `qwen3:8b` routing model on `127.0.0.1:11434`.
+- `opencode-litellm`: exposes cloud models through an OpenAI-compatible API on `127.0.0.1:8000`.
 - `opencode-auto-router`: exposes the single OpenCode-facing OpenAI-compatible API on `127.0.0.1:4000`.
 - `opencode-auto-router-pull-models.service`: pulls the configured Ollama models after Ollama starts.
 
