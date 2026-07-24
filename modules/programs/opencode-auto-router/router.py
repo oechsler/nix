@@ -867,17 +867,23 @@ async def health() -> dict[str, str]:
 
 @app.get("/v1/models")
 async def models() -> dict[str, Any]:
-    return {
-        "object": "list",
-        "data": [
-            {
-                "id": "auto",
+    data = [
+        {
+            "id": "auto",
+            "object": "model",
+            "created": 0,
+            "owned_by": "opencode-auto-router",
+        }
+    ]
+    for model_id in MODEL_ROUTING:
+        if model_id not in ROUTER_MODELS:
+            data.append({
+                "id": model_id,
                 "object": "model",
                 "created": 0,
                 "owned_by": "opencode-auto-router",
-            }
-        ],
-    }
+            })
+    return {"object": "list", "data": data}
 
 
 @app.post("/v1/chat/completions")
