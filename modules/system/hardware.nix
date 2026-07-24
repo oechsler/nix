@@ -4,7 +4,7 @@
 # - CPU microcode updates (when features.hardware.cpu is set)
 # - GPU graphics + VA-API drivers (when features.hardware.gpu is set)
 # - CoolerControl - Fan control GUI (monitors and controls system fans)
-# - zram swap - Compressed RAM swap (100% of RAM, improves performance)
+# - zram swap - Compressed RAM swap (% of RAM, capped at 8 GiB)
 # - Printing disabled (no CUPS service)
 #
 # features.hardware.gpu = "amd" | "intel" | null:
@@ -14,7 +14,8 @@
 #
 # zram swap:
 # - Uses 100% of available RAM for compressed swap space
-# - Improves performance on systems with limited RAM
+# - Hard-capped at 8 GiB so large-RAM machines don't waste memory
+# - On ≤ 8 GiB machines → swap = RAM; on ≥ 8 GiB → swap = 8 GiB
 # - Compression ratio typically 2-3x
 
 { config, pkgs, lib, ... }:
@@ -61,6 +62,7 @@
   zramSwap = {
     enable = true;
     memoryPercent = 100;
+    memoryMax = 8 * 1024 * 1024 * 1024; # 8 GiB hard cap
   };
 
   # CoolerControl: fan control GUI — desktop-only (not needed on servers)
