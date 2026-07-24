@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import re
 import time
 from typing import Any
 
@@ -383,8 +384,7 @@ async def _classify(messages: list[dict[str, Any]], has_tools: bool) -> str:
 # Metadata request detection
 #
 # opencode occasionally sends title/summary generation requests with no tools.
-# We detect these and suppress the [Routed to: …] notice so the result is
-# clean (just the title/summary text).
+# We detect these and suppress the model notice so the result is clean.
 # ---------------------------------------------------------------------------
 
 _TITLE_SUMMARY_MARKERS = {
@@ -419,14 +419,135 @@ def _is_metadata_request(messages: list[dict[str, Any]], has_tools: bool) -> boo
 # ---------------------------------------------------------------------------
 
 
+# Backend fallbacks handle availability failures. Capability escalation is
+# separate: it moves a retry to a stronger model after an inadequate answer.
+CAPABILITY_ESCALATION = {
+    "mistral-small": "mistral-medium",
+    "mistral-medium": "openai-terra",
+    "deepseek-v4-flash": "deepseek-v4-pro",
+    "deepseek-v4-pro": "openai-terra",
+    "qwen3.6-plus": "qwen3.7-plus",
+    "qwen3.7-plus": "deepseek-v4-pro",
+    "qwen3.7-max": "openai-terra",
+    "openai-luna-fast": "openai-sol-fast",
+    "openai-luna": "openai-sol",
+    "openai-sol-fast": "openai-terra-fast",
+    "openai-sol": "openai-terra",
+    "openai-terra-fast": "openai-terra",
+}
+
+CAPABILITY_LEVEL = {
+    "mistral-small": 1,
+    "deepseek-v4-flash": 2,
+    "mistral-medium": 2,
+    "openai-luna-fast": 2,
+    "openai-luna": 2,
+    "qwen3.6-plus": 2,
+    "qwen3.7-plus": 2,
+    "deepseek-v4-pro": 3,
+    "openai-sol-fast": 3,
+    "openai-sol": 3,
+    "qwen3.7-max": 3,
+    "openai-terra-fast": 4,
+    "openai-terra": 4,
+}
+
+_RETRY_MARKERS = (
+    "did not work",
+    "didn't work",
+    "does not work",
+    "doesn't work",
+    "still wrong",
+    "not fixed",
+    "didn't fix",
+    "not what i asked",
+    "try again",
+    "previous answer",
+    "other model",
+    "cannot handle",
+    "can't handle",
+    "hat nicht funktioniert",
+    "funktioniert nicht",
+    "klappt nicht",
+    "immer noch falsch",
+    "nicht gefixt",
+    "nicht geschafft",
+    "nicht mehr schafft",
+    "bekommt nicht hin",
+    "nicht hin",
+    "nicht was ich",
+    "nochmal",
+    "anderes modell",
+    "andere modell",
+    "vorherige antwort",
+    "schafft es nicht",
+    "schafft das nicht",
+    "nicht nur die doku",
+    "nicht nur die dokumentation",
+)
+
+_RETRY_PATTERNS = (
+    re.compile(r"\bhat\b.*\bnicht funktioniert\b"),
+    re.compile(r"\bbekommt\b.*\bnicht hin\b"),
+    re.compile(r"\bschafft\b.*\bnicht(?: mehr)?\b"),
+)
+
+
+def _last_routed_model(messages: list[dict[str, Any]]) -> str | None:
+    """Read the model from the final routing line of the last assistant turn."""
+    model_pattern = "|".join(
+        sorted((re.escape(model) for model in DIRECT_MODELS), key=len, reverse=True)
+    )
+    notice_pattern = re.compile(
+        rf"^(?:auto|{model_pattern})(?:\s+(?:->|→)\s+({model_pattern}))?$"
+    )
+    for message in reversed(messages):
+        if message.get("role") != "assistant":
+            continue
+        lines = [line.strip() for line in message_text(message).splitlines() if line.strip()]
+        if not lines:
+            continue
+        match = notice_pattern.fullmatch(lines[-1])
+        if match:
+            return match.group(1) or lines[-1]
+        continue
+    return None
+
+
+def _capability_escalation(messages: list[dict[str, Any]]) -> str | None:
+    """Return a stronger model when the user rejects the previous result."""
+    latest_user = next(
+        (
+            message_text(message).lower()
+            for message in reversed(messages)
+            if message.get("role") == "user"
+        ),
+        "",
+    )
+    if not any(marker in latest_user for marker in _RETRY_MARKERS) and not any(
+        pattern.search(latest_user) for pattern in _RETRY_PATTERNS
+    ):
+        return None
+    previous_model = _last_routed_model(messages)
+    return CAPABILITY_ESCALATION.get(previous_model or "")
+
+
+def _more_capable_model(classified_model: str, escalation_model: str) -> str:
+    """Keep a classifier choice when it is already at least as capable."""
+    if CAPABILITY_LEVEL.get(classified_model, 0) >= CAPABILITY_LEVEL.get(
+        escalation_model, 0
+    ):
+        return classified_model
+    return escalation_model
+
+
 def _fallback_chain(model: str) -> list[str]:
-    candidates = [model] + MODEL_ROUTING.get(model, {}).get("fallbacks", [])
-    seen = set()
     result = []
-    for candidate in candidates:
-        if candidate in DIRECT_MODELS and candidate not in seen:
-            result.append(candidate)
-            seen.add(candidate)
+    candidate = model
+    while candidate in DIRECT_MODELS and candidate not in result:
+        result.append(candidate)
+        fallbacks = MODEL_ROUTING.get(candidate, {}).get("fallbacks", [])
+        candidate = fallbacks[0] if fallbacks else ""
     return result or [model]
 
 
@@ -435,13 +556,10 @@ def _fallback_chain(model: str) -> list[str]:
 # ---------------------------------------------------------------------------
 
 
-def _model_notice(model: str, original_model: str | None = None) -> str:
-    return ""
-
 def _model_notice_text(model: str, original_model: str | None = None) -> str:
     if original_model and original_model != model:
-        return f"{original_model} → {model}"
-    return f"{model}"
+        return f"{original_model} -> {model}"
+    return model
 
 
 def _notice_chunk(model: str, content: str) -> dict[str, Any]:
@@ -454,6 +572,19 @@ def _notice_chunk(model: str, content: str) -> dict[str, Any]:
             {"index": 0, "delta": {"content": content}, "finish_reason": None}
         ],
     }
+
+
+def _is_terminal_chunk(line: str) -> bool:
+    if not line.startswith("data: ") or line.startswith("data: [DONE]"):
+        return False
+    try:
+        chunk = json.loads(line[6:])
+    except Exception:
+        return False
+    return any(
+        choice.get("finish_reason") is not None
+        for choice in chunk.get("choices", [])
+    )
 
 
 def _error_text(response: httpx.Response) -> str:
@@ -868,7 +999,7 @@ async def _stream_chatgpt(
                 if event_type in {"response.done", "response.completed"}:
                     response_id = event.get("response", {}).get("id", "chatgpt-response")
                     if show_notice:
-                        yield f"data: {json.dumps(_notice_chunk(routed_model, '\n\n' + _model_notice_text(routed_model, original_model)))}\n\n"
+                        yield f"data: {json.dumps(_notice_chunk(request_body['model'], '\n\n' + _model_notice_text(routed_model, original_model)))}\n\n"
                     done = {
                         "id": response_id,
                         "object": "chat.completion.chunk",
@@ -984,7 +1115,7 @@ async def _stream_to_backend(
     original_model: str,
     show_notice: bool = True,
 ):
-    """Try each candidate in order. Stream on first success, fallback on failure."""
+    """Try each candidate in order. Stream on first successful backend."""
     headers = {"Authorization": "Bearer dummy"}
     stream = bool(body.get("stream"))
     last_status = 502
@@ -1028,14 +1159,16 @@ async def _stream_to_backend(
                 continue
 
             async def _iter_litellm_stream(model: str = candidate):
+                notice_sent = False
                 try:
                     async for line in response.aiter_lines():
-                        if line.startswith("data: [DONE]"):
-                            if show_notice:
-                                yield f"data: {json.dumps(_notice_chunk(model, '\n\n' + _model_notice_text(model, original_model)))}\n\n"
-                            yield "data: [DONE]\n\n"
-                        else:
-                            yield line + "\n"
+                        should_send_notice = show_notice and not notice_sent and (
+                            _is_terminal_chunk(line) or line.startswith("data: [DONE]")
+                        )
+                        if should_send_notice:
+                            yield f"data: {json.dumps(_notice_chunk(model, '\n\n' + _model_notice_text(model, original_model)))}\n\n"
+                            notice_sent = True
+                        yield line + "\n"
                 finally:
                     await upstream.__aexit__(None, None, None)
                     await client.aclose()
@@ -1133,6 +1266,22 @@ async def chat_completions(request: Request):
         if requested_model in DIRECT_MODELS
         else await _classify(messages, has_tools)
     )
+    escalation_model = (
+        None
+        if requested_model in DIRECT_MODELS
+        else _capability_escalation(messages)
+    )
+    notice_model = target_model
+    if escalation_model:
+        previous_model = _last_routed_model(messages)
+        escalated_target = _more_capable_model(target_model, escalation_model)
+        logger.info(
+            "capability escalation classified_model=%s escalated_model=%s",
+            target_model,
+            escalated_target,
+        )
+        target_model = escalated_target
+        notice_model = previous_model or target_model
 
     logger.info(
         "routing requested_model=%s target_model=%s has_tools=%s messages=%s",
@@ -1159,4 +1308,4 @@ async def chat_completions(request: Request):
         candidates,
     )
 
-    return await _stream_to_backend(body, candidates, requested_model, show_notice)
+    return await _stream_to_backend(body, candidates, notice_model, show_notice)

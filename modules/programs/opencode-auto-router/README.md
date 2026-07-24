@@ -1,192 +1,138 @@
 # OpenCode Auto Router
 
-The OpenCode Auto Router automatically selects the best AI model for your task. It provides OpenCode with a default model, `local/auto`, which uses a lightweight local Ollama model to classify each request and route it to the most suitable cloud backend.
+The OpenCode Auto Router gives OpenCode a single default model, `local/auto`. You use OpenCode normally; the router chooses a suitable backend for each request and reports the model at the end of the response.
 
-This module is automatically enabled on development machines via `features.development.enable`.
+The module is enabled on development machines through `features.development.enable`.
 
-Manual model selection is also available through the OpenCode provider:
+## Why It Exists
 
-- `local/mistral-small`
-- `local/mistral-medium`
-- `local/deepseek-v4-pro`
-- `local/deepseek-v4-flash`
-- `local/openai-luna`
-- `local/openai-luna-fast`
-- `local/openai-sol`
-- `local/openai-sol-fast`
-- `local/openai-terra`
-- `local/openai-terra-fast`
-- `local/qwen3.7-max`
-- `local/qwen3.7-plus`
-- `local/qwen3.6-plus`
-- `local/qwen3:8b`
+Different models are useful for different work. A small model is sufficient for a translation, while a difficult debugging session benefits from a stronger agentic model. Selecting models manually for every request is distracting and wastes provider capacity.
 
-## Design Philosophy
+The router therefore follows three design choices:
 
-The Auto Router is built on three core principles:
+1. Use a local classifier so routing decisions do not require another cloud request.
+2. Choose the least expensive model expected to complete the task well.
+3. Keep provider failures and inadequate answers recoverable without hiding which model was used.
 
-1. **Automatic Optimization**: Users should not need to think about which model to use. The system automatically selects the most cost-effective model that can handle the task competently.
+You can still select any model manually when you need predictable behavior.
 
-2. **Cost Efficiency**: By routing simple tasks to cheaper models and reserving expensive models for complex work, we minimize costs without sacrificing quality.
+## Request Flow
 
-3. **Reliability**: Automatic fallbacks ensure that if a model fails, the system gracefully degrades to the next best option without user intervention.
+```mermaid
+flowchart LR
+    user["User"] --> opencode["OpenCode<br/>local/auto"]
+    opencode --> router["Auto Router<br/>127.0.0.1:4000"]
+    router --> classifier["Local classifier<br/>Ollama"]
+    classifier --> router
+    router --> litellm["LiteLLM<br/>Mistral and OpenCode Go"]
+    router --> chatgpt["ChatGPT backend<br/>OpenAI OAuth"]
+    litellm --> router
+    chatgpt --> router
+    router --> opencode
+```
 
-## Architecture
+For an automatic request:
+
+1. OpenCode sends the conversation and available tools to the router.
+2. Ollama classifies the task locally. `llama3.2:3b` is tried first and `qwen3:8b` is its classifier fallback.
+3. The router selects a backend based on task complexity, tool use, model capability, and subscription limits.
+4. LiteLLM normalizes Mistral and OpenCode Go behind one local OpenAI-compatible API. ChatGPT subscription models are called directly because they use a different OAuth API.
+5. The router streams the answer back to OpenCode.
+
+## Model Selection
+
+Models are listed once below in the approximate order of work they are intended to handle. The local classifier uses the complete conversation, not only the latest sentence.
+
+| Model | Provider | Intended use |
+| --- | --- | --- |
+| `mistral-small` | Mistral | Chat, translation, summaries, titles, and simple questions without tools |
+| `mistral-medium` | Mistral | Architecture, planning, reviews, and analysis without tools |
+| `deepseek-v4-flash` | OpenCode Go | Default for routine coding, debugging, shell work, tests, and file edits |
+| `deepseek-v4-pro` | OpenCode Go | Difficult focused engineering and debugging |
+| `qwen3.7-plus` | OpenCode Go | General development, broad edits, and an alternative to DeepSeek Flash |
+| `qwen3.7-max` | OpenCode Go | Advanced reasoning without broad tool coordination |
+| `qwen3.6-plus` | OpenCode Go | General coding when other OpenCode Go models are unavailable |
+| `openai-luna` / `openai-luna-fast` | ChatGPT | Daily agentic development; `fast` uses the priority service tier |
+| `openai-sol` / `openai-sol-fast` | ChatGPT | Complex debugging, refactoring, and multi-step tool use |
+| `openai-terra` / `openai-terra-fast` | ChatGPT | Ambiguous, critical, or high-stakes work; Terra is the strongest tier |
+| `qwen3:8b` | Local Ollama | Manual offline or privacy-sensitive work; not selected as an answer model by auto-routing |
+
+The broad routing policy is:
+
+- Simple, non-agentic requests use Mistral Small.
+- Analysis and design without tools use Mistral Medium.
+- Routine work with tools uses DeepSeek Flash, Qwen Plus, or Luna.
+- Difficult multi-step work uses DeepSeek Pro or Sol.
+- The hardest or highest-risk work uses Terra.
+
+## Retries and Fallbacks
+
+The router handles two different failure modes.
+
+**Backend fallback** applies when a provider fails before the first response chunk, for example because of a rate limit, missing authentication, a context limit, or an upstream server error. The router follows the configured fallback chain until a backend accepts the request. Once streaming has started, it cannot replace that response.
+
+**Capability escalation** applies when a backend returned an answer but the user says that the attempt failed or asks it to try again. On the next turn, the router reads the model recorded on the previous response and moves to the next capability tier. This is separate from provider availability fallback and prevents a failed task from repeatedly returning to the same small model.
+
+Every automatic response ends with one minimal routing line:
 
 ```text
-OpenCode
-  -> opencode-auto/auto at http://127.0.0.1:4000/v1
-  -> opencode-auto-router container
-  -> local qwen3:8b router model via Ollama
-  -> selected cloud backend
+mistral-small
 ```
 
-The system consists of four main components:
+If a backend fallback or capability escalation occurred, the line shows the path:
 
-- `opencode-ollama`: serves the local routing models (`qwen3:8b`, `llama3.2:3b`) on `127.0.0.1:11434`
-- `opencode-litellm`: exposes cloud models through an OpenAI-compatible API on `127.0.0.1:8000`
-- `opencode-auto-router`: exposes the single OpenCode-facing OpenAI-compatible API on `127.0.0.1:4000`
-- `opencode-auto-router-pull-models.service`: pulls the configured Ollama models after Ollama starts
-
-## How It Works
-
-When you send a request to OpenCode:
-
-1. The request is received by the auto-router at `http://127.0.0.1:4000/v1`
-2. A local `qwen3:8b` model classifies the request to determine the task type
-3. The router selects the most appropriate model based on:
-   - Task complexity
-   - Required capabilities
-   - Cost efficiency
-4. The request is forwarded to the selected cloud backend
-5. You receive your answer from the optimal model
-
-If a backend fails before sending the first response chunk (e.g., due to rate limits, context limits, or server errors), the router automatically tries fallback models and informs you in the chat:
-
-```
-deepseek-v4-pro → qwen3.7-plus
+```text
+mistral-small -> mistral-medium
 ```
 
-Streaming responses can only fallback before the first upstream chunk is sent.
-
-## Available Models
-
-The Auto Router supports the following models, grouped by provider:
-
-### Mistral
-- `mistral-small`: Cheapest option for simple tasks like chat, summaries, and translations
-- `mistral-medium`: Better for architecture, reviews, analysis, and planning tasks
-
-### DeepSeek
-- `deepseek-v4-flash`: Fast and cost-effective for simple to medium coding tasks and quick fixes
-- `deepseek-v4-pro`: Default choice for most coding, debugging, system administration, and tool-heavy work
-
-### Qwen
-- `qwen3.7-plus`: Good all-rounder for general development and debugging
-- `qwen3.7-max`: Strong reasoning and coding capabilities for complex tasks and advanced problem solving
-- `qwen3.6-plus`: Cost-effective option for architecture, reviews, analysis, and broad planning
-- `qwen3:8b`: Local model available for testing and offline/privacy-critical tasks (not auto-routed)
-
-### OpenAI
-- `openai-luna`: General-purpose coding, editing, shell commands, daily development tasks
-- `openai-luna-fast`: Fastest ChatGPT option for routine development at high throughput
-- `openai-sol`: Strong model for complex debugging, refactoring, and tool-heavy development
-- `openai-sol-fast`: Fast Sol variant for solid coding with quick turnaround
-- `openai-terra`: Most capable model for the hardest agentic coding, critical bugs, ambiguous exploration, and high-stakes system administration
-- `openai-terra-fast`: Faster Terra variant for urgent hard problems when latency matters
-
-## Routing Logic
-
-The router uses the following decision tree for model selection:
-
-- Simple chat, summaries, translations → `mistral-small`
-- Simple to medium coding, quick fixes → `deepseek-v4-flash`
-- Most coding, debugging, system tasks → `deepseek-v4-pro`
-- General development, debugging → `qwen3.7-plus`
-- Complex tasks, refactoring → `qwen3.7-max`
-- Architecture, reviews, planning → `qwen3.6-plus` or `mistral-medium`
-- Hardest, riskiest tasks → `openai-terra`
+There is intentionally no label or prefix so routing metadata stays secondary to the conversation. OpenCode title and summary requests suppress this line entirely.
 
 ## Providers and Authentication
 
-The Auto Router connects to the following AI providers:
+LiteLLM is not an AI provider. It is the local compatibility layer at `127.0.0.1:8000` that gives the router one OpenAI-compatible endpoint for Mistral and OpenCode Go.
 
-### OpenCode Go
-We use OpenCode Go as our primary provider for most cloud models. This service provides access to:
-- DeepSeek models (`deepseek-v4-flash`, `deepseek-v4-pro`)
-- Qwen models (`qwen3.7-plus`, `qwen3.7-max`, `qwen3.6-plus`)
-- OpenAI models (`openai-luna`, `openai-sol`, `openai-terra` and their fast variants)
+| Provider | Models | Credential source |
+| --- | --- | --- |
+| Mistral API | Mistral Small and Medium | SOPS secret `opencode/mistral/api-key`, exposed to LiteLLM as `MISTRAL_API_KEY` |
+| OpenCode Go | DeepSeek and Qwen cloud models | SOPS secret `opencode/opencode-go/api-key`, exposed to LiteLLM as `OPENCODE_GO_API_KEY` |
+| ChatGPT subscription | Luna, Sol, Terra, and fast variants | OpenCode OAuth entry in `~/.local/share/opencode/auth.json` |
+| Local Ollama | Classifier models and manual `qwen3:8b` | No external credential |
 
-Authentication for OpenCode Go models is handled automatically through the OpenCode infrastructure.
+The SOPS secrets are rendered into a systemd-managed environment file and passed only to the LiteLLM container. They are not stored in `litellm.yaml`.
 
-### Mistral
-Mistral models (`mistral-small`, `mistral-medium`) are accessed through LiteLLM, which serves as our local proxy to aggregate all backend connections. LiteLLM handles authentication via API keys configured in its configuration.
+ChatGPT authentication works differently. OpenCode creates the OAuth entry through its OpenAI authentication plugin. The host file `~/.local/share/opencode/auth.json` is mounted into the router container as `/var/lib/opencode/auth.json`. The router reads the `openai` OAuth entry, refreshes expired access tokens with its refresh token, and writes refreshed credentials back to the same mounted file. It then calls the ChatGPT Codex backend directly with the account ID from the OAuth data.
 
-### Local Models
-The `qwen3:8b` model runs locally via Ollama and requires no external authentication. It is used primarily for request classification.
+## Manual Selection
 
-### OpenAI/ChatGPT
-OpenCode authenticates with ChatGPT/OpenAI through `opencode-openai-codex-auth`. The auto-router reuses the OAuth tokens stored in `~/.local/share/opencode/auth.json` and refreshes them when needed.
-
-The ChatGPT backend endpoint uses the official Codex CLI/OAuth backend path. Model slugs are:
-
-- `gpt-5.6-terra`
-- `gpt-5.6-sol`
-- `gpt-5.6-luna`
-
-Fast variants use `service_tier: priority`.
-
-## Fallback Mechanism
-
-If a backend fails before sending the first response chunk (e.g., due to rate limits, context limits, or server errors), the router automatically tries fallback models. Fallbacks are shown in-chat as:
-
-```
-original → fallback
-```
-
-Streaming responses can only fallback before the first upstream chunk is sent.
-
-If a model cannot handle a request (e.g., due to capability limitations), the router will automatically switch to a more capable model from the fallback chain.
+Select `local/auto` for normal use. To bypass classification and automatic fallback, choose a specific `local/<model>` entry in OpenCode, for example `local/openai-terra` or `local/qwen3:8b`.
 
 ## Components
 
-| Component | Port | Description |
-|-----------|------|-------------|
-| `opencode-ollama` | 11434 | Serves local routing models (`qwen3:8b`, `llama3.2:3b`) |
-| `opencode-litellm` | 8000 | Exposes cloud models via OpenAI-compatible API |
-| `opencode-auto-router` | 4000 | Single OpenCode-facing OpenAI-compatible API |
-| `opencode-auto-router-pull-models.service` | – | Pulls configured Ollama models after Ollama starts |
+| Component | Address | Responsibility |
+| --- | --- | --- |
+| `opencode-auto-router` | `127.0.0.1:4000` | Classification, backend selection, ChatGPT OAuth, fallback, and response metadata |
+| `opencode-litellm` | `127.0.0.1:8000` | OpenAI-compatible adapter for Mistral and OpenCode Go |
+| `opencode-ollama` | `127.0.0.1:11434` | Local classifier and offline model runtime |
+| `opencode-auto-router-sync-models.service` | n/a | Pulls configured Ollama models and removes stale ones |
 
-## ChatGPT Subscription Auth
-
-OpenCode authenticates with ChatGPT/OpenAI via `opencode-openai-codex-auth`. The auto-router reuses the OAuth tokens stored in `~/.local/share/opencode/auth.json` and refreshes them as needed.
-
-The ChatGPT backend endpoint contains `codex` in the URL as it uses the official Codex CLI/OAuth backend path. Model slugs are:
-
-- `gpt-5.6-terra`
-- `gpt-5.6-sol`
-- `gpt-5.6-luna`
-
-Fast variants use `service_tier: priority`.
+All three containers run rootless in one Podman pod and communicate through localhost.
 
 ## Operations
 
-### Check Services
+The services are user services:
 
 ```bash
-systemctl status podman-opencode-ollama.service
-systemctl status podman-opencode-litellm.service
-systemctl status podman-opencode-auto-router.service
-systemctl status opencode-auto-router-pull-models.service
+systemctl --user status podman-opencode-ollama.service
+systemctl --user status podman-opencode-litellm.service
+systemctl --user status podman-opencode-auto-router.service
+systemctl --user status opencode-auto-router-sync-models.service
 ```
 
-### Check Endpoints
+Check the local endpoints:
 
 ```bash
 curl http://127.0.0.1:11434/api/tags
 curl http://127.0.0.1:4000/health
 ```
 
-### Restart OpenCode
-
-OpenCode must be restarted after configuration changes as it loads configuration only at startup.
+After changing the module, rebuild the Home Manager configuration and restart OpenCode. OpenCode loads provider configuration only at startup.
