@@ -80,15 +80,17 @@
 
     # CLI AI Tools (useful on servers and desktops)
     (lib.mkIf features.development.enable {
-      # openai uses OAuth (opencode-openai-codex-auth plugin) — no API key needed
+      # openai uses built-in OAuth — no API key needed
       programs.opencode = {
         enable = true;
 
         settings = {
-          # OpenCode only exposes this local provider. It can still route to
-          # local Ollama models, Mistral, or ChatGPT through the auto-router.
+          # The local provider routes everything through the auto-router.
+          # openai is enabled solely for `opencode auth login --provider openai`;
+          # all model selection should use local/* (auto-router) exclusively.
           enabled_providers = [
             "local"
+            "openai"
           ];
 
           model = "local/auto";
@@ -104,10 +106,6 @@
           };
 
           # Other models switchable via /models are all exposed by local/*.
-
-          plugin = [
-            "opencode-openai-codex-auth"
-          ];
 
           provider = {
             local = {
