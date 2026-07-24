@@ -1,10 +1,10 @@
 # OpenCode Auto Router
 
-This module provides OpenCode with a default model, `local/auto`. A lightweight local Ollama model classifies each request and routes it to the most suitable cloud backend.
+The OpenCode Auto Router is a smart system that automatically selects the best AI model for your task. It provides OpenCode with a default model, `local/auto`, which uses a lightweight local Ollama model to classify each request and route it to the most suitable cloud backend.
 
-It is enabled automatically on development machines via `features.development.enable`.
+This module is automatically enabled on development machines via `features.development.enable`.
 
-Manual model selection is also available through the OpenCode provider:
+You can also manually select a model through the OpenCode provider:
 
 - `local/mistral-small`
 - `local/mistral-medium`
@@ -21,25 +21,69 @@ Manual model selection is also available through the OpenCode provider:
 - `local/qwen3.6-plus`
 - `local/qwen3:8b`
 
-## Overview
+## How It Works
 
-The auto router acts as an intelligent intermediary between OpenCode and various AI models. It:
+Think of the Auto Router as a **smart traffic director** for your AI requests. Here is what happens when you ask OpenCode a question:
 
-- Analyzes your request to determine the task type.
-- Selects the most cost-effective model capable of handling the task.
-- Routes the request to the appropriate backend.
-- Handles fallbacks if the primary model fails.
+1. **You send a request** (e.g., "Debug this Python code" or "Explain NixOS to me").
+2. **The router receives it** at `http://127.0.0.1:4000/v1`.
+3. **A local AI model (`qwen3:8b`)** analyzes your request to understand what kind of task it is.
+4. **The router picks the best model** for that task, balancing capability and cost.
+5. **Your request is sent** to the selected cloud model.
+6. **You get your answer** from the most suitable AI.
 
-This ensures optimal performance and cost efficiency for all types of tasks.
+If the selected model fails (e.g., due to rate limits or errors), the router **automatically tries a fallback model** and lets you know with a message like `Routed to: original -> fallback`.
+
+## Model Selection Explained
+
+The Auto Router selects models based on **two key factors**:
+
+1. **Task Type**: What kind of task are you asking for?
+2. **Cost vs. Capability**: What is the minimum capability needed to solve the task well?
+
+### Model Capability Matrix
+
+| Model | Best For | Cost | Speed | Capability |
+|-------|----------|------|-------|------------|
+| `mistral-small` | Simple chat, summaries, translations | $ | ⚡⚡⚡⚡⚡ | Low |
+| `deepseek-v4-flash` | Quick fixes, simple coding tasks | $$ | ⚡⚡⚡⚡ | Medium |
+| `deepseek-v4-pro` | **Default choice** for most tasks | $$$ | ⚡⚡⚡ | High |
+| `qwen3.7-plus` | General development, debugging | $$$ | ⚡⚡ | Medium-High |
+| `qwen3.7-max` | Complex tasks, refactoring | $$$$ | ⚡⚡ | High |
+| `qwen3.6-plus` | Architecture, reviews, planning | $$$$ | ⚡⚡ | High |
+| `mistral-medium` | Architecture, reviews, planning | $$$$ | ⚡⚡ | High |
+| `openai-terra` | **Highest capability** for critical tasks | $$$$$ | ⚡ | Very High |
+| `openai-sol` | Complex debugging, refactoring | $$$$$ | ⚡ | High |
+| `openai-luna` | General-purpose coding | $$$$$ | ⚡ | Medium |
+
+### When to Use Which Model
+
+- **Simple questions?** → `mistral-small` (cheapest, fast)
+- **Quick code fixes?** → `deepseek-v4-flash` (fast and cheap)
+- **Most coding tasks?** → `deepseek-v4-pro` (default, good balance)
+- **General development?** → `qwen3.7-plus` (good all-rounder)
+- **Complex refactoring?** → `qwen3.7-max` (strong reasoning)
+- **Architecture decisions?** → `qwen3.6-plus` or `mistral-medium`
+- **Critical bugs?** → `openai-terra` (most capable)
+
+> 💡 **Pro Tip**: The Auto Router **always picks the cheapest model that can do the job well**. You don't need to worry about selecting the right model yourself!
 
 ## Architecture
 
-```
-OpenCode
-  -> opencode-auto/auto at http://127.0.0.1:4000/v1
-  -> opencode-auto-router container
-  -> local qwen3:8b router model via Ollama
-  -> selected cloud backend
+```mermaid
+graph TD
+    A[Your Request] -->|e.g. "Debug this code"| B[OpenCode]
+    B -->|Sends to| C[Auto Router
+    http://127.0.0.1:4000/v1]
+    C --> D[Local Classifier
+    qwen3:8b via Ollama]
+    D -->|"This is a debugging task"| C
+    C --> E[Selects Best Model
+    e.g. deepseek-v4-pro]
+    E --> F[Cloud Backend
+    via LiteLLM]
+    F -->|Response| B
+    B -->|Answer| A
 ```
 
 ## Available Backends
