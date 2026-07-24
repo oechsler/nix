@@ -6,8 +6,13 @@ It is enabled automatically on development machines via `features.development.en
 
 Manual model selection is also available through the same OpenCode provider:
 
+- `local/mistral-small`
 - `local/mistral-medium`
 - `local/deepseek-v4-pro`
+- `local/deepseek-v4-flash`
+- `local/qwen3.7-max`
+- `local/qwen3.7-plus`
+- `local/qwen3.6-plus`
 - `local/openai-chatgpt`
 
 ## Architecture
@@ -23,14 +28,22 @@ OpenCode
 Backends currently available to the router:
 
 - `mistral-small`: Mistral cloud model through LiteLLM, intended for cheap/simple cloud work such as greetings and summaries.
+- `deepseek-v4-flash`: OpenCode Go DeepSeek V4 Flash cloud model. Fast and cost-effective for simple to medium coding tasks.
+- `deepseek-v4-pro`: OpenCode Go DeepSeek V4 Pro cloud model, intended as the default auto-routed answer model for OpenCode, coding, system administration, debugging, reasoning, and tool-heavy work.
+- `qwen3.7-plus`: OpenCode Go Qwen3.7 Plus cloud model. Good coding performance for general development and debugging.
+- `qwen3.7-max`: OpenCode Go Qwen3.7 Max cloud model. Strong reasoning and coding capabilities for complex tasks and advanced problem solving.
+- `qwen3.6-plus`: OpenCode Go Qwen3.6 Plus cloud model. Cost-effective option for architecture, reviews, analysis, and broad non-private planning.
 - `mistral-medium`: Mistral cloud model through LiteLLM, intended for architecture, reviews, analysis, and broad planning.
-- `deepseek-v4-pro`: OpenCode Go cloud model through LiteLLM, intended as the default auto-routed answer model for OpenCode, coding, system administration, debugging, reasoning, and tool-heavy work.
 - `openai-chatgpt`: ChatGPT subscription model through the ChatGPT OAuth backend, reserved for the hardest agentic coding work, risky broad refactors, difficult bugs, and high-stakes reviews.
 
 Auto-routing optimizes for the cheapest model that is likely to complete the task well:
 
 - Simple chat, summaries, short explanations, translation, and low-risk non-agentic tasks go to `mistral-small`.
+- Simple to medium coding tasks, quick fixes, and straightforward reasoning go to `deepseek-v4-flash`.
 - Most coding, OpenCode agent, shell/system inspection, debugging, NixOS/admin, container, service, log, build, and test work goes to `deepseek-v4-pro`.
+- General development, debugging, and medium-complexity coding tasks go to `qwen3.7-plus`.
+- Complex tasks, refactoring, and advanced problem solving go to `qwen3.7-max`.
+- Architecture, reviews, analysis, and broad non-private planning go to `qwen3.6-plus`.
 - Broad architecture, design tradeoffs, reviews, planning, and analysis-heavy work goes to `mistral-medium`.
 - The hardest, riskiest, most ambiguous, or high-stakes work goes to `openai-chatgpt`.
 - Local Qwen is used only for classification, not for answering.

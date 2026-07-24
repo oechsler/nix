@@ -43,7 +43,7 @@ MODEL_ROUTING = {
             "Cloud model for cheap, fast utility tasks like greetings, "
             "summaries, titles, and simple non-sensitive questions."
         ),
-        "fallbacks": ["deepseek-v4-pro", "mistral-medium", "openai-chatgpt"],
+        "fallbacks": ["deepseek-v4-flash", "qwen3.6-plus", "deepseek-v4-pro", "mistral-medium", "openai-chatgpt"],
     },
     "deepseek-v4-pro": {
         "description": (
@@ -51,21 +51,49 @@ MODEL_ROUTING = {
             "OpenCode answers, coding, reasoning, system administration, "
             "and tool-heavy agent work."
         ),
-        "fallbacks": ["mistral-medium", "openai-chatgpt"],
+        "fallbacks": ["deepseek-v4-flash", "qwen3.7-plus", "qwen3.7-max", "mistral-medium", "openai-chatgpt"],
+    },
+    "deepseek-v4-flash": {
+        "description": (
+            "OpenCode Go DeepSeek V4 Flash cloud model. Fast and cost-effective "
+            "for simple to medium coding tasks, quick fixes, and straightforward reasoning."
+        ),
+        "fallbacks": ["deepseek-v4-pro", "qwen3.7-plus", "mistral-medium", "openai-chatgpt"],
+    },
+    "qwen3.7-max": {
+        "description": (
+            "OpenCode Go Qwen3.7 Max cloud model. Strong reasoning and coding "
+            "capabilities for complex tasks, refactoring, and advanced problem solving."
+        ),
+        "fallbacks": ["deepseek-v4-pro", "qwen3.7-plus", "mistral-medium", "openai-chatgpt"],
+    },
+    "qwen3.7-plus": {
+        "description": (
+            "OpenCode Go Qwen3.7 Plus cloud model. Good coding performance "
+            "for general development, debugging, and medium-complexity reasoning."
+        ),
+        "fallbacks": ["qwen3.7-max", "deepseek-v4-pro", "mistral-medium", "openai-chatgpt"],
+    },
+    "qwen3.6-plus": {
+        "description": (
+            "OpenCode Go Qwen3.6 Plus cloud model. Cost-effective option for "
+            "architecture, reviews, analysis, and broad non-private planning."
+        ),
+        "fallbacks": ["qwen3.7-plus", "deepseek-v4-pro", "mistral-medium", "openai-chatgpt"],
     },
     "mistral-medium": {
         "description": (
             "Cloud model for architecture, reviews, analysis, "
             "product/design reasoning, and broad non-private planning."
         ),
-        "fallbacks": ["deepseek-v4-pro", "openai-chatgpt"],
+        "fallbacks": ["deepseek-v4-pro", "qwen3.7-max", "openai-chatgpt"],
     },
     "openai-chatgpt": {
         "description": (
             "ChatGPT subscription model for the hardest coding, agentic, "
             "debugging, review, and refactoring work when cloud use is acceptable."
         ),
-        "fallbacks": ["deepseek-v4-pro", "mistral-medium"],
+        "fallbacks": ["deepseek-v4-pro", "qwen3.7-max", "mistral-medium"],
     },
 }
 
@@ -145,9 +173,15 @@ are tool-heavy agent work.
 Cost/complexity routing policy:
 - Choose mistral-small for greetings, simple Q&A, rewriting, summaries, classification,
   translation, short explanations, and other low-risk non-agentic tasks.
+- Choose deepseek-v4-flash for simple to medium coding tasks, quick fixes, and straightforward
+  reasoning. Cost-effective alternative to deepseek-v4-pro.
 - Choose deepseek-v4-pro for most OpenCode agent work: coding, file edits, shell/system
   inspection, debugging, build/test failures, NixOS/admin tasks, containers, services,
   logs, and medium-complexity reasoning. This is the default best price/performance model.
+- Choose qwen3.7-plus for general development, debugging, and medium-complexity coding tasks.
+- Choose qwen3.7-max for complex tasks, refactoring, and advanced problem solving requiring
+  strong reasoning and coding capabilities.
+- Choose qwen3.6-plus for architecture, reviews, analysis, and broad non-private planning.
 - Choose mistral-medium for broad architecture, design tradeoffs, reviews, product/planning,
   analysis-heavy tasks, or when communication quality matters more than tool use.
 - Choose openai-chatgpt only when the task is unusually hard, ambiguous, multi-step,
@@ -157,8 +191,10 @@ Choose openai-chatgpt only for the hardest coding-agent tasks, risky broad refac
 very difficult bugs, high-stakes reviews, or ambiguous multi-step work when the user did not ask
 for local/private handling and cheaper models are less likely to succeed.
 
-If a task is complex and privacy is not requested, prefer deepseek-v4-pro for coding,
-mistral-medium for architecture/review/analysis, and openai-chatgpt only for the hardest cases.
+If a task is complex and privacy is not requested, prefer deepseek-v4-flash for simple/medium
+coding, deepseek-v4-pro for most agent work, qwen3.7-plus for general coding, qwen3.7-max for
+complex reasoning, qwen3.6-plus for architecture/review/analysis, mistral-medium for
+architecture/review/analysis, and openai-chatgpt only for the hardest cases.
 If the user asks for local/private/offline handling, choose the cheapest cloud model that can answer
 without pretending to be local. The current router is configured for cloud execution only.
 
