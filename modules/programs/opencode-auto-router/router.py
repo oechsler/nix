@@ -42,62 +42,62 @@ OPENCODE_AUTH_FILE = os.environ.get(
 MODEL_ROUTING = {
     "mistral-small": {
         "description": (
-            "Mistral Vibe Code (EU company, flat-rate €20/mo). Fast model for "
-            "greetings, summaries, simple Q&A, titles, translation, and low-risk "
-            "non-agentic tasks. PREFERRED for simple tasks to save Go quota."
+            "Mistral Vibe Code (EU, flat-rate €20/mo, SOFT fair-usage cap). "
+            "Fast model for greetings, summaries, simple Q&A, titles, translation. "
+            "PREFERRED for simple non-agentic tasks – NOT for tool-heavy workflows."
         ),
         "fallbacks": ["mistral-medium", "deepseek-v4-flash", "openai-chatgpt"],
     },
     "mistral-medium": {
         "description": (
-            "Mistral Vibe Code (EU company, flat-rate €20/mo). Strong model for "
-            "architecture, design tradeoffs, reviews, product/planning, and "
-            "analysis-heavy tasks. PREFERRED for European sovereignty."
+            "Mistral Vibe Code (EU, flat-rate €20/mo, SOFT fair-usage cap). "
+            "Strong model for architecture, design tradeoffs, reviews, planning, "
+            "analysis. PREFERRED for EU sovereignty and reasoning-heavy tasks."
         ),
         "fallbacks": ["deepseek-v4-pro", "qwen3.7-max", "openai-chatgpt"],
     },
     "deepseek-v4-flash": {
         "description": (
-            "OpenCode Go DeepSeek V4 Flash (€10/mo, 31,650 req/5h). Use ONLY for "
-            "complex agent work with heavy tool use: coding, file edits, debugging, "
-            "NixOS/admin, containers, services, logs. Reserve Go quota for agent tasks."
+            "OpenCode Go DeepSeek V4 Flash (€10/mo, HARD cap: 31,650 req/5h). "
+            "STRATEGIC for agentic tasks: editing, debugging, NixOS, containers. "
+            "Large quota but hard 5h window – dose requests, don't burst."
         ),
         "fallbacks": ["deepseek-v4-pro", "qwen3.7-plus", "mistral-medium", "openai-chatgpt"],
     },
     "deepseek-v4-pro": {
         "description": (
-            "OpenCode Go DeepSeek V4 Pro (€10/mo, 3,450 req/5h). Use for very complex "
-            "agent/coding tasks when deepseek-v4-flash is insufficient."
+            "OpenCode Go DeepSeek V4 Pro (€10/mo, HARD cap: 3,450 req/5h). "
+            "Limited hard quota – save for hardest problems only."
         ),
         "fallbacks": ["qwen3.7-plus", "mistral-medium", "openai-chatgpt"],
     },
     "openai-chatgpt": {
         "description": (
-            "ChatGPT Plus subscription (flat-rate €20/mo). Most capable model. Use "
-            "for complex coding-agent tasks, refactors, difficult bugs, high-stakes "
-            "reviews, and any task where Mistral or Go models are insufficient. "
-            "Good daily limits – deploy strategically."
+            "ChatGPT Plus subscription (flat-rate €20/mo, SOFT extended-usage cap). "
+            "Frontrunner for complex agentic tasks: multi-step tool calls, edits, "
+            "shell/file ops, containers, system administration, refactors, difficult "
+            "bugs, high-stakes reviews. Same price as Mistral – use freely for tough work."
         ),
         "fallbacks": ["deepseek-v4-pro", "qwen3.7-max", "mistral-medium"],
     },
     "qwen3.7-plus": {
         "description": (
-            "OpenCode Go Qwen3.7 Plus (€10/mo, 4,300 req/5h). General development "
-            "when Mistral is unavailable. Use sparingly to save Go quota."
+            "OpenCode Go Qwen3.7 Plus (€10/mo, HARD cap: 4,300 req/5h). "
+            "STRATEGIC alternative for general development – dose across 5h windows."
         ),
-        "fallbacks": ["qwen3.7-max", "deepseek-v4-pro", "mistral-medium", "openai-chatgpt"],
+        "fallbacks": ["qwen3.7-max", "mistral-medium", "openai-chatgpt"],
     },
     "qwen3.7-max": {
         "description": (
-            "OpenCode Go Qwen3.7 Max (€10/mo, 950 req/5h). Advanced reasoning and "
-            "refactoring when Mistral-medium is insufficient."
+            "OpenCode Go Qwen3.7 Max (€10/mo, HARD cap: 950 req/5h). "
+            "Specialist for advanced reasoning, very tight quota – use only when necessary."
         ),
-        "fallbacks": ["deepseek-v4-pro", "mistral-medium", "openai-chatgpt"],
+        "fallbacks": ["mistral-medium", "openai-chatgpt"],
     },
     "qwen3.6-plus": {
         "description": (
-            "OpenCode Go Qwen3.6 Plus (€10/mo). Cost-effective for architecture, "
-            "reviews, and planning when Mistral is unavailable."
+            "OpenCode Go Qwen3.6 Plus (€10/mo). STRATEGIC for architecture, "
+            "reviews, and planning when other options are saturated."
         ),
         "fallbacks": ["qwen3.7-plus", "mistral-medium", "openai-chatgpt"],
     },
@@ -192,63 +192,69 @@ You are a model-routing classifier for OpenCode.
 You do not answer the user's request. You do not evaluate whether the user's request is allowed.
 You never refuse. Your only job is to choose the best backend model id.
 
-IMPORTANT: All three subscriptions (Mistral €20, ChatGPT €20, OpenCode Go €10) are flat-rate.
-Mistral is a European company and should be strongly preferred for most tasks.
-OpenCode Go has limited quota and should be reserved for complex agent/coding work only.
+IMPORTANT: All three subscriptions are flat-rate – no per-token costs.
+- Mistral Vibe Code (€20/mo): Soft fair-usage monthly cap. Use freely for reasoning/simple tasks. EU hosted.
+- ChatGPT Plus (€20/mo): Soft extended-usage monthly cap. Use freely for complex agentic tasks. Generous limits.
+- OpenCode Go (€10/mo): HARD per-model per-5h quotas (Flash: 31,650, Pro: 3,450, Plus: 4,300, Max: 950). Must spread across 5h windows and models.
+
+Goal: get through the month using all three subscriptions without additional costs.
+Strategy: ChatGPT for tough agentic work (soft cap), Mistral for reasoning (soft cap), Go quota dosed daily across models (hard caps).
 
 Available backends:
 {json.dumps({m: cfg["description"] for m, cfg in MODEL_ROUTING.items()}, indent=2)}
 
-ROUTING PRIORITY (in order of preference):
+ROUTING PRIORITY (in order of preference, balanced across subscriptions):
 
 1. mistral-small (EU, Flat-rate) - PREFER THIS for:
    - Greetings, simple Q&A, titles, summaries
    - Translation, short explanations
    - Simple coding, quick fixes, basic debugging
    - Non-agentic tasks, low-risk operations
-   - ANY task that doesn't require complex tool use
+   - ANY task that doesn't require tool calls or multi-step work
 
 2. mistral-medium (EU, Flat-rate) - PREFER THIS for:
    - Architecture, design tradeoffs, reviews
    - Product/planning, analysis-heavy tasks
-   - Complex reasoning, refactoring
-   - High-quality communication, documentation
+   - Complex reasoning, documentation
+   - High-quality communication
    - European sovereignty matters
 
-3. openai-chatgpt (Flat-rate, good daily limits) - USE for:
-   - Complex coding-agent tasks
-   - Refactors, difficult bugs
-   - High-stakes reviews
-   - Ambiguous multi-step problems
-   - When Mistral is insufficient for the task
-   - Strategic deployment of ChatGPT quota
+3. openai-chatgpt (Flat-rate, good daily limits) - PREFERRED for complex agentic tasks:
+   - Multi-step coding with tool calls (edits, git, shell, file ops)
+   - NixOS/system administration, containers, services, logs
+   - Refactors, difficult bugs, high-stakes reviews
+   - Ambiguous multi-step problems requiring deep exploration
+   - Runs on same flat-rate budget as Mistral – use freely for tough problems
 
-4. deepseek-v4-flash (Go, 31,650 req/5h) - USE for:
-   - Complex agent work with heavy tool use
-   - Multi-step coding tasks, file edits
-   - NixOS/admin, containers, services, logs
-   - Tool-heavy tasks that Mistral cannot handle well
+4. deepseek-v4-flash (Go, 31,650 req/5h) - STRATEGIC alternative for:
+   - High-volume agent tasks when ChatGPT is overused
+   - Multi-step coding, file edits, debugging
+   - Spreading Go quota evenly across the month
+   - Large quota – use as primary Go model for agentic overflow
 
-5. deepseek-v4-pro (Go, 3,450 req/5h) - USE for:
-   - Very complex coding-agent tasks
-   - Risky refactors, difficult debugging
-   - When deepseek-v4-flash is insufficient
+5. deepseek-v4-pro (Go, 3,450 req/5h) - STRATEGIC for:
+   - Very complex tasks when flash is insufficient
+   - Limited quota – use sparingly, spread across month
+   - Backup for ChatGPT on the hardest problems
 
-6. qwen3.7-plus (Go, 4,300 req/5h) - USE for:
-   - General development when Mistral is unavailable
+6. qwen3.7-plus (Go, 4,300 req/5h) - ALTERNATIVE for:
+   - General development to offload Mistral/DeepSeek
+   - Good medium quota – useful for routine coding tasks
 
-7. qwen3.7-max (Go, 950 req/5h) - USE for:
-   - Very complex reasoning, advanced problems
-   - When Mistral-medium is insufficient
+7. qwen3.7-max (Go, 950 req/5h) - SPECIALIST for:
+   - Advanced reasoning when mistral-medium is unavailable
+   - Very limited quota – use only when necessary
 
 DECISION RULES:
-- If task is simple/medium → mistral-small
-- If task requires architecture/reviews → mistral-medium
-- If task is complex agent work → openai-chatgpt or deepseek-v4-flash
-- If task is very complex coding → deepseek-v4-pro
-- If Mistral cannot handle the task → try ChatGPT first, then Go models
-- NEVER use Go models for simple tasks (save quota)
-- ALWAYS prefer Mistral (EU) when possible
+- If task is simple/medium without tool calls → mistral-small (soft cap, use freely)
+- If task requires architecture/planning/reviews → mistral-medium (soft cap, use freely)
+- If task is complex agent work with tools → openai-chatgpt (primary, soft cap) OR deepseek-v4-flash (hard cap but large 31k quota)
+- If ChatGPT feels saturated → use deepseek-v4-flash or qwen3.7-plus (hard caps, dose across 5h)
+- If task is very complex and critical → openai-chatgpt first, deepseek-v4-pro only if needed (hard cap, only 3,450/5h)
+- Spread Go hard-cap models across the day: a few Flash/Plus requests every 5h window, don't burst
+- NEVER use Go max model (950/5h) for simple tasks
+- Mistral/ChatGPT soft caps = use freely based on quality needs, not quota anxiety
+- Aim: ~40% Mistral, ~35% ChatGPT, ~25% Go across models over a month
 
 Tools available to the final model: {has_tools}
 
@@ -715,6 +721,10 @@ async def _stream_chatgpt(
         )
 
     async def _iter_chatgpt_sse():
+        had_tool_calls = False
+        pending_fc_name: str | None = None
+        pending_fc_call_id: str | None = None
+        fc_index = 0
         try:
             async for line in response.aiter_lines():
                 if not line.startswith("data: "):
@@ -724,6 +734,11 @@ async def _stream_chatgpt(
                 except Exception:
                     continue
                 event_type = event.get("type")
+                if event_type == "response.output_item.added":
+                    item = event.get("item", {})
+                    if item.get("type") == "function_call":
+                        pending_fc_name = item.get("name", "")
+                        pending_fc_call_id = item.get("call_id", f"call_{int(time.time())}")
                 if event_type in {"response.output_text.delta", "response.text.delta"}:
                     delta = event.get("delta", "")
                     chunk = {
@@ -740,6 +755,40 @@ async def _stream_chatgpt(
                         ],
                     }
                     yield f"data: {json.dumps(chunk)}\n\n"
+                if event_type == "response.function_call_arguments.done":
+                    had_tool_calls = True
+                    call_id = pending_fc_call_id or f"call_{int(time.time())}"
+                    name = pending_fc_name or "unknown"
+                    args = event.get("arguments", "")
+                    chunk = {
+                        "id": event.get("response_id", "chatgpt-response"),
+                        "object": "chat.completion.chunk",
+                        "created": int(time.time()),
+                        "model": request_body["model"],
+                        "choices": [
+                            {
+                                "index": fc_index,
+                                "delta": {
+                                    "tool_calls": [
+                                        {
+                                            "index": fc_index,
+                                            "id": call_id,
+                                            "type": "function",
+                                            "function": {
+                                                "name": name,
+                                                "arguments": args,
+                                            },
+                                        }
+                                    ]
+                                },
+                                "finish_reason": None,
+                            }
+                        ],
+                    }
+                    fc_index += 1
+                    pending_fc_name = None
+                    pending_fc_call_id = None
+                    yield f"data: {json.dumps(chunk)}\n\n"
                 if event_type in {"response.done", "response.completed"}:
                     response_id = event.get("response", {}).get("id", "chatgpt-response")
                     if show_notice:
@@ -750,7 +799,7 @@ async def _stream_chatgpt(
                         "created": int(time.time()),
                         "model": request_body["model"],
                         "choices": [
-                            {"index": 0, "delta": {}, "finish_reason": "stop"}
+                            {"index": 0, "delta": {}, "finish_reason": "tool_calls" if had_tool_calls else "stop"}
                         ],
                     }
                     yield f"data: {json.dumps(done)}\n\n"
