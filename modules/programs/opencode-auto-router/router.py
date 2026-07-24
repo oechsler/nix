@@ -159,6 +159,13 @@ MODEL_ROUTING = {
         ),
         "fallbacks": ["mistral-small"],
     },
+    "llama3.2:3b": {
+        "description": (
+            "Local Llama 3.2 3B model on Ollama. Lightweight classifier model. "
+            "Not for auto-routing as an answer model."
+        ),
+        "fallbacks": ["qwen3:8b"],
+    },
 }
 
 DIRECT_MODELS = set(MODEL_ROUTING)
