@@ -111,7 +111,6 @@ MODEL_ROUTING = {
 }
 
 DIRECT_MODELS = set(MODEL_ROUTING)
-MODEL_NOTICE_PREFIX = "Routed to"
 
 # ---------------------------------------------------------------------------
 # ChatGPT / OpenAI OAuth
@@ -321,8 +320,8 @@ def _model_notice(model: str, original_model: str | None = None) -> str:
 
 def _model_notice_text(model: str, original_model: str | None = None) -> str:
     if original_model and original_model != model:
-        return f"[{MODEL_NOTICE_PREFIX}: {original_model} -> {model}]"
-    return f"[{MODEL_NOTICE_PREFIX}: {model}]"
+        return f"[{original_model} -> {model}]"
+    return f"[{model}]"
 
 
 def _notice_chunk(model: str, content: str) -> dict[str, Any]:
