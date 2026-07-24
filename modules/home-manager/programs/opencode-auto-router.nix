@@ -89,7 +89,7 @@ let
     echo "[opencode-auto-router] Cleaning up models not in config …"
     ${pkgs.podman}/bin/podman exec opencode-ollama ollama list \
       | tail -n +2 \
-      | cut -f1 \
+      | awk '{print $1}' \
       | while IFS= read -r m; do
           case " ${desiredModelsStr} " in
             *" $m "*) ;;
