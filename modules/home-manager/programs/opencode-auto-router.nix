@@ -73,18 +73,18 @@ let
 
   mkSyncScript = ''
     set -e
-    >&2 echo "[opencode-auto-router] Waiting for ollama container …"
+    echo "[opencode-auto-router] Waiting for ollama container …"
     until ${podman} exec opencode-ollama ollama list >/dev/null 2>&1; do
       sleep 2
     done
 
-    >&2 echo "[opencode-auto-router] Pulling desired models …"
+    echo "[opencode-auto-router] Pulling desired models …"
   ''
   + lib.concatMapStringsSep "\n" (model: ''
     ${podman} exec opencode-ollama ollama pull ${lib.escapeShellArg model}
   '') desiredModels
   + ''
-    >&2 echo "[opencode-auto-router] Cleaning up models not in config …"
+    echo "[opencode-auto-router] Cleaning up models not in config …"
     # Parse "ollama list" (tab-separated: NAME\tID\tSIZE\tMODIFIED)
     ${podman} exec opencode-ollama ollama list \
       | tail -n +2 \
@@ -93,12 +93,12 @@ let
           case " ${desiredModelsStr} " in
             *" $m "*) ;;
             *)
-              >&2 echo "[opencode-auto-router] Removing stale model: $m"
+              echo "[opencode-auto-router] Removing stale model: $m"
               ${podman} exec opencode-ollama ollama rm "$m"
               ;;
           esac
         done
-    >&2 echo "[opencode-auto-router] Models synced."
+    echo "[opencode-auto-router] Models synced."
   '';
 
   routerModelsStr = lib.concatStringsSep "," routerModels;
