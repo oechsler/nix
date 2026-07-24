@@ -486,6 +486,25 @@ def _chat_to_responses_body(body: dict[str, Any]) -> dict[str, Any]:
                 "output": message.get("content", ""),
             })
             continue
+        # Convert assistant tool_calls to function_call items
+        tool_calls = message.get("tool_calls")
+        if role == "assistant" and tool_calls:
+            text = message.get("content") or ""
+            if text:
+                input_items.append({
+                    "type": "message",
+                    "role": role,
+                    "content": _chat_to_responses_content(text, assistant=True),
+                })
+            for tc in tool_calls:
+                fn = tc.get("function", {})
+                input_items.append({
+                    "type": "function_call",
+                    "call_id": tc.get("id", "unknown"),
+                    "name": fn.get("name", "unknown"),
+                    "arguments": fn.get("arguments", "{}"),
+                })
+            continue
         input_items.append({
             "type": "message",
             "role": role,
