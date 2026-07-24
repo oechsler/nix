@@ -22,6 +22,7 @@
     ./fish.nix
     ./git.nix
     ./neovim.nix
+    ./opencode-auto-router.nix
     ./proton-pass.nix
     ./terminal.nix
     ./tmux.nix
