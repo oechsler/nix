@@ -113,56 +113,58 @@
             local = {
               npm = "@ai-sdk/openai-compatible";
               name = "Local";
-              options = {
-                baseURL = "http://127.0.0.1:4000/v1";
-                apiKey = "dummy";
-                timeout = 600000;
-              };
-              models.auto = {
-                name = "Auto";
-                tool_call = true;
-                temperature = true;
-                limit = {
-                  context = 128000;
-                  output = 32768;
+                options = {
+                  baseURL = "http://127.0.0.1:4000/v1";
+                  apiKey = "dummy";
+                  timeout = 600000;
                 };
-              };
-              models.mistral-small = {
-                name = "Mistral Small";
-                tool_call = true;
-                temperature = true;
-                limit = {
-                  context = 128000;
-                  output = 32768;
-                };
-              };
-              models.mistral-medium = {
-                name = "Mistral Medium";
-                tool_call = true;
-                temperature = true;
-                limit = {
-                  context = 128000;
-                  output = 32768;
-                };
-              };
-              models.deepseek-v4-pro = {
-                name = "DeepSeek V4 Pro";
-                tool_call = true;
-                temperature = true;
-                limit = {
-                  context = 128000;
-                  output = 32768;
-                };
-              };
-              models.openai-chatgpt = {
-                name = "ChatGPT 5.5";
-                tool_call = true;
-                temperature = true;
-                limit = {
-                  context = 128000;
-                  output = 32768;
-                };
-              };
+                models = {
+                 auto = {
+                   name = "Auto";
+                   tool_call = true;
+                   temperature = true;
+                   limit = {
+                     context = 128000;
+                     output = 32768;
+                   };
+                 };
+                 mistral-small = {
+                   name = "Mistral Small";
+                   tool_call = true;
+                   temperature = true;
+                   limit = {
+                     context = 128000;
+                     output = 32768;
+                   };
+                 };
+                 mistral-medium = {
+                   name = "Mistral Medium";
+                   tool_call = true;
+                   temperature = true;
+                   limit = {
+                     context = 128000;
+                     output = 32768;
+                   };
+                 };
+                 deepseek-v4-pro = {
+                   name = "DeepSeek V4 Pro";
+                   tool_call = true;
+                   temperature = true;
+                   limit = {
+                     context = 128000;
+                     output = 32768;
+                   };
+                 };
+                 openai-chatgpt = {
+                   name = "ChatGPT 5.5";
+                   tool_call = true;
+                   temperature = true;
+                   limit = {
+                     context = 128000;
+                     output = 32768;
+                   };
+                 };
+               };
             };
           };
         };
