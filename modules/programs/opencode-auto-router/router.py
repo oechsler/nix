@@ -911,7 +911,11 @@ async def chat_completions(request: Request):
         and requested_model not in DIRECT_MODELS
     )
     body = _add_agent_instruction(body, has_tools)
-    candidates = _fallback_chain(target_model)
+    candidates = (
+        [target_model]
+        if requested_model in DIRECT_MODELS
+        else _fallback_chain(target_model)
+    )
 
     logger.info(
         "fallback chain target_model=%s candidates=%s",
