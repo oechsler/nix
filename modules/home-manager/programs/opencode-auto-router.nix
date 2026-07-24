@@ -230,12 +230,17 @@ in
             "opencode-auto-router-sync-models.service"
           ];
           Requires = [ "opencode-auto-router-pod.service" ];
-          BindsTo = [ "opencode-auto-router-load-image.service" ];
-          Wants = [ "opencode-auto-router-sync-models.service" ];
+          Wants = [
+            "opencode-auto-router-load-image.service"
+            "opencode-auto-router-sync-models.service"
+          ];
           PartOf = [ "opencode-auto-router-pod.service" ];
         };
         Service = {
-          ExecStartPre = "-${podman} rm -f opencode-auto-router";
+          ExecStartPre = [
+            "${podman} load -i ${routerImage}"
+            "-${podman} rm -f opencode-auto-router"
+          ];
           ExecStart = lib.concatStringsSep " " [
             podman
             "run"
