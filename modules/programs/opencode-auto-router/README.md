@@ -43,21 +43,31 @@ For an automatic request:
 
 Models are listed once below in the approximate order of work they are intended to handle. The local classifier uses the complete conversation, not only the latest sentence.
 
-| Model | Provider | Intended use |
-| --- | --- | --- |
-| `mistral-small` | Mistral | Chat, translation, summaries, titles, and simple questions without tools |
-| `mistral-medium` | Mistral | Architecture, planning, reviews, and analysis without tools |
-| `deepseek-v4-flash` | OpenCode Go | Default for routine coding, debugging, shell work, tests, and file edits |
-| `deepseek-v4-pro` | OpenCode Go | Difficult focused engineering and debugging |
-| `qwen3.7-plus` | OpenCode Go | General development, broad edits, and an alternative to DeepSeek Flash |
-| `qwen3.7-max` | OpenCode Go | Advanced reasoning without broad tool coordination |
-| `qwen3.6-plus` | OpenCode Go | General coding when other OpenCode Go models are unavailable |
-| `openai-luna` / `openai-luna-fast` | ChatGPT | Daily agentic development; `fast` uses the priority service tier |
-| `openai-sol` / `openai-sol-fast` | ChatGPT | Complex debugging, refactoring, and multi-step tool use |
-| `openai-terra` / `openai-terra-fast` | ChatGPT | Ambiguous, critical, or high-stakes work; Terra is the strongest tier |
-| `qwen3:8b` | Local Ollama | Manual offline or privacy-sensitive work; not selected as an answer model by auto-routing |
+### Mistral
 
-The broad routing policy is:
+- **`mistral-small`** — Chat, translation, summaries, titles, and simple questions without tools
+- **`mistral-medium`** — Architecture, planning, reviews, and analysis without tools
+
+### OpenCode Go
+
+- **`deepseek-v4-flash`** — Routine coding, debugging, shell work, tests, and file edits
+- **`deepseek-v4-pro`** — Difficult focused engineering and debugging
+- **`qwen3.7-plus`** — General development, broad edits, and an alternative to DeepSeek Flash
+- **`qwen3.7-max`** — Advanced reasoning without broad tool coordination
+- **`qwen3.6-plus`** — General coding when other OpenCode Go models are unavailable
+
+### ChatGPT
+
+- **`openai-luna` / `openai-luna-fast`** — Daily agentic development; fast uses the priority service tier
+- **`openai-sol` / `openai-sol-fast`** — Complex debugging, refactoring, and multi-step tool use
+- **`openai-terra` / `openai-terra-fast`** — Ambiguous, critical, or high-stakes work; strongest tier
+
+### Local Ollama
+
+- **`llama3.2:3b`** — Local classifier and fallback classifier; not selected as an answer model by auto-routing
+- **`qwen3:8b`** — Manual offline or privacy-sensitive work; not selected as an answer model by auto-routing
+
+The broad routing policy:
 
 - Simple, non-agentic requests use Mistral Small.
 - Analysis and design without tools use Mistral Medium.
@@ -89,14 +99,14 @@ There is intentionally no label or prefix so routing metadata stays secondary to
 
 ## Providers and Authentication
 
-LiteLLM is not an AI provider. It is the local compatibility layer at `127.0.0.1:8000` that gives the router one OpenAI-compatible endpoint for Mistral and OpenCode Go.
+LiteLLM is not an AI provider. It is the local compatibility layer at 127.0.0.1:8000 that gives the router one OpenAI-compatible endpoint for Mistral and OpenCode Go.
 
-| Provider | Models | Credential source |
-| --- | --- | --- |
-| Mistral API | Mistral Small and Medium | SOPS secret `opencode/mistral/api-key`, exposed to LiteLLM as `MISTRAL_API_KEY` |
-| OpenCode Go | DeepSeek and Qwen cloud models | SOPS secret `opencode/opencode-go/api-key`, exposed to LiteLLM as `OPENCODE_GO_API_KEY` |
-| ChatGPT subscription | Luna, Sol, Terra, and fast variants | OpenCode OAuth entry in `~/.local/share/opencode/auth.json` |
-| Local Ollama | Classifier models and manual `qwen3:8b` | No external credential |
+### Provider Authentication
+
+- **Mistral API** — SOPS secret `opencode/mistral/api-key`, exposed to LiteLLM as `MISTRAL_API_KEY`
+- **OpenCode Go** — SOPS secret `opencode/opencode-go/api-key`, exposed to LiteLLM as `OPENCODE_GO_API_KEY`
+- **ChatGPT subscription** — OpenCode OAuth entry in `~/.local/share/opencode/auth.json`
+- **Local Ollama** — No external credential
 
 The SOPS secrets are rendered into a systemd-managed environment file and passed only to the LiteLLM container. They are not stored in `litellm.yaml`.
 
@@ -104,16 +114,14 @@ ChatGPT authentication works differently. OpenCode creates the OAuth entry throu
 
 ## Manual Selection
 
-Select `local/auto` for normal use. To bypass classification and automatic fallback, choose a specific `local/<model>` entry in OpenCode, for example `local/openai-terra` or `local/qwen3:8b`.
+Select `local/auto` for normal use. To bypass classification and automatic fallback, choose any specific `local/<model>` entry in OpenCode, for example `local/openai-terra`, `local/qwen3:8b`, or `local/llama3.2:3b`.
 
 ## Components
 
-| Component | Address | Responsibility |
-| --- | --- | --- |
-| `opencode-auto-router` | `127.0.0.1:4000` | Classification, backend selection, ChatGPT OAuth, fallback, and response metadata |
-| `opencode-litellm` | `127.0.0.1:8000` | OpenAI-compatible adapter for Mistral and OpenCode Go |
-| `opencode-ollama` | `127.0.0.1:11434` | Local classifier and offline model runtime |
-| `opencode-auto-router-sync-models.service` | n/a | Pulls configured Ollama models and removes stale ones |
+- **`opencode-auto-router`** at `127.0.0.1:4000` — Classification, backend selection, ChatGPT OAuth, fallback, and response metadata
+- **`opencode-litellm`** at `127.0.0.1:8000` — OpenAI-compatible adapter for Mistral and OpenCode Go
+- **`opencode-ollama`** at `127.0.0.1:11434` — Local classifier and offline model runtime
+- **`opencode-auto-router-sync-models.service`** — Pulls configured Ollama models and removes stale ones
 
 All three containers run rootless in one Podman pod and communicate through localhost.
 
