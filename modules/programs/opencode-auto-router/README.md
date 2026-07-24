@@ -128,7 +128,7 @@ The `qwen3:8b` model runs locally via Ollama and requires no external authentica
 ### OpenAI/ChatGPT
 OpenCode authenticates with ChatGPT/OpenAI through `opencode-openai-codex-auth`. The auto-router reuses the OAuth tokens stored in `~/.local/share/opencode/auth.json` and refreshes them when needed.
 
-The ChatGPT backend endpoint contains `codex` in the URL as it uses the official Codex CLI/OAuth backend path. Model slugs are:
+The ChatGPT backend endpoint uses the official Codex CLI/OAuth backend path. Model slugs are:
 
 - `gpt-5.6-terra`
 - `gpt-5.6-sol`
