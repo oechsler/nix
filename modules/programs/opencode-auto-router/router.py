@@ -23,10 +23,9 @@ logger = logging.getLogger("opencode-auto-router")
 LITELLM_URL = os.environ.get("LITELLM_URL", "http://127.0.0.1:8000/v1")
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 ROUTER_MODELS = os.environ.get(
-    "ROUTER_MODELS", "qwen3:8b,llama3.2:3b"
+    "ROUTER_MODELS", "llama3.2:3b,qwen3:8b"
 ).split(",")
 DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "deepseek-v4-pro")
-OPENAI_CHATGPT_MODEL = os.environ.get("OPENAI_CHATGPT_MODEL", "gpt-5.5")
 OPENCODE_AUTH_FILE = os.environ.get(
     "OPENCODE_AUTH_FILE", "/var/lib/opencode/auth.json"
 )
@@ -54,7 +53,7 @@ MODEL_ROUTING = {
             "Strong model for architecture, design tradeoffs, reviews, planning, "
             "analysis. PREFERRED for EU sovereignty and reasoning-heavy tasks without tools."
         ),
-        "fallbacks": ["openai-chatgpt"],
+        "fallbacks": ["openai-terra"],
     },
     "deepseek-v4-flash": {
         "description": (
@@ -63,22 +62,70 @@ MODEL_ROUTING = {
             "search, refactors, NixOS, containers. Largest Go quota – first choice "
             "for tool-based development work."
         ),
-        "fallbacks": ["openai-chatgpt"],
+        "fallbacks": ["openai-luna-fast"],
     },
     "deepseek-v4-pro": {
         "description": (
             "OpenCode Go DeepSeek V4 Pro (€10/mo, HARD cap: 3,450 req/5h). "
             "For the hardest problems when flash is insufficient. Limited quota."
         ),
-        "fallbacks": ["openai-chatgpt"],
+        "fallbacks": ["openai-sol"],
     },
-    "openai-chatgpt": {
+    "openai-terra": {
         "description": (
-            "ChatGPT Plus subscription (flat-rate €20/mo, SOFT extended-usage cap). "
-            "Best for complex multi-step agentic workflows: deep exploration, "
-            "ambiguous problems, high-stakes reviews, system administration. "
-            "Use when Go quota is exhausted or task demands top-tier reasoning with tools."
+            "ChatGPT 5.6 Terra (Plus, flat-rate €20/mo, SOFT cap). "
+            "Top-tier for the hardest agentic work: ambiguous multi-step exploration, "
+            "race conditions, high-stakes system administration, critical bugs."
         ),
+        "chatgpt_model": "gpt-5.6-terra",
+        "fallbacks": ["openai-sol"],
+    },
+    "openai-sol": {
+        "description": (
+            "ChatGPT 5.6 Sol (Plus, flat-rate €20/mo, SOFT cap). "
+            "Strong model for complex coding, debugging, refactoring, and "
+            "tool-heavy development work. Balanced between speed and reasoning."
+        ),
+        "chatgpt_model": "gpt-5.6-sol",
+        "fallbacks": ["openai-luna"],
+    },
+    "openai-luna": {
+        "description": (
+            "ChatGPT 5.6 Luna (Plus, flat-rate €20/mo, SOFT cap). "
+            "General-purpose coding, editing, shell commands, NixOS/config work. "
+            "Good daily-driver for most development tasks."
+        ),
+        "chatgpt_model": "gpt-5.6-luna",
+        "fallbacks": ["openai-terra-fast"],
+    },
+    "openai-terra-fast": {
+        "description": (
+            "ChatGPT 5.6 Terra Fast (Plus, flat-rate €20/mo, SOFT cap). "
+            "Faster variant of Terra. Complex tasks at higher throughput – "
+            "good for urgent hard problems when quota allows."
+        ),
+        "chatgpt_model": "gpt-5.6-terra",
+        "service_tier": "priority",
+        "fallbacks": ["openai-sol-fast"],
+    },
+    "openai-sol-fast": {
+        "description": (
+            "ChatGPT 5.6 Sol Fast (Plus, flat-rate €20/mo, SOFT cap). "
+            "Fast variant of Sol. Solid coding performance with quick turnaround "
+            "for development, debugging, and refactors."
+        ),
+        "chatgpt_model": "gpt-5.6-sol",
+        "service_tier": "priority",
+        "fallbacks": ["openai-luna-fast"],
+    },
+    "openai-luna-fast": {
+        "description": (
+            "ChatGPT 5.6 Luna Fast (Plus, flat-rate €20/mo, SOFT cap). "
+            "Fastest ChatGPT option for simple to medium coding tasks, "
+            "file edits, shell commands. High throughput daily use."
+        ),
+        "chatgpt_model": "gpt-5.6-luna",
+        "service_tier": "priority",
         "fallbacks": ["deepseek-v4-flash"],
     },
     "qwen3.7-plus": {
@@ -95,7 +142,7 @@ MODEL_ROUTING = {
             "Specialist for advanced reasoning. Very tight quota – use only "
             "when mistral-medium is unavailable."
         ),
-        "fallbacks": ["openai-chatgpt"],
+        "fallbacks": ["openai-terra"],
     },
     "qwen3.6-plus": {
         "description": (
@@ -114,12 +161,16 @@ MODEL_ROUTING = {
 }
 
 DIRECT_MODELS = set(MODEL_ROUTING)
+CHATGPT_MODELS = {
+    m for m, cfg in MODEL_ROUTING.items() if "chatgpt_model" in cfg
+}
 
 # ---------------------------------------------------------------------------
 # ChatGPT / OpenAI OAuth
 #
 # ChatGPT subscription traffic uses the same backend path and OAuth flow as
-# the OpenAI Codex CLI. The routed model is OPENAI_CHATGPT_MODEL.
+# the OpenAI Codex CLI. The routed model name comes from the chatgpt_model
+# field in MODEL_ROUTING.
 # ---------------------------------------------------------------------------
 
 OPENAI_TOKEN_URL = "https://auth.openai.com/oauth/token"
@@ -168,7 +219,7 @@ def routing_context(messages: list[dict[str, Any]]) -> str:
 # Simple in-memory TTL cache: (prompt_hash, has_tools) → model_id
 _classification_cache: dict[tuple[int, bool], tuple[float, str]] = {}
 
-_CLASSIFICATION_TIMEOUT = 3  # seconds
+_CLASSIFICATION_TIMEOUT = 8  # seconds
 _CACHE_TTL = 300  # seconds
 
 
@@ -218,6 +269,8 @@ LEVEL 3 - Standard coding with tools:
 - NixOS config, containers, services
 - Examples: "Search files and edit code", "Run tests and fix failures", "Debug this service"
 - → deepseek-v4-flash for normal tool-based coding, debugging, tests, NixOS, containers
+- → openai-luna-fast for fast ChatGPT-driven daily development (best speed/quality tradeoff for routine coding)
+- → openai-luna for normal-speed, higher-quality coding when correctness matters more than latency
 - → qwen3.7-plus for routine refactors, broad codebase cleanup, repeated edits, or to distribute Go quota away from flash
 
 LEVEL 4 - Complex agentic with tools:
@@ -227,32 +280,42 @@ LEVEL 4 - Complex agentic with tools:
 - Requires deep reasoning + tool coordination
 - Examples: "Analyze race condition, examine files, fix code, validate with tests"
 - → deepseek-v4-pro for hard coding/debugging where Go should handle the reasoning
-- → openai-chatgpt for ambiguous, high-stakes, system-admin, or extremely broad multi-step work
+- → openai-sol for medium-complexity multi-step agentic workflows, broad refactors, and debugging
+- → openai-sol-fast for faster turnaround on complex (but not hardest) agentic tasks
+- → openai-terra for the hardest, most ambiguous, high-stakes, system-admin, or extremely broad multi-step work
 
 LEVEL 5 - Very hard problems:
 - Extremely complex logic, distributed systems, critical bugs
 - When other models would struggle
-- → openai-chatgpt for broad ambiguous investigation
+- → openai-terra for broad ambiguous investigation, production debugging, critical system changes
 - → deepseek-v4-pro for focused hard engineering/debugging
 - → qwen3.7-max for pure reasoning without tools when qwen-style reasoning is a better fit
+
+CHATGPT 5.6 MODEL TIERS (fast < normal, within each family):
+- Luna: general-purpose coding, daily development (fastest overall)
+- Sol: complex debugging, refactoring, agentic workflows (stronger reasoning)
+- Terra: hardest problems, high-stakes, critical systems (smartest, may be slower)
+- All ChatGPT models share soft monthly cap, use at moderate frequency
 
 DECISION PROCESS:
 1. Does the task require tools? (has_tools={has_tools})
 2. If NO tools: Is it simple (Level 1), normal reasoning (mistral-medium), or advanced pure reasoning (qwen3.7-max)?
-3. If YES tools: Is it standard coding (deepseek-v4-flash), broad routine refactor (qwen3.7-plus), hard focused debugging (deepseek-v4-pro), or broad ambiguous/high-stakes agentic work (openai-chatgpt)?
+3. If YES tools: Is it standard coding (deepseek-v4-flash, openai-luna-fast, openai-luna, qwen3.7-plus), complex agentic (deepseek-v4-pro, openai-sol, openai-sol-fast), or critically hard (openai-terra)?
 4. Choose the model that matches the level.
 
 HARD ROUTING CONSTRAINTS:
-- If has_tools=True and the task mentions logs, services, containers, production, ambiguous failures, broad investigation, or system administration → openai-chatgpt
+- If has_tools=True and the task mentions logs, services, containers, production, ambiguous failures, broad investigation, or system administration → openai-terra or openai-sol (choose terra for ambiguity, sol for structured debugging)
 - If has_tools=True, do not choose qwen3.7-max unless the request is primarily advanced reasoning and not broad tool coordination
 - qwen3.7-max is mainly for advanced pure reasoning without tools
+- Prefer fast variants (luna-fast, sol-fast, terra-fast) when latency matters and the task is not critically complex
 
 IMPORTANT:
 - All subscriptions are flat-rate, no per-token costs
 - Go models have hard 5h quotas but large capacity (Flash: 31k, Pro: 3.45k, Plus: 4.3k, Max: 950)
 - Mistral/ChatGPT have soft monthly caps, use freely
 - Use multiple Go models intentionally: flash for normal tools, qwen3.7-plus for routine/broad edits, deepseek-v4-pro for hard focused debugging, qwen3.7-max for advanced pure reasoning
-- Reserve ChatGPT for broad ambiguous or high-stakes multi-step agentic tasks
+- Use ChatGPT 5.6 models (luna, sol, terra) as strong alternatives to deepseek for agentic work
+- Luna-fast/luna for daily coding, sol/sol-fast for debugging/complexity, terra for hardest problems
 
 Available backends:
 {json.dumps({m: cfg["description"] for m, cfg in MODEL_ROUTING.items()}, indent=2)}
@@ -478,7 +541,9 @@ def _chat_tool_choice_to_responses_tool_choice(tool_choice: Any) -> Any:
     return tool_choice
 
 
-def _chat_to_responses_body(body: dict[str, Any]) -> dict[str, Any]:
+def _chat_to_responses_body(
+    body: dict[str, Any], chatgpt_model: str, service_tier: str | None = None
+) -> dict[str, Any]:
     input_items = []
     for message in body.get("messages", []):
         role = message.get("role", "user")
@@ -491,7 +556,6 @@ def _chat_to_responses_body(body: dict[str, Any]) -> dict[str, Any]:
                 "output": message.get("content", ""),
             })
             continue
-        # Convert assistant tool_calls to function_call items
         tool_calls = message.get("tool_calls")
         if role == "assistant" and tool_calls:
             text = message.get("content") or ""
@@ -519,7 +583,7 @@ def _chat_to_responses_body(body: dict[str, Any]) -> dict[str, Any]:
         })
 
     response_body: dict[str, Any] = {
-        "model": OPENAI_CHATGPT_MODEL,
+        "model": chatgpt_model,
         "input": input_items,
         "stream": True,
         "store": False,
@@ -527,6 +591,8 @@ def _chat_to_responses_body(body: dict[str, Any]) -> dict[str, Any]:
         "text": {"verbosity": "medium"},
         "include": ["reasoning.encrypted_content"],
     }
+    if service_tier:
+        response_body["service_tier"] = service_tier
     tools = _chat_tools_to_responses_tools(body.get("tools"))
     if tools:
         response_body["tools"] = tools
@@ -579,7 +645,7 @@ def _responses_to_chat_completion(
         "id": response.get("id", "chatgpt-response"),
         "object": "chat.completion",
         "created": int(time.time()),
-        "model": response.get("model", OPENAI_CHATGPT_MODEL),
+        "model": response.get("model", routed_model),
         "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
     }
 
@@ -681,7 +747,12 @@ async def _stream_chatgpt(
         )
 
     auth, account_id = auth_info
-    request_body = _chat_to_responses_body(body)
+    model_config = MODEL_ROUTING[routed_model]
+    request_body = _chat_to_responses_body(
+        body,
+        model_config["chatgpt_model"],
+        model_config.get("service_tier"),
+    )
     headers = {
         "Authorization": f"Bearer {auth['access']}",
         "chatgpt-account-id": account_id,
@@ -693,7 +764,13 @@ async def _stream_chatgpt(
 
     if not body.get("stream"):
         return await _chatgpt_non_streaming(
-            request_body, headers, routed_model, fallback_models, original_model, show_notice
+            body,
+            request_body,
+            headers,
+            routed_model,
+            fallback_models,
+            original_model,
+            show_notice,
         )
 
     client = httpx.AsyncClient(timeout=httpx.Timeout(30.0, read=600.0))
@@ -815,6 +892,7 @@ async def _stream_chatgpt(
 
 
 async def _chatgpt_non_streaming(
+    chat_body: dict[str, Any],
     request_body: dict[str, Any],
     headers: dict[str, str],
     routed_model: str,
@@ -837,10 +915,19 @@ async def _chatgpt_non_streaming(
             except Exception:
                 payload = {"error": "ChatGPT upstream failed", "details": response.text}
             if fallback_models:
-                return await _stream_to_backend(body=request_body, candidates=fallback_models, original_model=original_model or routed_model)
+                return await _stream_to_backend(
+                    body=chat_body,
+                    candidates=fallback_models,
+                    original_model=original_model or routed_model,
+                    show_notice=show_notice,
+                )
             return JSONResponse(payload, status_code=response.status_code)
 
         final_response = None
+        text_parts = []
+        tool_calls = []
+        pending_fc_name: str | None = None
+        pending_fc_call_id: str | None = None
         for line in response.text.splitlines():
             if not line.startswith("data: "):
                 continue
@@ -848,10 +935,37 @@ async def _chatgpt_non_streaming(
                 event = json.loads(line[6:])
             except Exception:
                 continue
-            if event.get("type") in {"response.done", "response.completed"}:
+            event_type = event.get("type")
+            if event_type == "response.output_item.added":
+                item = event.get("item", {})
+                if item.get("type") == "function_call":
+                    pending_fc_name = item.get("name", "")
+                    pending_fc_call_id = item.get("call_id")
+            if event_type in {"response.output_text.delta", "response.text.delta"}:
+                text_parts.append(event.get("delta", ""))
+            if event_type == "response.function_call_arguments.done":
+                tool_calls.append({
+                    "type": "function_call",
+                    "call_id": pending_fc_call_id or f"call_{int(time.time())}",
+                    "name": pending_fc_name or "unknown",
+                    "arguments": event.get("arguments", ""),
+                })
+                pending_fc_name = None
+                pending_fc_call_id = None
+            if event_type in {"response.done", "response.completed"}:
                 final_response = event.get("response")
         if not final_response:
             return JSONResponse({"error": "No final Codex response"}, status_code=502)
+        if not final_response.get("output"):
+            output = []
+            if text_parts:
+                output.append({
+                    "type": "message",
+                    "content": [{"type": "output_text", "text": "".join(text_parts)}],
+                })
+            output.extend(tool_calls)
+            final_response = dict(final_response)
+            final_response["output"] = output
         return JSONResponse(
             _responses_to_chat_completion(
                 final_response, routed_model, original_model, show_notice
@@ -878,7 +992,7 @@ async def _stream_to_backend(
 
     for index, candidate in enumerate(candidates):
         remaining = candidates[index + 1 :]
-        if candidate == "openai-chatgpt":
+        if candidate in CHATGPT_MODELS:
             return await _stream_chatgpt(
                 body, candidate, remaining, original_model, show_notice
             )
