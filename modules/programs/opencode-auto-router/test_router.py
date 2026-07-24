@@ -12,12 +12,12 @@ class RouterTest(unittest.TestCase):
         )
 
     def test_notice_is_minimal_for_initial_route(self):
-        self.assertEqual(router._model_notice_text("mistral-small", "mistral-small"), "> **Router:** mistral-small")
+        self.assertEqual(router._model_notice_text("mistral-small", "mistral-small"), "> **mistral-small**")
 
     def test_notice_shows_fallback_path(self):
         self.assertEqual(
             router._model_notice_text("mistral-medium", "mistral-small"),
-            "> **Router:** mistral-small -> mistral-medium",
+            "> **mistral-small -> mistral-medium**",
         )
 
     def test_terminal_stream_chunk_is_detected(self):
@@ -27,35 +27,35 @@ class RouterTest(unittest.TestCase):
 
     def test_failed_attempt_escalates_previous_model(self):
         messages = [
-            {"role": "assistant", "content": "An incomplete answer\n\n> **Router:** mistral-small"},
+            {"role": "assistant", "content": "An incomplete answer\n\n> **mistral-small**"},
             {"role": "user", "content": "That did not work, please try again."},
         ]
         self.assertEqual(router._capability_escalation(messages), "mistral-medium")
 
     def test_fallback_notice_escalates_from_model_that_answered(self):
         messages = [
-            {"role": "assistant", "content": "An incomplete answer\n\n> **Router:** mistral-small -> mistral-medium"},
+            {"role": "assistant", "content": "An incomplete answer\n\n> **mistral-small -> mistral-medium**"},
             {"role": "user", "content": "Das funktioniert nicht, versuche es nochmal."},
         ]
         self.assertEqual(router._capability_escalation(messages), "openai-terra")
 
     def test_legacy_auto_notice_escalates_from_selected_model(self):
         messages = [
-            {"role": "assistant", "content": "An incomplete answer\n\n> **Router:** auto -> mistral-small"},
+            {"role": "assistant", "content": "An incomplete answer\n\n> **auto -> mistral-small**"},
             {"role": "user", "content": "Das Modell bekommt es nicht hin."},
         ]
         self.assertEqual(router._capability_escalation(messages), "mistral-medium")
 
     def test_retry_detection_accepts_words_between_german_markers(self):
         messages = [
-            {"role": "assistant", "content": "Incomplete\n\n> **Router:** mistral-small"},
+            {"role": "assistant", "content": "Incomplete\n\n> **mistral-small**"},
             {"role": "user", "content": "Das hat leider immer noch nicht funktioniert."},
         ]
         self.assertEqual(router._capability_escalation(messages), "mistral-medium")
 
     def test_model_lookup_skips_assistant_turn_without_notice(self):
         messages = [
-            {"role": "assistant", "content": "Initial answer\n\n> **Router:** mistral-small"},
+            {"role": "assistant", "content": "Initial answer\n\n> **mistral-small**"},
             {"role": "assistant", "content": "Intermediate tool call"},
             {"role": "user", "content": "That did not work."},
         ]
@@ -63,7 +63,7 @@ class RouterTest(unittest.TestCase):
 
     def test_normal_follow_up_does_not_escalate(self):
         messages = [
-            {"role": "assistant", "content": "The answer\n\n> **Router:** mistral-small"},
+            {"role": "assistant", "content": "The answer\n\n> **mistral-small**"},
             {"role": "user", "content": "Can you give me another example?"},
         ]
         self.assertIsNone(router._capability_escalation(messages))
@@ -80,7 +80,7 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
         body = {
             "model": "auto",
             "messages": [
-                {"role": "assistant", "content": "Incomplete\n\n> **Router:** mistral-small"},
+                {"role": "assistant", "content": "Incomplete\n\n> **mistral-small**"},
                 {"role": "user", "content": "That did not work. Try again."},
             ],
         }

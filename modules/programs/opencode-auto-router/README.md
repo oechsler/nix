@@ -122,16 +122,16 @@ The router handles two different failure modes.
 Every automatic response ends with a highlighted routing notice:
 
 ```markdown
-> **Router:** mistral-small
+> **mistral-small**
 ```
 
 If a backend fallback or capability escalation occurred, the notice shows the path:
 
 ```markdown
-> **Router:** mistral-small -> mistral-medium
+> **mistral-small -> mistral-medium**
 ```
 
-The blockquote and bold label clearly separate routing metadata from the model's answer. This line is debug information and not part of the assistant's response. OpenCode title and summary requests suppress this notice entirely.
+The blockquote and bold text clearly separate routing metadata from the model's answer. This line is debug information and not part of the assistant's response. OpenCode title and summary requests suppress this notice entirely.
 
 ## Providers and Authentication
 

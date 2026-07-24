@@ -506,7 +506,7 @@ def _last_routed_model(messages: list[dict[str, Any]]) -> str | None:
         sorted((re.escape(model) for model in DIRECT_MODELS), key=len, reverse=True)
     )
     notice_pattern = re.compile(
-        rf"^(?:>\s+\*\*Router:\*\*\s+)?(auto|{model_pattern})(?:\s+(?:->|→)\s+({model_pattern}))?$"
+        rf"^>\s+\*\*(auto|{model_pattern})(?:\s+(?:->|→)\s+({model_pattern}))?\*\*$"
     )
     for message in reversed(messages):
         if message.get("role") != "assistant":
@@ -565,8 +565,8 @@ def _fallback_chain(model: str) -> list[str]:
 
 def _model_notice_text(model: str, original_model: str | None = None) -> str:
     if original_model and original_model != model:
-        return f"> **Router:** {original_model} -> {model}"
-    return f"> **Router:** {model}"
+        return f"> **{original_model} -> {model}**"
+    return f"> **{model}**"
 
 
 def _notice_chunk(model: str, content: str) -> dict[str, Any]:
