@@ -320,9 +320,12 @@ def _fallback_chain(model: str) -> list[str]:
 
 
 def _model_notice(model: str, original_model: str | None = None) -> str:
+    return ""
+
+def _model_notice_text(model: str, original_model: str | None = None) -> str:
     if original_model and original_model != model:
-        return f"[{MODEL_NOTICE_PREFIX}: {original_model} -> {model}]\n\n"
-    return f"[{MODEL_NOTICE_PREFIX}: {model}]\n\n"
+        return f"[{MODEL_NOTICE_PREFIX}: {original_model} -> {model}]"
+    return f"[{MODEL_NOTICE_PREFIX}: {model}]"
 
 
 def _notice_chunk(model: str, content: str) -> dict[str, Any]:
@@ -490,12 +493,12 @@ def _responses_to_chat_completion(
                 },
             })
 
+    content = "".join(text_parts)
+    if show_notice:
+        content += "\n\n" + _model_notice_text(routed_model, original_model)
     message: dict[str, Any] = {
         "role": "assistant",
-        "content": (
-            (_model_notice(routed_model, original_model) if show_notice else "")
-            + "".join(text_parts)
-        ),
+        "content": content,
     }
     if tool_calls:
         message["tool_calls"] = tool_calls
@@ -646,8 +649,6 @@ async def _stream_chatgpt(
 
     async def _iter_chatgpt_sse():
         try:
-            if show_notice:
-                yield f"data: {json.dumps(_notice_chunk(routed_model, _model_notice(routed_model, original_model)))}\n\n"
             async for line in response.aiter_lines():
                 if not line.startswith("data: "):
                     continue
@@ -674,6 +675,8 @@ async def _stream_chatgpt(
                     yield f"data: {json.dumps(chunk)}\n\n"
                 if event_type in {"response.done", "response.completed"}:
                     response_id = event.get("response", {}).get("id", "chatgpt-response")
+                    if show_notice:
+                        yield f"data: {json.dumps(_notice_chunk(routed_model, '\n\n' + _model_notice_text(routed_model, original_model)))}\n\n"
                     done = {
                         "id": response_id,
                         "object": "chat.completion.chunk",
@@ -797,10 +800,13 @@ async def _stream_to_backend(
 
             async def _iter_litellm_stream(model: str = candidate):
                 try:
-                    if show_notice:
-                        yield f"data: {json.dumps(_notice_chunk(model, _model_notice(model, original_model)))}\n\n".encode()
-                    async for chunk in response.aiter_bytes():
-                        yield chunk
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: [DONE]"):
+                            if show_notice:
+                                yield f"data: {json.dumps(_notice_chunk(model, '\n\n' + _model_notice_text(model, original_model)))}\n\n"
+                            yield "data: [DONE]\n\n"
+                        else:
+                            yield line + "\n"
                 finally:
                     await upstream.__aexit__(None, None, None)
                     await client.aclose()
@@ -841,10 +847,10 @@ async def _stream_to_backend(
         for choice in payload.get("choices", []):
             message = choice.get("message")
             if isinstance(message, dict):
-                prefix = (
-                    _model_notice(candidate, original_model) if show_notice else ""
-                )
-                message["content"] = prefix + str(message.get("content", ""))
+                content = str(message.get("content", ""))
+                if show_notice:
+                    content += "\n\n" + _model_notice_text(candidate, original_model)
+                message["content"] = content
         return JSONResponse(payload, status_code=response.status_code)
 
     return JSONResponse(last_error, status_code=last_status)
