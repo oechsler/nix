@@ -229,10 +229,8 @@ in
             "opencode-auto-router-load-image.service"
             "opencode-auto-router-sync-models.service"
           ];
-          Requires = [
-            "opencode-auto-router-pod.service"
-            "opencode-auto-router-load-image.service"
-          ];
+          Requires = [ "opencode-auto-router-pod.service" ];
+          BindsTo = [ "opencode-auto-router-load-image.service" ];
           Wants = [ "opencode-auto-router-sync-models.service" ];
           PartOf = [ "opencode-auto-router-pod.service" ];
         };
