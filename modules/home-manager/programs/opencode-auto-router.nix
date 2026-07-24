@@ -71,22 +71,20 @@ let
 
   desiredModelsStr = lib.concatStringsSep " " (map lib.escapeShellArg desiredModels);
 
-  mkSyncScript = ''
+  syncScript = pkgs.writeShellScriptBin "opencode-auto-router-sync-models" ''
     set -e
     echo "[opencode-auto-router] Waiting for ollama container …"
-    until ${podman} exec opencode-ollama ollama list >/dev/null 2>&1; do
+    until ${pkgs.podman}/bin/podman exec opencode-ollama ollama list >/dev/null 2>&1; do
       sleep 2
     done
 
     echo "[opencode-auto-router] Pulling desired models …"
-  ''
-  + lib.concatMapStringsSep "\n" (model: ''
-    ${podman} exec opencode-ollama ollama pull ${lib.escapeShellArg model}
-  '') desiredModels
-  + ''
+    for model in ${lib.concatStringsSep " " (map lib.escapeShellArg desiredModels)}; do
+      ${pkgs.podman}/bin/podman exec opencode-ollama ollama pull "$model"
+    done
+
     echo "[opencode-auto-router] Cleaning up models not in config …"
-    # Parse "ollama list" (tab-separated: NAME\tID\tSIZE\tMODIFIED)
-    ${podman} exec opencode-ollama ollama list \
+    ${pkgs.podman}/bin/podman exec opencode-ollama ollama list \
       | tail -n +2 \
       | cut -f1 \
       | while IFS= read -r m; do
@@ -94,7 +92,7 @@ let
             *" $m "*) ;;
             *)
               echo "[opencode-auto-router] Removing stale model: $m"
-              ${podman} exec opencode-ollama ollama rm "$m"
+              ${pkgs.podman}/bin/podman exec opencode-ollama ollama rm "$m"
               ;;
           esac
         done
@@ -268,11 +266,11 @@ in
           After = [ "podman-opencode-ollama.service" ];
           Requires = [ "podman-opencode-ollama.service" ];
         };
-        Service = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          ExecStart = mkSyncScript;
-        };
+         Service = {
+           Type = "oneshot";
+           RemainAfterExit = true;
+           ExecStart = "${syncScript}/bin/opencode-auto-router-sync-models";
+         };
         Install.WantedBy = [ "default.target" ];
       };
     };
