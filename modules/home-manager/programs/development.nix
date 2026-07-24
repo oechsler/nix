@@ -146,24 +146,60 @@
                      output = 32768;
                    };
                  };
-                 deepseek-v4-pro = {
-                   name = "DeepSeek V4 Pro";
-                   tool_call = true;
-                   temperature = true;
-                   limit = {
-                     context = 128000;
-                     output = 32768;
-                   };
-                 };
-                 openai-chatgpt = {
-                   name = "ChatGPT 5.5";
-                   tool_call = true;
-                   temperature = true;
-                   limit = {
-                     context = 128000;
-                     output = 32768;
-                   };
-                 };
+                  deepseek-v4-pro = {
+                    name = "DeepSeek V4 Pro";
+                    tool_call = true;
+                    temperature = true;
+                    limit = {
+                      context = 128000;
+                      output = 32768;
+                    };
+                  };
+                  deepseek-v4-flash = {
+                    name = "DeepSeek V4 Flash";
+                    tool_call = true;
+                    temperature = true;
+                    limit = {
+                      context = 128000;
+                      output = 32768;
+                    };
+                  };
+                  qwen3.7-max = {
+                    name = "Qwen3.7 Max";
+                    tool_call = true;
+                    temperature = true;
+                    limit = {
+                      context = 128000;
+                      output = 32768;
+                    };
+                  };
+                  qwen3.7-plus = {
+                    name = "Qwen3.7 Plus";
+                    tool_call = true;
+                    temperature = true;
+                    limit = {
+                      context = 128000;
+                      output = 32768;
+                    };
+                  };
+                  qwen3.6-plus = {
+                    name = "Qwen3.6 Plus";
+                    tool_call = true;
+                    temperature = true;
+                    limit = {
+                      context = 128000;
+                      output = 32768;
+                    };
+                  };
+                  openai-chatgpt = {
+                    name = "ChatGPT 5.5";
+                    tool_call = true;
+                    temperature = true;
+                    limit = {
+                      context = 128000;
+                      output = 32768;
+                    };
+                  };
                };
             };
           };
