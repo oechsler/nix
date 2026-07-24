@@ -218,6 +218,9 @@ def _parse_model_choice(text: str) -> str | None:
     cleaned = text.strip().lower()
     for model in DIRECT_MODELS:
         if model in cleaned:
+            # Never return a classifier model as the backend
+            if model in ROUTER_MODELS:
+                continue
             return model
     return None
 
