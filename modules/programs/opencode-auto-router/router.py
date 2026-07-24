@@ -46,7 +46,7 @@ MODEL_ROUTING = {
             "Fast model for greetings, summaries, simple Q&A, titles, translation. "
             "PREFERRED for simple non-agentic tasks – NOT for tool-heavy workflows."
         ),
-        "fallbacks": ["mistral-medium", "deepseek-v4-flash", "openai-chatgpt"],
+        "fallbacks": ["mistral-medium"],
     },
     "mistral-medium": {
         "description": (
@@ -54,7 +54,7 @@ MODEL_ROUTING = {
             "Strong model for architecture, design tradeoffs, reviews, planning, "
             "analysis. PREFERRED for EU sovereignty and reasoning-heavy tasks without tools."
         ),
-        "fallbacks": ["openai-chatgpt", "deepseek-v4-flash", "qwen3.7-max"],
+        "fallbacks": ["openai-chatgpt"],
     },
     "deepseek-v4-flash": {
         "description": (
@@ -63,14 +63,14 @@ MODEL_ROUTING = {
             "search, refactors, NixOS, containers. Largest Go quota – first choice "
             "for tool-based development work."
         ),
-        "fallbacks": ["openai-chatgpt", "mistral-medium", "qwen3.7-plus"],
+        "fallbacks": ["openai-chatgpt"],
     },
     "deepseek-v4-pro": {
         "description": (
             "OpenCode Go DeepSeek V4 Pro (€10/mo, HARD cap: 3,450 req/5h). "
             "For the hardest problems when flash is insufficient. Limited quota."
         ),
-        "fallbacks": ["openai-chatgpt", "qwen3.7-plus", "mistral-medium"],
+        "fallbacks": ["openai-chatgpt"],
     },
     "openai-chatgpt": {
         "description": (
@@ -79,7 +79,7 @@ MODEL_ROUTING = {
             "ambiguous problems, high-stakes reviews, system administration. "
             "Use when Go quota is exhausted or task demands top-tier reasoning with tools."
         ),
-        "fallbacks": ["deepseek-v4-flash", "mistral-medium", "qwen3.7-plus"],
+        "fallbacks": ["deepseek-v4-flash"],
     },
     "qwen3.7-plus": {
         "description": (
@@ -87,7 +87,7 @@ MODEL_ROUTING = {
             "Solid general-purpose coding model with tools. Good alternative "
             "when flash or ChatGPT are saturated."
         ),
-        "fallbacks": ["openai-chatgpt", "deepseek-v4-flash", "mistral-medium"],
+        "fallbacks": ["deepseek-v4-flash"],
     },
     "qwen3.7-max": {
         "description": (
@@ -95,21 +95,21 @@ MODEL_ROUTING = {
             "Specialist for advanced reasoning. Very tight quota – use only "
             "when mistral-medium is unavailable."
         ),
-        "fallbacks": ["openai-chatgpt", "mistral-medium", "qwen3.7-plus"],
+        "fallbacks": ["openai-chatgpt"],
     },
     "qwen3.6-plus": {
         "description": (
             "OpenCode Go Qwen3.6 Plus (€10/mo). General-purpose coding. "
             "Use when other Go models are saturated."
         ),
-        "fallbacks": ["qwen3.7-plus", "openai-chatgpt", "mistral-medium"],
+        "fallbacks": ["qwen3.7-plus"],
     },
     "qwen3:8b": {
         "description": (
             "Local Qwen3 8B model on Ollama. Limited offline model for testing "
             "and light tasks when privacy is critical. Not for auto-routing."
         ),
-        "fallbacks": ["mistral-small", "deepseek-v4-flash", "deepseek-v4-pro"],
+        "fallbacks": ["mistral-small"],
     },
 }
 
@@ -673,7 +673,7 @@ async def _stream_chatgpt(
     if not auth_info:
         if fallback_models:
             return await _stream_to_backend(
-                body, fallback_models, routed_model, show_notice
+                body, fallback_models, original_model or routed_model, show_notice
             )
         return JSONResponse(
             {"error": "OpenAI OAuth auth not found. Run opencode auth login for openai."},
@@ -712,7 +712,7 @@ async def _stream_chatgpt(
         await client.aclose()
         if fallback_models:
             return await _stream_to_backend(
-                body, fallback_models, routed_model, show_notice
+                body, fallback_models, original_model or routed_model, show_notice
             )
         return JSONResponse(
             {"error": "ChatGPT upstream failed", "details": error_body},
@@ -837,7 +837,7 @@ async def _chatgpt_non_streaming(
             except Exception:
                 payload = {"error": "ChatGPT upstream failed", "details": response.text}
             if fallback_models:
-                return await _stream_to_backend(body=request_body, candidates=fallback_models, original_model=routed_model)
+                return await _stream_to_backend(body=request_body, candidates=fallback_models, original_model=original_model or routed_model)
             return JSONResponse(payload, status_code=response.status_code)
 
         final_response = None
@@ -1045,4 +1045,4 @@ async def chat_completions(request: Request):
         candidates,
     )
 
-    return await _stream_to_backend(body, candidates, target_model, show_notice)
+    return await _stream_to_backend(body, candidates, requested_model, show_notice)
