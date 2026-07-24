@@ -119,19 +119,19 @@ The router handles two different failure modes.
 
 **Capability escalation** applies when a backend returned an answer but the user says that the attempt failed or asks it to try again. On the next turn, the router reads the model recorded on the previous response and moves to the next capability tier. This is separate from provider availability fallback and prevents a failed task from repeatedly returning to the same small model.
 
-Every automatic response ends with one minimal routing line:
+Every automatic response ends with a highlighted routing notice:
 
-```text
-mistral-small
+```markdown
+> **Router:** mistral-small
 ```
 
-If a backend fallback or capability escalation occurred, the line shows the path:
+If a backend fallback or capability escalation occurred, the notice shows the path:
 
-```text
-mistral-small -> mistral-medium
+```markdown
+> **Router:** mistral-small -> mistral-medium
 ```
 
-There is intentionally no label or prefix so routing metadata stays secondary to the conversation. OpenCode title and summary requests suppress this line entirely.
+The blockquote and bold label clearly separate routing metadata from the model's answer. OpenCode title and summary requests suppress this notice entirely.
 
 ## Providers and Authentication
 
