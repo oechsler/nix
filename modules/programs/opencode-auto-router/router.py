@@ -162,6 +162,29 @@ def routing_context(messages: list[dict[str, Any]]) -> str:
 # Model selection (classification via local Ollama)
 # ---------------------------------------------------------------------------
 
+# Simple in-memory TTL cache: (prompt_hash, has_tools) → model_id
+_classification_cache: dict[tuple[int, bool], tuple[float, str]] = {}
+
+_CLASSIFICATION_TIMEOUT = 3  # seconds
+_CACHE_TTL = 300  # seconds
+
+
+def _cached_classify(context: str, has_tools: bool) -> str | None:
+    """Return cached classification or None if expired/missing."""
+    key = (hash(context), has_tools)
+    entry = _classification_cache.get(key)
+    if entry:
+        expires, model = entry
+        if time.time() < expires:
+            return model
+        del _classification_cache[key]
+    return None
+
+
+def _cache_classify(context: str, has_tools: bool, model: str) -> None:
+    key = (hash(context), has_tools)
+    _classification_cache[key] = (time.time() + _CACHE_TTL, model)
+
 
 def _build_classification_prompt(context: str, has_tools: bool) -> str:
     return f"""
@@ -227,20 +250,24 @@ def _parse_model_choice(text: str) -> str | None:
 
 async def _classify(messages: list[dict[str, Any]], has_tools: bool) -> str:
     """Ask the local Ollama router models which cloud backend to use.
-    
-    Tries models in order: ROUTER_MODELS[0], ROUTER_MODELS[1], etc.
-    Falls back to next model if classification fails or returns nothing.
-    If all classifiers fail, returns DEFAULT_MODEL.
+
+    Uses in-memory cache to skip classification for repeated prompts.
+    Falls back to DEFAULT_MODEL after _CLASSIFICATION_TIMEOUT seconds.
     """
     context = routing_context(messages)
     if not context.strip():
         return DEFAULT_MODEL
 
+    cached = _cached_classify(context, has_tools)
+    if cached:
+        logger.info("classification cache hit model=%s", cached)
+        return cached
+
     prompt = _build_classification_prompt(context, has_tools)
 
     for model in ROUTER_MODELS:
         try:
-            async with httpx.AsyncClient(timeout=60) as client:
+            async with httpx.AsyncClient(timeout=_CLASSIFICATION_TIMEOUT) as client:
                 response = await client.post(
                     f"{OLLAMA_URL}/api/generate",
                     json={
@@ -253,12 +280,12 @@ async def _classify(messages: list[dict[str, Any]], has_tools: bool) -> str:
                 response.raise_for_status()
                 choice = _parse_model_choice(response.json().get("response", ""))
                 if choice:
+                    _cache_classify(context, has_tools, choice)
                     return choice
         except Exception:
-            # Try next model in the list
             continue
 
-    # All classifiers failed
+    # All classifiers failed or timed out
     return DEFAULT_MODEL
 
 
