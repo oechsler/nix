@@ -189,53 +189,8 @@
                       output = 32768;
                     };
                   };
-                   openai-luna-fast = {
-                     name = "ChatGPT 5.6 Luna Fast";
-                     tool_call = true;
-                     temperature = true;
-                     limit = {
-                       context = 128000;
-                       output = 32768;
-                     };
-                   };
-                   openai-luna = {
-                     name = "ChatGPT 5.6 Luna";
-                     tool_call = true;
-                     temperature = true;
-                     limit = {
-                       context = 128000;
-                       output = 32768;
-                     };
-                   };
-                   openai-sol-fast = {
-                     name = "ChatGPT 5.6 Sol Fast";
-                     tool_call = true;
-                     temperature = true;
-                     limit = {
-                       context = 128000;
-                       output = 32768;
-                     };
-                   };
-                   openai-sol = {
-                     name = "ChatGPT 5.6 Sol";
-                     tool_call = true;
-                     temperature = true;
-                     limit = {
-                       context = 128000;
-                       output = 32768;
-                     };
-                   };
-                   openai-terra-fast = {
-                     name = "ChatGPT 5.6 Terra Fast";
-                     tool_call = true;
-                     temperature = true;
-                     limit = {
-                       context = 128000;
-                       output = 32768;
-                     };
-                   };
-                   openai-terra = {
-                     name = "ChatGPT 5.6 Terra";
+                   openai-chatgpt = {
+                     name = "ChatGPT 5.5";
                      tool_call = true;
                      temperature = true;
                      limit = {
