@@ -907,7 +907,10 @@ async def chat_completions(request: Request):
         len(messages),
     )
 
-    show_notice = not _is_metadata_request(messages, has_tools)
+    show_notice = (
+        not _is_metadata_request(messages, has_tools)
+        and requested_model not in DIRECT_MODELS
+    )
     body = _add_agent_instruction(body, has_tools)
     candidates = _fallback_chain(target_model)
 
