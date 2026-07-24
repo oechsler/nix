@@ -101,8 +101,6 @@ MODEL_ROUTING = {
         ),
         "fallbacks": ["qwen3.7-plus", "mistral-medium", "openai-chatgpt"],
     },
-        "fallbacks": ["deepseek-v4-pro", "qwen3.7-max", "mistral-medium"],
-    },
     "qwen3:8b": {
         "description": (
             "Local Qwen3 8B model on Ollama. Limited offline model for testing "
