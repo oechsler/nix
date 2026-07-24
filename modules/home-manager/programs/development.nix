@@ -164,7 +164,7 @@
                       output = 32768;
                     };
                   };
-                  qwen3.7-max = {
+                  "qwen3.7-max" = {
                     name = "Qwen3.7 Max";
                     tool_call = true;
                     temperature = true;
@@ -173,7 +173,7 @@
                       output = 32768;
                     };
                   };
-                  qwen3.7-plus = {
+                  "qwen3.7-plus" = {
                     name = "Qwen3.7 Plus";
                     tool_call = true;
                     temperature = true;
@@ -182,7 +182,7 @@
                       output = 32768;
                     };
                   };
-                  qwen3.6-plus = {
+                  "qwen3.6-plus" = {
                     name = "Qwen3.6 Plus";
                     tool_call = true;
                     temperature = true;
