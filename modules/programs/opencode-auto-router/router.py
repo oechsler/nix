@@ -71,33 +71,36 @@ MODEL_ROUTING = {
         ),
         "fallbacks": ["qwen3.7-plus", "mistral-medium", "openai-chatgpt"],
     },
+    "openai-chatgpt": {
+        "description": (
+            "ChatGPT Plus subscription (flat-rate €20/mo). Most capable model. Use "
+            "for complex coding-agent tasks, refactors, difficult bugs, high-stakes "
+            "reviews, and any task where Mistral or Go models are insufficient. "
+            "Good daily limits – deploy strategically."
+        ),
+        "fallbacks": ["deepseek-v4-pro", "qwen3.7-max", "mistral-medium"],
+    },
     "qwen3.7-plus": {
         "description": (
             "OpenCode Go Qwen3.7 Plus (€10/mo, 4,300 req/5h). General development "
-            when Mistral is unavailable. Use sparingly."
+            "when Mistral is unavailable. Use sparingly to save Go quota."
         ),
         "fallbacks": ["qwen3.7-max", "deepseek-v4-pro", "mistral-medium", "openai-chatgpt"],
     },
     "qwen3.7-max": {
         "description": (
             "OpenCode Go Qwen3.7 Max (€10/mo, 950 req/5h). Advanced reasoning and "
-            refactoring when Mistral-medium is insufficient."
+            "refactoring when Mistral-medium is insufficient."
         ),
         "fallbacks": ["deepseek-v4-pro", "mistral-medium", "openai-chatgpt"],
     },
     "qwen3.6-plus": {
         "description": (
             "OpenCode Go Qwen3.6 Plus (€10/mo). Cost-effective for architecture, "
-            reviews, and planning when Mistral is unavailable."
+            "reviews, and planning when Mistral is unavailable."
         ),
         "fallbacks": ["qwen3.7-plus", "mistral-medium", "openai-chatgpt"],
     },
-    "openai-chatgpt": {
-        "description": (
-            "ChatGPT Plus subscription (flat-rate €20/mo). Most capable model for "
-            the hardest coding-agent tasks, risky refactors, very difficult bugs, "
-            and high-stakes reviews. Use only as last resort."
-        ),
         "fallbacks": ["deepseek-v4-pro", "qwen3.7-max", "mistral-medium"],
     },
     "qwen3:8b": {
@@ -214,35 +217,38 @@ ROUTING PRIORITY (in order of preference):
    - High-quality communication, documentation
    - European sovereignty matters
 
-3. deepseek-v4-flash (Go, 31,650 req/5h) - USE ONLY for:
+3. openai-chatgpt (Flat-rate, good daily limits) - USE for:
+   - Complex coding-agent tasks
+   - Refactors, difficult bugs
+   - High-stakes reviews
+   - Ambiguous multi-step problems
+   - When Mistral is insufficient for the task
+   - Strategic deployment of ChatGPT quota
+
+4. deepseek-v4-flash (Go, 31,650 req/5h) - USE for:
    - Complex agent work with heavy tool use
    - Multi-step coding tasks, file edits
    - NixOS/admin, containers, services, logs
    - Tool-heavy tasks that Mistral cannot handle well
 
-4. deepseek-v4-pro (Go, 3,450 req/5h) - USE ONLY for:
+5. deepseek-v4-pro (Go, 3,450 req/5h) - USE for:
    - Very complex coding-agent tasks
    - Risky refactors, difficult debugging
    - When deepseek-v4-flash is insufficient
 
-5. qwen3.7-plus (Go, 4,300 req/5h) - USE ONLY for:
+6. qwen3.7-plus (Go, 4,300 req/5h) - USE for:
    - General development when Mistral is unavailable
-   - Medium-complexity coding tasks
 
-6. qwen3.7-max (Go, 950 req/5h) - USE ONLY for:
+7. qwen3.7-max (Go, 950 req/5h) - USE for:
    - Very complex reasoning, advanced problems
    - When Mistral-medium is insufficient
-
-7. openai-chatgpt (Flat-rate) - USE ONLY for:
-   - The hardest coding-agent tasks
-   - Very risky refactors, high-stakes reviews
-   - When all other models fail
 
 DECISION RULES:
 - If task is simple/medium → mistral-small
 - If task requires architecture/reviews → mistral-medium
-- If task requires heavy tool use/agent work → deepseek-v4-flash
+- If task is complex agent work → openai-chatgpt or deepseek-v4-flash
 - If task is very complex coding → deepseek-v4-pro
+- If Mistral cannot handle the task → try ChatGPT first, then Go models
 - NEVER use Go models for simple tasks (save quota)
 - ALWAYS prefer Mistral (EU) when possible
 
