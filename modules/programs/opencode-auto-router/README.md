@@ -39,6 +39,42 @@ For an automatic request:
 4. LiteLLM normalizes Mistral and OpenCode Go behind one local OpenAI-compatible API. ChatGPT subscription models are called directly because they use a different OAuth API.
 5. The router streams the answer back to OpenCode.
 
+## How Routing Works
+
+The router classifies each request before sending it to a backend. This section explains the decision process.
+
+### Classification Process
+
+1. **Context extraction**: The router takes the last 6 messages from the conversation (truncated to 1200 characters each) to understand the request.
+2. **Tool detection**: It checks whether the request includes tool definitions (file edits, shell commands, search, etc.).
+3. **Local classification**: The router sends a prompt to Ollama with the conversation context, tool availability, and all available models with their descriptions. Ollama returns exactly one model ID.
+4. **Caching**: Identical prompts are cached for 5 minutes to avoid redundant classification calls.
+
+### Complexity Levels
+
+The classifier evaluates requests on five levels:
+
+- **Level 1 — Simple (no tools)**: Greetings, translations, summaries, titles, simple Q&A. Routed to `mistral-small`.
+- **Level 2 — Medium reasoning (no tools)**: Architecture discussions, design tradeoffs, analysis, planning. Routed to `mistral-medium` (preferred) or `qwen3.7-max` for exceptionally complex algorithmic reasoning.
+- **Level 3 — Standard coding with tools**: File edits, refactoring, shell commands, debugging, testing, NixOS config. Routed to `deepseek-v4-flash`, `openai-luna-fast`, `openai-luna`, or `qwen3.7-plus`.
+- **Level 4 — Complex agentic with tools**: Multi-step exploration, difficult bugs, race conditions, high-stakes reviews, system administration. Routed to `deepseek-v4-pro`, `openai-sol`, `openai-sol-fast`, or `openai-terra`.
+- **Level 5 — Very hard problems**: Extremely complex logic, distributed systems, critical bugs. Routed to `openai-terra`, `deepseek-v4-pro`, or `qwen3.7-max`.
+
+### Decision Criteria
+
+The classifier considers:
+
+- **Tool availability**: Requests with tools (file edits, shell, search) are routed to coding-focused models. Requests without tools go to reasoning models.
+- **Task complexity**: Simple tasks use small models; complex multi-step tasks use stronger models.
+- **Domain**: System administration, production debugging, and ambiguous failures favor `openai-terra` or `openai-sol`.
+- **Latency vs. quality**: Fast variants (`-fast`) are preferred when latency matters and the task is not critically complex.
+- **Quota distribution**: The router spreads load across multiple providers (Mistral, OpenCode Go, ChatGPT) to avoid hitting rate limits.
+
+### Fallback and Escalation
+
+- **Backend fallback**: If a provider fails before the first response chunk (rate limit, authentication error, context limit), the router walks the fallback chain defined for each model.
+- **Capability escalation**: If a user says the previous answer did not work (e.g., "that did not work", "funktioniert nicht"), the router reads the model from the previous response and escalates to the next capability tier on the next turn.
+
 ## Model Selection
 
 Models are listed once below in the approximate order of work they are intended to handle. The local classifier uses the complete conversation, not only the latest sentence.
