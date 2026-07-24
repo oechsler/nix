@@ -13,6 +13,7 @@ Manual model selection is also available through the same OpenCode provider:
 - `local/qwen3.7-max`
 - `local/qwen3.7-plus`
 - `local/qwen3.6-plus`
+- `local/qwen3:8b`
 - `local/openai-chatgpt`
 
 ## Architecture
@@ -34,6 +35,7 @@ Backends currently available to the router:
 - `qwen3.7-max`: OpenCode Go Qwen3.7 Max cloud model. Strong reasoning and coding capabilities for complex tasks and advanced problem solving.
 - `qwen3.6-plus`: OpenCode Go Qwen3.6 Plus cloud model. Cost-effective option for architecture, reviews, analysis, and broad non-private planning.
 - `mistral-medium`: Mistral cloud model through LiteLLM, intended for architecture, reviews, analysis, and broad planning.
+- `qwen3:8b`: Local Qwen3 8B model running on Ollama. Available for manual selection as `local/qwen3:8b`. Useful for testing and offline/privacy-critical tasks. Slower and less capable than cloud models; not selected by auto-routing.
 - `openai-chatgpt`: ChatGPT subscription model through the ChatGPT OAuth backend, reserved for the hardest agentic coding work, risky broad refactors, difficult bugs, and high-stakes reviews.
 
 Auto-routing optimizes for the cheapest model that is likely to complete the task well:
@@ -46,7 +48,7 @@ Auto-routing optimizes for the cheapest model that is likely to complete the tas
 - Architecture, reviews, analysis, and broad non-private planning go to `qwen3.6-plus`.
 - Broad architecture, design tradeoffs, reviews, planning, and analysis-heavy work goes to `mistral-medium`.
 - The hardest, riskiest, most ambiguous, or high-stakes work goes to `openai-chatgpt`.
-- Local Qwen is used only for classification, not for answering.
+- Local Qwen is used primarily for classification, but is also available as a manually-selectable answer model for testing and offline use.
 
 If a backend fails before the response starts, the router tries fallback models automatically.
 Examples: rate limits, context-limit errors, temporary backend failures, missing ChatGPT auth,
@@ -55,7 +57,7 @@ chunk is sent. Fallbacks are shown in-chat as `Routed to: original -> fallback`.
 
 ## Components
 
-- `opencode-ollama`: serves the local `qwen3:8b` routing model on `127.0.0.1:11434`.
+- `opencode-ollama`: serves the local routing models (`qwen3:8b`, `llama3.2:3b`) on `127.0.0.1:11434`.
 - `opencode-litellm`: exposes cloud models through an OpenAI-compatible API on `127.0.0.1:8000`.
 - `opencode-auto-router`: exposes the single OpenCode-facing OpenAI-compatible API on `127.0.0.1:4000`.
 - `opencode-auto-router-pull-models.service`: pulls the configured Ollama models after Ollama starts.

@@ -22,7 +22,9 @@ logger = logging.getLogger("opencode-auto-router")
 
 LITELLM_URL = os.environ.get("LITELLM_URL", "http://127.0.0.1:8000/v1")
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
-ROUTER_MODEL = os.environ.get("ROUTER_MODEL", "qwen3:8b")
+ROUTER_MODELS = os.environ.get(
+    "ROUTER_MODELS", "qwen3:8b,llama3.2:3b"
+).split(",")
 DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "deepseek-v4-pro")
 OPENAI_CHATGPT_MODEL = os.environ.get("OPENAI_CHATGPT_MODEL", "gpt-5.5")
 OPENCODE_AUTH_FILE = os.environ.get(
@@ -95,6 +97,14 @@ MODEL_ROUTING = {
         ),
         "fallbacks": ["deepseek-v4-pro", "qwen3.7-max", "mistral-medium"],
     },
+    "qwen3:8b": {
+        "description": (
+            "Local Qwen3 8B model on Ollama. Limited offline model for testing "
+            "purposes and light tasks when privacy is critical. Slower and less "
+            "capable than cloud models."
+        ),
+        "fallbacks": ["deepseek-v4-pro", "deepseek-v4-flash", "mistral-small", "openai-chatgpt"],
+    },
 }
 
 DIRECT_MODELS = set(MODEL_ROUTING)
@@ -162,8 +172,9 @@ not for showing variety and not for always choosing the strongest model.
 Available backends:
 {json.dumps({m: cfg["description"] for m, cfg in MODEL_ROUTING.items()}, indent=2)}
 
-The local Qwen model is only used to classify this request. It is not available as an answer model.
-Always choose one of the cloud backend model ids listed above.
+The local Qwen model (qwen3:8b) is also available for manual selection but is not recommended
+for auto-routing. Always prefer one of the cloud backend model ids listed above.
+The local model is intended only for manual testing and offline/privacy-critical use.
 Requests in English or German to inspect, change, debug, configure, install, build,
 test, deploy, administer, or troubleshoot the current computer, system, terminal,
 workspace, repository, files, installed software, kernel, services, logs, containers,
@@ -216,30 +227,40 @@ def _parse_model_choice(text: str) -> str | None:
 
 
 async def _classify(messages: list[dict[str, Any]], has_tools: bool) -> str:
-    """Ask the local Ollama router model which cloud backend to use."""
+    """Ask the local Ollama router models which cloud backend to use.
+    
+    Tries models in order: ROUTER_MODELS[0], ROUTER_MODELS[1], etc.
+    Falls back to next model if classification fails or returns nothing.
+    If all classifiers fail, returns DEFAULT_MODEL.
+    """
     context = routing_context(messages)
     if not context.strip():
         return DEFAULT_MODEL
 
     prompt = _build_classification_prompt(context, has_tools)
 
-    try:
-        async with httpx.AsyncClient(timeout=60) as client:
-            response = await client.post(
-                f"{OLLAMA_URL}/api/generate",
-                json={
-                    "model": ROUTER_MODEL,
-                    "prompt": prompt,
-                    "stream": False,
-                    "options": {"temperature": 0},
-                },
-            )
-            response.raise_for_status()
-            choice = _parse_model_choice(response.json().get("response", ""))
-    except Exception:
-        return DEFAULT_MODEL
+    for model in ROUTER_MODELS:
+        try:
+            async with httpx.AsyncClient(timeout=60) as client:
+                response = await client.post(
+                    f"{OLLAMA_URL}/api/generate",
+                    json={
+                        "model": model,
+                        "prompt": prompt,
+                        "stream": False,
+                        "options": {"temperature": 0},
+                    },
+                )
+                response.raise_for_status()
+                choice = _parse_model_choice(response.json().get("response", ""))
+                if choice:
+                    return choice
+        except Exception:
+            # Try next model in the list
+            continue
 
-    return choice if choice else DEFAULT_MODEL
+    # All classifiers failed
+    return DEFAULT_MODEL
 
 
 # ---------------------------------------------------------------------------

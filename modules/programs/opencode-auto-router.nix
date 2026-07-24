@@ -12,16 +12,21 @@
   ...
 }:
 
-let
-  # The Ollama model used for request classification (passed as ROUTER_MODEL env var).
-  routerModel = "qwen3:8b";
+  let
+    # The Ollama models used for request classification (passed as ROUTER_MODELS env var).
+    # Ordered by preference: primary classifier first, fallbacks in order.
+    routerModels = [
+      "qwen3:8b"
+      "llama3.2:3b"
+    ];
 
-  # Models to pre-pull into Ollama on startup. Must include routerModel.
-  # Kept as a separate list so additional local models can be pulled without
-  # changing the classifier.
-  ollamaModels = [
-    "qwen3:8b"
-  ];
+    # Models to pre-pull into Ollama on startup. Must include all routerModels.
+    # Kept as a separate list so additional local models can be pulled without
+    # changing the classifier.
+    ollamaModels = [
+      "qwen3:8b"
+      "llama3.2:3b"
+    ];
 
   routerEnv = pkgs.python3.withPackages (ps: [
     ps.fastapi
