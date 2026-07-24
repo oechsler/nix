@@ -124,7 +124,7 @@ in
         autoStart = true;
         ports = [ "127.0.0.1:4000:4000" ];
         environment = {
-          ROUTER_MODEL = routerModel;
+          ROUTER_MODELS = lib.concatStringsSep "," routerModels;
           OLLAMA_URL = "http://127.0.0.1:11434";
           LITELLM_URL = "http://127.0.0.1:8000/v1";
           OPENCODE_AUTH_FILE = "/var/lib/opencode/auth.json";
