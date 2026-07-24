@@ -8,7 +8,7 @@
 #
 # Jobs:
 # 1. Lint: Code quality checks (conventions, anti-patterns, dead code)
-# 2. Build: Validate all host configurations build successfully (sequentially)
+# 2. Build: Validate all host configurations evaluate successfully
 
 name: CI
 
@@ -25,6 +25,7 @@ jobs:
   lint:
     name: Code Quality
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - name: Checkout repository
@@ -48,6 +49,7 @@ jobs:
   build:
     name: Build NixOS configurations
     runs-on: ubuntu-latest
+    timeout-minutes: 120
 
     steps:
       - name: Checkout repository
@@ -56,30 +58,14 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Build samuels-terra
-        run: |
-          nix build \
-            .#nixosConfigurations.samuels-terra.config.system.build.toplevel \
-            --dry-run \
-            --show-trace
+      - name: Evaluate samuels-terra
+        run: nix eval .#nixosConfigurations.samuels-terra.config.system.build.toplevel
 
-      - name: Build samuels-pc
-        run: |
-          nix build \
-            .#nixosConfigurations.samuels-pc.config.system.build.toplevel \
-            --dry-run \
-            --show-trace
+      - name: Evaluate samuels-pc
+        run: nix eval .#nixosConfigurations.samuels-pc.config.system.build.toplevel
 
-      - name: Build samuels-ser9
-        run: |
-          nix build \
-            .#nixosConfigurations.samuels-ser9.config.system.build.toplevel \
-            --dry-run \
-            --show-trace
+      - name: Evaluate samuels-ser9
+        run: nix eval .#nixosConfigurations.samuels-ser9.config.system.build.toplevel
 
-      - name: Build samuels-razer
-        run: |
-          nix build \
-            .#nixosConfigurations.samuels-razer.config.system.build.toplevel \
-            --dry-run \
-            --show-trace
+      - name: Evaluate samuels-razer
+        run: nix eval .#nixosConfigurations.samuels-razer.config.system.build.toplevel
