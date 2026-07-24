@@ -15,17 +15,14 @@
   ...
 }:
 let
-  # Local Ollama models used for request classification.
-  # Ordered by preference: primary classifier first, fallbacks in order.
+  # Local Ollama model used for request classification.
   routerModels = [
     "qwen3:8b"
-    "llama3.2:3b"
   ];
 
   # Models to pull into Ollama on first start.
   ollamaModels = [
     "qwen3:8b"
-    "llama3.2:3b"
   ];
 
   routerEnv = pkgs.python3.withPackages (ps: [

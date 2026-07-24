@@ -209,8 +209,8 @@ LEVEL 2 - Medium reasoning (no tools needed):
 - Architecture discussions, design tradeoffs, comparisons
 - Analysis, planning, documentation, reviews
 - Examples: "Compare Event Sourcing vs CRUD", "Design a payment system", "Analyze this architecture"
-- → mistral-medium for normal reasoning
-- → qwen3.7-max for advanced pure reasoning, algorithmic analysis, or when the prompt asks for especially deep reasoning without tools
+- → mistral-medium for normal reasoning (PREFERRED)
+- → qwen3.7-max ONLY for exceptionally complex algorithmic/mathematical analysis that requires specialized reasoning (e.g., distributed consensus proofs, formal verification, cryptographic analysis). Do NOT use qwen3.7-max for general architecture, planning, or refactoring.
 
 LEVEL 3 - Standard coding with tools:
 - File edits, code search, refactoring
