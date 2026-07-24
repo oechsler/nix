@@ -141,10 +141,12 @@ Fast variants use `service_tier: priority`.
 If a backend fails before sending the first response chunk (e.g., due to rate limits, context limits, or server errors), the router automatically tries fallback models. Fallbacks are shown in-chat as:
 
 ```
-Routed to: original -> fallback
+original → fallback
 ```
 
 Streaming responses can only fallback before the first upstream chunk is sent.
+
+If a model cannot handle a request (e.g., due to capability limitations), the router will automatically switch to a more capable model from the fallback chain.
 
 ## Components
 
