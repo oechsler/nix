@@ -440,8 +440,8 @@ def _model_notice(model: str, original_model: str | None = None) -> str:
 
 def _model_notice_text(model: str, original_model: str | None = None) -> str:
     if original_model and original_model != model:
-        return f"[{original_model} -> {model}]"
-    return f"[{model}]"
+        return f"[Auto-Router] Selected: {original_model} → {model}"
+    return f"[Auto-Router] Selected: {model}"
 
 
 def _notice_chunk(model: str, content: str) -> dict[str, Any]:

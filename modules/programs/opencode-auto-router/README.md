@@ -61,7 +61,12 @@ When you send a request to OpenCode:
 4. The request is forwarded to the selected cloud backend
 5. You receive your answer from the optimal model
 
-If a backend fails before the response starts (rate limits, context errors, server failures), the router automatically tries fallback models. Fallbacks are shown in-chat as `Routed to: original -> fallback`.
+If a backend fails before sending the first response chunk (e.g., due to rate limits, context limits, or server errors), the router automatically tries fallback models and informs you in the chat:
+
+```
+[Auto-Router] Selected model: deepseek-v4-pro
+[Auto-Router] Fallback to: qwen3.7-plus due to backend failure
+```
 
 Streaming responses can only fallback before the first upstream chunk is sent.
 
