@@ -60,13 +60,17 @@ let
 in
 {
   config = lib.mkIf config.features.development.enable {
-    sops.secrets."opencode/mistral/api-key" = { };
-    sops.secrets."opencode/opencode-go/api-key" = { };
+    sops.secrets = {
+      "opencode/mistral/api-key" = { };
+      "opencode/opencode-go/api-key" = { };
+    };
 
-    sops.templates."opencode-auto-router-litellm.env".content = ''
-      MISTRAL_API_KEY=${config.sops.placeholder."opencode/mistral/api-key"}
-      OPENCODE_GO_API_KEY=${config.sops.placeholder."opencode/opencode-go/api-key"}
-    '';
+    sops.templates = {
+      "opencode-auto-router-litellm.env".content = ''
+        MISTRAL_API_KEY=${config.sops.placeholder."opencode/mistral/api-key"}
+        OPENCODE_GO_API_KEY=${config.sops.placeholder."opencode/opencode-go/api-key"}
+      '';
+    };
 
     virtualisation.oci-containers.backend = "podman";
 
