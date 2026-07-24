@@ -67,12 +67,39 @@ let
 
   podman = "${pkgs.podman}/bin/podman";
 
-  mkPullScript = lib.concatMapStringsSep "\n" (model: ''
+  desiredModels = ollamaModels;
+
+  desiredModelsStr = lib.concatStringsSep " " (map lib.escapeShellArg desiredModels);
+
+  mkSyncScript = ''
+    set -e
+    >&2 echo "[opencode-auto-router] Waiting for ollama container …"
     until ${podman} exec opencode-ollama ollama list >/dev/null 2>&1; do
       sleep 2
     done
+
+    >&2 echo "[opencode-auto-router] Pulling desired models …"
+  ''
+  + lib.concatMapStringsSep "\n" (model: ''
     ${podman} exec opencode-ollama ollama pull ${lib.escapeShellArg model}
-  '') ollamaModels;
+  '') desiredModels
+  + ''
+    >&2 echo "[opencode-auto-router] Cleaning up models not in config …"
+    # Parse "ollama list" (tab-separated: NAME\tID\tSIZE\tMODIFIED)
+    ${podman} exec opencode-ollama ollama list \
+      | tail -n +2 \
+      | cut -f1 \
+      | while IFS= read -r m; do
+          case " ${desiredModelsStr} " in
+            *" $m "*) ;;
+            *)
+              >&2 echo "[opencode-auto-router] Removing stale model: $m"
+              ${podman} exec opencode-ollama ollama rm "$m"
+              ;;
+          esac
+        done
+    >&2 echo "[opencode-auto-router] Models synced."
+  '';
 
   routerModelsStr = lib.concatStringsSep "," routerModels;
 in
@@ -106,6 +133,12 @@ in
         Service = {
           Type = "oneshot";
           RemainAfterExit = true;
+          # Clean up old system-level root containers (silent on failure).
+          ExecStartPre = [
+            "-sudo podman rm -f opencode-auto-router 2>/dev/null"
+            "-sudo podman rm -f opencode-litellm 2>/dev/null"
+            "-sudo podman rm -f opencode-ollama 2>/dev/null"
+          ];
           ExecStart = "${podman} pod create --name=opencode-auto -p 127.0.0.1:11434:11434 -p 127.0.0.1:8000:8000 -p 127.0.0.1:4000:4000";
           ExecStop = "-${podman} pod rm -f opencode-auto";
         };
@@ -226,17 +259,17 @@ in
         Install.WantedBy = [ "default.target" ];
       };
 
-      # -- Pull Ollama models (oneshot) --------------------------------
-      "opencode-auto-router-pull-models" = {
+      # -- Sync Ollama models (oneshot: pull desired, prune stale) ------
+      "opencode-auto-router-sync-models" = {
         Unit = {
-          Description = "Pull Ollama models for classification";
+          Description = "Sync Ollama models for OpenCode auto-router";
           After = [ "podman-opencode-ollama.service" ];
           Requires = [ "podman-opencode-ollama.service" ];
         };
         Service = {
           Type = "oneshot";
           RemainAfterExit = true;
-          ExecStart = mkPullScript;
+          ExecStart = mkSyncScript;
         };
         Install.WantedBy = [ "default.target" ];
       };
