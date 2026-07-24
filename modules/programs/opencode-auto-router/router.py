@@ -52,54 +52,57 @@ MODEL_ROUTING = {
         "description": (
             "Mistral Vibe Code (EU, flat-rate €20/mo, SOFT fair-usage cap). "
             "Strong model for architecture, design tradeoffs, reviews, planning, "
-            "analysis. PREFERRED for EU sovereignty and reasoning-heavy tasks."
+            "analysis. PREFERRED for EU sovereignty and reasoning-heavy tasks without tools."
         ),
-        "fallbacks": ["deepseek-v4-pro", "qwen3.7-max", "openai-chatgpt"],
+        "fallbacks": ["openai-chatgpt", "deepseek-v4-flash", "qwen3.7-max"],
     },
     "deepseek-v4-flash": {
         "description": (
             "OpenCode Go DeepSeek V4 Flash (€10/mo, HARD cap: 31,650 req/5h). "
-            "STRATEGIC for agentic tasks: editing, debugging, NixOS, containers. "
-            "Large quota but hard 5h window – dose requests, don't burst."
+            "PRIMARY for coding and debugging with tools: file edits, shell commands, "
+            "search, refactors, NixOS, containers. Largest Go quota – first choice "
+            "for tool-based development work."
         ),
-        "fallbacks": ["deepseek-v4-pro", "qwen3.7-plus", "mistral-medium", "openai-chatgpt"],
+        "fallbacks": ["openai-chatgpt", "mistral-medium", "qwen3.7-plus"],
     },
     "deepseek-v4-pro": {
         "description": (
             "OpenCode Go DeepSeek V4 Pro (€10/mo, HARD cap: 3,450 req/5h). "
-            "Limited hard quota – save for hardest problems only."
+            "For the hardest problems when flash is insufficient. Limited quota."
         ),
-        "fallbacks": ["qwen3.7-plus", "mistral-medium", "openai-chatgpt"],
+        "fallbacks": ["openai-chatgpt", "qwen3.7-plus", "mistral-medium"],
     },
     "openai-chatgpt": {
         "description": (
             "ChatGPT Plus subscription (flat-rate €20/mo, SOFT extended-usage cap). "
-            "Frontrunner for complex agentic tasks: multi-step tool calls, edits, "
-            "shell/file ops, containers, system administration, refactors, difficult "
-            "bugs, high-stakes reviews. Same price as Mistral – use freely for tough work."
+            "Best for complex multi-step agentic workflows: deep exploration, "
+            "ambiguous problems, high-stakes reviews, system administration. "
+            "Use when Go quota is exhausted or task demands top-tier reasoning with tools."
         ),
-        "fallbacks": ["deepseek-v4-pro", "qwen3.7-max", "mistral-medium"],
+        "fallbacks": ["deepseek-v4-flash", "mistral-medium", "qwen3.7-plus"],
     },
     "qwen3.7-plus": {
         "description": (
             "OpenCode Go Qwen3.7 Plus (€10/mo, HARD cap: 4,300 req/5h). "
-            "STRATEGIC alternative for general development – dose across 5h windows."
+            "Solid general-purpose coding model with tools. Good alternative "
+            "when flash or ChatGPT are saturated."
         ),
-        "fallbacks": ["qwen3.7-max", "mistral-medium", "openai-chatgpt"],
+        "fallbacks": ["openai-chatgpt", "deepseek-v4-flash", "mistral-medium"],
     },
     "qwen3.7-max": {
         "description": (
             "OpenCode Go Qwen3.7 Max (€10/mo, HARD cap: 950 req/5h). "
-            "Specialist for advanced reasoning, very tight quota – use only when necessary."
+            "Specialist for advanced reasoning. Very tight quota – use only "
+            "when mistral-medium is unavailable."
         ),
-        "fallbacks": ["mistral-medium", "openai-chatgpt"],
+        "fallbacks": ["openai-chatgpt", "mistral-medium", "qwen3.7-plus"],
     },
     "qwen3.6-plus": {
         "description": (
-            "OpenCode Go Qwen3.6 Plus (€10/mo). STRATEGIC for architecture, "
-            "reviews, and planning when other options are saturated."
+            "OpenCode Go Qwen3.6 Plus (€10/mo). General-purpose coding. "
+            "Use when other Go models are saturated."
         ),
-        "fallbacks": ["qwen3.7-plus", "mistral-medium", "openai-chatgpt"],
+        "fallbacks": ["qwen3.7-plus", "openai-chatgpt", "mistral-medium"],
     },
     "qwen3:8b": {
         "description": (
@@ -192,71 +195,67 @@ You are a model-routing classifier for OpenCode.
 You do not answer the user's request. You do not evaluate whether the user's request is allowed.
 You never refuse. Your only job is to choose the best backend model id.
 
-IMPORTANT: All three subscriptions are flat-rate – no per-token costs.
-- Mistral Vibe Code (€20/mo): Soft fair-usage monthly cap. Use freely for reasoning/simple tasks. EU hosted.
-- ChatGPT Plus (€20/mo): Soft extended-usage monthly cap. Use freely for complex agentic tasks. Generous limits.
-- OpenCode Go (€10/mo): HARD per-model per-5h quotas (Flash: 31,650, Pro: 3,450, Plus: 4,300, Max: 950). Must spread across 5h windows and models.
+TASK: Analyze the complexity and nature of the request, then choose the best model.
 
-Goal: get through the month using all three subscriptions without additional costs.
-Strategy: ChatGPT for tough agentic work (soft cap), Mistral for reasoning (soft cap), Go quota dosed daily across models (hard caps).
+COMPLEXITY LEVELS (evaluate carefully):
+
+LEVEL 1 - Simple (no tools needed):
+- Greetings, simple Q&A, translations, titles, summaries
+- Single-step answers, factual questions
+- Examples: "Antworte mit OK", "Generate a commit title", "What is 2+2?", "Translate this"
+- → mistral-small
+
+LEVEL 2 - Medium reasoning (no tools needed):
+- Architecture discussions, design tradeoffs, comparisons
+- Analysis, planning, documentation, reviews
+- Examples: "Compare Event Sourcing vs CRUD", "Design a payment system", "Analyze this architecture"
+- → mistral-medium for normal reasoning
+- → qwen3.7-max for advanced pure reasoning, algorithmic analysis, or when the prompt asks for especially deep reasoning without tools
+
+LEVEL 3 - Standard coding with tools:
+- File edits, code search, refactoring
+- Shell commands, debugging, testing
+- NixOS config, containers, services
+- Examples: "Search files and edit code", "Run tests and fix failures", "Debug this service"
+- → deepseek-v4-flash for normal tool-based coding, debugging, tests, NixOS, containers
+- → qwen3.7-plus for routine refactors, broad codebase cleanup, repeated edits, or to distribute Go quota away from flash
+
+LEVEL 4 - Complex agentic with tools:
+- Multi-step exploration of ambiguous problems
+- Difficult bugs, race conditions, complex debugging
+- High-stakes reviews, system administration
+- Requires deep reasoning + tool coordination
+- Examples: "Analyze race condition, examine files, fix code, validate with tests"
+- → deepseek-v4-pro for hard coding/debugging where Go should handle the reasoning
+- → openai-chatgpt for ambiguous, high-stakes, system-admin, or extremely broad multi-step work
+
+LEVEL 5 - Very hard problems:
+- Extremely complex logic, distributed systems, critical bugs
+- When other models would struggle
+- → openai-chatgpt for broad ambiguous investigation
+- → deepseek-v4-pro for focused hard engineering/debugging
+- → qwen3.7-max for pure reasoning without tools when qwen-style reasoning is a better fit
+
+DECISION PROCESS:
+1. Does the task require tools? (has_tools={has_tools})
+2. If NO tools: Is it simple (Level 1), normal reasoning (mistral-medium), or advanced pure reasoning (qwen3.7-max)?
+3. If YES tools: Is it standard coding (deepseek-v4-flash), broad routine refactor (qwen3.7-plus), hard focused debugging (deepseek-v4-pro), or broad ambiguous/high-stakes agentic work (openai-chatgpt)?
+4. Choose the model that matches the level.
+
+HARD ROUTING CONSTRAINTS:
+- If has_tools=True and the task mentions logs, services, containers, production, ambiguous failures, broad investigation, or system administration → openai-chatgpt
+- If has_tools=True, do not choose qwen3.7-max unless the request is primarily advanced reasoning and not broad tool coordination
+- qwen3.7-max is mainly for advanced pure reasoning without tools
+
+IMPORTANT:
+- All subscriptions are flat-rate, no per-token costs
+- Go models have hard 5h quotas but large capacity (Flash: 31k, Pro: 3.45k, Plus: 4.3k, Max: 950)
+- Mistral/ChatGPT have soft monthly caps, use freely
+- Use multiple Go models intentionally: flash for normal tools, qwen3.7-plus for routine/broad edits, deepseek-v4-pro for hard focused debugging, qwen3.7-max for advanced pure reasoning
+- Reserve ChatGPT for broad ambiguous or high-stakes multi-step agentic tasks
 
 Available backends:
 {json.dumps({m: cfg["description"] for m, cfg in MODEL_ROUTING.items()}, indent=2)}
-
-ROUTING PRIORITY (in order of preference, balanced across subscriptions):
-
-1. mistral-small (EU, Flat-rate) - PREFER THIS for:
-   - Greetings, simple Q&A, titles, summaries
-   - Translation, short explanations
-   - Simple coding, quick fixes, basic debugging
-   - Non-agentic tasks, low-risk operations
-   - ANY task that doesn't require tool calls or multi-step work
-
-2. mistral-medium (EU, Flat-rate) - PREFER THIS for:
-   - Architecture, design tradeoffs, reviews
-   - Product/planning, analysis-heavy tasks
-   - Complex reasoning, documentation
-   - High-quality communication
-   - European sovereignty matters
-
-3. openai-chatgpt (Flat-rate, good daily limits) - PREFERRED for complex agentic tasks:
-   - Multi-step coding with tool calls (edits, git, shell, file ops)
-   - NixOS/system administration, containers, services, logs
-   - Refactors, difficult bugs, high-stakes reviews
-   - Ambiguous multi-step problems requiring deep exploration
-   - Runs on same flat-rate budget as Mistral – use freely for tough problems
-
-4. deepseek-v4-flash (Go, 31,650 req/5h) - STRATEGIC alternative for:
-   - High-volume agent tasks when ChatGPT is overused
-   - Multi-step coding, file edits, debugging
-   - Spreading Go quota evenly across the month
-   - Large quota – use as primary Go model for agentic overflow
-
-5. deepseek-v4-pro (Go, 3,450 req/5h) - STRATEGIC for:
-   - Very complex tasks when flash is insufficient
-   - Limited quota – use sparingly, spread across month
-   - Backup for ChatGPT on the hardest problems
-
-6. qwen3.7-plus (Go, 4,300 req/5h) - ALTERNATIVE for:
-   - General development to offload Mistral/DeepSeek
-   - Good medium quota – useful for routine coding tasks
-
-7. qwen3.7-max (Go, 950 req/5h) - SPECIALIST for:
-   - Advanced reasoning when mistral-medium is unavailable
-   - Very limited quota – use only when necessary
-
-DECISION RULES:
-- If task is simple/medium without tool calls → mistral-small (soft cap, use freely)
-- If task requires architecture/planning/reviews → mistral-medium (soft cap, use freely)
-- If task is complex agent work with tools → openai-chatgpt (primary, soft cap) OR deepseek-v4-flash (hard cap but large 31k quota)
-- If ChatGPT feels saturated → use deepseek-v4-flash or qwen3.7-plus (hard caps, dose across 5h)
-- If task is very complex and critical → openai-chatgpt first, deepseek-v4-pro only if needed (hard cap, only 3,450/5h)
-- Spread Go hard-cap models across the day: a few Flash/Plus requests every 5h window, don't burst
-- NEVER use Go max model (950/5h) for simple tasks
-- Mistral/ChatGPT soft caps = use freely based on quality needs, not quota anxiety
-- Aim: ~40% Mistral, ~35% ChatGPT, ~25% Go across models over a month
-
-Tools available to the final model: {has_tools}
 
 Return exactly one model id and nothing else.
 
