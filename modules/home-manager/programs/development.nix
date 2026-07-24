@@ -191,16 +191,25 @@
                       output = 32768;
                     };
                   };
-                  openai-chatgpt = {
-                    name = "ChatGPT 5.5";
-                    tool_call = true;
-                    temperature = true;
-                    limit = {
-                      context = 128000;
-                      output = 32768;
-                    };
-                  };
-               };
+                   openai-chatgpt = {
+                     name = "ChatGPT 5.5";
+                     tool_call = true;
+                     temperature = true;
+                     limit = {
+                       context = 128000;
+                       output = 32768;
+                     };
+                   };
+                   "qwen3:8b" = {
+                     name = "Qwen3 8B (Local)";
+                     tool_call = true;
+                     temperature = true;
+                     limit = {
+                       context = 128000;
+                       output = 32768;
+                     };
+                   };
+                };
             };
           };
         };
