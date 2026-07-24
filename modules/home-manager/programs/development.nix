@@ -94,6 +94,15 @@
           model = "local/auto";
           small_model = "local/auto";
 
+          agent = {
+            build.model = "local/auto";
+            general.model = "local/auto";
+            explore.model = "local/auto";
+            plan.model = "local/auto";
+            title.model = "local/mistral-small";
+            summary.model = "local/mistral-small";
+          };
+
           # Other models switchable via /models are all exposed by local/*.
 
           plugin = [
@@ -118,22 +127,13 @@
                   output = 32768;
                 };
               };
-              models.qwen3-fast = {
-                name = "Qwen3 14B Local";
+              models.mistral-small = {
+                name = "Mistral Small";
                 tool_call = true;
                 temperature = true;
                 limit = {
-                  context = 40960;
-                  output = 16384;
-                };
-              };
-              models.qwen3-deep = {
-                name = "Qwen3 32B Local";
-                tool_call = true;
-                temperature = true;
-                limit = {
-                  context = 40960;
-                  output = 16384;
+                  context = 128000;
+                  output = 32768;
                 };
               };
               models.mistral-medium = {
