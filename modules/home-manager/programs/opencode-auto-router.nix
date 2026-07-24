@@ -15,18 +15,14 @@
   ...
 }:
 let
-  # Local Ollama models used for request classification (tried in order).
-  # llama3.2:3b is primary: fast cold-start (~2s), low VRAM (~2GB).
-  # qwen3:8b is fallback: higher quality but slower to load.
+  # Local Ollama model used for request classification.
   routerModels = [
-    "llama3.2:3b"
     "qwen3:8b"
   ];
 
   # Models to pull into Ollama on first start.
   ollamaModels = [
     "qwen3:8b"
-    "llama3.2:3b"
   ];
 
   routerEnv = pkgs.python3.withPackages (ps: [
@@ -161,7 +157,7 @@ in
             "--device=/dev/kfd"
             "--device=/dev/dri"
             "-v opencode-ollama:/root/.ollama"
-            "-e OLLAMA_KEEP_ALIVE=5m"
+            "-e OLLAMA_KEEP_ALIVE=30s"
             "docker.io/ollama/ollama:latest"
           ];
           ExecStop = "${podman} stop opencode-ollama";
@@ -253,6 +249,7 @@ in
             "-e OLLAMA_URL=http://127.0.0.1:11434"
             "-e LITELLM_URL=http://127.0.0.1:8000/v1"
             "-e OPENCODE_AUTH_FILE=/var/lib/opencode/auth.json"
+            "-e OPENAI_CHATGPT_MODEL=gpt-5.5"
             "-e DEFAULT_MODEL=deepseek-v4-pro"
             "opencode-auto-router:latest"
           ];

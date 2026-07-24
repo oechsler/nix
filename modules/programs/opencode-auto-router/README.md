@@ -10,16 +10,11 @@ Manual model selection is also available through the same OpenCode provider:
 - `local/mistral-medium`
 - `local/deepseek-v4-pro`
 - `local/deepseek-v4-flash`
-- `local/openai-luna`
-- `local/openai-luna-fast`
-- `local/openai-sol`
-- `local/openai-sol-fast`
-- `local/openai-terra`
-- `local/openai-terra-fast`
 - `local/qwen3.7-max`
 - `local/qwen3.7-plus`
 - `local/qwen3.6-plus`
 - `local/qwen3:8b`
+- `local/openai-chatgpt`
 
 ## Architecture
 
@@ -41,12 +36,7 @@ Backends currently available to the router:
 - `qwen3.6-plus`: OpenCode Go Qwen3.6 Plus cloud model. Cost-effective option for architecture, reviews, analysis, and broad non-private planning.
 - `mistral-medium`: Mistral cloud model through LiteLLM, intended for architecture, reviews, analysis, and broad planning.
 - `qwen3:8b`: Local Qwen3 8B model running on Ollama. Available for manual selection as `local/qwen3:8b`. Useful for testing and offline/privacy-critical tasks. Slower and less capable than cloud models; not selected by auto-routing.
-- `openai-terra`: ChatGPT 5.6 Terra – most capable model for the hardest agentic coding, critical bugs, ambiguous exploration, and high-stakes system administration.
-- `openai-sol`: ChatGPT 5.6 Sol – strong model for complex debugging, refactoring, and tool-heavy development with moderate reasoning demands.
-- `openai-luna`: ChatGPT 5.6 Luna – general-purpose coding, editing, shell commands, daily development tasks.
-- `openai-terra-fast`: ChatGPT 5.6 Terra Fast – faster Terra variant for urgent hard problems when latency matters.
-- `openai-sol-fast`: ChatGPT 5.6 Sol Fast – fast Sol variant for solid coding with quick turnaround.
-- `openai-luna-fast`: ChatGPT 5.6 Luna Fast – fastest ChatGPT option for routine development at high throughput.
+- `openai-chatgpt`: ChatGPT subscription model through the ChatGPT OAuth backend, reserved for the hardest agentic coding work, risky broad refactors, difficult bugs, and high-stakes reviews.
 
 Auto-routing optimizes for the cheapest model that is likely to complete the task well:
 
@@ -57,7 +47,7 @@ Auto-routing optimizes for the cheapest model that is likely to complete the tas
 - Complex tasks, refactoring, and advanced problem solving go to `qwen3.7-max`.
 - Architecture, reviews, analysis, and broad non-private planning go to `qwen3.6-plus`.
 - Broad architecture, design tradeoffs, reviews, planning, and analysis-heavy work goes to `mistral-medium`.
-- The hardest, riskiest, most ambiguous, or high-stakes work goes to `openai-terra`.
+- The hardest, riskiest, most ambiguous, or high-stakes work goes to `openai-chatgpt`.
 - Local Qwen is used primarily for classification, but is also available as a manually-selectable answer model for testing and offline use.
 
 If a backend fails before the response starts, the router tries fallback models automatically.
@@ -76,7 +66,7 @@ chunk is sent. Fallbacks are shown in-chat as `Routed to: original -> fallback`.
 
 OpenCode itself authenticates ChatGPT/OpenAI through `opencode-openai-codex-auth`. The auto-router reuses the resulting `~/.local/share/opencode/auth.json` OAuth tokens and refreshes them when needed.
 
-The ChatGPT backend endpoint still contains `codex` in the URL because that is the official Codex CLI/OAuth backend path used by the existing OpenCode plugin. The actual model name sent to the API is configured per routing entry via the `chatgpt_model` field (e.g. `terra`, `sol`, `luna` with `-fast` variants).
+The ChatGPT backend endpoint still contains `codex` in the URL because that is the official Codex CLI/OAuth backend path used by the existing OpenCode plugin. The configured model is `gpt-5.5` via `OPENAI_CHATGPT_MODEL`, not a Codex-only model.
 
 ## Operations
 
