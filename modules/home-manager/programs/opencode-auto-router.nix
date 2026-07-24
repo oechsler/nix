@@ -74,7 +74,10 @@ let
   syncScript = pkgs.writeShellScriptBin "opencode-auto-router-sync-models" ''
     set -e
     echo "[opencode-auto-router] Waiting for ollama container …"
-    until ${pkgs.podman}/bin/podman exec opencode-ollama ollama list >/dev/null 2>&1; do
+    for i in $(seq 1 30); do
+      if ${pkgs.podman}/bin/podman exec opencode-ollama ollama list >/dev/null 2>&1; then
+        break
+      fi
       sleep 2
     done
 
@@ -131,14 +134,9 @@ in
         Service = {
           Type = "oneshot";
           RemainAfterExit = true;
-          # Clean up old system-level root containers (silent on failure).
-          ExecStartPre = [
-            "-sudo podman rm -f opencode-auto-router 2>/dev/null"
-            "-sudo podman rm -f opencode-litellm 2>/dev/null"
-            "-sudo podman rm -f opencode-ollama 2>/dev/null"
-          ];
           ExecStart = "${podman} pod create --name=opencode-auto -p 127.0.0.1:11434:11434 -p 127.0.0.1:8000:8000 -p 127.0.0.1:4000:4000";
           ExecStop = "-${podman} pod rm -f opencode-auto";
+          TimeoutStartSec = 30;
         };
         Install.WantedBy = [ "default.target" ];
       };
@@ -168,6 +166,7 @@ in
           ExecStop = "${podman} stop opencode-ollama";
           Restart = "on-failure";
           RestartSec = "5s";
+          TimeoutStartSec = 300;
         };
         Install.WantedBy = [ "default.target" ];
       };
@@ -199,6 +198,7 @@ in
           ExecStop = "${podman} stop opencode-litellm";
           Restart = "on-failure";
           RestartSec = "5s";
+          TimeoutStartSec = 300;
         };
         Install.WantedBy = [ "default.target" ];
       };
@@ -214,6 +214,7 @@ in
           RemainAfterExit = true;
           ExecStart = "${podman} load -i ${routerImage}";
           ExecStartPost = "-${podman} image prune -f";
+          TimeoutStartSec = 120;
         };
         Install.WantedBy = [ "default.target" ];
       };
@@ -255,6 +256,7 @@ in
           ExecStop = "${podman} stop opencode-auto-router";
           Restart = "on-failure";
           RestartSec = "5s";
+          TimeoutStartSec = 120;
         };
         Install.WantedBy = [ "default.target" ];
       };
@@ -266,11 +268,12 @@ in
           After = [ "podman-opencode-ollama.service" ];
           Requires = [ "podman-opencode-ollama.service" ];
         };
-         Service = {
-           Type = "oneshot";
-           RemainAfterExit = true;
-           ExecStart = "${syncScript}/bin/opencode-auto-router-sync-models";
-         };
+        Service = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+          TimeoutStartSec = 120;
+          ExecStart = "${syncScript}/bin/opencode-auto-router-sync-models";
+        };
         Install.WantedBy = [ "default.target" ];
       };
     };
