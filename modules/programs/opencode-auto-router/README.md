@@ -72,7 +72,9 @@ The classifier considers:
 
 ### Fallback and Escalation
 
-- **Backend fallback**: If a provider fails before the first response chunk (rate limit, authentication error, context limit), the router walks the fallback chain defined for each model.
+- **Backend fallback**: If a provider fails before the first response chunk (network error, rate limit, authentication error, timeout, or upstream error), the router walks the fallback chain defined for each model.
+- **Provider circuit breaker**: An unavailable provider enters a 60-second cooldown. Other models from that provider are skipped instead of repeating the same slow failure.
+- **Offline safety net**: Every fallback chain covers the cloud providers and includes local `qwen3:8b`, so requests can still receive a limited answer during a complete cloud outage.
 - **Capability escalation**: If a user says the previous answer did not work (e.g., "that did not work", "funktioniert nicht"), the router reads the model from the previous response and escalates to the next capability tier on the next turn.
 
 ## Model Selection
@@ -101,7 +103,7 @@ Models are listed once below in the approximate order of work they are intended 
 ### Local Ollama
 
 - **`llama3.2:3b`** — Local classifier and fallback classifier; not selected as an answer model by auto-routing
-- **`qwen3:8b`** — Manual offline or privacy-sensitive work; not selected as an answer model by auto-routing
+- **`qwen3:8b`** — Offline and privacy-sensitive work; also the final automatic fallback when cloud providers are unavailable
 
 The broad routing policy:
 
@@ -115,7 +117,7 @@ The broad routing policy:
 
 The router handles two different failure modes.
 
-**Backend fallback** applies when a provider fails before the first response chunk, for example because of a rate limit, missing authentication, a context limit, or an upstream server error. The router follows the configured fallback chain until a backend accepts the request. Once streaming has started, it cannot replace that response.
+**Backend fallback** applies when a provider fails before the first response chunk, for example because of a network failure, timeout, rate limit, missing authentication, context limit, or upstream server error. The router follows the configured fallback chain until a backend accepts the request. A provider-level circuit breaker prevents subsequent requests from retrying every model of a provider known to be unavailable. The cooldown state is visible in `/health`. Once streaming has started, the router cannot replace that response, but an interrupted stream puts that provider on cooldown for the next request.
 
 **Capability escalation** applies when a backend returned an answer but the user says that the attempt failed or asks it to try again. On the next turn, the router reads the model recorded on the previous response and moves to the next capability tier. This is separate from provider availability fallback and prevents a failed task from repeatedly returning to the same small model.
 
@@ -150,7 +152,7 @@ ChatGPT authentication works differently. OpenCode creates the OAuth entry throu
 
 ## Manual Selection
 
-Select `local/auto` for normal use. To bypass classification and automatic fallback, choose any specific `local/<model>` entry in OpenCode, for example `local/openai-terra`, `local/qwen3:8b`, or `local/llama3.2:3b`.
+Select `local/auto` for normal use. A specific `local/<model>` entry, for example `local/openai-terra` or `local/qwen3:8b`, bypasses classification and becomes the preferred backend. Availability fallback remains active so a selected provider outage does not break the session.
 
 ## Components
 

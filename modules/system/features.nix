@@ -229,6 +229,10 @@ in
           assertion = config.features.encryption.unlockMethod != "yubikey" || hasYubiKey;
           message = "features.encryption.unlockMethod = 'yubikey' requires features.auth.yubikey.enable = true. Set auth.yubikey.enable = true or change encryption.unlockMethod.";
         }
+        {
+          assertion = !config.features.encryption.enable || config.boot.initrd.luks.devices != {};
+          message = "features.encryption.enable = true requires a LUKS device in the host's disko.nix. If the host uses no encryption, set features.encryption.enable = false.";
+        }
       ];
     }
   ];

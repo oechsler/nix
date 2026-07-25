@@ -21,7 +21,7 @@
 #   vi, vim → nvim
 #   EDITOR → nvim
 
-{ pkgs, theme, ... }:
+{ pkgs, theme, lib, features, ... }:
 
 {
   #===========================
@@ -32,7 +32,7 @@
   # (avoids the viml/lua type warning since we use pure Lua setup)
   catppuccin.nvim.enable = false;
 
-  programs.neovim = {
+  programs.neovim = lib.mkIf features.development.enable {
     enable = true;
     defaultEditor = true; # Set as $EDITOR
     viAlias = true; # vi → nvim

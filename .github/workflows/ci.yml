@@ -42,6 +42,9 @@ jobs:
       - name: Run deadnix (dead code detection)
         run: nix build .#checks.x86_64-linux.deadnix --show-trace
 
+      - name: Run shellcheck (shell script lint)
+        run: nix shell nixpkgs#shellcheck -c 'shellcheck install.sh'
+
   #===========================================================================
   # Job 2: Build Validation
   #===========================================================================
@@ -60,14 +63,12 @@ jobs:
         run: |
           nix build \
             .#nixosConfigurations.samuels-terra.config.system.build.toplevel \
-            --dry-run \
             --show-trace
 
       - name: Build samuels-pc
         run: |
           nix build \
             .#nixosConfigurations.samuels-pc.config.system.build.toplevel \
-            --dry-run \
             --show-trace
 
       - name: Build samuels-ser9
@@ -81,5 +82,4 @@ jobs:
         run: |
           nix build \
             .#nixosConfigurations.samuels-razer.config.system.build.toplevel \
-            --dry-run \
             --show-trace

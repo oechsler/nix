@@ -38,7 +38,7 @@ let
     echo "Waiting for network and DNS..."
     for i in $(seq 1 30); do
       if ${pkgs.iproute2}/bin/ip route | ${pkgs.gnugrep}/bin/grep -q '^default'; then
-        if ${pkgs.systemd}/bin/resolvectl query google.com >/dev/null 2>&1; then
+        if ${pkgs.systemd}/bin/resolvectl query localhost >/dev/null 2>&1; then
           echo "Network and DNS ready"
           exit 0
         fi

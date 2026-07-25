@@ -131,10 +131,17 @@ in
         Unit = {
           Description = "OpenCode shared pod (ollama + litellm + router)";
           After = [ "network-online.target" ];
+          Wants = [
+            "podman-opencode-ollama.service"
+            "podman-opencode-litellm.service"
+            "opencode-auto-router-sync-models.service"
+            "podman-opencode-auto-router.service"
+          ];
         };
         Service = {
           Type = "oneshot";
           RemainAfterExit = true;
+          ExecStartPre = "-${podman} pod rm -f opencode-auto";
           ExecStart = "${podman} pod create --name=opencode-auto -p 127.0.0.1:11434:11434 -p 127.0.0.1:8000:8000 -p 127.0.0.1:4000:4000";
           ExecStop = "-${podman} pod rm -f opencode-auto";
           TimeoutStartSec = 30;
@@ -150,21 +157,23 @@ in
           Requires = [ "opencode-auto-router-pod.service" ];
           PartOf = [ "opencode-auto-router-pod.service" ];
         };
-        Service = {
-          ExecStartPre = "-${podman} rm -f opencode-ollama";
-          ExecStart = lib.concatStringsSep " " [
-            podman
-            "run"
-            "--name=opencode-ollama"
-            "--rm"
-            "--pod=opencode-auto"
-            "--device=/dev/kfd"
-            "--device=/dev/dri"
-            "-v opencode-ollama:/root/.ollama"
-            "-e OLLAMA_KEEP_ALIVE=5m"
-            "docker.io/ollama/ollama:latest"
-          ];
-          ExecStop = "${podman} stop opencode-ollama";
+         Service = {
+           ExecStartPre = "-${podman} rm -f opencode-ollama";
+           ExecStart = lib.concatStringsSep " " ([
+             podman
+             "run"
+             "--name=opencode-ollama"
+             "--rm"
+             "--pod=opencode-auto"
+             "--device=/dev/dri"
+           ] ++ lib.optionals (features.hardware.gpu == "amd") [
+             "--device=/dev/kfd"
+           ] ++ [
+             "-v opencode-ollama:/root/.ollama"
+             "-e OLLAMA_KEEP_ALIVE=5m"
+              "docker.io/ollama/ollama@sha256:ec24bcaa2a810eb74171ce7c517813ef4821ed678988845e8d76cf62467036d4"
+           ]);
+           ExecStop = "${podman} stop opencode-ollama";
           Restart = "on-failure";
           RestartSec = "5s";
           TimeoutStartSec = 300;
@@ -196,7 +205,7 @@ in
             "--pod=opencode-auto"
             "-v ${litellmConfig}:/etc/litellm/config.yaml:ro"
             "--env-file=${config.sops.templates."opencode-auto-router-litellm.env".path}"
-            "ghcr.io/berriai/litellm:main-latest"
+            "ghcr.io/berriai/litellm@sha256:029460ad724a63b39021612a3523989483184347372f0204d39fcf540484609f"
             "--config /etc/litellm/config.yaml --host 0.0.0.0 --port 8000"
           ];
           ExecStop = "${podman} stop opencode-litellm";
