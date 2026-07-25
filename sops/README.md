@@ -60,8 +60,8 @@ git commit -m "Update secrets"
 | `wifi/<name>/psk` | WiFi WPA2 pre-shared key | `modules/system/networking/wifi.nix` (NetworkManager) |
 | `smb/<name>/password` | SMB/CIFS mount credentials | `modules/system/smb.nix` (systemd mount units) |
 | `backgrounds/password` | Wallhaven API password for wallpaper sync | `modules/system/backgrounds.nix` |
-| `opencode/mistral/api-key` | Mistral API key for LLM coding assistant | `modules/home-manager/programs/opencode-auto-router.nix` |
-| `opencode/opencode-go/api-key` | OpenCode Go API key | `modules/home-manager/programs/opencode-auto-router.nix` |
+| `opencode/mistral/api-key` | Mistral API key for LLM coding assistant | `modules/home-manager/programs/opencode-auto-router/services.nix` |
+| `opencode/opencode-go/api-key` | OpenCode Go API key | `modules/home-manager/programs/opencode-auto-router/services.nix` |
 
 ### WiFi Networks
 - `wifi/home/psk` — Home WPA2 PSK

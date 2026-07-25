@@ -1,5 +1,8 @@
 # Disk Configuration (samuels-ser9)
 #
+# WARNING: PLACEHOLDER — Replace the disk ID before installation!
+#     $ ls -l /dev/disk/by-id/ | grep nvme
+#
 # Declarative disk partitioning with disko.
 #
 # Layout:

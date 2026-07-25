@@ -210,7 +210,6 @@ in
       enable = true;
       extraConfig = ''
         Defaults timestamp_timeout=30
-        Defaults !use_pty
       '';
     };
   };
