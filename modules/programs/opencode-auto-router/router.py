@@ -173,6 +173,33 @@ CHATGPT_MODELS = {
     m for m, cfg in MODEL_ROUTING.items() if "chatgpt_model" in cfg
 }
 
+MODEL_PROVIDERS = {
+    "mistral-small": "mistral",
+    "mistral-medium": "mistral",
+    "deepseek-v4-flash": "opencode-go",
+    "deepseek-v4-pro": "opencode-go",
+    "qwen3.7-plus": "opencode-go",
+    "qwen3.7-max": "opencode-go",
+    "qwen3.6-plus": "opencode-go",
+    "qwen3:8b": "ollama",
+    "llama3.2:3b": "ollama",
+    **{model: "chatgpt" for model in CHATGPT_MODELS},
+}
+
+# Ensure every route can survive a complete provider outage. Existing
+# model-specific fallbacks run first; this list fills missing providers and
+# always ends at the local model, which remains usable without internet.
+GLOBAL_FALLBACKS = [
+    "mistral-small",
+    "deepseek-v4-flash",
+    "openai-luna",
+    "qwen3:8b",
+]
+
+_PROVIDER_COOLDOWN = int(os.environ.get("PROVIDER_COOLDOWN_SECONDS", "60"))
+_provider_unavailable_until: dict[str, float] = {}
+_PROVIDER_FAILURE_STATUSES = {401, 403, 408, 425, 429}
+
 # ---------------------------------------------------------------------------
 # ChatGPT / OpenAI OAuth
 #
@@ -555,7 +582,56 @@ def _fallback_chain(model: str) -> list[str]:
         result.append(candidate)
         fallbacks = MODEL_ROUTING.get(candidate, {}).get("fallbacks", [])
         candidate = fallbacks[0] if fallbacks else ""
+    for fallback in GLOBAL_FALLBACKS:
+        if fallback not in result:
+            result.append(fallback)
     return result or [model]
+
+
+def _provider(model: str) -> str:
+    return MODEL_PROVIDERS.get(model, model)
+
+
+def _provider_available(model: str) -> bool:
+    provider = _provider(model)
+    unavailable_until = _provider_unavailable_until.get(provider, 0)
+    if unavailable_until <= time.monotonic():
+        _provider_unavailable_until.pop(provider, None)
+        return True
+    return False
+
+
+def _mark_provider_failure(model: str, reason: str) -> None:
+    provider = _provider(model)
+    _provider_unavailable_until[provider] = time.monotonic() + _PROVIDER_COOLDOWN
+    logger.warning(
+        "provider cooldown provider=%s model=%s seconds=%s reason=%s",
+        provider,
+        model,
+        _PROVIDER_COOLDOWN,
+        reason,
+    )
+
+
+def _mark_provider_http_failure(model: str, status_code: int) -> None:
+    if status_code >= 500 or status_code in _PROVIDER_FAILURE_STATUSES:
+        _mark_provider_failure(model, f"HTTP {status_code}")
+
+
+def _mark_provider_success(model: str) -> None:
+    _provider_unavailable_until.pop(_provider(model), None)
+
+
+def _degraded_providers() -> dict[str, int]:
+    now = time.monotonic()
+    degraded = {}
+    for provider, unavailable_until in list(_provider_unavailable_until.items()):
+        remaining = int(unavailable_until - now)
+        if remaining > 0:
+            degraded[provider] = remaining
+        else:
+            _provider_unavailable_until.pop(provider, None)
+    return degraded
 
 
 # ---------------------------------------------------------------------------
@@ -873,8 +949,20 @@ async def _stream_chatgpt(
     original_model: str | None = None,
     show_notice: bool = True,
 ):
-    auth_info = await _get_openai_auth()
+    try:
+        auth_info = await _get_openai_auth()
+    except Exception as exc:
+        _mark_provider_failure(routed_model, f"auth refresh failed: {exc}")
+        if fallback_models:
+            return await _stream_to_backend(
+                body, fallback_models, original_model or routed_model, show_notice
+            )
+        return JSONResponse(
+            {"error": "OpenAI OAuth refresh failed", "details": str(exc)},
+            status_code=502,
+        )
     if not auth_info:
+        _mark_provider_failure(routed_model, "OAuth credentials unavailable")
         if fallback_models:
             return await _stream_to_backend(
                 body, fallback_models, original_model or routed_model, show_notice
@@ -915,7 +1003,19 @@ async def _stream_chatgpt(
     upstream = client.stream(
         "POST", CHATGPT_RESPONSES_URL, json=request_body, headers=headers
     )
-    response = await upstream.__aenter__()
+    try:
+        response = await upstream.__aenter__()
+    except httpx.HTTPError as exc:
+        await client.aclose()
+        _mark_provider_failure(routed_model, f"network error: {exc}")
+        if fallback_models:
+            return await _stream_to_backend(
+                body, fallback_models, original_model or routed_model, show_notice
+            )
+        return JSONResponse(
+            {"error": "ChatGPT upstream unavailable", "details": str(exc)},
+            status_code=502,
+        )
     if not response.is_success:
         error_body = (await response.aread()).decode(errors="replace")
         logger.warning(
@@ -923,6 +1023,7 @@ async def _stream_chatgpt(
             response.status_code,
             error_body,
         )
+        _mark_provider_http_failure(routed_model, response.status_code)
         await upstream.__aexit__(None, None, None)
         await client.aclose()
         if fallback_models:
@@ -933,6 +1034,8 @@ async def _stream_chatgpt(
             {"error": "ChatGPT upstream failed", "details": error_body},
             status_code=response.status_code,
         )
+
+    _mark_provider_success(routed_model)
 
     async def _iter_chatgpt_sse():
         had_tool_calls = False
@@ -1005,7 +1108,7 @@ async def _stream_chatgpt(
                     yield f"data: {json.dumps(chunk)}\n\n"
                 if event_type in {"response.done", "response.completed"}:
                     response_id = event.get("response", {}).get("id", "chatgpt-response")
-                    if show_notice:
+                    if show_notice or original_model != routed_model:
                         yield f"data: {json.dumps(_notice_chunk(request_body['model'], '\n\n' + _model_notice_text(routed_model, original_model)))}\n\n"
                     done = {
                         "id": response_id,
@@ -1018,6 +1121,9 @@ async def _stream_chatgpt(
                     }
                     yield f"data: {json.dumps(done)}\n\n"
                     yield "data: [DONE]\n\n"
+        except httpx.HTTPError as exc:
+            _mark_provider_failure(routed_model, f"stream interrupted: {exc}")
+            raise
         finally:
             await upstream.__aexit__(None, None, None)
             await client.aclose()
@@ -1038,77 +1144,106 @@ async def _chatgpt_non_streaming(
     original_model: str | None,
     show_notice: bool,
 ):
-    async with httpx.AsyncClient(timeout=600) as client:
-        response = await client.post(
-            CHATGPT_RESPONSES_URL, json=request_body, headers=headers
-        )
-        if not response.is_success:
-            logger.warning(
-                "chatgpt upstream failed status=%s body=%s",
-                response.status_code,
-                response.text,
+    try:
+        async with httpx.AsyncClient(timeout=600) as client:
+            response = await client.post(
+                CHATGPT_RESPONSES_URL, json=request_body, headers=headers
             )
-            try:
-                payload = response.json()
-            except Exception:
-                payload = {"error": "ChatGPT upstream failed", "details": response.text}
-            if fallback_models:
-                return await _stream_to_backend(
-                    body=chat_body,
-                    candidates=fallback_models,
-                    original_model=original_model or routed_model,
-                    show_notice=show_notice,
-                )
-            return JSONResponse(payload, status_code=response.status_code)
-
-        final_response = None
-        text_parts = []
-        tool_calls = []
-        pending_fc_name: str | None = None
-        pending_fc_call_id: str | None = None
-        for line in response.text.splitlines():
-            if not line.startswith("data: "):
-                continue
-            try:
-                event = json.loads(line[6:])
-            except Exception:
-                continue
-            event_type = event.get("type")
-            if event_type == "response.output_item.added":
-                item = event.get("item", {})
-                if item.get("type") == "function_call":
-                    pending_fc_name = item.get("name", "")
-                    pending_fc_call_id = item.get("call_id")
-            if event_type in {"response.output_text.delta", "response.text.delta"}:
-                text_parts.append(event.get("delta", ""))
-            if event_type == "response.function_call_arguments.done":
-                tool_calls.append({
-                    "type": "function_call",
-                    "call_id": pending_fc_call_id or f"call_{int(time.time())}",
-                    "name": pending_fc_name or "unknown",
-                    "arguments": event.get("arguments", ""),
-                })
-                pending_fc_name = None
-                pending_fc_call_id = None
-            if event_type in {"response.done", "response.completed"}:
-                final_response = event.get("response")
-        if not final_response:
-            return JSONResponse({"error": "No final Codex response"}, status_code=502)
-        if not final_response.get("output"):
-            output = []
-            if text_parts:
-                output.append({
-                    "type": "message",
-                    "content": [{"type": "output_text", "text": "".join(text_parts)}],
-                })
-            output.extend(tool_calls)
-            final_response = dict(final_response)
-            final_response["output"] = output
+    except httpx.HTTPError as exc:
+        _mark_provider_failure(routed_model, f"network error: {exc}")
+        if fallback_models:
+            return await _stream_to_backend(
+                body=chat_body,
+                candidates=fallback_models,
+                original_model=original_model or routed_model,
+                show_notice=show_notice,
+            )
         return JSONResponse(
-            _responses_to_chat_completion(
-                final_response, routed_model, original_model, show_notice
-            )
+            {"error": "ChatGPT upstream unavailable", "details": str(exc)},
+            status_code=502,
         )
+
+    if not response.is_success:
+        _mark_provider_http_failure(routed_model, response.status_code)
+        logger.warning(
+            "chatgpt upstream failed status=%s body=%s",
+            response.status_code,
+            response.text,
+        )
+        try:
+            payload = response.json()
+        except Exception:
+            payload = {"error": "ChatGPT upstream failed", "details": response.text}
+        if fallback_models:
+            return await _stream_to_backend(
+                body=chat_body,
+                candidates=fallback_models,
+                original_model=original_model or routed_model,
+                show_notice=show_notice,
+            )
+        return JSONResponse(payload, status_code=response.status_code)
+
+    _mark_provider_success(routed_model)
+
+    final_response = None
+    text_parts = []
+    tool_calls = []
+    pending_fc_name: str | None = None
+    pending_fc_call_id: str | None = None
+    for line in response.text.splitlines():
+        if not line.startswith("data: "):
+            continue
+        try:
+            event = json.loads(line[6:])
+        except Exception:
+            continue
+        event_type = event.get("type")
+        if event_type == "response.output_item.added":
+            item = event.get("item", {})
+            if item.get("type") == "function_call":
+                pending_fc_name = item.get("name", "")
+                pending_fc_call_id = item.get("call_id")
+        if event_type in {"response.output_text.delta", "response.text.delta"}:
+            text_parts.append(event.get("delta", ""))
+        if event_type == "response.function_call_arguments.done":
+            tool_calls.append({
+                "type": "function_call",
+                "call_id": pending_fc_call_id or f"call_{int(time.time())}",
+                "name": pending_fc_name or "unknown",
+                "arguments": event.get("arguments", ""),
+            })
+            pending_fc_name = None
+            pending_fc_call_id = None
+        if event_type in {"response.done", "response.completed"}:
+            final_response = event.get("response")
+    if not final_response:
+        _mark_provider_failure(routed_model, "no final response")
+        if fallback_models:
+            return await _stream_to_backend(
+                body=chat_body,
+                candidates=fallback_models,
+                original_model=original_model or routed_model,
+                show_notice=show_notice,
+            )
+        return JSONResponse({"error": "No final Codex response"}, status_code=502)
+    if not final_response.get("output"):
+        output = []
+        if text_parts:
+            output.append({
+                "type": "message",
+                "content": [{"type": "output_text", "text": "".join(text_parts)}],
+            })
+        output.extend(tool_calls)
+        final_response = dict(final_response)
+        final_response["output"] = output
+    return JSONResponse(
+        _responses_to_chat_completion(
+            final_response,
+            routed_model,
+            original_model,
+            show_notice or original_model != routed_model,
+        )
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -1130,6 +1265,13 @@ async def _stream_to_backend(
 
     for index, candidate in enumerate(candidates):
         remaining = candidates[index + 1 :]
+        if not _provider_available(candidate):
+            logger.info(
+                "skipping unavailable provider=%s model=%s",
+                _provider(candidate),
+                candidate,
+            )
+            continue
         if candidate in CHATGPT_MODELS:
             return await _stream_chatgpt(
                 body, candidate, remaining, original_model, show_notice
@@ -1146,7 +1288,17 @@ async def _stream_to_backend(
                 json=forwarded,
                 headers=headers,
             )
-            response = await upstream.__aenter__()
+            try:
+                response = await upstream.__aenter__()
+            except httpx.HTTPError as exc:
+                await client.aclose()
+                _mark_provider_failure(candidate, f"network error: {exc}")
+                last_error = {
+                    "error": "Backend unavailable",
+                    "model": candidate,
+                    "details": str(exc),
+                }
+                continue
             if not response.is_success:
                 body_text = (await response.aread()).decode(errors="replace")
                 logger.warning(
@@ -1161,21 +1313,32 @@ async def _stream_to_backend(
                     "model": candidate,
                     "details": body_text,
                 }
+                _mark_provider_http_failure(candidate, response.status_code)
                 await upstream.__aexit__(None, None, None)
                 await client.aclose()
                 continue
+
+            _mark_provider_success(candidate)
 
             async def _iter_litellm_stream(model: str = candidate):
                 notice_sent = False
                 try:
                     async for line in response.aiter_lines():
-                        should_send_notice = show_notice and not notice_sent and (
-                            _is_terminal_chunk(line) or line.startswith("data: [DONE]")
+                        should_send_notice = (
+                            (show_notice or model != original_model)
+                            and not notice_sent
+                            and (
+                                _is_terminal_chunk(line)
+                                or line.startswith("data: [DONE]")
+                            )
                         )
                         if should_send_notice:
                             yield f"data: {json.dumps(_notice_chunk(model, '\n\n' + _model_notice_text(model, original_model)))}\n\n"
                             notice_sent = True
                         yield line + "\n"
+                except httpx.HTTPError as exc:
+                    _mark_provider_failure(model, f"stream interrupted: {exc}")
+                    raise
                 finally:
                     await upstream.__aexit__(None, None, None)
                     await client.aclose()
@@ -1189,12 +1352,21 @@ async def _stream_to_backend(
             )
 
         # Non-streaming path
-        async with httpx.AsyncClient(timeout=600) as client:
-            response = await client.post(
-                f"{LITELLM_URL}/chat/completions",
-                json=forwarded,
-                headers=headers,
-            )
+        try:
+            async with httpx.AsyncClient(timeout=600) as client:
+                response = await client.post(
+                    f"{LITELLM_URL}/chat/completions",
+                    json=forwarded,
+                    headers=headers,
+                )
+        except httpx.HTTPError as exc:
+            _mark_provider_failure(candidate, f"network error: {exc}")
+            last_error = {
+                "error": "Backend unavailable",
+                "model": candidate,
+                "details": str(exc),
+            }
+            continue
 
         if not response.is_success:
             body_text = _error_text(response)
@@ -1210,14 +1382,25 @@ async def _stream_to_backend(
                 "model": candidate,
                 "details": body_text,
             }
+            _mark_provider_http_failure(candidate, response.status_code)
             continue
 
-        payload = response.json()
+        _mark_provider_success(candidate)
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            _mark_provider_failure(candidate, f"invalid JSON response: {exc}")
+            last_error = {
+                "error": "Backend returned an invalid response",
+                "model": candidate,
+                "details": str(exc),
+            }
+            continue
         for choice in payload.get("choices", []):
             message = choice.get("message")
             if isinstance(message, dict):
                 content = str(message.get("content", ""))
-                if show_notice:
+                if show_notice or candidate != original_model:
                     content += "\n\n" + _model_notice_text(candidate, original_model)
                 message["content"] = content
         return JSONResponse(payload, status_code=response.status_code)
@@ -1231,8 +1414,12 @@ async def _stream_to_backend(
 
 
 @app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok"}
+async def health() -> dict[str, Any]:
+    degraded = _degraded_providers()
+    return {
+        "status": "degraded" if degraded else "ok",
+        "provider_cooldowns": degraded,
+    }
 
 
 @app.get("/v1/models")
@@ -1303,11 +1490,7 @@ async def chat_completions(request: Request):
         and requested_model not in DIRECT_MODELS
     )
     body = _add_agent_instruction(body, has_tools)
-    candidates = (
-        [target_model]
-        if requested_model in DIRECT_MODELS
-        else _fallback_chain(target_model)
-    )
+    candidates = _fallback_chain(target_model)
 
     logger.info(
         "fallback chain target_model=%s candidates=%s",

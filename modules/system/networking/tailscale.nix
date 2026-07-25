@@ -15,9 +15,12 @@ let
 in
 {
   config = lib.mkIf tailscaleCfg.enable {
-    services.tailscale.enable = true;
+    services.tailscale = {
+      enable = true;
+      port = 41641;
+    };
 
-    networking.firewall.trustedInterfaces = [ "tailscale0" ];
+    networking.firewall.allowedUDPPorts = [ 41641 ];
 
     environment.systemPackages = [
       (pkgs.writeShellScriptBin "tailscale-init" ''

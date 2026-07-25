@@ -5,11 +5,33 @@ import router
 
 
 class RouterTest(unittest.TestCase):
+    def setUp(self):
+        router._provider_unavailable_until.clear()
+
     def test_fallback_chain_follows_all_configured_backends(self):
         self.assertEqual(
             router._fallback_chain("mistral-small"),
-            ["mistral-small", "mistral-medium", "openai-terra", "openai-sol", "openai-luna", "openai-terra-fast", "openai-sol-fast", "openai-luna-fast", "deepseek-v4-flash"],
+            ["mistral-small", "mistral-medium", "openai-terra", "openai-sol", "openai-luna", "openai-terra-fast", "openai-sol-fast", "openai-luna-fast", "deepseek-v4-flash", "qwen3:8b"],
         )
+
+    def test_every_fallback_chain_ends_with_local_model(self):
+        for model in router.DIRECT_MODELS:
+            with self.subTest(model=model):
+                chain = router._fallback_chain(model)
+                self.assertIn("qwen3:8b", chain)
+                self.assertEqual(
+                    {router._provider(candidate) for candidate in chain},
+                    {"mistral", "opencode-go", "chatgpt", "ollama"},
+                )
+
+    def test_provider_failure_temporarily_disables_all_provider_models(self):
+        router._mark_provider_failure("mistral-small", "test outage")
+        self.assertFalse(router._provider_available("mistral-small"))
+        self.assertFalse(router._provider_available("mistral-medium"))
+        self.assertTrue(router._provider_available("openai-luna"))
+
+        router._mark_provider_success("mistral-medium")
+        self.assertTrue(router._provider_available("mistral-small"))
 
     def test_notice_is_minimal_for_initial_route(self):
         self.assertEqual(router._model_notice_text("mistral-small", "mistral-small"), "> **mistral-small**")
@@ -76,6 +98,9 @@ class RouterTest(unittest.TestCase):
 
 
 class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
+    def setUp(self):
+        router._provider_unavailable_until.clear()
+
     async def test_retry_routes_to_stronger_model_and_reports_path(self):
         body = {
             "model": "auto",
@@ -100,6 +125,41 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(candidates[0], "mistral-medium")
         self.assertEqual(notice_model, "mistral-small")
         self.assertTrue(show_notice)
+
+    async def test_provider_outage_skips_sibling_model_and_fails_over(self):
+        class Response:
+            is_success = False
+            status_code = 503
+
+            @staticmethod
+            def json():
+                return {"error": "provider unavailable"}
+
+            text = "provider unavailable"
+
+        class Client:
+            post = AsyncMock(return_value=Response())
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+        chatgpt = AsyncMock(return_value="chatgpt fallback")
+        with (
+            patch.object(router.httpx, "AsyncClient", return_value=Client()),
+            patch.object(router, "_stream_chatgpt", chatgpt),
+        ):
+            result = await router._stream_to_backend(
+                body={"stream": False},
+                candidates=["mistral-small", "mistral-medium", "openai-luna"],
+                original_model="mistral-small",
+            )
+
+        self.assertEqual(result, "chatgpt fallback")
+        self.assertEqual(Client.post.await_count, 1)
+        chatgpt.assert_awaited_once()
 
 
 if __name__ == "__main__":

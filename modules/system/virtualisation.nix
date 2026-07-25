@@ -1,6 +1,7 @@
 # Virtualisation Configuration
 #
-# Docker container runtime with IPv6 fixups for desktop hosts.
+# Container and VM management with Docker and libvirt.
+# Docker gets IPv6 fixups on desktop hosts.
 #
 # Configuration:
 #   features.virtualisation.enable = true;  # Enable Docker (default: true)

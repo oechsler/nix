@@ -54,10 +54,26 @@ git commit -m "Update secrets"
 
 ## Managed Secrets
 
-| Secret | Used By |
-|--------|---------|
-| `wifi.home.ssid/psk` | NetworkManager WiFi profiles |
-| `smb.personal-drive.*` | SMB mount credentials |
+| Secret | Purpose | Used By |
+|--------|---------|---------|
+| `user/password` | Login hashed password for Samuel | `modules/system/users.nix`, `modules/system/hardware.nix` |
+| `wifi/<name>/psk` | WiFi WPA2 pre-shared key | `modules/system/networking/wifi.nix` (NetworkManager) |
+| `smb/<name>/password` | SMB/CIFS mount credentials | `modules/system/smb.nix` (systemd mount units) |
+| `backgrounds/password` | Wallhaven API password for wallpaper sync | `modules/system/backgrounds.nix` |
+| `opencode/mistral/api-key` | Mistral API key for LLM coding assistant | `modules/home-manager/programs/opencode-auto-router.nix` |
+| `opencode/opencode-go/api-key` | OpenCode Go API key | `modules/home-manager/programs/opencode-auto-router.nix` |
+
+### WiFi Networks
+- `wifi/home/psk` — Home WPA2 PSK
+
+### SMB Shares
+- `smb/personal-drive/password` — Personal NAS share credentials
+- `smb/pika/password` — Pika server share credentials
+
+### Why Secrets Are Encrypted
+- **Credentials**: WiFi keys, SMB passwords, API tokens must never appear in plaintext in the Git history.
+- **Reproducibility**: The same SOPS file works across all hosts — only the Age key needs to be provisioned on each machine.
+- **Auditability**: Changes to secrets are tracked via Git (encrypted), with the decrypted version gitignored.
 
 
 ## Security Notes

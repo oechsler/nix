@@ -161,43 +161,41 @@
         # Pre-upgrade script: Sync with remote, then apply Secure Boot override if needed.
         # lanzaboote requires /var/lib/sbctl/keys to exist at build time.
         # If secure-boot-init hasn't run yet, inject a mkForce false override so the
-        # build succeeds. The override is cleaned up after the build in ExecStartPost.
+        # build succeeds. The override file lives inside the flake source (so Nix can
+        # find it in pure eval) but is never git-added — cleaned up after build.
         updateFlake = pkgs.writeShellScript "nixos-upgrade-update-flake" ''
           cd ${flakeDir}
           ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git checkout flake.lock
           ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git pull --ff-only
 
-          # Inject Secure Boot override when keys are missing
+          # Write Secure Boot override when sbctl keys are missing.
+          # Never git-added — exists only during the build window.
+          OVERRIDE="${flakeDir}/hosts/$(hostname)/secure-boot-upgrade-override.nix"
           if grep -q 'secureBoot\.enable = true' ${flakeDir}/hosts/$(hostname)/configuration.nix 2>/dev/null \
             && [ ! -f /var/lib/sbctl/keys/db/db.pem ]; then
-            OVERRIDE="${flakeDir}/hosts/$(hostname)/secure-boot-upgrade-override.nix"
             printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }\n' > "$OVERRIDE"
             sed -i '/imports = \[/a\    .\/secure-boot-upgrade-override.nix' \
-              ${flakeDir}/hosts/$(hostname)/configuration.nix
-            ${pkgs.git}/bin/git -C ${flakeDir} add "$OVERRIDE" \
               ${flakeDir}/hosts/$(hostname)/configuration.nix
           fi
         '';
 
-        # Post-upgrade cleanup: remove Secure Boot override if it was injected
+        # Post-upgrade cleanup: remove override and restore configuration.nix.
+        # Runs even on upgrade failure so the git tree stays clean.
         cleanupOverride = pkgs.writeShellScript "nixos-upgrade-cleanup-override" ''
           OVERRIDE="${flakeDir}/hosts/$(hostname)/secure-boot-upgrade-override.nix"
           if [ -f "$OVERRIDE" ]; then
             sed -i '/secure-boot-upgrade-override\.nix/d' \
               ${flakeDir}/hosts/$(hostname)/configuration.nix
             rm -f "$OVERRIDE"
-            ${pkgs.git}/bin/git -C ${flakeDir} rm --cached "$OVERRIDE" 2>/dev/null || true
-            ${pkgs.git}/bin/git -C ${flakeDir} add \
-              ${flakeDir}/hosts/$(hostname)/configuration.nix
           fi
         '';
 
         # Post-upgrade success script
-        # Compare /run/current-system (newly built) vs /run/booted-system (currently running)
+        # Compare /nix/var/nix/profiles/system vs /run/booted-system
         # If different: Reboot recommended
         # If same: System already up-to-date
         successScript = pkgs.writeShellScript "nixos-upgrade-success" ''
-          current=$(readlink /run/current-system)
+          current=$(readlink /nix/var/nix/profiles/system)
           booted=$(readlink /run/booted-system)
           if [ "$current" != "$booted" ]; then
             # New system generation built, reboot needed to activate
@@ -213,10 +211,10 @@
         '';
        in
        {
-         path = [ pkgs.git pkgs.gnused ];
+          path = [ pkgs.git pkgs.gnused ];
 
-         serviceConfig.ExecStartPre = lib.mkBefore [ "${updateFlake}" ];
-         serviceConfig.ExecStartPost = [ "${cleanupOverride}" "${successScript}" ];
+          serviceConfig.ExecStartPre = lib.mkBefore [ "${updateFlake}" ];
+          serviceConfig.ExecStartPost = [ "${cleanupOverride}" "${successScript}" ];
 
           # Trigger failure notification service on upgrade failure
           unitConfig.OnFailure = [ "nixos-upgrade-notify-failure.service" ];

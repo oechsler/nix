@@ -269,7 +269,12 @@ phase_select_host() {
       if [[ "$h" == "$current_hostname" ]]; then
         HOST="$current_hostname"
         success "Host detected from hostname: $HOST"
-        echo ""
+  # Ensure jq is available (not on NixOS ISO by default)
+  if ! command -v jq &>/dev/null; then
+    nix profile install nixpkgs#jq 2>/dev/null || nix-env -iA nixos.jq 2>/dev/null
+  fi
+
+  echo ""
         return
       fi
     done
@@ -333,6 +338,11 @@ phase_detect_features() {
     return
   fi
 
+  # Ensure jq is available (not on NixOS ISO by default)
+  if ! command -v jq &>/dev/null; then
+    nix profile install nixpkgs#jq 2>/dev/null || nix-env -iA nixos.jq 2>/dev/null
+  fi
+
   echo ""
   info "Reading configuration for $HOST..."
   echo ""
@@ -358,11 +368,6 @@ phase_detect_features() {
       luksDevices = builtins.attrValues (builtins.mapAttrs (name: dev: dev.device) cfg.boot.initrd.luks.devices);
     }
   ') || error "Failed to evaluate configuration. Check flake syntax."
-
-  # Ensure jq is available (not on NixOS ISO by default)
-  if ! command -v jq &>/dev/null; then
-    nix profile install nixpkgs#jq 2>/dev/null || nix-env -iA nixos.jq 2>/dev/null
-  fi
 
   FEAT_ENCRYPTION=$(echo "$json"      | jq -r '.encryption')
   FEAT_IMPERMANENCE=$(echo "$json"    | jq -r '.impermanence')
@@ -656,7 +661,14 @@ phase_partition() {
   # shellcheck disable=SC2054  # comma is disko syntax, not array separator
   local disko_args=(--mode destroy,format,mount --flake "$REPO_DIR#$HOST" --yes-wipe-all-disks)
 
-  if ! nix run github:nix-community/disko -- "${disko_args[@]}"; then
+  local disko_ref
+  disko_ref=$(nix flake metadata "path:${REPO_DIR}" --json 2>/dev/null \
+    | jq -r '.locks.nodes.disko.locked | "github:\(.owner)/\(.repo)/\(.rev)"')
+  if [[ -z "$disko_ref" || "$disko_ref" == "null" ]]; then
+    disko_ref="github:nix-community/disko"
+  fi
+
+  if ! nix run "$disko_ref" -- "${disko_args[@]}"; then
     error "Disko failed. Check disk IDs in hosts/$HOST/disko.nix"
   fi
 
@@ -666,7 +678,14 @@ phase_partition() {
 phase_mount() {
   local disko_args=(--mode mount --flake "$REPO_DIR#$HOST")
 
-  if ! nix run github:nix-community/disko -- "${disko_args[@]}"; then
+  local disko_ref
+  disko_ref=$(nix flake metadata "path:${REPO_DIR}" --json 2>/dev/null \
+    | jq -r '.locks.nodes.disko.locked | "github:\(.owner)/\(.repo)/\(.rev)"')
+  if [[ -z "$disko_ref" || "$disko_ref" == "null" ]]; then
+    disko_ref="github:nix-community/disko"
+  fi
+
+  if ! nix run "$disko_ref" -- "${disko_args[@]}"; then
     error "Disko mount failed. Are the disks connected?"
   fi
 
