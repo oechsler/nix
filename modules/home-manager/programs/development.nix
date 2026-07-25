@@ -79,15 +79,13 @@
     })
 
     # CLI AI Tools (useful on servers and desktops)
-    (lib.mkIf features.development.enable {
+    (lib.mkIf (features.development.enable && features.development.opencode.enable) {
       # openai uses built-in OAuth — no API key needed
       programs.opencode = {
         enable = true;
 
+        # Router is always active now, connects to 127.0.0.1:4000
         settings = {
-          # The local provider routes everything through the auto-router.
-          # openai is enabled solely for `opencode auth login --provider openai`;
-          # all model selection should use local/* (auto-router) exclusively.
           enabled_providers = [
             "local"
             "openai"
@@ -105,154 +103,155 @@
             summary.model = "local/mistral-small";
           };
 
-          # Other models switchable via /models are all exposed by local/*.
-
+          # All models are exposed through the router at local/*
           provider = {
             local = {
               npm = "@ai-sdk/openai-compatible";
               name = "Local";
-                options = {
-                  baseURL = "http://127.0.0.1:4000/v1";
-                  apiKey = "dummy";
-                  timeout = 600000;
+              options = {
+                baseURL = "http://127.0.0.1:4000/v1";
+                apiKey = "dummy";
+                timeout = 600000;
+              };
+              models = {
+                auto = {
+                  name = "Auto";
+                  tool_call = true;
+                  temperature = true;
+                  limit = {
+                    context = 128000;
+                    output = 32768;
+                  };
                 };
-                models = {
-                 auto = {
-                   name = "Auto";
-                   tool_call = true;
-                   temperature = true;
-                   limit = {
-                     context = 128000;
-                     output = 32768;
-                   };
-                 };
-                 mistral-small = {
-                   name = "Mistral Small";
-                   tool_call = true;
-                   temperature = true;
-                   limit = {
-                     context = 128000;
-                     output = 32768;
-                   };
-                 };
-                 mistral-medium = {
-                   name = "Mistral Medium";
-                   tool_call = true;
-                   temperature = true;
-                   limit = {
-                     context = 128000;
-                     output = 32768;
-                   };
-                 };
-                  deepseek-v4-pro = {
-                    name = "DeepSeek V4 Pro";
-                    tool_call = true;
-                    temperature = true;
-                    limit = {
-                      context = 128000;
-                      output = 32768;
-                    };
+                mistral-small = {
+                  name = "Mistral Small";
+                  tool_call = true;
+                  temperature = true;
+                  limit = {
+                    context = 128000;
+                    output = 32768;
                   };
-                  deepseek-v4-flash = {
-                    name = "DeepSeek V4 Flash";
-                    tool_call = true;
-                    temperature = true;
-                    limit = {
-                      context = 128000;
-                      output = 32768;
-                    };
-                  };
-                  "qwen3.7-max" = {
-                    name = "Qwen3.7 Max";
-                    tool_call = true;
-                    temperature = true;
-                    limit = {
-                      context = 128000;
-                      output = 32768;
-                    };
-                  };
-                  "qwen3.7-plus" = {
-                    name = "Qwen3.7 Plus";
-                    tool_call = true;
-                    temperature = true;
-                    limit = {
-                      context = 128000;
-                      output = 32768;
-                    };
-                  };
-                  "qwen3.6-plus" = {
-                    name = "Qwen3.6 Plus";
-                    tool_call = true;
-                    temperature = true;
-                    limit = {
-                      context = 128000;
-                      output = 32768;
-                    };
-                  };
-                   openai-luna-fast = {
-                     name = "ChatGPT 5.6 Luna Fast";
-                     tool_call = true;
-                     temperature = true;
-                     limit = {
-                       context = 128000;
-                       output = 32768;
-                     };
-                   };
-                   openai-luna = {
-                     name = "ChatGPT 5.6 Luna";
-                     tool_call = true;
-                     temperature = true;
-                     limit = {
-                       context = 128000;
-                       output = 32768;
-                     };
-                   };
-                   openai-sol-fast = {
-                     name = "ChatGPT 5.6 Sol Fast";
-                     tool_call = true;
-                     temperature = true;
-                     limit = {
-                       context = 128000;
-                       output = 32768;
-                     };
-                   };
-                   openai-sol = {
-                     name = "ChatGPT 5.6 Sol";
-                     tool_call = true;
-                     temperature = true;
-                     limit = {
-                       context = 128000;
-                       output = 32768;
-                     };
-                   };
-                   openai-terra-fast = {
-                     name = "ChatGPT 5.6 Terra Fast";
-                     tool_call = true;
-                     temperature = true;
-                     limit = {
-                       context = 128000;
-                       output = 32768;
-                     };
-                   };
-                   openai-terra = {
-                     name = "ChatGPT 5.6 Terra";
-                     tool_call = true;
-                     temperature = true;
-                     limit = {
-                       context = 128000;
-                       output = 32768;
-                     };
-                   };
-                   "qwen3:8b" = {
-                     name = "Qwen3 8B (Local)";
-                     tool_call = true;
-                     temperature = true;
-                     limit = {
-                       context = 128000;
-                       output = 32768;
-                     };
-                   };
                 };
+                mistral-medium = {
+                  name = "Mistral Medium";
+                  tool_call = true;
+                  temperature = true;
+                  limit = {
+                    context = 128000;
+                    output = 32768;
+                  };
+                };
+                deepseek-v4-pro = {
+                  name = "DeepSeek V4 Pro";
+                  tool_call = true;
+                  temperature = true;
+                  limit = {
+                    context = 128000;
+                    output = 32768;
+                  };
+                };
+                deepseek-v4-flash = {
+                  name = "DeepSeek V4 Flash";
+                  tool_call = true;
+                  temperature = true;
+                  limit = {
+                    context = 128000;
+                    output = 32768;
+                  };
+                };
+                "qwen3.7-max" = {
+                  name = "Qwen3.7 Max";
+                  tool_call = true;
+                  temperature = true;
+                  limit = {
+                    context = 128000;
+                    output = 32768;
+                  };
+                };
+                "qwen3.7-plus" = {
+                  name = "Qwen3.7 Plus";
+                  tool_call = true;
+                  temperature = true;
+                  limit = {
+                    context = 128000;
+                    output = 32768;
+                  };
+                };
+                "qwen3.6-plus" = {
+                  name = "Qwen3.6 Plus";
+                  tool_call = true;
+                  temperature = true;
+                  limit = {
+                    context = 128000;
+                    output = 32768;
+                  };
+                };
+                openai-luna-fast = {
+                  name = "ChatGPT 5.6 Luna Fast";
+                  tool_call = true;
+                  temperature = true;
+                  limit = {
+                    context = 128000;
+                    output = 32768;
+                  };
+                };
+                openai-luna = {
+                  name = "ChatGPT 5.6 Luna";
+                  tool_call = true;
+                  temperature = true;
+                  limit = {
+                    context = 128000;
+                    output = 32768;
+                  };
+                };
+                openai-sol-fast = {
+                  name = "ChatGPT 5.6 Sol Fast";
+                  tool_call = true;
+                  temperature = true;
+                  limit = {
+                    context = 128000;
+                    output = 32768;
+                  };
+                };
+                openai-sol = {
+                  name = "ChatGPT 5.6 Sol";
+                  tool_call = true;
+                  temperature = true;
+                  limit = {
+                    context = 128000;
+                    output = 32768;
+                  };
+                };
+                openai-terra-fast = {
+                  name = "ChatGPT 5.6 Terra Fast";
+                  tool_call = true;
+                  temperature = true;
+                  limit = {
+                    context = 128000;
+                    output = 32768;
+                  };
+                };
+                openai-terra = {
+                  name = "ChatGPT 5.6 Terra";
+                  tool_call = true;
+                  temperature = true;
+                  limit = {
+                    context = 128000;
+                    output = 32768;
+                  };
+                };
+              }
+              // lib.optionalAttrs (features.development.opencode.classifier == "local") {
+                "qwen3:8b" = {
+                  name = "Qwen3 8B (Local)";
+                  tool_call = true;
+                  temperature = true;
+                  limit = {
+                    context = 128000;
+                    output = 32768;
+                  };
+                };
+              };
             };
           };
         };

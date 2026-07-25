@@ -30,6 +30,11 @@ DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "deepseek-v4-pro")
 OPENCODE_AUTH_FILE = os.environ.get(
     "OPENCODE_AUTH_FILE", "/var/lib/opencode/auth.json"
 )
+CLASSIFIER_BACKEND = os.environ.get("CLASSIFIER_BACKEND", "local")
+USE_LOCAL_CLASSIFIER = CLASSIFIER_BACKEND == "local"
+CLOUD_CLASSIFIER_MODEL = os.environ.get(
+    "CLOUD_CLASSIFIER_MODEL", "deepseek-v4-flash"
+)
 
 # ---------------------------------------------------------------------------
 # Model routing configuration
@@ -186,9 +191,8 @@ MODEL_PROVIDERS = {
     **{model: "chatgpt" for model in CHATGPT_MODELS},
 }
 
-# Ensure every route can survive a complete provider outage. Existing
-# model-specific fallbacks run first; this list fills missing providers and
-# always ends at the local model, which remains usable without internet.
+# Ensure every route covers all available providers. The local model is
+# filtered out when this host is configured without Ollama.
 GLOBAL_FALLBACKS = [
     "mistral-small",
     "deepseek-v4-flash",
@@ -248,7 +252,7 @@ def routing_context(messages: list[dict[str, Any]]) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Model selection (classification via local Ollama)
+# Model selection
 # ---------------------------------------------------------------------------
 
 # Simple in-memory TTL cache: (prompt_hash, has_tools) → model_id
@@ -374,8 +378,10 @@ def _parse_model_choice(text: str) -> str | None:
 
 
 async def _classify(messages: list[dict[str, Any]], has_tools: bool) -> str:
-    """Ask the local Ollama router models which cloud backend to use.
+    """Ask the classifier which cloud backend to use.
 
+    Uses local Ollama models when configured, otherwise a small model through
+    the existing LiteLLM gateway.
     Uses in-memory cache to skip classification for repeated prompts.
     Falls back to DEFAULT_MODEL after _CLASSIFICATION_TIMEOUT seconds.
     """
@@ -389,6 +395,30 @@ async def _classify(messages: list[dict[str, Any]], has_tools: bool) -> str:
         return cached
 
     prompt = _build_classification_prompt(context, has_tools)
+
+    if not USE_LOCAL_CLASSIFIER:
+        try:
+            async with httpx.AsyncClient(timeout=_CLASSIFICATION_TIMEOUT) as client:
+                response = await client.post(
+                    f"{LITELLM_URL}/chat/completions",
+                    headers={"Authorization": "Bearer dummy"},
+                    json={
+                        "model": CLOUD_CLASSIFIER_MODEL,
+                        "messages": [{"role": "user", "content": prompt}],
+                        "temperature": 0,
+                        "max_tokens": 32,
+                        "stream": False,
+                    },
+                )
+                response.raise_for_status()
+                content = response.json()["choices"][0]["message"]["content"]
+                choice = _parse_model_choice(str(content))
+                if choice:
+                    _cache_classify(context, has_tools, choice)
+                    return choice
+        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
+            logger.warning("cloud classification failed: %s", exc)
+        return DEFAULT_MODEL
 
     for model in ROUTER_MODELS:
         try:
@@ -585,6 +615,8 @@ def _fallback_chain(model: str) -> list[str]:
     for fallback in GLOBAL_FALLBACKS:
         if fallback not in result:
             result.append(fallback)
+    if not USE_LOCAL_CLASSIFIER:
+        result = [candidate for candidate in result if _provider(candidate) != "ollama"]
     return result or [model]
 
 
@@ -1109,7 +1141,8 @@ async def _stream_chatgpt(
                 if event_type in {"response.done", "response.completed"}:
                     response_id = event.get("response", {}).get("id", "chatgpt-response")
                     if show_notice or original_model != routed_model:
-                        yield f"data: {json.dumps(_notice_chunk(request_body['model'], '\n\n' + _model_notice_text(routed_model, original_model)))}\n\n"
+                        notice_content = '\n\n' + _model_notice_text(routed_model, original_model)
+                        yield f"data: {json.dumps(_notice_chunk(request_body['model'], notice_content))}\n\n"
                     done = {
                         "id": response_id,
                         "object": "chat.completion.chunk",
@@ -1333,7 +1366,8 @@ async def _stream_to_backend(
                             )
                         )
                         if should_send_notice:
-                            yield f"data: {json.dumps(_notice_chunk(model, '\n\n' + _model_notice_text(model, original_model)))}\n\n"
+                            notice_content = '\n\n' + _model_notice_text(model, original_model)
+                            yield f"data: {json.dumps(_notice_chunk(model, notice_content))}\n\n"
                             notice_sent = True
                         yield line + "\n"
                 except httpx.HTTPError as exc:
@@ -1418,6 +1452,7 @@ async def health() -> dict[str, Any]:
     degraded = _degraded_providers()
     return {
         "status": "degraded" if degraded else "ok",
+        "classifier_backend": CLASSIFIER_BACKEND,
         "provider_cooldowns": degraded,
     }
 
@@ -1433,7 +1468,9 @@ async def models() -> dict[str, Any]:
         }
     ]
     for model_id in MODEL_ROUTING:
-        if model_id not in ROUTER_MODELS:
+        if model_id not in ROUTER_MODELS and (
+            USE_LOCAL_CLASSIFIER or _provider(model_id) != "ollama"
+        ):
             data.append({
                 "id": model_id,
                 "object": "model",
@@ -1454,7 +1491,7 @@ async def chat_completions(request: Request):
     has_tools = bool(body.get("tools"))
 
     # If the client already picked a specific model, use it directly.
-    # Otherwise classify the request through the local Ollama router.
+    # Otherwise classify the request through the configured classifier.
     target_model = (
         requested_model
         if requested_model in DIRECT_MODELS

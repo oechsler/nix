@@ -107,6 +107,7 @@
         ssid = "Oechsler!Box";
       }
     ];
+    development.opencode.classifier = "local";
   };
 
   system.stateVersion = "26.11";

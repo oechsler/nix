@@ -2,7 +2,7 @@
 
 The OpenCode Auto Router gives OpenCode a single default model, `local/auto`. You use OpenCode normally; the router chooses a suitable backend for each request and reports the model at the end of the response.
 
-The module is enabled on development machines through `features.development.enable`.
+The router is enabled whenever `features.development.opencode.enable` is enabled. Set `features.development.opencode.classifier` to `local` for Ollama classification or `cloud` for classification through a small cloud model without running Ollama.
 
 ## Why It Exists
 
@@ -10,7 +10,7 @@ Different models are useful for different work. A small model is sufficient for 
 
 The router therefore follows three design choices:
 
-1. Use a local classifier so routing decisions do not require another cloud request.
+1. Use a local classifier when sufficient VRAM is available, otherwise use a small cloud classifier.
 2. Choose the least expensive model expected to complete the task well.
 3. Keep provider failures and inadequate answers recoverable without hiding which model was used.
 
@@ -22,7 +22,7 @@ You can still select any model manually when you need predictable behavior.
 flowchart LR
     user["User"] --> opencode["OpenCode<br/>local/auto"]
     opencode --> router["Auto Router<br/>127.0.0.1:4000"]
-    router --> classifier["Local classifier<br/>Ollama"]
+    router --> classifier["Classifier<br/>Ollama or LiteLLM"]
     classifier --> router
     router --> litellm["LiteLLM<br/>Mistral and OpenCode Go"]
     router --> chatgpt["ChatGPT backend<br/>OpenAI OAuth"]
@@ -34,7 +34,7 @@ flowchart LR
 For an automatic request:
 
 1. OpenCode sends the conversation and available tools to the router.
-2. Ollama classifies the task locally. `llama3.2:3b` is tried first and `qwen3:8b` is its classifier fallback.
+2. The configured classifier selects a backend. Local mode tries `llama3.2:3b` and then `qwen3:8b`; cloud mode calls `deepseek-v4-flash` through LiteLLM.
 3. The router selects a backend based on task complexity, tool use, model capability, and subscription limits.
 4. LiteLLM normalizes Mistral and OpenCode Go behind one local OpenAI-compatible API. ChatGPT subscription models are called directly because they use a different OAuth API.
 5. The router streams the answer back to OpenCode.
@@ -47,7 +47,7 @@ The router classifies each request before sending it to a backend. This section 
 
 1. **Context extraction**: The router takes the last 6 messages from the conversation (truncated to 1200 characters each) to understand the request.
 2. **Tool detection**: It checks whether the request includes tool definitions (file edits, shell commands, search, etc.).
-3. **Local classification**: The router sends a prompt to Ollama with the conversation context, tool availability, and all available models with their descriptions. Ollama returns exactly one model ID.
+3. **Classification**: The router sends the same routing prompt either to Ollama or to `deepseek-v4-flash` through LiteLLM. The classifier returns exactly one model ID.
 4. **Caching**: Identical prompts are cached for 5 minutes to avoid redundant classification calls.
 
 ### Complexity Levels
@@ -74,12 +74,12 @@ The classifier considers:
 
 - **Backend fallback**: If a provider fails before the first response chunk (network error, rate limit, authentication error, timeout, or upstream error), the router walks the fallback chain defined for each model.
 - **Provider circuit breaker**: An unavailable provider enters a 60-second cooldown. Other models from that provider are skipped instead of repeating the same slow failure.
-- **Offline safety net**: Every fallback chain covers the cloud providers and includes local `qwen3:8b`, so requests can still receive a limited answer during a complete cloud outage.
+- **Offline safety net**: Local-classifier hosts end every fallback chain at `qwen3:8b`. Cloud-classifier hosts omit Ollama from their model list and fallback chains.
 - **Capability escalation**: If a user says the previous answer did not work (e.g., "that did not work", "funktioniert nicht"), the router reads the model from the previous response and escalates to the next capability tier on the next turn.
 
 ## Model Selection
 
-Models are listed once below in the approximate order of work they are intended to handle. The local classifier uses the complete conversation, not only the latest sentence.
+Models are listed once below in the approximate order of work they are intended to handle. Both classifiers use the complete conversation, not only the latest sentence.
 
 ### Mistral
 
@@ -101,6 +101,8 @@ Models are listed once below in the approximate order of work they are intended 
 - **`openai-terra` / `openai-terra-fast`** — Ambiguous, critical, or high-stakes work; strongest tier
 
 ### Local Ollama
+
+These models are available only when `features.development.opencode.classifier = "local"`.
 
 - **`llama3.2:3b`** — Local classifier and fallback classifier; not selected as an answer model by auto-routing
 - **`qwen3:8b`** — Offline and privacy-sensitive work; also the final automatic fallback when cloud providers are unavailable
@@ -152,16 +154,16 @@ ChatGPT authentication works differently. OpenCode creates the OAuth entry throu
 
 ## Manual Selection
 
-Select `local/auto` for normal use. A specific `local/<model>` entry, for example `local/openai-terra` or `local/qwen3:8b`, bypasses classification and becomes the preferred backend. Availability fallback remains active so a selected provider outage does not break the session.
+Select `local/auto` for normal use. A specific `local/<model>` entry, for example `local/openai-terra`, bypasses classification and becomes the preferred backend. Local-classifier hosts additionally expose `local/qwen3:8b`. Availability fallback remains active so a selected provider outage does not break the session.
 
 ## Components
 
 - **`opencode-auto-router`** at `127.0.0.1:4000` — Classification, backend selection, ChatGPT OAuth, fallback, and response metadata
 - **`opencode-litellm`** at `127.0.0.1:8000` — OpenAI-compatible adapter for Mistral and OpenCode Go
-- **`opencode-ollama`** at `127.0.0.1:11434` — Local classifier and offline model runtime
-- **`opencode-auto-router-sync-models.service`** — Pulls configured Ollama models and removes stale ones
+- **`opencode-ollama`** at `127.0.0.1:11434` — Optional local classifier and offline model runtime
+- **`opencode-auto-router-sync-models.service`** — On local-classifier hosts, pulls configured Ollama models and removes stale ones
 
-All three containers run rootless in one Podman pod and communicate through localhost.
+The containers run rootless in one Podman pod and communicate through localhost. Cloud-classifier hosts run only LiteLLM and the router; local-classifier hosts additionally run Ollama.
 
 ## Operations
 
@@ -173,6 +175,8 @@ systemctl --user status podman-opencode-litellm.service
 systemctl --user status podman-opencode-auto-router.service
 systemctl --user status opencode-auto-router-sync-models.service
 ```
+
+The Ollama and model-sync services exist only on local-classifier hosts.
 
 Check the local endpoints:
 
