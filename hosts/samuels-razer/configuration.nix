@@ -86,7 +86,6 @@
         ssid = "Oechsler!Box";
       }
     ];
-    development.opencode.classifier = "cloud";
   };
 
   fonts.defaults.terminalSize = 10;
