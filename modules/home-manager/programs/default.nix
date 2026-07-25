@@ -13,12 +13,6 @@
 # - tools.nix - GitHub CLI
 
 {
-  lib,
-  features,
-  ...
-}:
-
-{
   imports = [
     ./apps.nix
     ./browsers.nix
@@ -26,11 +20,7 @@
     ./fish.nix
     ./git.nix
     ./neovim.nix
-  ]
-  ++ lib.optionals (features.development.enable && features.development.opencode.enable) [
-    ./opencode-auto-router.nix
-  ]
-  ++ [
+    ./opencode-auto-router
     ./proton-pass.nix
     ./terminal.nix
     ./tmux.nix

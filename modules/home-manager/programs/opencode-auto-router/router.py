@@ -866,7 +866,10 @@ def _chat_to_responses_body(
         "input": input_items,
         "stream": True,
         "store": False,
-        "reasoning": {"effort": "high", "summary": "auto"},
+        "reasoning": {
+            "effort": body.get("reasoning_effort", "high"),
+            "summary": "auto",
+        },
         "text": {"verbosity": "medium"},
         "include": ["reasoning.encrypted_content"],
     }
@@ -895,12 +898,17 @@ def _responses_to_chat_completion(
     classification_reason: str = "",
 ) -> dict[str, Any]:
     text_parts = []
+    reasoning_parts = []
     tool_calls = []
     for item in response.get("output", []):
         if item.get("type") == "message":
             for content in item.get("content", []):
                 if content.get("type") in {"output_text", "text"}:
                     text_parts.append(content.get("text", ""))
+        if item.get("type") == "reasoning":
+            for summary in item.get("summary", []):
+                if summary.get("type") in {"summary_text", "text"}:
+                    reasoning_parts.append(summary.get("text", ""))
         if item.get("type") == "function_call":
             tool_calls.append({
                 "id": item.get("call_id") or item.get("id"),
@@ -922,6 +930,8 @@ def _responses_to_chat_completion(
     }
     if tool_calls:
         message["tool_calls"] = tool_calls
+    if reasoning_parts:
+        message["reasoning_content"] = "".join(reasoning_parts)
 
     return {
         "id": response.get("id", "chatgpt-response"),
@@ -929,6 +939,28 @@ def _responses_to_chat_completion(
         "created": int(time.time()),
         "model": response.get("model", routed_model),
         "choices": [{"index": 0, "message": message, "finish_reason": "stop"}],
+    }
+
+
+def _chatgpt_text_chunk(event: dict[str, Any], model: str) -> dict[str, Any] | None:
+    event_type = event.get("type")
+    if event_type in {"response.output_text.delta", "response.text.delta"}:
+        delta = {"content": event.get("delta", "")}
+    elif event_type in {
+        "response.reasoning.delta",
+        "response.reasoning_text.delta",
+        "response.reasoning_summary_text.delta",
+    }:
+        delta = {"reasoning_content": event.get("delta", "")}
+    else:
+        return None
+
+    return {
+        "id": event.get("response_id", "chatgpt-response"),
+        "object": "chat.completion.chunk",
+        "created": int(time.time()),
+        "model": model,
+        "choices": [{"index": 0, "delta": delta, "finish_reason": None}],
     }
 
 
@@ -1142,21 +1174,8 @@ async def _stream_chatgpt(
                     if item.get("type") == "function_call":
                         pending_fc_name = item.get("name", "")
                         pending_fc_call_id = item.get("call_id", f"call_{int(time.time())}")
-                if event_type in {"response.output_text.delta", "response.text.delta"}:
-                    delta = event.get("delta", "")
-                    chunk = {
-                        "id": event.get("response_id", "chatgpt-response"),
-                        "object": "chat.completion.chunk",
-                        "created": int(time.time()),
-                        "model": request_body["model"],
-                        "choices": [
-                            {
-                                "index": 0,
-                                "delta": {"content": delta},
-                                "finish_reason": None,
-                            }
-                        ],
-                    }
+                chunk = _chatgpt_text_chunk(event, request_body["model"])
+                if chunk:
                     yield f"data: {json.dumps(chunk)}\n\n"
                 if event_type == "response.function_call_arguments.done":
                     had_tool_calls = True
@@ -1279,6 +1298,7 @@ async def _chatgpt_non_streaming(
 
     final_response = None
     text_parts = []
+    reasoning_parts = []
     tool_calls = []
     pending_fc_name: str | None = None
     pending_fc_call_id: str | None = None
@@ -1297,6 +1317,12 @@ async def _chatgpt_non_streaming(
                 pending_fc_call_id = item.get("call_id")
         if event_type in {"response.output_text.delta", "response.text.delta"}:
             text_parts.append(event.get("delta", ""))
+        if event_type in {
+            "response.reasoning.delta",
+            "response.reasoning_text.delta",
+            "response.reasoning_summary_text.delta",
+        }:
+            reasoning_parts.append(event.get("delta", ""))
         if event_type == "response.function_call_arguments.done":
             tool_calls.append({
                 "type": "function_call",
@@ -1325,6 +1351,13 @@ async def _chatgpt_non_streaming(
             output.append({
                 "type": "message",
                 "content": [{"type": "output_text", "text": "".join(text_parts)}],
+            })
+        if reasoning_parts:
+            output.append({
+                "type": "reasoning",
+                "summary": [
+                    {"type": "summary_text", "text": "".join(reasoning_parts)}
+                ],
             })
         output.extend(tool_calls)
         final_response = dict(final_response)

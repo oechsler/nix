@@ -4,6 +4,17 @@ The OpenCode Auto Router gives OpenCode a single default model, `local/auto`. Yo
 
 The router is enabled whenever `features.development.opencode.enable` is enabled. Set `features.development.opencode.classifier` to `local` for Ollama classification or `cloud` for classification through a small cloud model without running Ollama.
 
+## Source Layout
+
+- `default.nix` imports the complete feature.
+- `client.nix` configures OpenCode and its visible model catalog.
+- `services.nix` builds and runs the rootless Podman stack.
+- `router.py` contains classification, routing, fallback, and proxy behavior.
+- `litellm.yaml` maps LiteLLM model names to upstream providers.
+- `test_router.py` covers routing and proxy behavior.
+
+Feature options remain in `modules/system/features.nix`, and individual hosts select the classifier in their host configuration. Those settings are intentionally outside this directory because they belong to global option declarations and host policy rather than the router implementation.
+
 ## Why It Exists
 
 Different models are useful for different work. A small model is sufficient for a translation, while a difficult debugging session benefits from a stronger agentic model. Selecting models manually for every request is distracting and wastes provider capacity.
@@ -117,6 +128,8 @@ The broad routing policy:
 
 For tool-enabled requests, the router also injects a persistence instruction. Multi-part requests are treated as one assignment, remaining work is tracked with the todo tool when available, and the agent is told to continue through implementation and verification instead of stopping after the first subtask. OpenCode's automatic context compaction and tool-output pruning keep long sessions within the model context window. No `steps` limit is configured, so OpenCode continues until the model completes the task or the user interrupts it.
 
+The router exposes OpenCode-compatible reasoning content for every model entry. Backends that provide reasoning summaries therefore appear as timed `Thought` entries in OpenCode in both automatic and manual modes. ChatGPT Responses API reasoning-summary events are translated to the OpenAI-compatible `reasoning_content` field; LiteLLM reasoning fields pass through unchanged.
+
 ## Retries and Fallbacks
 
 The router handles two different failure modes.
@@ -158,7 +171,7 @@ ChatGPT authentication works differently. OpenCode creates the OAuth entry throu
 
 ## Manual Selection
 
-Select `local/auto` for normal use. A specific `local/<model>` entry, for example `local/openai-terra`, bypasses classification and becomes the preferred backend. Local-classifier hosts additionally expose `local/qwen3:8b`. Availability fallback remains active so a selected provider outage does not break the session.
+Select `local/auto` for normal use. A specific `local/<model>` entry, for example `local/openai-terra`, bypasses classification and capability escalation but retains reasoning display, tool support, persistence instructions, and availability fallback. Local-classifier hosts additionally expose `local/qwen3:8b`.
 
 ## Components
 
@@ -190,3 +203,11 @@ curl http://127.0.0.1:4000/health
 ```
 
 After changing the module, rebuild the Home Manager configuration and restart OpenCode. OpenCode loads provider configuration only at startup.
+
+Run the router tests from the repository root:
+
+```bash
+nix shell --impure --expr \
+  'with import <nixpkgs> {}; python3.withPackages (ps: with ps; [ pytest fastapi httpx ])' \
+  -c pytest modules/home-manager/programs/opencode-auto-router/test_router.py
+```

@@ -37,7 +37,7 @@ let
 
   routerApp = pkgs.runCommand "opencode-auto-router-app" { } ''
     mkdir -p $out/app
-    cp ${../../programs/opencode-auto-router/router.py} $out/app/router.py
+    cp ${./router.py} $out/app/router.py
   '';
 
   routerImage = pkgs.dockerTools.buildLayeredImage {
@@ -64,7 +64,7 @@ let
     };
   };
 
-  litellmConfig = ../../programs/opencode-auto-router/litellm.yaml;
+  litellmConfig = ./litellm.yaml;
 
   podman = "${pkgs.podman}/bin/podman";
 
@@ -244,7 +244,8 @@ in
               "--pod=opencode-auto"
               "-v ${litellmConfig}:/etc/litellm/config.yaml:ro"
               "--env-file=${config.sops.templates."opencode-auto-router-litellm.env".path}"
-              "ghcr.io/berriai/litellm@sha256:029460ad724a63b39021612a3523989483184347372f0204d39fcf540484609f"
+              # renovate: datasource=docker depName=ghcr.io/berriai/litellm versioning=docker
+              "ghcr.io/berriai/litellm:main-latest@sha256:029460ad724a63b39021612a3523989483184347372f0204d39fcf540484609f"
               "--config /etc/litellm/config.yaml --host 0.0.0.0 --port 8000"
             ];
             ExecStop = "${podman} stop opencode-litellm";
@@ -283,7 +284,8 @@ in
                 ++ [
                   "-v opencode-ollama:/root/.ollama"
                   "-e OLLAMA_KEEP_ALIVE=5m"
-                  "docker.io/ollama/ollama@sha256:ec24bcaa2a810eb74171ce7c517813ef4821ed678988845e8d76cf62467036d4"
+                  # renovate: datasource=docker depName=docker.io/ollama/ollama versioning=docker
+                  "docker.io/ollama/ollama:0.32.3@sha256:ec24bcaa2a810eb74171ce7c517813ef4821ed678988845e8d76cf62467036d4"
                 ]
               );
               ExecStop = "${podman} stop opencode-ollama";

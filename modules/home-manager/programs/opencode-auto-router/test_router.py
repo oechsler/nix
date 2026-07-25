@@ -154,6 +154,51 @@ class RouterTest(unittest.TestCase):
             "openai-terra",
         )
 
+    def test_chatgpt_request_preserves_requested_reasoning_effort(self):
+        body = {"messages": [], "reasoning_effort": "medium"}
+
+        converted = router._chat_to_responses_body(body, "gpt-5.6-sol")
+
+        self.assertEqual(converted["reasoning"], {"effort": "medium", "summary": "auto"})
+
+    def test_chatgpt_reasoning_summary_streams_as_reasoning_content(self):
+        event = {
+            "type": "response.reasoning_summary_text.delta",
+            "response_id": "response-1",
+            "delta": "Planning comprehensive checks",
+        }
+
+        chunk = router._chatgpt_text_chunk(event, "gpt-5.6-sol")
+
+        self.assertEqual(
+            chunk["choices"][0]["delta"],
+            {"reasoning_content": "Planning comprehensive checks"},
+        )
+
+    def test_chatgpt_non_streaming_response_preserves_reasoning_summary(self):
+        response = {
+            "output": [
+                {
+                    "type": "reasoning",
+                    "summary": [
+                        {"type": "summary_text", "text": "Planning checks"}
+                    ],
+                },
+                {
+                    "type": "message",
+                    "content": [{"type": "output_text", "text": "Finished"}],
+                },
+            ]
+        }
+
+        converted = router._responses_to_chat_completion(
+            response, "openai-sol", show_notice=False
+        )
+
+        message = converted["choices"][0]["message"]
+        self.assertEqual(message["content"], "Finished")
+        self.assertEqual(message["reasoning_content"], "Planning checks")
+
 
 class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -291,6 +336,36 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(stream.await_args.args[1][0], "mistral-medium")
         self.assertEqual(stream.await_args.args[2], "mistral-medium")
         self.assertEqual(stream.await_args.args[4], reason)
+
+    async def test_manual_model_skips_only_classification(self):
+        body = {
+            "model": "openai-sol",
+            "messages": [{"role": "user", "content": "Run all checks"}],
+            "tools": [{"type": "function", "function": {"name": "bash"}}],
+        }
+
+        class Request:
+            async def json(self):
+                return body
+
+        with (
+            patch.object(router, "_classify", AsyncMock()) as classify,
+            patch.object(
+                router, "_stream_to_backend", AsyncMock(return_value="ok")
+            ) as stream,
+        ):
+            self.assertEqual(await router.chat_completions(Request()), "ok")
+
+        classify.assert_not_awaited()
+        routed_body, candidates, notice_model, show_notice, reason = stream.await_args.args
+        self.assertEqual(candidates[0], "openai-sol")
+        self.assertEqual(notice_model, "openai-sol")
+        self.assertFalse(show_notice)
+        self.assertEqual(reason, "")
+        self.assertIn(
+            "keep working until all of them are completed",
+            routed_body["messages"][0]["content"],
+        )
 
     async def test_provider_outage_skips_sibling_model_and_fails_over(self):
         class Response:
