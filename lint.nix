@@ -1,6 +1,6 @@
 # NixOS Configuration Linter
 #
-# Pure Nix linter that enforces conventions from NIX_CODE_STYLE.md and NIX_DOCS_STYLE.md
+# Shell-based linter that enforces conventions from NIX_CODE_STYLE.md and NIX_DOCS_STYLE.md
 #
 # This is the custom convention checker. Additional linters also run:
 #   - statix: Anti-patterns and best practices (15 built-in rules)
@@ -14,6 +14,10 @@
 #
 # CI Integration:
 #   nix flake check || exit 1
+#
+# Design: Uses shell scripts during the build phase instead of pure Nix
+# evaluation (lib.filesystem.listFilesRecursive + builtins.readFile) to
+# avoid evaluation-timeouts in CI on large directory trees.
 #
 # ============================================================================
 # CONVENTIONS ENFORCED
@@ -58,249 +62,70 @@
 
 { pkgs, lib, ... }:
 
-let
-  # Find all Nix files in the repository
-  nixFiles = lib.filesystem.listFilesRecursive ./.;
+pkgs.runCommand "nixos-config-lint" { } ''
+  export LC_ALL=C.UTF-8
 
-  # Filter to only .nix files, exclude certain paths
-  relevantFiles = builtins.filter (
-    path:
-    let
-      str = toString path;
-      isNix = lib.hasSuffix ".nix" str;
-      notGenerated = !(lib.hasInfix "hardware-configuration.generated" str);
-      notFlakeLock = !(lib.hasInfix "flake.lock" str);
-      notResult = !(lib.hasInfix "/result" str);
-    in
-    isNix && notGenerated && notFlakeLock && notResult
-  ) nixFiles;
+  src="${./.}"
 
-  # ============================================================================
+  fails=0
+  total=0
+
+  echo "=== NixOS Configuration Lint Results ==="
+  echo ""
+
+  # ==========================================================================
   # CHECK 1: No Quoted Nested Attributes
-  # ============================================================================
-  # Convention: NIX_CODE_STYLE.md §2 (Nested Attributes)
-  #
-  # Detects: "foo.bar" = value;
-  # Should be: foo.bar = value;
-  #
-  # Reason: In Nix, quoted strings create literal attribute names.
-  #   "desktop.enable" = false  → { "desktop.enable" = false; }  (single key)
-  #   desktop.enable = false    → { desktop = { enable = false; }; }  (nested)
-  #
-  # Exception: Application settings like Firefox preferences MUST use quoted
-  #            strings because they're literal config keys, not Nix attributes:
-  #              settings = { "browser.startup.page" = 3; };  ← CORRECT
-  #
-  checkQuotedAttrs =
-    file:
-    let
-      content = builtins.readFile file;
-      fileName = baseNameOf (toString file);
-      # Skip files with application settings (Firefox, etc.) where quoted keys are required
-      # Also skip lint.nix itself (contains example code in comments)
-      isAppSettings = builtins.elem fileName [
-        "browsers.nix"
-        "lint.nix"
-        "gaming.nix"
-      ];
-      # Regex pattern: matches "word.word" = (quoted string with dot followed by equals)
-      hasQuotedAttrs =
-        builtins.match ".*\"[a-z][a-z0-9]*\\.[a-z][a-z0-9.]*\"[[:space:]]*=.*" content != null;
-    in
-    {
-      file = toString file;
-      pass = isAppSettings || !hasQuotedAttrs;
-      message =
-        if hasQuotedAttrs && !isAppSettings then
-          "Found quoted nested attributes (use foo.bar not \"foo.bar\")"
-        else
-          null;
-    };
+  # ==========================================================================
+  echo "--- Check 1: No Quoted Nested Attributes ---"
 
-  # ============================================================================
-  # CHECK 2: Documentation Headers
-  # ============================================================================
-  # Convention: NIX_DOCS_STYLE.md §1 (File Header)
-  #
-  # Required: All NixOS modules must start with a comment header explaining:
-  #   - What the module does
-  #   - Configuration options available
-  #   - Key features / how it works
-  #
-  # Example:
-  #   # Audio Configuration
-  #   #
-  #   # This module configures:
-  #   # - PipeWire audio server
-  #   # - JACK support
-  #   # - Low-latency settings
-  #   #
-  #   # Configuration:
-  #   #   features.audio.enable = true;
-  #
-  # Why: Makes modules self-documenting. Anyone opening the file immediately
-  #      understands its purpose and available options.
-  #
-  # Exceptions:
-  #   - default.nix files (they only import other modules)
-  #   - packages/*.nix (package definitions use meta.description instead)
-  #
-  checkDocHeader =
-    file:
-    let
-      content = builtins.readFile file;
-      fileName = baseNameOf (toString file);
-      filePath = toString file;
-      # Skip default.nix files (they just import)
-      isDefaultNix = fileName == "default.nix";
-      # Skip package definitions (they use meta.description)
-      isPackage = lib.hasInfix "/packages/" filePath;
-      # Check if first 5 lines contain a comment
-      lines = lib.splitString "\n" content;
-      firstLines = lib.take 5 lines;
-      hasComment = builtins.any (line: lib.hasPrefix "#" line) firstLines;
-    in
-    {
-      file = toString file;
-      pass = isDefaultNix || isPackage || hasComment;
-      message =
-        if !hasComment && !isDefaultNix && !isPackage then "Missing documentation header" else null;
-    };
-
-  # ============================================================================
-  # RUN ALL CHECKS
-  # ============================================================================
-  # For each file, run all check functions and collect results.
-  #
-  # To add a new check:
-  # 1. Create checkFunction above with same signature:
-  #      checkNewRule = file: { pass = bool; message = string or null; };
-  # 2. Add to checks below: newRule = checkNewRule file;
-  # 3. Update failures logic if needed
-  #
-  results = map (file: {
-    inherit file;
-    checks = {
-      quotedAttrs = checkQuotedAttrs file;
-      docHeader = checkDocHeader file;
-      # Add new checks here:
-      # myNewCheck = checkMyNewRule file;
-    };
-  }) relevantFiles;
-
-  # Aggregate results
-  failures = builtins.filter (r: !(r.checks.quotedAttrs.pass && r.checks.docHeader.pass)) results;
-
-  # Generate report
-  report = lib.concatStringsSep "\n" (
-    [
-      "=== NixOS Configuration Lint Results ==="
-      ""
-    ]
-    ++ (
-      if failures == [ ] then
-        [
-          "✅ All checks passed!"
-          ""
-          "Files checked: ${toString (builtins.length relevantFiles)}"
-          "  - No quoted nested attributes"
-          "  - All modules have documentation headers"
-        ]
-      else
-        [
-          "❌ Found ${toString (builtins.length failures)} files with issues:"
-          ""
-        ]
-        ++ (map (
-          f:
-          let
-            quotedFail = !f.checks.quotedAttrs.pass;
-            docFail = !f.checks.docHeader.pass;
-          in
-          ''
-            File: ${f.file}
-            ${lib.optionalString quotedFail "  ❌ ${f.checks.quotedAttrs.message}"}
-            ${lib.optionalString docFail "  ❌ ${f.checks.docHeader.message}"}
-          ''
-        ) failures)
-    )
-  );
-
-in
-# ============================================================================
-# DERIVATION: Fail build if any checks fail
-# ============================================================================
-# Creates a derivation that:
-# 1. Prints the linting report (successes and failures)
-# 2. Writes report to $out (for nix build)
-# 3. Exits with code 1 if any checks failed (breaks CI/CD)
-#
-pkgs.runCommand "nixos-config-lint"
-  {
-    inherit report;
-    failOnIssues = failures != [ ];
-  }
-  ''
-    echo "$report"
-    echo "$report" > $out
-
-    if [ "$failOnIssues" = "1" ]; then
-      echo ""
-      echo "Linting failed! See NIX_CODE_STYLE.md and NIX_DOCS_STYLE.md"
-      exit 1
+  while IFS= read -r -d $'\0' f; do
+    total=$((total + 1))
+    if grep -nP '"[a-z][a-z0-9]*\.[a-z][a-z0-9.]*"\s*=' "$f" 2>/dev/null; then
+      echo "  ❌ $f: Found quoted nested attributes (use foo.bar not \"foo.bar\")" >&2
+      fails=1
     fi
-  ''
+  done < <(
+    find "$src" -name '*.nix' \
+      ! -name 'browsers.nix' \
+      ! -name 'lint.nix' \
+      ! -name 'gaming.nix' \
+      ! -path '*/hardware-configuration.generated.nix' \
+      -print0
+  )
 
-# ============================================================================
-# EXTENDING THE LINTER
-# ============================================================================
-#
-# Example: Add check for consistent section separators
-#
-# 1. Define the check function (add after checkDocHeader):
-#
-#   checkSectionSeparators = file: let
-#     content = builtins.readFile file;
-#     # Look for inconsistent separator lengths
-#     hasBadSeps = builtins.match ".*#[-=]{10,25}.*" content != null;
-#   in {
-#     pass = !hasBadSeps;
-#     message = if hasBadSeps then
-#       "Inconsistent section separators (use #=== or #--- with 27 chars)"
-#     else null;
-#   };
-#
-# 2. Add to checks (in results = map):
-#
-#   checks = {
-#     quotedAttrs = checkQuotedAttrs file;
-#     docHeader = checkDocHeader file;
-#     sectionSeps = checkSectionSeparators file;  # ← Add here
-#   };
-#
-# 3. Done! The new check will automatically run and report failures.
-#
-# ============================================================================
-# USEFUL NIX PATTERNS FOR CHECKS
-# ============================================================================
-#
-# Pattern matching:
-#   builtins.match "regex" content != null  # Returns true if match
-#
-# String operations:
-#   lib.hasPrefix "prefix" string           # Starts with
-#   lib.hasSuffix "suffix" string           # Ends with
-#   lib.hasInfix "substring" string         # Contains
-#   lib.splitString "\n" content            # Split into lines
-#
-# File filtering:
-#   lib.hasInfix "/path/" (toString file)   # Filter by path
-#   baseNameOf (toString file) == "name"    # Filter by filename
-#
-# List operations:
-#   builtins.filter (x: condition x) list   # Filter list
-#   map (x: transform x) list               # Transform list
-#   builtins.any (x: test x) list           # Any true?
-#   builtins.all (x: test x) list           # All true?
-#
-# ============================================================================
+  echo ""
+
+  # ==========================================================================
+  # CHECK 2: Documentation Headers
+  # ==========================================================================
+  echo "--- Check 2: Documentation Headers ---"
+
+  while IFS= read -r -d $'\0' f; do
+    if ! head -5 "$f" | grep -q '^#'; then
+      echo "  ❌ $f: Missing documentation header" >&2
+      fails=1
+    fi
+  done < <(
+    find "$src" -name '*.nix' \
+      ! -name 'default.nix' \
+      ! -path '*/packages/*' \
+      ! -path '*/hardware-configuration.generated.nix' \
+      -print0
+  )
+
+  echo ""
+
+  if [ "$fails" -eq 0 ]; then
+    echo "✅ All checks passed!"
+    echo "Files checked: $total"
+    echo "  - No quoted nested attributes"
+    echo "  - All modules have documentation headers"
+  else
+    echo "❌ Found files with issues"
+    echo ""
+    echo "Linting failed! See NIX_CODE_STYLE.md and NIX_DOCS_STYLE.md"
+    exit 1
+  fi
+
+  touch $out
+''
