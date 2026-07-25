@@ -94,6 +94,13 @@
           model = "local/auto";
           small_model = "local/auto";
 
+          # Keep long tool-heavy sessions usable without imposing an agent step limit.
+          compaction = {
+            auto = true;
+            prune = true;
+            reserved = 20000;
+          };
+
           agent = {
             build.model = "local/auto";
             general.model = "local/auto";

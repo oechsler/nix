@@ -50,14 +50,64 @@ class RouterTest(unittest.TestCase):
             "> **mistral-small -> mistral-medium**",
         )
 
+    def test_notice_includes_classifier_reason(self):
+        self.assertEqual(
+            router._model_notice_text(
+                "mistral-medium",
+                "mistral-medium",
+                "Weil die Aufgabe Architekturabwägungen erfordert.",
+            ),
+            "> **mistral-medium** - Weil die Aufgabe Architekturabwägungen erfordert.",
+        )
+
+    def test_classifier_choice_parses_reason(self):
+        self.assertEqual(
+            router._parse_model_choice(
+                "deepseek-v4-flash - Because this requires file edits and tests."
+            ),
+            (
+                "deepseek-v4-flash",
+                "Because this requires file edits and tests.",
+            ),
+        )
+
+    def test_classifier_choice_requires_reason(self):
+        self.assertIsNone(router._parse_model_choice("mistral-medium"))
+
     def test_terminal_stream_chunk_is_detected(self):
         line = 'data: {"choices":[{"finish_reason":"stop","delta":{}}]}'
         self.assertTrue(router._is_terminal_chunk(line))
         self.assertFalse(router._is_terminal_chunk("data: [DONE]"))
 
+    def test_agent_instruction_requires_end_to_end_completion(self):
+        body = {"messages": [{"role": "user", "content": "Do all three tasks"}]}
+
+        forwarded = router._add_agent_instruction(body, has_tools=True)
+
+        instruction = forwarded["messages"][0]["content"]
+        self.assertIn("keep working until all of them are completed", instruction)
+        self.assertIn("Do not stop after analysis, after one subtask", instruction)
+        self.assertIn("implementation and verification", instruction)
+        self.assertIn("todo tool", instruction)
+        self.assertEqual(body["messages"][0]["role"], "user")
+
+    def test_agent_instruction_is_not_added_without_tools(self):
+        body = {"messages": [{"role": "user", "content": "Explain this"}]}
+
+        self.assertIs(router._add_agent_instruction(body, has_tools=False), body)
+
+    def test_classifier_treats_multiple_deliverables_as_complex_agentic(self):
+        prompt = router._build_classification_prompt("user: Do all five tasks", True)
+
+        self.assertIn("Requests with several deliverables", prompt)
+        self.assertIn("explicitly asks the agent to continue until completion", prompt)
+
     def test_failed_attempt_escalates_previous_model(self):
         messages = [
-            {"role": "assistant", "content": "An incomplete answer\n\n> **mistral-small**"},
+            {
+                "role": "assistant",
+                "content": "An incomplete answer\n\n> **mistral-small** - Because this was initially a simple request.",
+            },
             {"role": "user", "content": "That did not work, please try again."},
         ]
         self.assertEqual(router._capability_escalation(messages), "mistral-medium")
@@ -120,7 +170,11 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
             def json():
                 return {
                     "choices": [
-                        {"message": {"content": "mistral-medium"}}
+                        {
+                            "message": {
+                                "content": "mistral-medium - Because this requires architecture analysis."
+                            }
+                        }
                     ]
                 }
 
@@ -142,7 +196,13 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
                 False,
             )
 
-        self.assertEqual(result, "mistral-medium")
+        self.assertEqual(
+            result,
+            (
+                "mistral-medium",
+                "Because this requires architecture analysis.",
+            ),
+        )
         request = Client.post.await_args
         self.assertEqual(request.args[0], f"{router.LITELLM_URL}/chat/completions")
         self.assertEqual(
@@ -168,7 +228,7 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
                 True,
             )
 
-        self.assertEqual(result, router.DEFAULT_MODEL)
+        self.assertEqual(result, (router.DEFAULT_MODEL, ""))
 
     async def test_retry_routes_to_stronger_model_and_reports_path(self):
         body = {
@@ -184,16 +244,53 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
                 return body
 
         with (
-            patch.object(router, "_classify", AsyncMock(return_value="mistral-small")),
+            patch.object(
+                router,
+                "_classify",
+                AsyncMock(
+                    return_value=(
+                        "mistral-small",
+                        "Because this initially looked like a simple request.",
+                    )
+                ),
+            ),
             patch.object(router, "_stream_to_backend", AsyncMock(return_value="ok")) as stream,
         ):
             self.assertEqual(await router.chat_completions(Request()), "ok")
 
-        routed_body, candidates, notice_model, show_notice = stream.await_args.args
+        routed_body, candidates, notice_model, show_notice, reason = stream.await_args.args
         self.assertIs(routed_body, body)
         self.assertEqual(candidates[0], "mistral-medium")
         self.assertEqual(notice_model, "mistral-small")
         self.assertTrue(show_notice)
+        self.assertEqual(reason, "")
+
+    async def test_auto_route_forwards_classifier_reason(self):
+        body = {
+            "model": "auto",
+            "messages": [{"role": "user", "content": "Compare two architectures"}],
+        }
+
+        class Request:
+            async def json(self):
+                return body
+
+        reason = "Because this requires comparing architectural tradeoffs."
+        with (
+            patch.object(
+                router,
+                "_classify",
+                AsyncMock(return_value=("mistral-medium", reason)),
+            ),
+            patch.object(
+                router, "_stream_to_backend", AsyncMock(return_value="ok")
+            ) as stream,
+        ):
+            self.assertEqual(await router.chat_completions(Request()), "ok")
+
+        self.assertEqual(stream.await_args.args[1][0], "mistral-medium")
+        self.assertEqual(stream.await_args.args[2], "mistral-medium")
+        self.assertEqual(stream.await_args.args[4], reason)
 
     async def test_provider_outage_skips_sibling_model_and_fails_over(self):
         class Response:

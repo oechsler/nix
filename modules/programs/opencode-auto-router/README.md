@@ -115,6 +115,8 @@ The broad routing policy:
 - Difficult multi-step work uses DeepSeek Pro or Sol.
 - The hardest or highest-risk work uses Terra.
 
+For tool-enabled requests, the router also injects a persistence instruction. Multi-part requests are treated as one assignment, remaining work is tracked with the todo tool when available, and the agent is told to continue through implementation and verification instead of stopping after the first subtask. OpenCode's automatic context compaction and tool-output pruning keep long sessions within the model context window. No `steps` limit is configured, so OpenCode continues until the model completes the task or the user interrupts it.
+
 ## Retries and Fallbacks
 
 The router handles two different failure modes.
@@ -126,13 +128,15 @@ The router handles two different failure modes.
 Every automatic response ends with a highlighted routing notice:
 
 ```markdown
-> **mistral-small**
+> **mistral-small** - Because this is a simple question that does not require tools.
 ```
+
+The classifier writes the one-sentence reason itself in the language of the most recent user message.
 
 If a backend fallback or capability escalation occurred, the notice shows the path:
 
 ```markdown
-> **mistral-small -> mistral-medium**
+> **mistral-small -> mistral-medium** - Because this request requires deeper analysis.
 ```
 
 The blockquote and bold text clearly separate routing metadata from the model's answer. This line is debug information and not part of the assistant's response. OpenCode title and summary requests suppress this notice entirely.
