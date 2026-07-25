@@ -344,11 +344,12 @@ DECISION PROCESS:
 4. Choose the model that matches the level.
 
 RETURN FORMAT:
-Return exactly: <model_id> - <one-sentence reason>
+Return exactly: <model_id> - <concise reason>
 Write the reason in the language of the most recent user message.
-Explain which properties of the request caused this model choice.
-Example: "mistral-medium - Weil die Aufgabe Analyse und Planung erfordert"
-Example: "deepseek-v4-flash - Because this requires file edits and shell commands"
+Use 2-6 words describing the decisive request properties. Never write a full sentence.
+Always provide a reason.
+Example: "mistral-medium - Analyse und Planung"
+Example: "deepseek-v4-flash - File edits and shell commands"
 
 HARD ROUTING CONSTRAINTS:
 - If has_tools=True and the task mentions logs, services, containers, production, ambiguous failures, broad investigation, or system administration → openai-terra or openai-sol (choose terra for ambiguity, sol for structured debugging)
@@ -373,6 +374,11 @@ Conversation context:
 """.strip()
 
 
+def _compact_reason(reason: str) -> str:
+    words = " ".join(reason.strip().strip("`\"'* ").split()).split()
+    return " ".join(words[:6]).rstrip(".,;:!?")
+
+
 def _parse_model_choice(text: str) -> tuple[str, str] | None:
     """Parse ``model_id - reason`` while tolerating common model formatting."""
     cleaned = text.strip().strip("`\"'")
@@ -386,9 +392,9 @@ def _parse_model_choice(text: str) -> tuple[str, str] | None:
         )
         if not match:
             continue
-        reason = " ".join(match.group(1).strip().strip("`\"'*").split())
+        reason = _compact_reason(match.group(1))
         if reason:
-            return (model, reason[:300])
+            return (model, reason)
     return None
 
 
@@ -587,12 +593,10 @@ def _last_routed_model(messages: list[dict[str, Any]]) -> str | None:
         if message.get("role") != "assistant":
             continue
         lines = [line.strip() for line in message_text(message).splitlines() if line.strip()]
-        if not lines:
-            continue
-        match = notice_pattern.fullmatch(lines[-1])
-        if match:
-            return match.group(2) or match.group(1)
-        continue
+        for line in lines:
+            match = notice_pattern.fullmatch(line)
+            if match:
+                return match.group(2) or match.group(1)
     return None
 
 
@@ -693,12 +697,11 @@ def _model_notice_text(
     model: str, original_model: str | None = None, reason: str = ""
 ) -> str:
     if original_model and original_model != model:
-        if reason:
-            return f"> **{original_model} -> {model}** - {reason}"
-        return f"> **{original_model} -> {model}**"
-    if reason:
-        return f"> **{model}** - {reason}"
-    return f"> **{model}**"
+        model_line = f"> **{original_model} -> {model}**"
+    else:
+        model_line = f"> **{model}**"
+    compact_reason = _compact_reason(reason)
+    return f"{model_line}\n> {compact_reason}" if compact_reason else model_line
 
 
 def _notice_chunk(model: str, content: str) -> dict[str, Any]:
@@ -921,9 +924,9 @@ def _responses_to_chat_completion(
 
     content = "".join(text_parts)
     if show_notice:
-        content += "\n\n" + _model_notice_text(
+        content = _model_notice_text(
             routed_model, original_model, classification_reason
-        )
+        ) + "\n\n" + content
     message: dict[str, Any] = {
         "role": "assistant",
         "content": content,
@@ -1160,6 +1163,11 @@ async def _stream_chatgpt(
         pending_fc_name: str | None = None
         pending_fc_call_id: str | None = None
         fc_index = 0
+        if show_notice or original_model != routed_model:
+            notice_content = _model_notice_text(
+                routed_model, original_model, classification_reason
+            ) + "\n\n"
+            yield f"data: {json.dumps(_notice_chunk(request_body['model'], notice_content))}\n\n"
         try:
             async for line in response.aiter_lines():
                 if not line.startswith("data: "):
@@ -1213,11 +1221,6 @@ async def _stream_chatgpt(
                     yield f"data: {json.dumps(chunk)}\n\n"
                 if event_type in {"response.done", "response.completed"}:
                     response_id = event.get("response", {}).get("id", "chatgpt-response")
-                    if show_notice or original_model != routed_model:
-                        notice_content = "\n\n" + _model_notice_text(
-                            routed_model, original_model, classification_reason
-                        )
-                        yield f"data: {json.dumps(_notice_chunk(request_body['model'], notice_content))}\n\n"
                     done = {
                         "id": response_id,
                         "object": "chat.completion.chunk",
@@ -1454,23 +1457,13 @@ async def _stream_to_backend(
             _mark_provider_success(candidate)
 
             async def _iter_litellm_stream(model: str = candidate):
-                notice_sent = False
                 try:
+                    if show_notice or model != original_model:
+                        notice_content = _model_notice_text(
+                            model, original_model, classification_reason
+                        ) + "\n\n"
+                        yield f"data: {json.dumps(_notice_chunk(model, notice_content))}\n\n"
                     async for line in response.aiter_lines():
-                        should_send_notice = (
-                            (show_notice or model != original_model)
-                            and not notice_sent
-                            and (
-                                _is_terminal_chunk(line)
-                                or line.startswith("data: [DONE]")
-                            )
-                        )
-                        if should_send_notice:
-                            notice_content = "\n\n" + _model_notice_text(
-                                model, original_model, classification_reason
-                            )
-                            yield f"data: {json.dumps(_notice_chunk(model, notice_content))}\n\n"
-                            notice_sent = True
                         yield line + "\n"
                 except httpx.HTTPError as exc:
                     _mark_provider_failure(model, f"stream interrupted: {exc}")
@@ -1537,9 +1530,9 @@ async def _stream_to_backend(
             if isinstance(message, dict):
                 content = str(message.get("content", ""))
                 if show_notice or candidate != original_model:
-                    content += "\n\n" + _model_notice_text(
+                    content = _model_notice_text(
                         candidate, original_model, classification_reason
-                    )
+                    ) + "\n\n" + content
                 message["content"] = content
         return JSONResponse(payload, status_code=response.status_code)
 

@@ -50,25 +50,30 @@ class RouterTest(unittest.TestCase):
             "> **mistral-small -> mistral-medium**",
         )
 
-    def test_notice_includes_classifier_reason(self):
+    def test_notice_includes_classifier_reason_on_second_line(self):
         self.assertEqual(
             router._model_notice_text(
                 "mistral-medium",
                 "mistral-medium",
                 "Weil die Aufgabe Architekturabwägungen erfordert.",
             ),
-            "> **mistral-medium** - Weil die Aufgabe Architekturabwägungen erfordert.",
+            "> **mistral-medium**\n> Weil die Aufgabe Architekturabwägungen erfordert",
         )
 
-    def test_classifier_choice_parses_reason(self):
+    def test_classifier_choice_compacts_reason(self):
         self.assertEqual(
             router._parse_model_choice(
                 "deepseek-v4-flash - Because this requires file edits and tests."
             ),
-            (
-                "deepseek-v4-flash",
-                "Because this requires file edits and tests.",
+            ("deepseek-v4-flash", "Because this requires file edits and"),
+        )
+
+    def test_notice_shows_compact_reason_on_second_line(self):
+        self.assertEqual(
+            router._model_notice_text(
+                "openai-sol-fast", reason="Complex debugging and refactoring"
             ),
+            "> **openai-sol-fast**\n> Complex debugging and refactoring",
         )
 
     def test_classifier_choice_requires_reason(self):
@@ -135,7 +140,7 @@ class RouterTest(unittest.TestCase):
 
     def test_model_lookup_skips_assistant_turn_without_notice(self):
         messages = [
-            {"role": "assistant", "content": "Initial answer\n\n> **mistral-small**"},
+            {"role": "assistant", "content": "> **mistral-small**\n> Simple request\n\nInitial answer"},
             {"role": "assistant", "content": "Intermediate tool call"},
             {"role": "user", "content": "That did not work."},
         ]
@@ -199,6 +204,27 @@ class RouterTest(unittest.TestCase):
         self.assertEqual(message["content"], "Finished")
         self.assertEqual(message["reasoning_content"], "Planning checks")
 
+    def test_chatgpt_non_streaming_notice_precedes_response(self):
+        response = {
+            "output": [
+                {
+                    "type": "message",
+                    "content": [{"type": "output_text", "text": "Finished"}],
+                }
+            ]
+        }
+
+        converted = router._responses_to_chat_completion(
+            response,
+            "openai-sol-fast",
+            original_model="auto",
+            classification_reason="Complex debugging and refactoring",
+        )
+
+        content = converted["choices"][0]["message"]["content"]
+        self.assertTrue(content.startswith("> **auto -> openai-sol-fast**\n> Complex debugging and refactoring\n\n"))
+        self.assertTrue(content.endswith("Finished"))
+
 
 class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
@@ -217,7 +243,7 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
                     "choices": [
                         {
                             "message": {
-                                "content": "mistral-medium - Because this requires architecture analysis."
+                                "content": "mistral-medium - Architecture analysis"
                             }
                         }
                     ]
@@ -245,7 +271,7 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
             result,
             (
                 "mistral-medium",
-                "Because this requires architecture analysis.",
+                "Architecture analysis",
             ),
         )
         request = Client.post.await_args
@@ -293,10 +319,7 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
                 router,
                 "_classify",
                 AsyncMock(
-                    return_value=(
-                        "mistral-small",
-                        "Because this initially looked like a simple request.",
-                    )
+                    return_value=("mistral-small", "Simple request")
                 ),
             ),
             patch.object(router, "_stream_to_backend", AsyncMock(return_value="ok")) as stream,
@@ -320,7 +343,7 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
             async def json(self):
                 return body
 
-        reason = "Because this requires comparing architectural tradeoffs."
+        reason = "Architectural tradeoffs"
         with (
             patch.object(
                 router,
