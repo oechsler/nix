@@ -34,13 +34,17 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Validate configurations (dry-run)
+      - name: Evaluate configurations
         if: steps.check.outputs.changed == 'true'
         run: |
-          nix build .#nixosConfigurations.samuels-terra.config.system.build.toplevel --dry-run
-          nix build .#nixosConfigurations.samuels-pc.config.system.build.toplevel --dry-run
-          nix build .#nixosConfigurations.samuels-ser9.config.system.build.toplevel --dry-run
-          nix build .#nixosConfigurations.samuels-razer.config.system.build.toplevel --dry-run
+          nix eval \
+            .#nixosConfigurations.samuels-terra.config.system.build.toplevel
+          nix eval \
+            .#nixosConfigurations.samuels-pc.config.system.build.toplevel
+          nix eval \
+            .#nixosConfigurations.samuels-ser9.config.system.build.toplevel
+          nix eval \
+            .#nixosConfigurations.samuels-razer.config.system.build.toplevel
 
       - name: Commit and push
         if: steps.check.outputs.changed == 'true'

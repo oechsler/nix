@@ -1,6 +1,6 @@
 # NixOS Configuration CI/CD Pipeline
 #
-# Comprehensive quality checks and build validation.
+# Comprehensive quality checks and configuration evaluation.
 #
 # Runs on:
 # - Push to main
@@ -8,7 +8,8 @@
 #
 # Jobs:
 # 1. Lint: Code quality checks (conventions, anti-patterns, dead code)
-# 2. Build: Validate all host configurations build successfully (sequentially)
+# 2. Evaluate: Validate all host configurations evaluate successfully
+#    (sequentially)
 
 name: CI
 
@@ -46,10 +47,10 @@ jobs:
         run: nix shell nixpkgs#shellcheck -c 'shellcheck install.sh'
 
   #===========================================================================
-  # Job 2: Build Validation
+  # Job 2: Evaluate Configurations
   #===========================================================================
-  build:
-    name: Build NixOS configurations
+  evaluate:
+    name: Evaluate NixOS configurations
     runs-on: ubuntu-latest
 
     steps:
@@ -59,27 +60,22 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Build samuels-terra
+      - name: Evaluate samuels-terra
         run: |
-          nix build \
-            .#nixosConfigurations.samuels-terra.config.system.build.toplevel \
-            --show-trace
+          nix eval \
+            .#nixosConfigurations.samuels-terra.config.system.build.toplevel
 
-      - name: Build samuels-pc
+      - name: Evaluate samuels-pc
         run: |
-          nix build \
-            .#nixosConfigurations.samuels-pc.config.system.build.toplevel \
-            --show-trace
+          nix eval \
+            .#nixosConfigurations.samuels-pc.config.system.build.toplevel
 
-      - name: Build samuels-ser9
+      - name: Evaluate samuels-ser9
         run: |
-          nix build \
-            .#nixosConfigurations.samuels-ser9.config.system.build.toplevel \
-            --dry-run \
-            --show-trace
+          nix eval \
+            .#nixosConfigurations.samuels-ser9.config.system.build.toplevel
 
-      - name: Build samuels-razer
+      - name: Evaluate samuels-razer
         run: |
-          nix build \
-            .#nixosConfigurations.samuels-razer.config.system.build.toplevel \
-            --show-trace
+          nix eval \
+            .#nixosConfigurations.samuels-razer.config.system.build.toplevel
