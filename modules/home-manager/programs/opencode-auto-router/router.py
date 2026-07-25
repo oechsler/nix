@@ -353,6 +353,8 @@ DECISION PROCESS:
 
 RETURN FORMAT:
 Return exactly: <model_id> - <concise reason>
+The model_id must be selected from the available backends listed below.
+Never invent new models or use models not in the list.
 Write the reason in the language of the most recent user message.
 Use 2-6 words describing the decisive request properties. Never write a full sentence.
 Always provide a reason.
@@ -461,6 +463,9 @@ async def _classify(messages: list[dict[str, Any]], has_tools: bool) -> tuple[st
                     model, reason = choice
                     _cache_classify(context, has_tools, model, reason)
                     return (model, reason)
+                logger.warning(
+                    "cloud classifier returned unknown model content=%s", content
+                )
         except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
             logger.warning("cloud classification failed: %s", exc)
         return (DEFAULT_MODEL, "")
@@ -483,6 +488,10 @@ async def _classify(messages: list[dict[str, Any]], has_tools: bool) -> tuple[st
                     classified_model, reason = choice
                     _cache_classify(context, has_tools, classified_model, reason)
                     return (classified_model, reason)
+                logger.warning(
+                    "local classifier returned unknown model content=%s",
+                    response.json().get("response", ""),
+                )
         except Exception:
             continue
 
