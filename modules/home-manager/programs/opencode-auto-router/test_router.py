@@ -12,7 +12,7 @@ class RouterTest(unittest.TestCase):
     def test_fallback_chain_follows_all_configured_backends(self):
         self.assertEqual(
             router._fallback_chain("mistral-small"),
-            ["mistral-small", "mistral-medium", "openai-terra", "openai-sol", "openai-luna", "openai-terra-fast", "openai-sol-fast", "openai-luna-fast", "deepseek-v4-flash", "qwen3:8b"],
+            ["mistral-small", "mistral-medium", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.6-luna", "gpt-5.6-terra-fast", "gpt-5.6-sol-fast", "gpt-5.6-luna-fast", "deepseek-v4-flash", "qwen3:8b"],
         )
 
     def test_every_fallback_chain_ends_with_local_model(self):
@@ -36,7 +36,7 @@ class RouterTest(unittest.TestCase):
         router._mark_provider_failure("mistral-small", "test outage")
         self.assertFalse(router._provider_available("mistral-small"))
         self.assertFalse(router._provider_available("mistral-medium"))
-        self.assertTrue(router._provider_available("openai-luna"))
+        self.assertTrue(router._provider_available("gpt-5.6-luna"))
 
         router._mark_provider_success("mistral-medium")
         self.assertTrue(router._provider_available("mistral-small"))
@@ -71,13 +71,31 @@ class RouterTest(unittest.TestCase):
     def test_notice_shows_compact_reason_on_second_line(self):
         self.assertEqual(
             router._model_notice_text(
-                "openai-sol-fast", reason="Complex debugging and refactoring"
+                "gpt-5.6-sol-fast", reason="Complex debugging and refactoring"
             ),
-            "> **openai-sol-fast**\n> Complex debugging and refactoring",
+            "> **gpt-5.6-sol-fast**\n> Complex debugging and refactoring",
         )
 
     def test_classifier_choice_requires_reason(self):
         self.assertIsNone(router._parse_model_choice("mistral-medium"))
+
+    def test_classifier_choice_keeps_fast_suffix_in_model_id(self):
+        self.assertEqual(
+            router._parse_model_choice("gpt-5.6-sol-fast - Complex debugging"),
+            ("gpt-5.6-sol-fast", "Complex debugging"),
+        )
+
+    def test_classifier_choice_repairs_legacy_fast_format(self):
+        self.assertEqual(
+            router._parse_model_choice("gpt-5.6-sol - fast - Complex debugging"),
+            ("gpt-5.6-sol-fast", "Complex debugging"),
+        )
+
+    def test_classifier_choice_canonicalizes_legacy_gpt_alias(self):
+        self.assertEqual(
+            router._parse_model_choice("openai-sol - Complex debugging"),
+            ("gpt-5.6-sol", "Complex debugging"),
+        )
 
     def test_terminal_stream_chunk_is_detected(self):
         line = 'data: {"choices":[{"finish_reason":"stop","delta":{}}]}'
@@ -90,9 +108,9 @@ class RouterTest(unittest.TestCase):
         forwarded = router._add_agent_instruction(body, has_tools=True)
 
         instruction = forwarded["messages"][0]["content"]
-        self.assertIn("keep working until all of them are completed", instruction)
-        self.assertIn("Do not stop after analysis, after one subtask", instruction)
-        self.assertIn("implementation and verification", instruction)
+        self.assertIn("one assignment and own it end to end", instruction)
+        self.assertIn("Never stop after analysis", instruction)
+        self.assertIn("all implementation, testing, linting, typechecking, and verification", instruction)
         self.assertIn("todo tool", instruction)
         self.assertEqual(body["messages"][0]["role"], "user")
 
@@ -122,7 +140,7 @@ class RouterTest(unittest.TestCase):
             {"role": "assistant", "content": "An incomplete answer\n\n> **mistral-small -> mistral-medium**"},
             {"role": "user", "content": "Das funktioniert nicht, versuche es nochmal."},
         ]
-        self.assertEqual(router._capability_escalation(messages), "openai-terra")
+        self.assertEqual(router._capability_escalation(messages), "gpt-5.6-terra")
 
     def test_legacy_auto_notice_escalates_from_selected_model(self):
         messages = [
@@ -155,8 +173,8 @@ class RouterTest(unittest.TestCase):
 
     def test_escalation_does_not_downgrade_classifier_choice(self):
         self.assertEqual(
-            router._more_capable_model("openai-terra", "mistral-medium"),
-            "openai-terra",
+            router._more_capable_model("gpt-5.6-terra", "mistral-medium"),
+            "gpt-5.6-terra",
         )
 
     def test_chatgpt_request_preserves_requested_reasoning_effort(self):
@@ -197,7 +215,7 @@ class RouterTest(unittest.TestCase):
         }
 
         converted = router._responses_to_chat_completion(
-            response, "openai-sol", show_notice=False
+            response, "gpt-5.6-sol", show_notice=False
         )
 
         message = converted["choices"][0]["message"]
@@ -216,13 +234,13 @@ class RouterTest(unittest.TestCase):
 
         converted = router._responses_to_chat_completion(
             response,
-            "openai-sol-fast",
+            "gpt-5.6-sol-fast",
             original_model="auto",
             classification_reason="Complex debugging and refactoring",
         )
 
         content = converted["choices"][0]["message"]["content"]
-        self.assertTrue(content.startswith("> **auto -> openai-sol-fast**\n> Complex debugging and refactoring\n\n"))
+        self.assertTrue(content.startswith("> **auto -> gpt-5.6-sol-fast**\n> Complex debugging and refactoring\n\n"))
         self.assertTrue(content.endswith("Finished"))
 
 
@@ -362,7 +380,7 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
 
     async def test_manual_model_skips_only_classification(self):
         body = {
-            "model": "openai-sol",
+            "model": "gpt-5.6-sol",
             "messages": [{"role": "user", "content": "Run all checks"}],
             "tools": [{"type": "function", "function": {"name": "bash"}}],
         }
@@ -381,12 +399,12 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
 
         classify.assert_not_awaited()
         routed_body, candidates, notice_model, show_notice, reason = stream.await_args.args
-        self.assertEqual(candidates[0], "openai-sol")
-        self.assertEqual(notice_model, "openai-sol")
+        self.assertEqual(candidates[0], "gpt-5.6-sol")
+        self.assertEqual(notice_model, "gpt-5.6-sol")
         self.assertFalse(show_notice)
         self.assertEqual(reason, "")
         self.assertIn(
-            "keep working until all of them are completed",
+            "one assignment and own it end to end",
             routed_body["messages"][0]["content"],
         )
 
@@ -417,7 +435,7 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
         ):
             result = await router._stream_to_backend(
                 body={"stream": False},
-                candidates=["mistral-small", "mistral-medium", "openai-luna"],
+                candidates=["mistral-small", "mistral-medium", "gpt-5.6-luna"],
                 original_model="mistral-small",
             )
 
