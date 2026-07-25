@@ -198,9 +198,25 @@ in
       };
     };
 
-    development.enable = (lib.mkEnableOption "development tools") // {
-      default = true;
+    development = {
+      enable = (lib.mkEnableOption "development tools") // {
+        default = true;
+      };
+      opencode = {
+        enable = (lib.mkEnableOption "OpenCode AI coding agent") // {
+          default = config.features.development.enable;
+        };
+        classifier = lib.mkOption {
+          type = lib.types.enum [
+            "local"
+            "cloud"
+          ];
+          default = "cloud";
+          description = "Classifier backend. Local uses Ollama; cloud uses a small model through LiteLLM.";
+        };
+      };
     };
+
     apps = {
       enable = (lib.mkEnableOption "desktop applications (Discord, Spotify, etc.)") // {
         default = true;
@@ -230,7 +246,7 @@ in
           message = "features.encryption.unlockMethod = 'yubikey' requires features.auth.yubikey.enable = true. Set auth.yubikey.enable = true or change encryption.unlockMethod.";
         }
         {
-          assertion = !config.features.encryption.enable || config.boot.initrd.luks.devices != {};
+          assertion = !config.features.encryption.enable || config.boot.initrd.luks.devices != { };
           message = "features.encryption.enable = true requires a LUKS device in the host's disko.nix. If the host uses no encryption, set features.encryption.enable = false.";
         }
       ];

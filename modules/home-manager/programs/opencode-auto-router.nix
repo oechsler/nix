@@ -6,7 +6,7 @@
 # they can reach each other through localhost without --network=host
 # (which is unavailable rootless).
 #
-# Enabled when features.development.enable = true.
+# OpenCode Auto Router - always enabled when development.opencode.enable = true.
 {
   config,
   pkgs,
@@ -104,9 +104,12 @@ let
   '';
 
   routerModelsStr = lib.concatStringsSep "," routerModels;
+  classifier = features.development.opencode.classifier;
+  opencodeEnabled = features.development.opencode.enable;
+  useLocalClassifier = classifier == "local";
 in
 {
-  config = lib.mkIf features.development.enable {
+  config = lib.mkIf (features.development.enable && opencodeEnabled) {
     # -----------------------------------------------------------------
     # Secrets – SOPS (home‑manager level, same source file as system)
     # -----------------------------------------------------------------
@@ -125,176 +128,189 @@ in
     # -----------------------------------------------------------------
     # User systemd services
     # -----------------------------------------------------------------
-    systemd.user.services = {
-      # -- Pod ---------------------------------------------------------
-      "opencode-auto-router-pod" = {
-        Unit = {
-          Description = "OpenCode shared pod (ollama + litellm + router)";
-          After = [ "network-online.target" ];
-          Wants = [
-            "podman-opencode-ollama.service"
-            "podman-opencode-litellm.service"
-            "opencode-auto-router-sync-models.service"
-            "podman-opencode-auto-router.service"
-          ];
+    systemd.user.services = lib.mkMerge [
+      # Services that are always needed.
+      {
+        # -- Pod ---------------------------------------------------------
+        "opencode-auto-router-pod" = {
+          Unit = {
+            Description = "OpenCode shared pod (LiteLLM + router, optionally Ollama)";
+            After = [ "network-online.target" ];
+            Wants = [
+              "podman-opencode-litellm.service"
+              "podman-opencode-auto-router.service"
+            ]
+            ++ lib.optionals useLocalClassifier [
+              "podman-opencode-ollama.service"
+              "opencode-auto-router-sync-models.service"
+            ];
+          };
+          Service = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            ExecStartPre = "-${podman} pod rm -f opencode-auto";
+            ExecStart = "${podman} pod create --name=opencode-auto -p 127.0.0.1:11434:11434 -p 127.0.0.1:8000:8000 -p 127.0.0.1:4000:4000";
+            ExecStop = "-${podman} pod rm -f opencode-auto";
+            TimeoutStartSec = 30;
+          };
+          Install.WantedBy = [ "default.target" ];
         };
-        Service = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          ExecStartPre = "-${podman} pod rm -f opencode-auto";
-          ExecStart = "${podman} pod create --name=opencode-auto -p 127.0.0.1:11434:11434 -p 127.0.0.1:8000:8000 -p 127.0.0.1:4000:4000";
-          ExecStop = "-${podman} pod rm -f opencode-auto";
-          TimeoutStartSec = 30;
-        };
-        Install.WantedBy = [ "default.target" ];
-      };
 
-      # -- Ollama ------------------------------------------------------
-      "podman-opencode-ollama" = {
-        Unit = {
-          Description = "OpenCode Ollama (user, rootless)";
-          After = [ "opencode-auto-router-pod.service" ];
-          Requires = [ "opencode-auto-router-pod.service" ];
-          PartOf = [ "opencode-auto-router-pod.service" ];
+        # -- Router image loader -----------------------------------------
+        "opencode-auto-router-load-image" = {
+          Unit = {
+            Description = "Load opencode-auto-router image into user Podman storage";
+            Before = [ "podman-opencode-auto-router.service" ];
+          };
+          Service = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            ExecStart = "${podman} load -i ${routerImage}";
+            ExecStartPost = "-${podman} image prune -f";
+            TimeoutStartSec = 120;
+          };
+          Install.WantedBy = [ "default.target" ];
         };
-         Service = {
-           ExecStartPre = "-${podman} rm -f opencode-ollama";
-           ExecStart = lib.concatStringsSep " " ([
-             podman
-             "run"
-             "--name=opencode-ollama"
-             "--rm"
-             "--pod=opencode-auto"
-             "--device=/dev/dri"
-           ] ++ lib.optionals (features.hardware.gpu == "amd") [
-             "--device=/dev/kfd"
-           ] ++ [
-             "-v opencode-ollama:/root/.ollama"
-             "-e OLLAMA_KEEP_ALIVE=5m"
-              "docker.io/ollama/ollama@sha256:ec24bcaa2a810eb74171ce7c517813ef4821ed678988845e8d76cf62467036d4"
-           ]);
-           ExecStop = "${podman} stop opencode-ollama";
-          Restart = "on-failure";
-          RestartSec = "5s";
-          TimeoutStartSec = 300;
-        };
-        Install.WantedBy = [ "default.target" ];
-      };
 
-      # -- LiteLLM -----------------------------------------------------
-      "podman-opencode-litellm" = {
-        Unit = {
-          Description = "OpenCode LiteLLM (user, rootless)";
-          After = [
-            "opencode-auto-router-pod.service"
-            "podman-opencode-ollama.service"
-          ];
-          Requires = [ "opencode-auto-router-pod.service" ];
-          PartOf = [
-            "opencode-auto-router-pod.service"
-            "podman-opencode-ollama.service"
-          ];
+        # -- Auto-router -------------------------------------------------
+        "podman-opencode-auto-router" = {
+          Unit = {
+            Description = "OpenCode Auto Router (user, rootless)";
+            After = [
+              "opencode-auto-router-pod.service"
+              "podman-opencode-litellm.service"
+              "opencode-auto-router-load-image.service"
+            ]
+            ++ lib.optionals useLocalClassifier [
+              "opencode-auto-router-sync-models.service"
+            ];
+            Requires = [ "opencode-auto-router-pod.service" ];
+            Wants = [
+              "opencode-auto-router-load-image.service"
+            ]
+            ++ lib.optionals useLocalClassifier [
+              "opencode-auto-router-sync-models.service"
+            ];
+            PartOf = [
+              "opencode-auto-router-pod.service"
+              "podman-opencode-litellm.service"
+            ]
+            ++ lib.optionals useLocalClassifier [
+              "podman-opencode-ollama.service"
+            ];
+          };
+          Service = {
+            ExecStartPre = [
+              "${podman} load -i ${routerImage}"
+              "-${podman} rm -f opencode-auto-router"
+            ];
+            ExecStart = lib.concatStringsSep " " [
+              podman
+              "run"
+              "--name=opencode-auto-router"
+              "--rm"
+              "--pod=opencode-auto"
+              "-v ${config.home.homeDirectory}/.local/share/opencode/auth.json:/var/lib/opencode/auth.json"
+              "-e ROUTER_MODELS=${routerModelsStr}"
+              "-e OLLAMA_URL=http://127.0.0.1:11434"
+              "-e LITELLM_URL=http://127.0.0.1:8000/v1"
+              "-e OPENCODE_AUTH_FILE=/var/lib/opencode/auth.json"
+              "-e DEFAULT_MODEL=deepseek-v4-pro"
+              "-e CLASSIFIER_BACKEND=${classifier}"
+              "opencode-auto-router:latest"
+            ];
+            ExecStop = "${podman} stop opencode-auto-router";
+            Restart = "on-failure";
+            RestartSec = "5s";
+            TimeoutStartSec = 120;
+          };
+          Install.WantedBy = [ "default.target" ];
         };
-        Service = {
-          ExecStartPre = "-${podman} rm -f opencode-litellm";
-          ExecStart = lib.concatStringsSep " " [
-            podman
-            "run"
-            "--name=opencode-litellm"
-            "--rm"
-            "--pod=opencode-auto"
-            "-v ${litellmConfig}:/etc/litellm/config.yaml:ro"
-            "--env-file=${config.sops.templates."opencode-auto-router-litellm.env".path}"
-            "ghcr.io/berriai/litellm@sha256:029460ad724a63b39021612a3523989483184347372f0204d39fcf540484609f"
-            "--config /etc/litellm/config.yaml --host 0.0.0.0 --port 8000"
-          ];
-          ExecStop = "${podman} stop opencode-litellm";
-          Restart = "on-failure";
-          RestartSec = "5s";
-          TimeoutStartSec = 300;
+        # -- LiteLLM -----------------------------------------------------
+        "podman-opencode-litellm" = {
+          Unit = {
+            Description = "OpenCode LiteLLM (user, rootless)";
+            After = [ "opencode-auto-router-pod.service" ];
+            Requires = [ "opencode-auto-router-pod.service" ];
+            PartOf = [ "opencode-auto-router-pod.service" ];
+          };
+          Service = {
+            ExecStartPre = "-${podman} rm -f opencode-litellm";
+            ExecStart = lib.concatStringsSep " " [
+              podman
+              "run"
+              "--name=opencode-litellm"
+              "--rm"
+              "--pod=opencode-auto"
+              "-v ${litellmConfig}:/etc/litellm/config.yaml:ro"
+              "--env-file=${config.sops.templates."opencode-auto-router-litellm.env".path}"
+              "ghcr.io/berriai/litellm@sha256:029460ad724a63b39021612a3523989483184347372f0204d39fcf540484609f"
+              "--config /etc/litellm/config.yaml --host 0.0.0.0 --port 8000"
+            ];
+            ExecStop = "${podman} stop opencode-litellm";
+            Restart = "on-failure";
+            RestartSec = "5s";
+            TimeoutStartSec = 300;
+          };
+          Install.WantedBy = [ "default.target" ];
         };
-        Install.WantedBy = [ "default.target" ];
-      };
+      }
+      (
+        # Services only needed for local classification.
+        lib.mkIf useLocalClassifier {
+          # -- Ollama ------------------------------------------------------
+          "podman-opencode-ollama" = {
+            Unit = {
+              Description = "OpenCode Ollama (user, rootless)";
+              After = [ "opencode-auto-router-pod.service" ];
+              Requires = [ "opencode-auto-router-pod.service" ];
+              PartOf = [ "opencode-auto-router-pod.service" ];
+            };
+            Service = {
+              ExecStartPre = "-${podman} rm -f opencode-ollama";
+              ExecStart = lib.concatStringsSep " " (
+                [
+                  podman
+                  "run"
+                  "--name=opencode-ollama"
+                  "--rm"
+                  "--pod=opencode-auto"
+                  "--device=/dev/dri"
+                ]
+                ++ lib.optionals (features.hardware.gpu == "amd") [
+                  "--device=/dev/kfd"
+                ]
+                ++ [
+                  "-v opencode-ollama:/root/.ollama"
+                  "-e OLLAMA_KEEP_ALIVE=5m"
+                  "docker.io/ollama/ollama@sha256:ec24bcaa2a810eb74171ce7c517813ef4821ed678988845e8d76cf62467036d4"
+                ]
+              );
+              ExecStop = "${podman} stop opencode-ollama";
+              Restart = "on-failure";
+              RestartSec = "5s";
+              TimeoutStartSec = 300;
+            };
+            Install.WantedBy = [ "default.target" ];
+          };
 
-      # -- Router image loader -----------------------------------------
-      "opencode-auto-router-load-image" = {
-        Unit = {
-          Description = "Load opencode-auto-router image into user Podman storage";
-          Before = [ "podman-opencode-auto-router.service" ];
-        };
-        Service = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          ExecStart = "${podman} load -i ${routerImage}";
-          ExecStartPost = "-${podman} image prune -f";
-          TimeoutStartSec = 120;
-        };
-        Install.WantedBy = [ "default.target" ];
-      };
-
-      # -- Auto-router -------------------------------------------------
-      "podman-opencode-auto-router" = {
-        Unit = {
-          Description = "OpenCode Auto Router (user, rootless)";
-          After = [
-            "opencode-auto-router-pod.service"
-            "podman-opencode-litellm.service"
-            "opencode-auto-router-load-image.service"
-            "opencode-auto-router-sync-models.service"
-          ];
-          Requires = [ "opencode-auto-router-pod.service" ];
-          Wants = [
-            "opencode-auto-router-load-image.service"
-            "opencode-auto-router-sync-models.service"
-          ];
-          PartOf = [
-            "opencode-auto-router-pod.service"
-            "podman-opencode-ollama.service"
-            "podman-opencode-litellm.service"
-          ];
-        };
-        Service = {
-          ExecStartPre = [
-            "${podman} load -i ${routerImage}"
-            "-${podman} rm -f opencode-auto-router"
-          ];
-          ExecStart = lib.concatStringsSep " " [
-            podman
-            "run"
-            "--name=opencode-auto-router"
-            "--rm"
-            "--pod=opencode-auto"
-            "-v ${config.home.homeDirectory}/.local/share/opencode/auth.json:/var/lib/opencode/auth.json"
-            "-e ROUTER_MODELS=${routerModelsStr}"
-            "-e OLLAMA_URL=http://127.0.0.1:11434"
-            "-e LITELLM_URL=http://127.0.0.1:8000/v1"
-            "-e OPENCODE_AUTH_FILE=/var/lib/opencode/auth.json"
-            "-e DEFAULT_MODEL=deepseek-v4-pro"
-            "opencode-auto-router:latest"
-          ];
-          ExecStop = "${podman} stop opencode-auto-router";
-          Restart = "on-failure";
-          RestartSec = "5s";
-          TimeoutStartSec = 120;
-        };
-        Install.WantedBy = [ "default.target" ];
-      };
-
-      # -- Sync Ollama models (oneshot: pull desired, prune stale) ------
-      "opencode-auto-router-sync-models" = {
-        Unit = {
-          Description = "Sync Ollama models for OpenCode auto-router";
-          After = [ "podman-opencode-ollama.service" ];
-          Requires = [ "podman-opencode-ollama.service" ];
-        };
-        Service = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          TimeoutStartSec = 120;
-          ExecStart = "${syncScript}/bin/opencode-auto-router-sync-models";
-        };
-        Install.WantedBy = [ "default.target" ];
-      };
-    };
+          # -- Sync Ollama models (oneshot: pull desired, prune stale) ------
+          "opencode-auto-router-sync-models" = {
+            Unit = {
+              Description = "Sync Ollama models for OpenCode auto-router";
+              After = [ "podman-opencode-ollama.service" ];
+              Requires = [ "podman-opencode-ollama.service" ];
+            };
+            Service = {
+              Type = "oneshot";
+              RemainAfterExit = true;
+              TimeoutStartSec = 120;
+              ExecStart = "${syncScript}/bin/opencode-auto-router-sync-models";
+            };
+            Install.WantedBy = [ "default.target" ];
+          };
+        }
+      )
+    ];
   };
 }

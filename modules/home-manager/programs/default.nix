@@ -12,7 +12,11 @@
 # - tmux.nix - Tmux terminal multiplexer
 # - tools.nix - GitHub CLI
 
-{ ... }:
+{
+  lib,
+  features,
+  ...
+}:
 
 {
   imports = [
@@ -22,7 +26,11 @@
     ./fish.nix
     ./git.nix
     ./neovim.nix
+  ]
+  ++ lib.optionals (features.development.enable && features.development.opencode.enable) [
     ./opencode-auto-router.nix
+  ]
+  ++ [
     ./proton-pass.nix
     ./terminal.nix
     ./tmux.nix

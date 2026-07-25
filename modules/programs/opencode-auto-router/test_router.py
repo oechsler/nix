@@ -7,6 +7,7 @@ import router
 class RouterTest(unittest.TestCase):
     def setUp(self):
         router._provider_unavailable_until.clear()
+        router._classification_cache.clear()
 
     def test_fallback_chain_follows_all_configured_backends(self):
         self.assertEqual(
@@ -23,6 +24,13 @@ class RouterTest(unittest.TestCase):
                     {router._provider(candidate) for candidate in chain},
                     {"mistral", "opencode-go", "chatgpt", "ollama"},
                 )
+
+    def test_cloud_classifier_hosts_exclude_ollama_fallbacks(self):
+        with patch.object(router, "USE_LOCAL_CLASSIFIER", False):
+            chain = router._fallback_chain("mistral-small")
+
+        self.assertNotIn("qwen3:8b", chain)
+        self.assertNotIn("ollama", {router._provider(model) for model in chain})
 
     def test_provider_failure_temporarily_disables_all_provider_models(self):
         router._mark_provider_failure("mistral-small", "test outage")
@@ -100,6 +108,67 @@ class RouterTest(unittest.TestCase):
 class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         router._provider_unavailable_until.clear()
+        router._classification_cache.clear()
+
+    async def test_cloud_classifier_uses_litellm(self):
+        class Response:
+            @staticmethod
+            def raise_for_status():
+                return None
+
+            @staticmethod
+            def json():
+                return {
+                    "choices": [
+                        {"message": {"content": "mistral-medium"}}
+                    ]
+                }
+
+        class Client:
+            post = AsyncMock(return_value=Response())
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+        with (
+            patch.object(router, "USE_LOCAL_CLASSIFIER", False),
+            patch.object(router.httpx, "AsyncClient", return_value=Client()),
+        ):
+            result = await router._classify(
+                [{"role": "user", "content": "Compare two architectures"}],
+                False,
+            )
+
+        self.assertEqual(result, "mistral-medium")
+        request = Client.post.await_args
+        self.assertEqual(request.args[0], f"{router.LITELLM_URL}/chat/completions")
+        self.assertEqual(
+            request.kwargs["json"]["model"], router.CLOUD_CLASSIFIER_MODEL
+        )
+
+    async def test_cloud_classifier_failure_uses_default_model(self):
+        class Client:
+            post = AsyncMock(side_effect=router.httpx.ConnectError("offline"))
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+        with (
+            patch.object(router, "USE_LOCAL_CLASSIFIER", False),
+            patch.object(router.httpx, "AsyncClient", return_value=Client()),
+        ):
+            result = await router._classify(
+                [{"role": "user", "content": "Fix this code"}],
+                True,
+            )
+
+        self.assertEqual(result, router.DEFAULT_MODEL)
 
     async def test_retry_routes_to_stronger_model_and_reports_path(self):
         body = {
