@@ -255,28 +255,28 @@ def routing_context(messages: list[dict[str, Any]]) -> str:
 # Model selection
 # ---------------------------------------------------------------------------
 
-# Simple in-memory TTL cache: (prompt_hash, has_tools) → model_id
-_classification_cache: dict[tuple[int, bool], tuple[float, str]] = {}
+# Simple in-memory TTL cache: (prompt_hash, has_tools) → (model_id, reason)
+_classification_cache: dict[tuple[int, bool], tuple[float, str, str]] = {}
 
 _CLASSIFICATION_TIMEOUT = 8  # seconds
 _CACHE_TTL = 300  # seconds
 
 
-def _cached_classify(context: str, has_tools: bool) -> str | None:
-    """Return cached classification or None if expired/missing."""
+def _cached_classify(context: str, has_tools: bool) -> tuple[str, str] | None:
+    """Return cached classification (model, reason) or None if expired/missing."""
     key = (hash(context), has_tools)
     entry = _classification_cache.get(key)
     if entry:
-        expires, model = entry
+        expires, model, reason = entry
         if time.time() < expires:
-            return model
+            return (model, reason)
         del _classification_cache[key]
     return None
 
 
-def _cache_classify(context: str, has_tools: bool, model: str) -> None:
+def _cache_classify(context: str, has_tools: bool, model: str, reason: str = "") -> None:
     key = (hash(context), has_tools)
-    _classification_cache[key] = (time.time() + _CACHE_TTL, model)
+    _classification_cache[key] = (time.time() + _CACHE_TTL, model, reason)
 
 
 def _build_classification_prompt(context: str, has_tools: bool) -> str:
@@ -314,6 +314,7 @@ LEVEL 3 - Standard coding with tools:
 
 LEVEL 4 - Complex agentic with tools:
 - Multi-step exploration of ambiguous problems
+- Requests with several deliverables that must all be implemented and verified
 - Difficult bugs, race conditions, complex debugging
 - High-stakes reviews, system administration
 - Requires deep reasoning + tool coordination
@@ -342,8 +343,16 @@ DECISION PROCESS:
 3. If YES tools: Is it standard coding (deepseek-v4-flash, openai-luna-fast, openai-luna, qwen3.7-plus), complex agentic (deepseek-v4-pro, openai-sol, openai-sol-fast), or critically hard (openai-terra)?
 4. Choose the model that matches the level.
 
+RETURN FORMAT:
+Return exactly: <model_id> - <one-sentence reason>
+Write the reason in the language of the most recent user message.
+Explain which properties of the request caused this model choice.
+Example: "mistral-medium - Weil die Aufgabe Analyse und Planung erfordert"
+Example: "deepseek-v4-flash - Because this requires file edits and shell commands"
+
 HARD ROUTING CONSTRAINTS:
 - If has_tools=True and the task mentions logs, services, containers, production, ambiguous failures, broad investigation, or system administration → openai-terra or openai-sol (choose terra for ambiguity, sol for structured debugging)
+- If has_tools=True and the user requests multiple deliverables, end-to-end implementation, or explicitly asks the agent to continue until completion → at least openai-sol, openai-sol-fast, or deepseek-v4-pro
 - If has_tools=True, do not choose qwen3.7-max unless the request is primarily advanced reasoning and not broad tool coordination
 - qwen3.7-max is mainly for advanced pure reasoning without tools
 - Prefer fast variants (luna-fast, sol-fast, terra-fast) when latency matters and the task is not critically complex
@@ -359,39 +368,46 @@ IMPORTANT:
 Available backends:
 {json.dumps({m: cfg["description"] for m, cfg in MODEL_ROUTING.items()}, indent=2)}
 
-Return exactly one model id and nothing else.
-
 Conversation context:
 {context}
 """.strip()
 
 
-def _parse_model_choice(text: str) -> str | None:
-    cleaned = text.strip().lower()
+def _parse_model_choice(text: str) -> tuple[str, str] | None:
+    """Parse ``model_id - reason`` while tolerating common model formatting."""
+    cleaned = text.strip().strip("`\"'")
     for model in DIRECT_MODELS:
-        if model in cleaned:
-            # Never return a classifier model as the backend
-            if model in ROUTER_MODELS:
-                continue
-            return model
+        if model in ROUTER_MODELS:
+            continue
+        match = re.match(
+            rf"^\s*\**{re.escape(model)}\**\s*(?:-|–|—|:)\s*(.+)$",
+            cleaned,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+        if not match:
+            continue
+        reason = " ".join(match.group(1).strip().strip("`\"'*").split())
+        if reason:
+            return (model, reason[:300])
     return None
 
 
-async def _classify(messages: list[dict[str, Any]], has_tools: bool) -> str:
+async def _classify(messages: list[dict[str, Any]], has_tools: bool) -> tuple[str, str]:
     """Ask the classifier which cloud backend to use.
 
     Uses local Ollama models when configured, otherwise a small model through
     the existing LiteLLM gateway.
     Uses in-memory cache to skip classification for repeated prompts.
     Falls back to DEFAULT_MODEL after _CLASSIFICATION_TIMEOUT seconds.
+    Returns (model_id, reason) tuple.
     """
     context = routing_context(messages)
     if not context.strip():
-        return DEFAULT_MODEL
+        return (DEFAULT_MODEL, "")
 
     cached = _cached_classify(context, has_tools)
     if cached:
-        logger.info("classification cache hit model=%s", cached)
+        logger.info("classification cache hit model=%s reason=%s", cached[0], cached[1])
         return cached
 
     prompt = _build_classification_prompt(context, has_tools)
@@ -406,7 +422,7 @@ async def _classify(messages: list[dict[str, Any]], has_tools: bool) -> str:
                         "model": CLOUD_CLASSIFIER_MODEL,
                         "messages": [{"role": "user", "content": prompt}],
                         "temperature": 0,
-                        "max_tokens": 32,
+                        "max_tokens": 128,  # Increased for reason
                         "stream": False,
                     },
                 )
@@ -414,11 +430,12 @@ async def _classify(messages: list[dict[str, Any]], has_tools: bool) -> str:
                 content = response.json()["choices"][0]["message"]["content"]
                 choice = _parse_model_choice(str(content))
                 if choice:
-                    _cache_classify(context, has_tools, choice)
-                    return choice
+                    model, reason = choice
+                    _cache_classify(context, has_tools, model, reason)
+                    return (model, reason)
         except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
             logger.warning("cloud classification failed: %s", exc)
-        return DEFAULT_MODEL
+        return (DEFAULT_MODEL, "")
 
     for model in ROUTER_MODELS:
         try:
@@ -435,13 +452,14 @@ async def _classify(messages: list[dict[str, Any]], has_tools: bool) -> str:
                 response.raise_for_status()
                 choice = _parse_model_choice(response.json().get("response", ""))
                 if choice:
-                    _cache_classify(context, has_tools, choice)
-                    return choice
+                    classified_model, reason = choice
+                    _cache_classify(context, has_tools, classified_model, reason)
+                    return (classified_model, reason)
         except Exception:
             continue
 
     # All classifiers failed or timed out
-    return DEFAULT_MODEL
+    return (DEFAULT_MODEL, "")
 
 
 # ---------------------------------------------------------------------------
@@ -563,7 +581,7 @@ def _last_routed_model(messages: list[dict[str, Any]]) -> str | None:
         sorted((re.escape(model) for model in DIRECT_MODELS), key=len, reverse=True)
     )
     notice_pattern = re.compile(
-        rf"^>\s+\*\*(auto|{model_pattern})(?:\s+(?:->|→)\s+({model_pattern}))?\*\*$"
+        rf"^>\s+\*\*(auto|{model_pattern})(?:\s+(?:->|→)\s+({model_pattern}))?\*\*(?:\s+-\s+.+)?$"
     )
     for message in reversed(messages):
         if message.get("role") != "assistant":
@@ -671,9 +689,15 @@ def _degraded_providers() -> dict[str, int]:
 # ---------------------------------------------------------------------------
 
 
-def _model_notice_text(model: str, original_model: str | None = None) -> str:
+def _model_notice_text(
+    model: str, original_model: str | None = None, reason: str = ""
+) -> str:
     if original_model and original_model != model:
+        if reason:
+            return f"> **{original_model} -> {model}** - {reason}"
         return f"> **{original_model} -> {model}**"
+    if reason:
+        return f"> **{model}** - {reason}"
     return f"> **{model}**"
 
 
@@ -710,7 +734,7 @@ def _error_text(response: httpx.Response) -> str:
 
 
 def _add_agent_instruction(body: dict[str, Any], has_tools: bool) -> dict[str, Any]:
-    """Prepend a system instruction when the model has tools (agent mode)."""
+    """Prepend persistence instructions when the model has tools."""
     if not has_tools:
         return body
 
@@ -724,7 +748,16 @@ def _add_agent_instruction(body: dict[str, Any], has_tools: bool) -> dict[str, A
                 "You are running inside OpenCode as an agent with tools. "
                 "When the user asks you to inspect the computer, workspace, files, "
                 "repository, services, logs, or command output, use the provided tools "
-                "instead of saying you cannot access the system."
+                "instead of saying you cannot access the system. Treat every multi-part "
+                "request as one assignment: identify every requested deliverable and keep "
+                "working until all of them are completed. For three or more substantive "
+                "steps, track the remaining work with the todo tool when available and "
+                "re-check it after each tool result. Do not stop after analysis, after one "
+                "subtask, or after merely describing the next step. Continue autonomously "
+                "through implementation and verification. Only give the final response "
+                "when the entire request is complete or a genuine blocker prevents further "
+                "progress; if blocked, complete every unblocked part first and state the "
+                "specific blocker."
             ),
         },
     )
@@ -859,6 +892,7 @@ def _responses_to_chat_completion(
     routed_model: str,
     original_model: str | None = None,
     show_notice: bool = True,
+    classification_reason: str = "",
 ) -> dict[str, Any]:
     text_parts = []
     tool_calls = []
@@ -879,7 +913,9 @@ def _responses_to_chat_completion(
 
     content = "".join(text_parts)
     if show_notice:
-        content += "\n\n" + _model_notice_text(routed_model, original_model)
+        content += "\n\n" + _model_notice_text(
+            routed_model, original_model, classification_reason
+        )
     message: dict[str, Any] = {
         "role": "assistant",
         "content": content,
@@ -980,6 +1016,7 @@ async def _stream_chatgpt(
     fallback_models: list[str] | None = None,
     original_model: str | None = None,
     show_notice: bool = True,
+    classification_reason: str = "",
 ):
     try:
         auth_info = await _get_openai_auth()
@@ -987,7 +1024,11 @@ async def _stream_chatgpt(
         _mark_provider_failure(routed_model, f"auth refresh failed: {exc}")
         if fallback_models:
             return await _stream_to_backend(
-                body, fallback_models, original_model or routed_model, show_notice
+                body,
+                fallback_models,
+                original_model or routed_model,
+                show_notice,
+                classification_reason,
             )
         return JSONResponse(
             {"error": "OpenAI OAuth refresh failed", "details": str(exc)},
@@ -997,7 +1038,11 @@ async def _stream_chatgpt(
         _mark_provider_failure(routed_model, "OAuth credentials unavailable")
         if fallback_models:
             return await _stream_to_backend(
-                body, fallback_models, original_model or routed_model, show_notice
+                body,
+                fallback_models,
+                original_model or routed_model,
+                show_notice,
+                classification_reason,
             )
         return JSONResponse(
             {"error": "OpenAI OAuth auth not found. Run opencode auth login for openai."},
@@ -1029,6 +1074,7 @@ async def _stream_chatgpt(
             fallback_models,
             original_model,
             show_notice,
+            classification_reason,
         )
 
     client = httpx.AsyncClient(timeout=httpx.Timeout(30.0, read=600.0))
@@ -1042,7 +1088,11 @@ async def _stream_chatgpt(
         _mark_provider_failure(routed_model, f"network error: {exc}")
         if fallback_models:
             return await _stream_to_backend(
-                body, fallback_models, original_model or routed_model, show_notice
+                body,
+                fallback_models,
+                original_model or routed_model,
+                show_notice,
+                classification_reason,
             )
         return JSONResponse(
             {"error": "ChatGPT upstream unavailable", "details": str(exc)},
@@ -1060,7 +1110,11 @@ async def _stream_chatgpt(
         await client.aclose()
         if fallback_models:
             return await _stream_to_backend(
-                body, fallback_models, original_model or routed_model, show_notice
+                body,
+                fallback_models,
+                original_model or routed_model,
+                show_notice,
+                classification_reason,
             )
         return JSONResponse(
             {"error": "ChatGPT upstream failed", "details": error_body},
@@ -1141,7 +1195,9 @@ async def _stream_chatgpt(
                 if event_type in {"response.done", "response.completed"}:
                     response_id = event.get("response", {}).get("id", "chatgpt-response")
                     if show_notice or original_model != routed_model:
-                        notice_content = '\n\n' + _model_notice_text(routed_model, original_model)
+                        notice_content = "\n\n" + _model_notice_text(
+                            routed_model, original_model, classification_reason
+                        )
                         yield f"data: {json.dumps(_notice_chunk(request_body['model'], notice_content))}\n\n"
                     done = {
                         "id": response_id,
@@ -1176,6 +1232,7 @@ async def _chatgpt_non_streaming(
     fallback_models: list[str] | None,
     original_model: str | None,
     show_notice: bool,
+    classification_reason: str,
 ):
     try:
         async with httpx.AsyncClient(timeout=600) as client:
@@ -1190,6 +1247,7 @@ async def _chatgpt_non_streaming(
                 candidates=fallback_models,
                 original_model=original_model or routed_model,
                 show_notice=show_notice,
+                classification_reason=classification_reason,
             )
         return JSONResponse(
             {"error": "ChatGPT upstream unavailable", "details": str(exc)},
@@ -1213,6 +1271,7 @@ async def _chatgpt_non_streaming(
                 candidates=fallback_models,
                 original_model=original_model or routed_model,
                 show_notice=show_notice,
+                classification_reason=classification_reason,
             )
         return JSONResponse(payload, status_code=response.status_code)
 
@@ -1257,6 +1316,7 @@ async def _chatgpt_non_streaming(
                 candidates=fallback_models,
                 original_model=original_model or routed_model,
                 show_notice=show_notice,
+                classification_reason=classification_reason,
             )
         return JSONResponse({"error": "No final Codex response"}, status_code=502)
     if not final_response.get("output"):
@@ -1275,6 +1335,7 @@ async def _chatgpt_non_streaming(
             routed_model,
             original_model,
             show_notice or original_model != routed_model,
+            classification_reason,
         )
     )
 
@@ -1289,6 +1350,7 @@ async def _stream_to_backend(
     candidates: list[str],
     original_model: str,
     show_notice: bool = True,
+    classification_reason: str = "",
 ):
     """Try each candidate in order. Stream on first successful backend."""
     headers = {"Authorization": "Bearer dummy"}
@@ -1307,7 +1369,12 @@ async def _stream_to_backend(
             continue
         if candidate in CHATGPT_MODELS:
             return await _stream_chatgpt(
-                body, candidate, remaining, original_model, show_notice
+                body,
+                candidate,
+                remaining,
+                original_model,
+                show_notice,
+                classification_reason,
             )
 
         forwarded = dict(body)
@@ -1366,7 +1433,9 @@ async def _stream_to_backend(
                             )
                         )
                         if should_send_notice:
-                            notice_content = '\n\n' + _model_notice_text(model, original_model)
+                            notice_content = "\n\n" + _model_notice_text(
+                                model, original_model, classification_reason
+                            )
                             yield f"data: {json.dumps(_notice_chunk(model, notice_content))}\n\n"
                             notice_sent = True
                         yield line + "\n"
@@ -1435,7 +1504,9 @@ async def _stream_to_backend(
             if isinstance(message, dict):
                 content = str(message.get("content", ""))
                 if show_notice or candidate != original_model:
-                    content += "\n\n" + _model_notice_text(candidate, original_model)
+                    content += "\n\n" + _model_notice_text(
+                        candidate, original_model, classification_reason
+                    )
                 message["content"] = content
         return JSONResponse(payload, status_code=response.status_code)
 
@@ -1492,11 +1563,12 @@ async def chat_completions(request: Request):
 
     # If the client already picked a specific model, use it directly.
     # Otherwise classify the request through the configured classifier.
-    target_model = (
-        requested_model
-        if requested_model in DIRECT_MODELS
-        else await _classify(messages, has_tools)
-    )
+    if requested_model in DIRECT_MODELS:
+        target_model = requested_model
+        classification_reason = ""
+    else:
+        target_model, classification_reason = await _classify(messages, has_tools)
+
     escalation_model = (
         None
         if requested_model in DIRECT_MODELS
@@ -1511,15 +1583,18 @@ async def chat_completions(request: Request):
             target_model,
             escalated_target,
         )
+        if escalated_target != target_model:
+            classification_reason = ""
         target_model = escalated_target
         notice_model = previous_model or target_model
 
     logger.info(
-        "routing requested_model=%s target_model=%s has_tools=%s messages=%s",
+        "routing requested_model=%s target_model=%s has_tools=%s messages=%s reason=%s",
         requested_model,
         target_model,
         has_tools,
         len(messages),
+        classification_reason,
     )
 
     show_notice = (
@@ -1535,4 +1610,6 @@ async def chat_completions(request: Request):
         candidates,
     )
 
-    return await _stream_to_backend(body, candidates, notice_model, show_notice)
+    return await _stream_to_backend(
+        body, candidates, notice_model, show_notice, classification_reason
+    )
