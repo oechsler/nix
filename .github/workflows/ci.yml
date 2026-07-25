@@ -45,7 +45,7 @@ jobs:
         run: nix build .#checks.x86_64-linux.deadnix --show-trace
 
       - name: Run shellcheck (shell script lint)
-        run: nix shell nixpkgs#shellcheck -c 'shellcheck install.sh'
+        run: nix build .#checks.x86_64-linux.shellcheck --show-trace
 
   #===========================================================================
   # Job 2: Evaluate Configurations
