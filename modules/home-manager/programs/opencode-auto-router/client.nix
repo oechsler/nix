@@ -40,10 +40,22 @@ in
         };
 
         agent = {
-          build.model = "local/auto";
-          general.model = "local/auto";
-          explore.model = "local/auto";
-          plan.model = "local/auto";
+          build = {
+            model = "local/auto";
+            steps = 1000;
+          };
+          general = {
+            model = "local/auto";
+            steps = 1000;
+          };
+          explore = {
+            model = "local/auto";
+            steps = 1000;
+          };
+          plan = {
+            model = "local/auto";
+            steps = 1000;
+          };
           title.model = "local/mistral-small";
           summary.model = "local/mistral-small";
         };
@@ -65,12 +77,12 @@ in
             "qwen3.7-max" = model "Qwen3.7 Max";
             "qwen3.7-plus" = model "Qwen3.7 Plus";
             "qwen3.6-plus" = model "Qwen3.6 Plus";
-            openai-luna-fast = model "ChatGPT 5.6 Luna Fast";
-            openai-luna = model "ChatGPT 5.6 Luna";
-            openai-sol-fast = model "ChatGPT 5.6 Sol Fast";
-            openai-sol = model "ChatGPT 5.6 Sol";
-            openai-terra-fast = model "ChatGPT 5.6 Terra Fast";
-            openai-terra = model "ChatGPT 5.6 Terra";
+            "gpt-5.6-luna-fast" = model "GPT-5.6 Luna Fast";
+            "gpt-5.6-luna" = model "GPT-5.6 Luna";
+            "gpt-5.6-sol-fast" = model "GPT-5.6 Sol Fast";
+            "gpt-5.6-sol" = model "GPT-5.6 Sol";
+            "gpt-5.6-terra-fast" = model "GPT-5.6 Terra Fast";
+            "gpt-5.6-terra" = model "GPT-5.6 Terra";
           }
           // lib.optionalAttrs (features.development.opencode.classifier == "local") {
             "qwen3:8b" = model "Qwen3 8B (Local)";

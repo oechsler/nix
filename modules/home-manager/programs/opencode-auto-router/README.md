@@ -67,9 +67,9 @@ The classifier evaluates requests on five levels:
 
 - **Level 1 — Simple (no tools)**: Greetings, translations, summaries, titles, simple Q&A. Routed to `mistral-small`.
 - **Level 2 — Medium reasoning (no tools)**: Architecture discussions, design tradeoffs, analysis, planning. Routed to `mistral-medium` (preferred) or `qwen3.7-max` for exceptionally complex algorithmic reasoning.
-- **Level 3 — Standard coding with tools**: File edits, refactoring, shell commands, debugging, testing, NixOS config. Routed to `deepseek-v4-flash`, `openai-luna-fast`, `openai-luna`, or `qwen3.7-plus`.
-- **Level 4 — Complex agentic with tools**: Multi-step exploration, difficult bugs, race conditions, high-stakes reviews, system administration. Routed to `deepseek-v4-pro`, `openai-sol`, `openai-sol-fast`, or `openai-terra`.
-- **Level 5 — Very hard problems**: Extremely complex logic, distributed systems, critical bugs. Routed to `openai-terra`, `deepseek-v4-pro`, or `qwen3.7-max`.
+- **Level 3 — Standard coding with tools**: File edits, refactoring, shell commands, debugging, testing, NixOS config. Routed to `deepseek-v4-flash`, `gpt-5.6-luna-fast`, `gpt-5.6-luna`, or `qwen3.7-plus`.
+- **Level 4 — Complex agentic with tools**: Multi-step exploration, difficult bugs, race conditions, high-stakes reviews, system administration. Routed to `deepseek-v4-pro`, `gpt-5.6-sol`, `gpt-5.6-sol-fast`, or `gpt-5.6-terra`.
+- **Level 5 — Very hard problems**: Extremely complex logic, distributed systems, critical bugs. Routed to `gpt-5.6-terra`, `deepseek-v4-pro`, or `qwen3.7-max`.
 
 ### Decision Criteria
 
@@ -77,7 +77,7 @@ The classifier considers:
 
 - **Tool availability**: Requests with tools (file edits, shell, search) are routed to coding-focused models. Requests without tools go to reasoning models.
 - **Task complexity**: Simple tasks use small models; complex multi-step tasks use stronger models.
-- **Domain**: System administration, production debugging, and ambiguous failures favor `openai-terra` or `openai-sol`.
+- **Domain**: System administration, production debugging, and ambiguous failures favor `gpt-5.6-terra` or `gpt-5.6-sol`.
 - **Latency vs. quality**: Fast variants (`-fast`) are preferred when latency matters and the task is not critically complex.
 - **Quota distribution**: The router spreads load across multiple providers (Mistral, OpenCode Go, ChatGPT) to avoid hitting rate limits.
 
@@ -105,11 +105,11 @@ Models are listed once below in the approximate order of work they are intended 
 - **`qwen3.7-max`** — Advanced reasoning without broad tool coordination
 - **`qwen3.6-plus`** — General coding when other OpenCode Go models are unavailable
 
-### ChatGPT
+### GPT-5.6
 
-- **`openai-luna` / `openai-luna-fast`** — Daily agentic development; fast uses the priority service tier
-- **`openai-sol` / `openai-sol-fast`** — Complex debugging, refactoring, and multi-step tool use
-- **`openai-terra` / `openai-terra-fast`** — Ambiguous, critical, or high-stakes work; strongest tier
+- **`gpt-5.6-luna` / `gpt-5.6-luna-fast`** — Daily agentic development; fast uses the priority service tier
+- **`gpt-5.6-sol` / `gpt-5.6-sol-fast`** — Complex debugging, refactoring, and multi-step tool use
+- **`gpt-5.6-terra` / `gpt-5.6-terra-fast`** — Ambiguous, critical, or high-stakes work; strongest tier
 
 ### Local Ollama
 
@@ -126,7 +126,7 @@ The broad routing policy:
 - Difficult multi-step work uses DeepSeek Pro or Sol.
 - The hardest or highest-risk work uses Terra.
 
-For tool-enabled requests, the router also injects a persistence instruction. Multi-part requests are treated as one assignment, remaining work is tracked with the todo tool when available, and the agent is told to continue through implementation and verification instead of stopping after the first subtask. OpenCode's automatic context compaction and tool-output pruning keep long sessions within the model context window. No `steps` limit is configured, so OpenCode continues until the model completes the task or the user interrupts it.
+For tool-enabled requests, the router also injects a persistence instruction. Multi-part requests are treated as one assignment, remaining work is tracked with the todo tool when available, and the agent is told to continue through implementation and verification instead of stopping after the first subtask. OpenCode's automatic context compaction, tool-output pruning, and high agent step limit keep long sessions within the model context window.
 
 The router exposes OpenCode-compatible reasoning content for every model entry. Backends that provide reasoning summaries therefore appear as timed `Thought` entries in OpenCode in both automatic and manual modes. ChatGPT Responses API reasoning-summary events are translated to the OpenAI-compatible `reasoning_content` field; LiteLLM reasoning fields pass through unchanged.
 
@@ -173,7 +173,7 @@ ChatGPT authentication works differently. OpenCode creates the OAuth entry throu
 
 ## Manual Selection
 
-Select `local/auto` for normal use. A specific `local/<model>` entry, for example `local/openai-terra`, bypasses classification and capability escalation but retains reasoning display, tool support, persistence instructions, and availability fallback. Local-classifier hosts additionally expose `local/qwen3:8b`.
+Select `local/auto` for normal use. A specific `local/<model>` entry, for example `local/gpt-5.6-terra`, bypasses classification and capability escalation but retains reasoning display, tool support, persistence instructions, and availability fallback. Local-classifier hosts additionally expose `local/qwen3:8b`.
 
 ## Components
 
