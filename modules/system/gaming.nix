@@ -44,10 +44,12 @@ let
     SRT_URLOPEN_PREFER_STEAM = "1";
     STEAM_DISABLE_AUDIO_DEVICE_SWITCHING = "1";
     STEAM_MULTIPLE_XWAYLANDS = "1";
+    STEAM_GAMESCOPE_COLOR_MANAGED = "1";
     STEAM_GAMESCOPE_HAS_TEARING_SUPPORT = "1";
     STEAM_GAMESCOPE_NIS_SUPPORTED = "1";
     STEAM_GAMESCOPE_TEARING_SUPPORTED = "1";
     STEAM_GAMESCOPE_FANCY_SCALING_SUPPORT = "1";
+    STEAM_GAMESCOPE_VIRTUAL_WHITE = "1";
     STEAM_DISABLE_MANGOAPP_ATOM_WORKAROUND = "1";
   }
   // lib.optionalAttrs steamMachineVrr {
@@ -128,6 +130,8 @@ let
       ]
       ++ lib.optionals hasHdrDisplay [
         "--hdr-enabled"
+        "--hdr-sdr-content-nits"
+        "203"
       ];
       gamescopeArgs = lib.escapeShellArgs gamescopeArgList;
       steamArgs = lib.escapeShellArgs [
@@ -206,6 +210,11 @@ let
         else
           echo "steam-gamescope: gamescope did not report startup displays" >&2
         fi
+
+        # Let Gamescope finish applying HDR on the DRM output before Steam
+        # initializes its client-side HDR/color pipeline. Without this, Steam can
+        # start washed out until HDR is toggled off/on in Game Mode.
+        ${pkgs.coreutils}/bin/sleep 1
 
         ${pkgs.mangohud}/bin/mangoapp &
         mangoapp_pid=$!
