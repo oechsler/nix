@@ -97,21 +97,27 @@ let
 
   # Environment file for NetworkManager ensureProfiles — only secrets as vars
   wifiEnvContent =
-    lib.concatMapStringsSep "\n" (net:
-      "WIFI_${lib.toUpper net.name}_PSK=${config.sops.placeholder."wifi/${net.name}/psk"}"
+    lib.concatMapStringsSep "\n" (
+      net: "WIFI_${lib.toUpper net.name}_PSK=${config.sops.placeholder."wifi/${net.name}/psk"}"
     ) cfg.networks
     + lib.optionalString (cfg.enterpriseNetworks != [ ]) "\n"
-    + lib.concatMapStringsSep "\n" (net:
-      "WIFI_${lib.toUpper net.name}_PASSWORD=${config.sops.placeholder."wifi/${net.name}/password"}"
+    + lib.concatMapStringsSep "\n" (
+      net: "WIFI_${lib.toUpper net.name}_PASSWORD=${config.sops.placeholder."wifi/${net.name}/password"}"
     ) cfg.enterpriseNetworks;
 
   # Sops secrets — only psk/password, no ssid
   wifiSecrets =
     lib.listToAttrs (
-      map (net: { name = "wifi/${net.name}/psk"; value = { }; }) cfg.networks
+      map (net: {
+        name = "wifi/${net.name}/psk";
+        value = { };
+      }) cfg.networks
     )
     // lib.listToAttrs (
-      map (net: { name = "wifi/${net.name}/password"; value = { }; }) cfg.enterpriseNetworks
+      map (net: {
+        name = "wifi/${net.name}/password";
+        value = { };
+      }) cfg.enterpriseNetworks
     );
 
   ethernetWifiSwitch = pkgs.writeShellScript "ethernet-wifi-switch" ''
@@ -168,50 +174,53 @@ in
   config = lib.mkMerge [
 
     # Ethernet/WiFi switching for desktops without NetworkManager UI policy.
-    (lib.mkIf (
-      config.features.desktop.enable
-      && config.features.desktop.wm != "kde"
-      && cfg.enable
-      && cfg.preferEthernet.enable
-    ) {
-      networking.networkmanager.dispatcherScripts = [
-        {
-          source = ethernetWifiSwitch;
-          type = "basic";
-        }
-      ];
-
-      systemd.services.ethernet-wifi-switch = {
-        description = "Apply Ethernet/WiFi autoconnect policy";
-        wantedBy = [ "multi-user.target" ];
-        after = [ "NetworkManager.service" ];
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = ethernetWifiSwitch;
-        };
-      };
-
-      systemd.services.networkmanager-cleanup-ethernet-profiles = {
-        description = "Remove unmanaged Ethernet connection profiles";
-        wantedBy = [ "multi-user.target" ];
-        after = [
-          "NetworkManager.service"
-          "NetworkManager-ensure-profiles.service"
+    (lib.mkIf
+      (
+        config.features.desktop.enable
+        && config.features.desktop.wm != "kde"
+        && cfg.enable
+        && cfg.preferEthernet.enable
+      )
+      {
+        networking.networkmanager.dispatcherScripts = [
+          {
+            source = ethernetWifiSwitch;
+            type = "basic";
+          }
         ];
-        serviceConfig = {
-          Type = "oneshot";
+
+        systemd.services.ethernet-wifi-switch = {
+          description = "Apply Ethernet/WiFi autoconnect policy";
+          wantedBy = [ "multi-user.target" ];
+          after = [ "NetworkManager.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = ethernetWifiSwitch;
+          };
         };
-        script = ''
-          ${pkgs.networkmanager}/bin/nmcli -t -f NAME,TYPE connection show \
-            | while IFS=: read -r name type; do
-                if [ "$type" = "802-3-ethernet" ] && [ "$name" != "Ethernet" ]; then
-                  ${pkgs.util-linux}/bin/logger "NetworkManager cleanup: deleting unmanaged Ethernet profile '$name'"
-                  ${pkgs.networkmanager}/bin/nmcli connection delete "$name" || true
-                fi
-              done
-        '';
-      };
-    })
+
+        systemd.services.networkmanager-cleanup-ethernet-profiles = {
+          description = "Remove unmanaged Ethernet connection profiles";
+          wantedBy = [ "multi-user.target" ];
+          after = [
+            "NetworkManager.service"
+            "NetworkManager-ensure-profiles.service"
+          ];
+          serviceConfig = {
+            Type = "oneshot";
+          };
+          script = ''
+            ${pkgs.networkmanager}/bin/nmcli -t -f NAME,TYPE connection show \
+              | while IFS=: read -r name type; do
+                  if [ "$type" = "802-3-ethernet" ] && [ "$name" != "Ethernet" ]; then
+                    ${pkgs.util-linux}/bin/logger "NetworkManager cleanup: deleting unmanaged Ethernet profile '$name'"
+                    ${pkgs.networkmanager}/bin/nmcli connection delete "$name" || true
+                  fi
+                done
+          '';
+        };
+      }
+    )
 
     # WiFi disabled
     (lib.mkIf (!cfg.enable) {

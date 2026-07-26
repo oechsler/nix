@@ -21,7 +21,13 @@
 #   vi, vim → nvim
 #   EDITOR → nvim
 
-{ pkgs, theme, lib, features, ... }:
+{
+  pkgs,
+  theme,
+  lib,
+  features,
+  ...
+}:
 
 {
   #===========================

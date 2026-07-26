@@ -69,20 +69,17 @@ withoutLuks
     # mt7925e is the correct module (MT7927 shares the driver); the PCI ID
     # 14c3:7927 will be recognised once CachyOS ships a kernel >= that commit.
     # Until then WiFi/BT are non-functional — update flake when 7.2 is available.
-    kernelModules =
-      ((withoutLuks.boot or { }).kernelModules or [ ]) ++ [ "mt7925e" ];
+    kernelModules = ((withoutLuks.boot or { }).kernelModules or [ ]) ++ [ "mt7925e" ];
 
     initrd = ((withoutLuks.boot or { }).initrd or { }) // {
       # Force-load USB-C controller modules at initrd start so the YubiKey
       # is visible before systemd-cryptsetup asks for FIDO2 touch.
       # availableKernelModules = load-on-demand (too late for LUKS unlock).
       # kernelModules = load immediately (required here).
-      kernelModules =
-        ((withoutLuks.boot or { }).initrd or { }).kernelModules or [ ]
-        ++ [
-          "ucsi_acpi"
-          "typec_ucsi"
-        ];
+      kernelModules = ((withoutLuks.boot or { }).initrd or { }).kernelModules or [ ] ++ [
+        "ucsi_acpi"
+        "typec_ucsi"
+      ];
     };
   };
 }

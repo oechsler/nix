@@ -53,14 +53,15 @@ let
   # The "*" fallback prevents Waybar from using its own default for unknown outputs.
   # Example: { "*" = [1 2 3 4]; "DP-1" = [1 2 3 4]; "HDMI-A-1" = [5 6 7 8]; }
   defaultWorkspaces = lib.range 1 displays.defaultWorkspaceCount;
-  persistentWorkspaces =
-    { "*" = defaultWorkspaces; }
-    // lib.listToAttrs (
-      map (m: {
-        inherit (m) name;
-        value = if m.workspaces == [ ] then defaultWorkspaces else m.workspaces;
-      }) displays.monitors
-    );
+  persistentWorkspaces = {
+    "*" = defaultWorkspaces;
+  }
+  // lib.listToAttrs (
+    map (m: {
+      inherit (m) name;
+      value = if m.workspaces == [ ] then defaultWorkspaces else m.workspaces;
+    }) displays.monitors
+  );
 
   # Reload script (used by Super+Shift+R keybinding)
   reload = pkgs.writeShellScript "waybar-reload" ''
@@ -107,18 +108,17 @@ in
           "hyprland/window"
         ];
         modules-center = [ ];
-        modules-right =
-          [
-            "tray"
-            "network"
-          ]
-          ++ lib.optionals features.bluetooth.enable [ "bluetooth" ]
-          ++ [
-            "custom/power-profile"
-            "battery"
-            "pulseaudio"
-            "clock"
-          ];
+        modules-right = [
+          "tray"
+          "network"
+        ]
+        ++ lib.optionals features.bluetooth.enable [ "bluetooth" ]
+        ++ [
+          "custom/power-profile"
+          "battery"
+          "pulseaudio"
+          "clock"
+        ];
 
         "custom/launcher" = {
           format = "<span size='x-large' rise='-2000'>󱄅</span>";
