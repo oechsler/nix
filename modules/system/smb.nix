@@ -97,11 +97,9 @@ let
   # ============================================================================
   # UNMOUNT SCRIPT
   # ============================================================================
-  umountContent = lib.concatMapStringsSep "\n" (
-    share: ''
-      umount -l "${user.home}/smb/${share.label}" || true
-    ''
-  ) cfg.shares;
+  umountContent = lib.concatMapStringsSep "\n" (share: ''
+    umount -l "${user.home}/smb/${share.label}" || true
+  '') cfg.shares;
 in
 {
   #===========================

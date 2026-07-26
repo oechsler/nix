@@ -237,16 +237,16 @@
       #===========================
       # Exported Library Functions
       #===========================
-       lib = {
-         mkHost = mkHostExternal;
-         mkDisko = mkDiskoExternal;
-       };
+      lib = {
+        mkHost = mkHostExternal;
+        mkDisko = mkDiskoExternal;
+      };
 
-       overlays = {
-         default = final: prev: {
-           hypr-dock = final.callPackage ./packages/hypr-dock.nix { };
-         };
-       };
+      overlays = {
+        default = final: prev: {
+          hypr-dock = final.callPackage ./packages/hypr-dock.nix { };
+        };
+      };
 
       #===========================
       # Formatter

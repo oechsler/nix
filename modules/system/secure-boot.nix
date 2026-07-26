@@ -15,7 +15,12 @@ let
 
   secure-boot-init = pkgs.writeShellApplication {
     name = "secure-boot-init";
-    runtimeInputs = [ pkgs.sbctl pkgs.systemd pkgs.coreutils pkgs.jq ];
+    runtimeInputs = [
+      pkgs.sbctl
+      pkgs.systemd
+      pkgs.coreutils
+      pkgs.jq
+    ];
     text = ''
       if [[ $EUID -ne 0 ]]; then
         exec sudo "$0" "$@"

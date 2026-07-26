@@ -37,137 +37,143 @@ in
         default = true;
       };
       networks = lib.mkOption {
-        type = lib.types.listOf (lib.types.submodule {
-          options = {
-            name = lib.mkOption {
-              type = lib.types.str;
-              description = "Internal identifier — used as sops key (wifi/<name>/psk).";
+        type = lib.types.listOf (
+          lib.types.submodule {
+            options = {
+              name = lib.mkOption {
+                type = lib.types.str;
+                description = "Internal identifier — used as sops key (wifi/<name>/psk).";
+              };
+              ssid = lib.mkOption {
+                type = lib.types.str;
+                description = "WiFi network SSID (broadcast name).";
+              };
             };
-            ssid = lib.mkOption {
-              type = lib.types.str;
-              description = "WiFi network SSID (broadcast name).";
-            };
-          };
-        });
+          }
+        );
         default = [ ];
         description = "WPA2-PSK networks. Only wifi/<name>/psk needs a SOPS secret.";
       };
       enterpriseNetworks = lib.mkOption {
-        type = lib.types.listOf (lib.types.submodule {
-          options = {
-            name = lib.mkOption {
-              type = lib.types.str;
-              description = "Internal identifier — used as sops key (wifi/<name>/password).";
+        type = lib.types.listOf (
+          lib.types.submodule {
+            options = {
+              name = lib.mkOption {
+                type = lib.types.str;
+                description = "Internal identifier — used as sops key (wifi/<name>/password).";
+              };
+              ssid = lib.mkOption {
+                type = lib.types.str;
+                description = "WiFi network SSID (broadcast name).";
+              };
+              identity = lib.mkOption {
+                type = lib.types.str;
+                description = "EAP identity (e.g. user@university.edu).";
+              };
             };
-            ssid = lib.mkOption {
-              type = lib.types.str;
-              description = "WiFi network SSID (broadcast name).";
-            };
-            identity = lib.mkOption {
-              type = lib.types.str;
-              description = "EAP identity (e.g. user@university.edu).";
-            };
-          };
-        });
+          }
+        );
         default = [ ];
         description = "WPA2 Enterprise (EAP-PEAP/MSCHAPv2) networks. Only wifi/<name>/password needs a SOPS secret.";
       };
-      preferEthernet.enable = (lib.mkEnableOption "disable WiFi while Ethernet is connected on non-KDE desktops") // {
-        default = true;
-      };
+      preferEthernet.enable =
+        (lib.mkEnableOption "disable WiFi while Ethernet is connected on non-KDE desktops")
+        // {
+          default = true;
+        };
     };
     tailscale.enable = (lib.mkEnableOption "Tailscale VPN") // {
       default = true;
     };
   };
 
-   config = {
-     networking = {
-       networkmanager = {
-         enable = true;
-         wifi.backend = "iwd";
-         unmanaged = [
-           "interface-name:docker*"
-           "interface-name:br-*"
-           "interface-name:veth*"
-           "interface-name:tailscale*"
-         ];
-         ensureProfiles.profiles.ethernet-default = {
-           connection = {
-             id = "Ethernet";
-             type = "ethernet";
-             autoconnect = true;
-             autoconnect-priority = 999;
-           };
-           ipv4 = {
-             method = "auto";
-             route-metric = 100;
-             dns-priority = 100;
-             ignore-auto-dns = false;
-           };
-           ipv6 = {
-             method = "auto";
-             ip6-privacy = ip6Privacy;
-             route-metric = 100;
-             dns-priority = 100;
-             ignore-auto-dns = false;
-           };
-         };
-       };
-       wireless.iwd = {
-         enable = true;
-         settings.General.EnableNetworkConfiguration = false;
-       };
-     };
+  config = {
+    networking = {
+      networkmanager = {
+        enable = true;
+        wifi.backend = "iwd";
+        unmanaged = [
+          "interface-name:docker*"
+          "interface-name:br-*"
+          "interface-name:veth*"
+          "interface-name:tailscale*"
+        ];
+        ensureProfiles.profiles.ethernet-default = {
+          connection = {
+            id = "Ethernet";
+            type = "ethernet";
+            autoconnect = true;
+            autoconnect-priority = 999;
+          };
+          ipv4 = {
+            method = "auto";
+            route-metric = 100;
+            dns-priority = 100;
+            ignore-auto-dns = false;
+          };
+          ipv6 = {
+            method = "auto";
+            ip6-privacy = ip6Privacy;
+            route-metric = 100;
+            dns-priority = 100;
+            ignore-auto-dns = false;
+          };
+        };
+      };
+      wireless.iwd = {
+        enable = true;
+        settings.General.EnableNetworkConfiguration = false;
+      };
+    };
 
-     services.resolved = {
-       enable = true;
-       settings.Resolve = {
-         DNSSEC = "allow-downgrade";
-         Domains = [ "~." ];
-         LLMNR = false;
-         MulticastDNS = false;
-         Cache = true;
-         DNSStubListener = true;
-         FallbackDNS = "";
-         DNS = "";
-       };
-     };
+    services.resolved = {
+      enable = true;
+      settings.Resolve = {
+        DNSSEC = "allow-downgrade";
+        Domains = [ "~." ];
+        LLMNR = false;
+        MulticastDNS = false;
+        Cache = true;
+        DNSStubListener = true;
+        FallbackDNS = "";
+        DNS = "";
+      };
+    };
 
-     systemd.services.resolved.serviceConfig.Environment = [ "SYSTEMD_RESOLVED_FALLBACK_DNS=" ];
+    systemd.services.resolved.serviceConfig.Environment = [ "SYSTEMD_RESOLVED_FALLBACK_DNS=" ];
 
-     networking.networkmanager.settings = {
-       main = {
-         dns = "systemd-resolved";
-       };
-     };
+    networking.networkmanager.settings = {
+      main = {
+        dns = "systemd-resolved";
+      };
+    };
 
-     services.avahi = {
-       enable = true;
-       nssmdns4 = true;
-       openFirewall = true;
-       publish = {
-         enable = true;
-         addresses = true;
-       };
-     };
+    services.avahi = {
+      enable = true;
+      nssmdns4 = true;
+      openFirewall = true;
+      publish = {
+        enable = true;
+        addresses = true;
+      };
+    };
 
-     networking.networkmanager.dispatcherScripts = [
-       {
-         source = pkgs.writeShellScript "99-resolved-refresh" ''
-           #!${pkgs.bash}/bin/bash
-           if [ "$2" = "resume" ] || [ "$2" = "connectivity-change" ]; then
-             ${pkgs.systemd}/bin/resolvectl flush-caches
-             ${pkgs.systemd}/bin/systemctl restart systemd-resolved.service
-           fi
-         '';
-         type = "basic";
-       }
-     ];
+    networking.networkmanager.dispatcherScripts = [
+      {
+        source = pkgs.writeShellScript "99-resolved-refresh" ''
+          #!${pkgs.bash}/bin/bash
+          if [ "$2" = "resume" ] || [ "$2" = "connectivity-change" ]; then
+            ${pkgs.systemd}/bin/resolvectl flush-caches
+            ${pkgs.systemd}/bin/systemctl restart systemd-resolved.service
+          fi
+        '';
+        type = "basic";
+      }
+    ];
 
-     environment.systemPackages = with pkgs; [
-       avahi
-       iwd
-     ];
-   };
+    environment.systemPackages = with pkgs; [
+      avahi
+      iwd
+    ];
+  };
 }

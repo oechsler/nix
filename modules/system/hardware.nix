@@ -18,7 +18,12 @@
 # - On ≤ 32 GiB machines → swap = RAM; on ≥ 32 GiB → swap = 32 GiB.
 # - Compression ratio typically 2-3x
 
-{ config, pkgs, lib, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
   # Enable all redistributable firmware blobs — required for WiFi, BT, and other
@@ -40,7 +45,8 @@
         if config.features.hardware.gpu == "amd" then
           [ pkgs.libvdpau-va-gl ]
         else if config.features.hardware.gpu == "intel" then
-          with pkgs; [
+          with pkgs;
+          [
             intel-media-driver # iHD VA-API driver (Broadwell+)
             libvdpau-va-gl
           ]

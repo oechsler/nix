@@ -64,8 +64,8 @@
     };
   };
 
-   # Store optimisation runs after GC to deduplicate store paths via hardlinks.
-   # Runs as a separate weekly service so it never races with active builds.
+  # Store optimisation runs after GC to deduplicate store paths via hardlinks.
+  # Runs as a separate weekly service so it never races with active builds.
 
   # Allow unfree packages (e.g., Discord, Spotify, proprietary drivers)
   nixpkgs.config.allowUnfree = true;
@@ -142,79 +142,85 @@
     # - ExecStart: Run nixos-rebuild boot (default behavior)
     # - ExecStartPost: Check if reboot is needed and notify
     # - OnFailure: Trigger failure notification service
-    
+
     services = {
       nixos-upgrade =
-      let
-        flakeDir = "${config.users.users.${config.user.name}.home}/repos/nix";
-        user = config.user.name;
+        let
+          flakeDir = "${config.users.users.${config.user.name}.home}/repos/nix";
+          user = config.user.name;
 
-        # Helper script to send desktop notifications from system service
-        # Why: System services don't have access to user D-Bus session
-        # Solution: Use systemd-run --machine=<user>@ to run notify-send in user session
-        notify = pkgs.writeShellScript "nixos-upgrade-notify" ''
-          ${pkgs.systemd}/bin/systemd-run --machine=${user}@ \
-            --user --pipe --quiet --collect \
-            ${pkgs.libnotify}/bin/notify-send "$@"
-        '';
+          # Helper script to send desktop notifications from system service
+          # Why: System services don't have access to user D-Bus session
+          # Solution: Use systemd-run --machine=<user>@ to run notify-send in user session
+          notify = pkgs.writeShellScript "nixos-upgrade-notify" ''
+            ${pkgs.systemd}/bin/systemd-run --machine=${user}@ \
+              --user --pipe --quiet --collect \
+              ${pkgs.libnotify}/bin/notify-send "$@"
+          '';
 
-        # Pre-upgrade script: Sync with remote, then apply Secure Boot override if needed.
-        # lanzaboote requires /var/lib/sbctl/keys to exist at build time.
-        # If secure-boot-init hasn't run yet, inject a mkForce false override so the
-        # build succeeds. The override file lives inside the flake source (so Nix can
-        # find it in pure eval) but is never git-added — cleaned up after build.
-        updateFlake = pkgs.writeShellScript "nixos-upgrade-update-flake" ''
-          cd ${flakeDir}
-          ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git checkout flake.lock
-          ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git pull --ff-only
+          # Pre-upgrade script: Sync with remote, then apply Secure Boot override if needed.
+          # lanzaboote requires /var/lib/sbctl/keys to exist at build time.
+          # If secure-boot-init hasn't run yet, inject a mkForce false override so the
+          # build succeeds. The override file lives inside the flake source (so Nix can
+          # find it in pure eval) but is never git-added — cleaned up after build.
+          updateFlake = pkgs.writeShellScript "nixos-upgrade-update-flake" ''
+            cd ${flakeDir}
+            ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git checkout flake.lock
+            ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git pull --ff-only
 
-          # Write Secure Boot override when sbctl keys are missing.
-          # Never git-added — exists only during the build window.
-          OVERRIDE="${flakeDir}/hosts/$(hostname)/secure-boot-upgrade-override.nix"
-          if grep -q 'secureBoot\.enable = true' ${flakeDir}/hosts/$(hostname)/configuration.nix 2>/dev/null \
-            && [ ! -f /var/lib/sbctl/keys/db/db.pem ]; then
-            printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }\n' > "$OVERRIDE"
-            sed -i '/imports = \[/a\    .\/secure-boot-upgrade-override.nix' \
-              ${flakeDir}/hosts/$(hostname)/configuration.nix
-          fi
-        '';
+            # Write Secure Boot override when sbctl keys are missing.
+            # Never git-added — exists only during the build window.
+            OVERRIDE="${flakeDir}/hosts/$(hostname)/secure-boot-upgrade-override.nix"
+            if grep -q 'secureBoot\.enable = true' ${flakeDir}/hosts/$(hostname)/configuration.nix 2>/dev/null \
+              && [ ! -f /var/lib/sbctl/keys/db/db.pem ]; then
+              printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }\n' > "$OVERRIDE"
+              sed -i '/imports = \[/a\    .\/secure-boot-upgrade-override.nix' \
+                ${flakeDir}/hosts/$(hostname)/configuration.nix
+            fi
+          '';
 
-        # Post-upgrade cleanup: remove override and restore configuration.nix.
-        # Runs even on upgrade failure so the git tree stays clean.
-        cleanupOverride = pkgs.writeShellScript "nixos-upgrade-cleanup-override" ''
-          OVERRIDE="${flakeDir}/hosts/$(hostname)/secure-boot-upgrade-override.nix"
-          if [ -f "$OVERRIDE" ]; then
-            sed -i '/secure-boot-upgrade-override\.nix/d' \
-              ${flakeDir}/hosts/$(hostname)/configuration.nix
-            rm -f "$OVERRIDE"
-          fi
-        '';
+          # Post-upgrade cleanup: remove override and restore configuration.nix.
+          # Runs even on upgrade failure so the git tree stays clean.
+          cleanupOverride = pkgs.writeShellScript "nixos-upgrade-cleanup-override" ''
+            OVERRIDE="${flakeDir}/hosts/$(hostname)/secure-boot-upgrade-override.nix"
+            if [ -f "$OVERRIDE" ]; then
+              sed -i '/secure-boot-upgrade-override\.nix/d' \
+                ${flakeDir}/hosts/$(hostname)/configuration.nix
+              rm -f "$OVERRIDE"
+            fi
+          '';
 
-        # Post-upgrade success script
-        # Compare /nix/var/nix/profiles/system vs /run/booted-system
-        # If different: Reboot recommended
-        # If same: System already up-to-date
-        successScript = pkgs.writeShellScript "nixos-upgrade-success" ''
-          current=$(readlink /nix/var/nix/profiles/system)
-          booted=$(readlink /run/booted-system)
-          if [ "$current" != "$booted" ]; then
-            # New system generation built, reboot needed to activate
-            ${notify} -u normal \
-              "Systemaktualisierung abgeschlossen" \
-              "Ein Neustart wird empfohlen."
-          else
-            # No changes, system already up-to-date
-            ${notify} -u low \
-              "Systemaktualisierung" \
-              "Das System ist bereits auf dem neuesten Stand."
-          fi
-        '';
-       in
-       {
-          path = [ pkgs.git pkgs.gnused ];
+          # Post-upgrade success script
+          # Compare /nix/var/nix/profiles/system vs /run/booted-system
+          # If different: Reboot recommended
+          # If same: System already up-to-date
+          successScript = pkgs.writeShellScript "nixos-upgrade-success" ''
+            current=$(readlink /nix/var/nix/profiles/system)
+            booted=$(readlink /run/booted-system)
+            if [ "$current" != "$booted" ]; then
+              # New system generation built, reboot needed to activate
+              ${notify} -u normal \
+                "Systemaktualisierung abgeschlossen" \
+                "Ein Neustart wird empfohlen."
+            else
+              # No changes, system already up-to-date
+              ${notify} -u low \
+                "Systemaktualisierung" \
+                "Das System ist bereits auf dem neuesten Stand."
+            fi
+          '';
+        in
+        {
+          path = [
+            pkgs.git
+            pkgs.gnused
+          ];
 
           serviceConfig.ExecStartPre = lib.mkBefore [ "${updateFlake}" ];
-          serviceConfig.ExecStartPost = [ "${cleanupOverride}" "${successScript}" ];
+          serviceConfig.ExecStartPost = [
+            "${cleanupOverride}"
+            "${successScript}"
+          ];
 
           # Trigger failure notification service on upgrade failure
           unitConfig.OnFailure = [ "nixos-upgrade-notify-failure.service" ];
@@ -237,7 +243,7 @@
               ${pkgs.libnotify}/bin/notify-send -u critical \
                 "Systemaktualisierung fehlgeschlagen" \
                 "Die automatische Aktualisierung konnte nicht durchgeführt werden.\n\n$error"
-            '';
+          '';
         in
         {
           description = "Notify on NixOS upgrade failure";

@@ -36,17 +36,17 @@ in
     };
   };
 
-   config = lib.mkIf cfg.enable (
-     lib.mkMerge [
-       # Podman (replaces Docker with full compatibility)
-       {
-         virtualisation.podman = {
-           enable = true;
-           dockerCompat = true; # Enable Docker-compatible CLI
-         };
+  config = lib.mkIf cfg.enable (
+    lib.mkMerge [
+      # Podman (replaces Docker with full compatibility)
+      {
+        virtualisation.podman = {
+          enable = true;
+          dockerCompat = true; # Enable Docker-compatible CLI
+        };
 
-         users.users.${config.user.name}.extraGroups = [ "podman" ];
-       }
-     ]
-   );
+        users.users.${config.user.name}.extraGroups = [ "podman" ];
+      }
+    ]
+  );
 }
