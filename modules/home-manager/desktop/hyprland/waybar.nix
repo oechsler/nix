@@ -192,7 +192,7 @@ in
             headphone = "<span size='large'>󰋋</span>";
             headset = "<span size='large'>󰋎</span>";
           };
-          on-click = "${config.terminal.exec} wiremix -e wiremix";
+          on-click = "${config.terminal.exec} wiremix";
           tooltip-format = "{desc}";
         };
 
