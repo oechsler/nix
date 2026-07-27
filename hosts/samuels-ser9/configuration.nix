@@ -82,8 +82,11 @@
 
   features = {
     kernel = "cachyos-v4"; # Ryzen AI 9 HX 370 (Zen 5/Zen 5c) — x86_64-v4 optimized build
-    hardware.cpu = "amd"; # AMD Ryzen AI 9 HX 370
-    hardware.gpu = "amd"; # Integrated Radeon 890M
+    hardware = {
+      formFactor = "desktop";
+      cpu = "amd"; # AMD Ryzen AI 9 HX 370
+      gpu = "amd"; # Integrated Radeon 890M
+    };
     secureBoot.enable = true;
     encryption.unlockMethod = "yubikey";
     gaming.steamMachine.enable = true;

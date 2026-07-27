@@ -2,13 +2,29 @@
 #
 # This module defines global feature toggles consumed by multiple modules.
 #
-# --- SERVER MODE ---
+# --- FORM FACTOR ---
 #
-#   features.server = true;                 # Minimal server setup (disables desktop, audio, etc.)
+#   features.hardware.formFactor = "desktop" | "laptop" | "server";
 #
-# Server mode disables desktop/GUI/audio/bluetooth/wifi/gaming/devtools.
-# Encryption and auth (YubiKey/TOTP for sudo/SSH) remain active.
-# On a pure server, encryption.unlockMethod should be "tpm2" (auto-unlock).
+# Determines machine-type-specific behavior:
+#
+#   "desktop" (default)
+#     - Lid switch → ignore (no lid on a desktop)
+#     - AMD GPU → runpm=0 (disable GPU runtime PM, prevents resume hangs)
+#     - Power key → suspend
+#     - Higher idle timeouts (always on AC power)
+#
+#   "laptop"
+#     - Lid switch → suspend on battery, ignore on external power
+#     - AMD GPU → NOT disabled (runtime PM keeps battery alive)
+#     - Power key → suspend
+#     - Lower idle timeouts (battery-conscious)
+#
+#   "server"
+#     - Lid switch → ignore
+#     - AMD GPU → runpm=0 (disable GPU runtime PM)
+#     - Power key → ignore (accidental shutdown prevention)
+#     - power-profiles-daemon disabled (servers don't need dynamic profiles)
 #
 # --- ENCRYPTION ---
 #
@@ -30,7 +46,7 @@
 #
 # --- RECOMMENDED COMBINATIONS ---
 #
-# YubiKey + Greeter (samuels-pc):
+# YubiKey + Greeter (desktop with YubiKey):
 #   encryption.unlockMethod = "yubikey";
 #   desktop.login = "greeter";
 #   → LUKS unlocked via YubiKey, SDDM shows login, password unlocks keyring.
@@ -48,8 +64,11 @@
 #
 # --- OTHER OPTIONS ---
 #
-#   features.desktop.wm = "hyprland" | "kde";  # Window manager (default: hyprland)
-#   features.desktop.fileManager = "default" | "terminal";  # Primary file manager
+#   features.hardware.formFactor = "desktop" | "laptop" | "server"  (default: "desktop")
+#   features.hardware.cpu = "amd" | "intel" | null                  (CPU vendor, required for microcode)
+#   features.hardware.gpu = "amd" | "intel" | null                  (GPU vendor, required for graphics)
+#   features.desktop.wm = "hyprland" | "kde";                       # Window manager (default: hyprland)
+#   features.desktop.fileManager = "default" | "terminal";          # Primary file manager
 #   features.auth.yubikey.enable = true;        # YubiKey PAM (default: on when unlockMethod = "yubikey")
 #   features.auth.totp.enable = true;           # TOTP 2FA (default: true)
 #   features.development.enable = true;         # Dev tools (default: true)
@@ -64,9 +83,9 @@ let
   hasTotp = config.features.auth.totp.enable;
 
   # ============================================================================
-  # SERVER MODE CONFIGURATION
+  # SERVER FORM FACTOR CONFIGURATION
   # ============================================================================
-  # What gets disabled when features.server = true
+  # What gets disabled when hardware.formFactor = "server"
   #
   # Easy to customize: Just comment out lines you want to keep active,
   # or add new features to disable.
@@ -102,13 +121,13 @@ let
   # Convert the config map to NixOS options
   # This uses lib.mkDefault so you can override individual settings
   serverModeOptions = lib.mapAttrs (_: value: lib.mkDefault value) serverModeConfig;
+
+  isServer = config.features.hardware.formFactor == "server";
 in
 {
   # Feature toggles consumed by multiple modules.
   # Single-module toggles (gaming, bluetooth, etc.) are defined in their own modules.
   options.features = {
-    server = lib.mkEnableOption "server mode (disables desktop, audio, bluetooth, gaming, etc.)";
-
     impermanence = {
       enable = (lib.mkEnableOption "impermanent root with rollback on boot") // {
         default = true;
@@ -146,6 +165,34 @@ in
     };
 
     hardware = {
+      formFactor = lib.mkOption {
+        type = lib.types.enum [
+          "desktop"
+          "laptop"
+          "server"
+        ];
+        default = "desktop";
+        description = ''
+          Machine form factor — selects machine-type-specific behavior:
+
+          "desktop"
+            - Lid switch → ignore (no lid on a desktop)
+            - AMD GPU → runpm=0 (disable GPU runtime PM, prevents resume hangs)
+            - Power key → suspend
+
+          "laptop"
+            - Lid switch → suspend on battery, ignore on external power
+            - AMD GPU → runtime PM enabled (keeps battery alive)
+            - Power key → suspend
+
+          "server"
+            - Lid switch → ignore
+            - AMD GPU → runpm=0 (disable GPU runtime PM)
+            - Power key → ignore (accidental shutdown prevention)
+            - power-profiles-daemon disabled (servers don't need dynamic profiles)
+        '';
+      };
+
       cpu = lib.mkOption {
         type = lib.types.nullOr (
           lib.types.enum [
@@ -227,7 +274,7 @@ in
 
   config = lib.mkMerge [
     # Apply server mode configuration
-    (lib.mkIf config.features.server (lib.setAttrByPath [ "features" ] serverModeOptions))
+    (lib.mkIf isServer (lib.setAttrByPath [ "features" ] serverModeOptions))
 
     {
       warnings =

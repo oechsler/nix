@@ -13,7 +13,11 @@ Use this flake as a base NixOS configuration.
     nixosConfigurations.my-host = base-config.lib.mkHost {
       hostName = "my-host";
       hostPath = ./hosts/my-host;
-      serverMode = true;    # false for desktop
+      # features.hardware.formFactor determines machine type:
+      #   "desktop" — default, lid switch ignore, no GPU runtime PM on AMD
+      #   "laptop"  — lid switch suspend, GPU runtime PM enabled
+      #   "server"  — minimal server (no desktop), lid switch ignore
+      # Set in the host's configuration.nix, not here:
       extraModules = [ ];   # optional: additional NixOS modules
     };
   };

@@ -35,7 +35,7 @@ sops/           # Encrypted secrets
 Common per-host overrides:
 
 ```nix
-features.server = true;                         # Minimal server (no desktop, optimized kernel)
+features.hardware.formFactor = "server";        # Minimal server (disables desktop, audio, gaming)
 features.impermanence.enable = false;           # Disable root wipe on boot
 features.gaming.enable = false;                 # No Steam/gaming
 features.gaming.steamMachine.enable = true;     # Steam Gamescope session / Steam Machine mode

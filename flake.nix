@@ -124,7 +124,6 @@
         {
           hostName,
           hostPath,
-          serverMode ? false,
           extraModules ? [ ],
           withHyprDock ? false,
         }:
@@ -163,8 +162,6 @@
           ++ [
             {
               networking.hostName = hostName;
-              features.server = serverMode;
-
               home-manager = {
                 useGlobalPkgs = true;
                 useUserPackages = true;
@@ -196,14 +193,12 @@
         {
           hostName,
           hostPath,
-          serverMode ? false,
           extraModules ? [ ],
         }:
         mkHostBase {
           inherit
             hostName
             hostPath
-            serverMode
             extraModules
             ;
         };

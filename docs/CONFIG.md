@@ -5,7 +5,7 @@
 Most desktop-oriented features default to enabled. Some toggles inherit their parent feature, and opt-in features default to disabled. Override per host in `configuration.nix`:
 
 ```nix
-features.server = true;          # Disables all desktop-related features at once
+features.hardware.formFactor = "server";   # Server mode — disables desktop, audio, bluetooth, gaming, dev, apps
 features.gaming.enable = false;
 features.gaming.steamMachine.enable = true;
 features.desktop.wm = "kde";
@@ -15,7 +15,7 @@ features.ssh.enable = true;
 
 | Toggle | Default | Description |
 |--------|---------|-------------|
-| `features.server` | `false` | Server mode — disables desktop, apps, audio, bluetooth, gaming, flatpak, appimage, wifi, development, virtualisation; enables cachyos-server kernel |
+| `features.hardware.formFactor` | `"desktop"` | Machine form factor — `"desktop"`, `"laptop"`, or `"server"`. Server disables desktop, apps, audio, bluetooth, gaming, flatpak, appimage, wifi, development, virtualisation; enables cachyos-server kernel. Laptop enables lid switch suspend and keeps GPU runtime PM active. Desktop disables lid switch and GPU runtime PM (safest for AMD). |
 | `features.impermanence.enable` | `true` | Impermanent root with btrfs rollback on boot — see [System Requirements](#system-requirements) |
 | `features.impermanence.extraPaths` | `[]` | Additional paths to persist (beyond feature-based defaults) |
 | `features.encryption.enable` | `true` | LUKS full disk encryption |
@@ -30,7 +30,7 @@ features.ssh.enable = true;
 | `features.gaming.steamMachine.enable` | `false` | Adds a Steam Gamescope session to SDDM for hybrid desktop/Steam Machine use. |
 | `features.hardware.cpu` | `null` | CPU vendor (`"amd"` / `"intel"`) — enables the correct microcode update package loaded at early boot (security patches from AMD/Intel). |
 | `features.hardware.gpu` | `null` | GPU vendor (`"amd"` / `"intel"`) — enables graphics support and VA-API hardware decoding for all contexts (browser, video players). AMD also gets 32-bit libs when `gaming.enable = true`. **NVIDIA is not supported** — the enum only accepts `"amd"` and `"intel"`. |
-| `features.ipv6PrivacyExtensions.enable` | `!server` | IPv6 privacy extensions for NetworkManager profiles |
+| `features.ipv6PrivacyExtensions.enable` | `formFactor != "server"` | IPv6 privacy extensions for NetworkManager profiles |
 | `features.virtualisation.enable` | `true` | Docker daemon + user group |
 | `features.smb.enable` | `true` | SMB network share mounts (auto-mount with retry) |
 | `features.smb.shares` | `[]` | SMB shares to mount — list of `{ name, label, path, username? }`. `username` defaults to `config.user.name`. Only `smb/<name>/password` needs a SOPS secret. |
@@ -66,7 +66,7 @@ Set in `configuration.nix`:
 - Desktop hosts disable IPv6 only on Docker bridge/veth interfaces to reduce local development link churn; server hosts leave Docker untouched.
 - LLMNR is disabled in `systemd-resolved` to avoid resolver scopes on Docker/veth links.
 - Desktop Ethernet disables WiFi autoconnect while active.
-- IPv6 privacy extensions default to enabled, except in server mode.
+- IPv6 privacy extensions default to enabled, except when formFactor = "server".
 
 ## User Options
 

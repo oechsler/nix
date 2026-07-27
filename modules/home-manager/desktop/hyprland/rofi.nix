@@ -87,7 +87,7 @@ let
     choice=$(printf "󰌾  Sperren\n󰒲  Standby\n󰍃  Abmelden\n󰜉  Neustart\n󰐥  Herunterfahren\n󰘚  Firmware Setup" | rofi -dmenu -p "Energie" -i -no-custom)
     case "$choice" in
       "󰌾  Sperren")        hyprlock ;;
-      "󰒲  Standby")       loginctl lock-session && sleep 2 && systemctl suspend ;;
+      "󰒲  Standby")       loginctl lock-session && systemctl suspend ;;
       "󰍃  Abmelden")      hyprctl dispatch exit ;;
       "󰜉  Neustart")       systemctl reboot ;;
       "󰐥  Herunterfahren") systemctl poweroff ;;

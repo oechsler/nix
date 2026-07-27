@@ -71,13 +71,19 @@
     memoryMax = 32 * 1024 * 1024 * 1024; # 32 GiB hard cap
   };
 
+  # AMD CPU: ensure active pstate driver for modern EPP-based scaling.
+  # Required for power-profiles-daemon to control performance profiles on AMD.
+  boot.kernelParams = lib.mkIf (config.features.hardware.cpu == "amd") [
+    "amd_pstate=active"
+  ];
+
   # CoolerControl: fan control GUI — desktop-only (not needed on servers)
-  programs.coolercontrol.enable = lib.mkDefault (!config.features.server);
+  programs.coolercontrol.enable = lib.mkDefault (config.features.hardware.formFactor != "server");
 
   # Set CoolerControl password from the same sops secret as the user password.
   # Generates an argon2id hash at boot and writes it to /etc/coolercontrol/.passwd.
   # sops.secrets."user/password" is defined in users.nix (merged automatically).
-  systemd.services.coolercontrol-passwd = lib.mkIf (!config.features.server) {
+  systemd.services.coolercontrol-passwd = lib.mkIf (config.features.hardware.formFactor != "server") {
     description = "Set CoolerControl password from sops secret";
     wantedBy = [ "multi-user.target" ];
     before = [ "coolercontrold.service" ];
@@ -100,7 +106,7 @@
       '';
   };
 
-  systemd.services.coolercontrold = lib.mkIf (!config.features.server) {
+  systemd.services.coolercontrold = lib.mkIf (config.features.hardware.formFactor != "server") {
     after = [ "coolercontrol-passwd.service" ];
     wants = [ "coolercontrol-passwd.service" ];
   };

@@ -151,8 +151,8 @@ in
     settings = {
       general = {
         lock_cmd = "pidof hyprlock || hyprlock";
-        before_sleep_cmd = "loginctl lock-session && sleep 2";
-        after_sleep_cmd = "hyprctl dispatch dpms on";
+        before_sleep_cmd = "loginctl lock-session";
+        after_sleep_cmd = "${pkgs.runtimeShell} -c 'for i in 1 2 3; do hyprctl dispatch dpms on 2>/dev/null && break; sleep 0.5; done'";
       };
 
       listener = [

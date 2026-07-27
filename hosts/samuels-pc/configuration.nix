@@ -86,8 +86,11 @@
 
   features = {
     kernel = "cachyos-v3"; # Ryzen 9 5950X (Zen 3) — x86_64-v3 optimized build
-    hardware.cpu = "amd"; # Ryzen 9 5950X (Zen 3)
-    hardware.gpu = "amd"; # RX 7900 XTX (RDNA3)
+    hardware = {
+      formFactor = "desktop";
+      cpu = "amd"; # Ryzen 9 5950X (Zen 3)
+      gpu = "amd"; # RX 7900 XTX (RDNA3)
+    };
     secureBoot.enable = true;
     encryption.unlockMethod = "yubikey";
     gaming.steamMachine.enable = true;
