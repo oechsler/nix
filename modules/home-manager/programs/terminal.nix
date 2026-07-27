@@ -14,7 +14,7 @@
 #
 # Exposed option:
 #   terminal.exec - Command prefix to launch TUI apps
-#   Usage: terminal.exec "title" -e "command"
+#   Usage: terminal.exec <command>
 
 {
   pkgs,
@@ -32,9 +32,9 @@
 
   options.terminal.exec = lib.mkOption {
     type = lib.types.str;
-    default = "kitty --hold --title";
+    default = "kitty -e";
     readOnly = true;
-    description = "Command prefix to launch a TUI app in the terminal (usage: exec 'title' -e 'command')";
+    description = "Command prefix to launch a TUI app in the terminal (usage: exec <command>)";
   };
 
   config = {
