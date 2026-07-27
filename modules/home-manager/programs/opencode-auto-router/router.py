@@ -357,7 +357,8 @@ The model_id must be selected from the available backends listed below.
 Never invent new models or use models not in the list.
 Write the reason in the language of the most recent user message.
 Use 2-6 words describing the decisive request properties. Never write a full sentence.
-Always provide a reason.
+CRITICAL: You MUST always provide a non-empty reason. Never output just a model ID.
+Never generate empty or placeholder reasons like "auto" or "default".
 Use the exact model ID, including the `-fast` suffix for fast variants.
 Never put `fast` or another model modifier between the model ID and the reason.
 Example: "mistral-medium - Analyse und Planung"
@@ -729,6 +730,23 @@ def _degraded_providers() -> dict[str, int]:
 # ---------------------------------------------------------------------------
 
 
+_FALLBACK_REASONS: dict[str, str] = {
+    "mistral-small": "Simple Q&A / summary",
+    "mistral-medium": "Architecture & planning",
+    "deepseek-v4-flash": "Coding & shell commands",
+    "deepseek-v4-pro": "Hard debugging",
+    "gpt-5.6-luna-fast": "Daily development",
+    "gpt-5.6-luna": "General coding",
+    "gpt-5.6-sol-fast": "Complex debugging",
+    "gpt-5.6-sol": "Refactoring & debugging",
+    "gpt-5.6-terra-fast": "Critical fixes",
+    "gpt-5.6-terra": "Hardest problems",
+    "qwen3.7-plus": "Routine refactoring",
+    "qwen3.7-max": "Advanced reasoning",
+    "qwen3.6-plus": "General coding",
+}
+
+
 def _model_notice_text(
     model: str, original_model: str | None = None, reason: str = ""
 ) -> str:
@@ -737,7 +755,9 @@ def _model_notice_text(
     else:
         model_line = f"> **{model}**"
     compact_reason = _compact_reason(reason)
-    return f"{model_line}\n> {compact_reason}" if compact_reason else model_line
+    if not compact_reason:
+        compact_reason = _FALLBACK_REASONS.get(model, "Auto-routed")
+    return f"{model_line}\n> {compact_reason}"
 
 
 def _notice_chunk(model: str, content: str) -> dict[str, Any]:
@@ -797,7 +817,11 @@ def _add_agent_instruction(body: dict[str, Any], has_tools: bool) -> dict[str, A
                 "against the original request and run the strongest applicable checks. "
                 "Only return a final answer when the entire assignment is complete or a "
                 "genuine blocker prevents completion. If blocked, complete every unblocked "
-                "part first and state the exact blocker and remaining action."
+                "part first and state the exact blocker and remaining action. "
+                "CRITICAL RULE: NEVER generate model-routing annotations or model IDs "
+                "(like '> **model**', '> reason', 'deepseek-v4-flash', 'gpt-5.6-*' etc.) "
+                "in your responses. The auto-router system injects those automatically. "
+                "You must not prefix, suffix, or embed any routing information."
             ),
         },
     )
