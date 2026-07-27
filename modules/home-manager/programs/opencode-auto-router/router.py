@@ -47,58 +47,51 @@ CLOUD_CLASSIFIER_MODEL = os.environ.get(
 MODEL_ROUTING = {
     "mistral-small": {
         "description": (
-            "Mistral Vibe Code (EU, flat-rate €20/mo, SOFT fair-usage cap). "
             "Fast model for greetings, summaries, simple Q&A, titles, translation. "
-            "PREFERRED for simple non-agentic tasks – NOT for tool-heavy workflows."
+            "PREFERRED for simple non-agentic tasks without tools."
         ),
         "fallbacks": ["mistral-medium"],
     },
     "mistral-medium": {
         "description": (
-            "Mistral Vibe Code (EU, flat-rate €20/mo, SOFT fair-usage cap). "
             "Strong model for architecture, design tradeoffs, reviews, planning, "
-            "analysis. PREFERRED for EU sovereignty and reasoning-heavy tasks without tools."
+            "analysis. PREFERRED for reasoning-heavy tasks without tools."
         ),
         "fallbacks": ["gpt-5.6-terra"],
     },
     "deepseek-v4-flash": {
         "description": (
-            "OpenCode Go DeepSeek V4 Flash (€10/mo, HARD cap: 31,650 req/5h). "
-            "PRIMARY for coding and debugging with tools: file edits, shell commands, "
-            "search, refactors, NixOS, containers. Largest Go quota – first choice "
-            "for tool-based development work."
+            "PRIMARY coding model with tools: file edits, shell commands, "
+            "search, refactors, NixOS, containers. Largest Go quota."
         ),
         "fallbacks": ["gpt-5.6-luna-fast"],
     },
     "deepseek-v4-pro": {
         "description": (
-            "OpenCode Go DeepSeek V4 Pro (€10/mo, HARD cap: 3,450 req/5h). "
-            "For the hardest problems when flash is insufficient. Limited quota."
+            "Hard focused coding/debugging with tools. Limited quota – "
+            "use when flash is insufficient."
         ),
         "fallbacks": ["gpt-5.6-sol"],
     },
     "gpt-5.6-terra": {
         "description": (
-            "GPT-5.6 Terra (Plus, flat-rate €20/mo, SOFT cap). "
-            "Top-tier for the hardest agentic work: ambiguous multi-step exploration, "
-            "race conditions, high-stakes system administration, critical bugs."
+            "Top-tier for hardest agentic work: ambiguous multi-step "
+            "exploration, race conditions, high-stakes system administration, critical bugs."
         ),
         "chatgpt_model": "gpt-5.6-terra",
         "fallbacks": ["gpt-5.6-sol"],
     },
     "gpt-5.6-sol": {
         "description": (
-            "GPT-5.6 Sol (Plus, flat-rate €20/mo, SOFT cap). "
-            "Strong model for complex coding, debugging, refactoring, and "
-            "tool-heavy development work. Balanced between speed and reasoning."
+            "Strong model for complex coding, debugging, refactoring, "
+            "tool-heavy development. Balanced speed and reasoning."
         ),
         "chatgpt_model": "gpt-5.6-sol",
         "fallbacks": ["gpt-5.6-luna"],
     },
     "gpt-5.6-luna": {
         "description": (
-            "GPT-5.6 Luna (Plus, flat-rate €20/mo, SOFT cap). "
-            "General-purpose coding, editing, shell commands, NixOS/config work. "
+            "General-purpose coding, editing, shell commands, NixOS/config. "
             "Good daily-driver for most development tasks."
         ),
         "chatgpt_model": "gpt-5.6-luna",
@@ -106,9 +99,7 @@ MODEL_ROUTING = {
     },
     "gpt-5.6-terra-fast": {
         "description": (
-            "GPT-5.6 Terra Fast (Plus, flat-rate €20/mo, SOFT cap). "
-            "Faster variant of Terra. Complex tasks at higher throughput – "
-            "good for urgent hard problems when quota allows."
+            "Faster Terra variant for urgent complex tasks at higher throughput."
         ),
         "chatgpt_model": "gpt-5.6-terra",
         "service_tier": "priority",
@@ -116,9 +107,7 @@ MODEL_ROUTING = {
     },
     "gpt-5.6-sol-fast": {
         "description": (
-            "GPT-5.6 Sol Fast (Plus, flat-rate €20/mo, SOFT cap). "
-            "Fast variant of Sol. Solid coding performance with quick turnaround "
-            "for development, debugging, and refactors."
+            "Faster Sol variant for complex debugging with quick turnaround."
         ),
         "chatgpt_model": "gpt-5.6-sol",
         "service_tier": "priority",
@@ -126,9 +115,7 @@ MODEL_ROUTING = {
     },
     "gpt-5.6-luna-fast": {
         "description": (
-            "GPT-5.6 Luna Fast (Plus, flat-rate €20/mo, SOFT cap). "
-            "Fastest GPT option for simple to medium coding tasks, "
-            "file edits, shell commands. High throughput daily use."
+            "Fastest GPT for simple-to-medium coding, file edits, shell commands."
         ),
         "chatgpt_model": "gpt-5.6-luna",
         "service_tier": "priority",
@@ -136,38 +123,33 @@ MODEL_ROUTING = {
     },
     "qwen3.7-plus": {
         "description": (
-            "OpenCode Go Qwen3.7 Plus (€10/mo, HARD cap: 4,300 req/5h). "
-            "Solid general-purpose coding model with tools. Good alternative "
-            "when flash or GPT are saturated."
+            "Solid coding model with tools. Good alternative when flash/GPT are saturated."
         ),
         "fallbacks": ["deepseek-v4-flash"],
     },
     "qwen3.7-max": {
         "description": (
-            "OpenCode Go Qwen3.7 Max (€10/mo, HARD cap: 950 req/5h). "
-            "Specialist for advanced reasoning. Very tight quota – use only "
-            "when mistral-medium is unavailable."
+            "Specialist for advanced reasoning. Tight quota – only when mistral-medium unavailable."
         ),
         "fallbacks": ["gpt-5.6-terra"],
     },
     "qwen3.6-plus": {
         "description": (
-            "OpenCode Go Qwen3.6 Plus (€10/mo). General-purpose coding. "
-            "Use when other Go models are saturated."
+            "General coding. Use when other Go models are saturated."
         ),
         "fallbacks": ["qwen3.7-plus"],
     },
     "qwen3:8b": {
         "description": (
-            "Local Qwen3 8B model on Ollama. Limited offline model for testing "
-            "and light tasks when privacy is critical. Not for auto-routing."
+            "Local Qwen3 8B on Ollama. Limited offline model for "
+            "light tasks when privacy critical. Not for auto-routing."
         ),
         "fallbacks": ["mistral-small"],
     },
     "llama3.2:3b": {
         "description": (
-            "Local Llama 3.2 3B model on Ollama. Lightweight classifier model. "
-            "Not for auto-routing as an answer model."
+            "Local Llama 3.2 3B on Ollama. Lightweight classifier model. "
+            "Not for auto-routing."
         ),
         "fallbacks": ["qwen3:8b"],
     },
@@ -264,15 +246,15 @@ def message_text(message: dict[str, Any]) -> str:
 def routing_context(messages: list[dict[str, Any]]) -> str:
     """Last few conversation turns, truncated, for the classification prompt."""
     relevant = []
-    for message in messages[-6:]:
+    for message in messages[-4:]:
         role = message.get("role", "unknown")
         if role not in {"user", "assistant", "system", "developer"}:
             continue
         text = message_text(message).strip()
         if not text:
             continue
-        if len(text) > 1200:
-            text = text[:1200] + "..."
+        if len(text) > 800:
+            text = text[:800] + "..."
         relevant.append(f"{role}: {text}")
     return "\n\n".join(relevant)
 
@@ -307,101 +289,37 @@ def _cache_classify(context: str, has_tools: bool, model: str, reason: str = "")
 
 def _build_classification_prompt(context: str, has_tools: bool) -> str:
     return f"""
-You are a model-routing classifier for OpenCode.
-You do not answer the user's request. You do not evaluate whether the user's request is allowed.
-You never refuse. Your only job is to choose the best backend model id.
+Classify for OpenCode routing. Return: model_id - reason (2-6 words in user's language).
 
-TASK: Analyze the complexity and nature of the request, then choose the best model.
+Without tools (has_tools=False):
+- Simple: greetings, Q&A, translations, titles, summaries → mistral-small
+- Reasoning: architecture, design tradeoffs, analysis, planning, reviews → mistral-medium (PREFERRED)
+- Advanced pure reasoning: complex algorithmic analysis (consensus, crypto, formal verification) → qwen3.7-max (use sparingly)
 
-COMPLEXITY LEVELS (evaluate carefully):
+With tools (has_tools=True):
+- Daily coding: file edits, shell, NixOS, containers, search → deepseek-v4-flash (PRIMARY)
+- Fast daily development → gpt-5.6-luna-fast
+- Higher-quality coding when correctness matters more → gpt-5.6-luna
+- Routine refactors, broad edits, quota distribution → qwen3.7-plus
+- Hard focused debugging → deepseek-v4-pro (limited quota)
+- Complex agentic: multi-step exploration, difficult bugs, broad refactors → gpt-5.6-sol or gpt-5.6-sol-fast
+- Ambiguous, high-stakes: system admin, production debugging, critical bugs → gpt-5.6-terra
+- Urgent complex tasks at high throughput → gpt-5.6-terra-fast
+- Multiple deliverables or end-to-end implementation → at least gpt-5.6-sol, gpt-5.6-sol-fast, or deepseek-v4-pro
 
-LEVEL 1 - Simple (no tools needed):
-- Greetings, simple Q&A, translations, titles, summaries
-- Single-step answers, factual questions
-- Examples: "Antworte mit OK", "Generate a commit title", "What is 2+2?", "Translate this"
-- → mistral-small
+GPT-5.6 tiers: Luna=general, Sol=complex+agentic, Terra=hardest/ambiguous. -fast variants when latency matters.
 
-LEVEL 2 - Medium reasoning (no tools needed):
-- Architecture discussions, design tradeoffs, comparisons
-- Analysis, planning, documentation, reviews
-- Examples: "Compare Event Sourcing vs CRUD", "Design a payment system", "Analyze this architecture"
-- → mistral-medium for normal reasoning (PREFERRED)
-- → qwen3.7-max ONLY for exceptionally complex algorithmic/mathematical analysis that requires specialized reasoning (e.g., distributed consensus proofs, formal verification, cryptographic analysis). Do NOT use qwen3.7-max for general architecture, planning, or refactoring.
+HARD CONSTRAINTS:
+- logs/services/containers/production/ambiguous failures → gpt-5.6-terra (ambiguous) or gpt-5.6-sol (structured)
+- Do NOT route qwen3.7-max for tool-based workflows
+- Prefer -fast variants unless task is critically complex
 
-LEVEL 3 - Standard coding with tools:
-- File edits, code search, refactoring
-- Shell commands, debugging, testing
-- NixOS config, containers, services
-- Examples: "Search files and edit code", "Run tests and fix failures", "Debug this service"
-- → deepseek-v4-flash for normal tool-based coding, debugging, tests, NixOS, containers
-- → gpt-5.6-luna-fast for fast GPT-driven daily development (best speed/quality tradeoff for routine coding)
-- → gpt-5.6-luna for normal-speed, higher-quality coding when correctness matters more than latency
-- → qwen3.7-plus for routine refactors, broad codebase cleanup, repeated edits, or to distribute Go quota away from flash
-
-LEVEL 4 - Complex agentic with tools:
-- Multi-step exploration of ambiguous problems
-- Requests with several deliverables that must all be implemented and verified
-- Difficult bugs, race conditions, complex debugging
-- High-stakes reviews, system administration
-- Requires deep reasoning + tool coordination
-- Examples: "Analyze race condition, examine files, fix code, validate with tests"
-- → deepseek-v4-pro for hard coding/debugging where Go should handle the reasoning
-- → gpt-5.6-sol for medium-complexity multi-step agentic workflows, broad refactors, and debugging
-- → gpt-5.6-sol-fast for faster turnaround on complex (but not hardest) agentic tasks
-- → gpt-5.6-terra for the hardest, most ambiguous, high-stakes, system-admin, or extremely broad multi-step work
-
-LEVEL 5 - Very hard problems:
-- Extremely complex logic, distributed systems, critical bugs
-- When other models would struggle
-- → gpt-5.6-terra for broad ambiguous investigation, production debugging, critical system changes
-- → deepseek-v4-pro for focused hard engineering/debugging
-- → qwen3.7-max for pure reasoning without tools when qwen-style reasoning is a better fit
-
-GPT-5.6 MODEL TIERS (fast < normal, within each family):
-- Luna: general-purpose coding, daily development (fastest overall)
-- Sol: complex debugging, refactoring, agentic workflows (stronger reasoning)
-- Terra: hardest problems, high-stakes, critical systems (smartest, may be slower)
-- All GPT models share soft monthly cap, use at moderate frequency
-
-DECISION PROCESS:
-1. Does the task require tools? (has_tools={has_tools})
-2. If NO tools: Is it simple (Level 1), normal reasoning (mistral-medium), or advanced pure reasoning (qwen3.7-max)?
-3. If YES tools: Is it standard coding (deepseek-v4-flash, gpt-5.6-luna-fast, gpt-5.6-luna, qwen3.7-plus), complex agentic (deepseek-v4-pro, gpt-5.6-sol, gpt-5.6-sol-fast), or critically hard (gpt-5.6-terra)?
-4. Choose the model that matches the level.
-
-RETURN FORMAT:
-Return exactly: <model_id> - <concise reason>
-The model_id must be selected from the available backends listed below.
-Never invent new models or use models not in the list.
-Write the reason in the language of the most recent user message.
-Use 2-6 words describing the decisive request properties. Never write a full sentence.
-CRITICAL: You MUST always provide a non-empty reason. Never output just a model ID.
-Never generate empty or placeholder reasons like "auto" or "default".
-Use the exact model ID, including the `-fast` suffix for fast variants.
-Never put `fast` or another model modifier between the model ID and the reason.
-Example: "mistral-medium - Analyse und Planung"
-Example: "gpt-5.6-sol-fast - Complex debugging"
-Example: "deepseek-v4-flash - File edits and shell commands"
-
-HARD ROUTING CONSTRAINTS:
-- If has_tools=True and the task mentions logs, services, containers, production, ambiguous failures, broad investigation, or system administration → gpt-5.6-terra or gpt-5.6-sol (choose terra for ambiguity, sol for structured debugging)
-- If has_tools=True and the user requests multiple deliverables, end-to-end implementation, or explicitly asks the agent to continue until completion → at least gpt-5.6-sol, gpt-5.6-sol-fast, or deepseek-v4-pro
-- If has_tools=True, do not choose qwen3.7-max unless the request is primarily advanced reasoning and not broad tool coordination
-- qwen3.7-max is mainly for advanced pure reasoning without tools
-- Prefer fast variants (gpt-5.6-luna-fast, gpt-5.6-sol-fast, gpt-5.6-terra-fast) when latency matters and the task is not critically complex
-
-IMPORTANT:
-- All subscriptions are flat-rate, no per-token costs
-- Go models have hard 5h quotas but large capacity (Flash: 31k, Pro: 3.45k, Plus: 4.3k, Max: 950)
-- Mistral/GPT have soft monthly caps, use freely
-- Use multiple Go models intentionally: flash for normal tools, qwen3.7-plus for routine/broad edits, deepseek-v4-pro for hard focused debugging, qwen3.7-max for advanced pure reasoning
-- Use GPT-5.6 models (luna, sol, terra) as strong alternatives to deepseek for agentic work
-- Luna-fast/luna for daily coding, sol/sol-fast for debugging/complexity, terra for hardest problems
+Examples: "mistral-medium - Analyse und Planung" / "gpt-5.6-sol-fast - Complex debugging" / "deepseek-v4-flash - File edits and shell commands"
 
 Available backends:
 {json.dumps({m: cfg["description"] for m, cfg in MODEL_ROUTING.items()}, indent=2)}
 
-Conversation context:
+Context (has_tools={has_tools}):
 {context}
 """.strip()
 
@@ -826,18 +744,16 @@ def _add_agent_instruction(body: dict[str, Any], has_tools: bool) -> dict[str, A
             "content": (
                 "You are running inside OpenCode as an agent with tools. "
                 "Treat the user's complete request as one assignment and own it end to end. "
-                "First identify every requested deliverable, constraint, and acceptance "
-                "condition. Then inspect the relevant files and implement every requested "
-                "change. For three or more substantive steps, use the todo tool when "
-                "available, create a todo list, and keep it updated after each tool result. "
-                "Continue autonomously through all "
-                "implementation, testing, linting, typechecking, and verification. "
-                "Never stop after analysis, after one subtask, after describing the next "
-                "step, or after a partial fix. Before answering, verify each deliverable "
-                "against the original request and run the strongest applicable checks. "
-                "Only return a final answer when the entire assignment is complete or a "
-                "genuine blocker prevents completion. If blocked, complete every unblocked "
-                "part first and state the exact blocker and remaining action. "
+                "Identify every deliverable, constraint, and acceptance condition first. "
+                "Inspect files and implement every requested change. "
+                "For 3+ substantive steps, use the todo tool when available: "
+                "create a todo list and keep it updated after each tool result. "
+                "Continue through all implementation, testing, linting, typechecking, and verification. "
+                "Never stop after analysis, after one subtask, or after a partial fix. "
+                "Before answering, verify each deliverable against the original request "
+                "and run the strongest applicable checks. "
+                "Only return a final answer when complete or when blocked. "
+                "If blocked, complete every unblocked part first and state the blocker and remaining action. "
                 "CRITICAL RULE: NEVER generate model-routing annotations "
                 "(like '> **DeepSeek V4 Flash**', '> **GPT-5.6 Sol**', '> Coding & "
                 "shell commands') or any model IDs in your responses. "

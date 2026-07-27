@@ -42,12 +42,15 @@ class RouterTest(unittest.TestCase):
         self.assertTrue(router._provider_available("mistral-small"))
 
     def test_notice_is_minimal_for_initial_route(self):
-        self.assertEqual(router._model_notice_text("mistral-small", "mistral-small"), "> **mistral-small**")
+        self.assertEqual(
+            router._model_notice_text("mistral-small", "mistral-small"),
+            "> **Mistral Small**\n> Simple Q&A / summary",
+        )
 
     def test_notice_shows_fallback_path(self):
         self.assertEqual(
             router._model_notice_text("mistral-medium", "mistral-small"),
-            "> **mistral-small -> mistral-medium**",
+            "> **Mistral Small → Mistral Medium**\n> Architecture & planning",
         )
 
     def test_notice_includes_classifier_reason_on_second_line(self):
@@ -57,7 +60,7 @@ class RouterTest(unittest.TestCase):
                 "mistral-medium",
                 "Weil die Aufgabe Architekturabwägungen erfordert.",
             ),
-            "> **mistral-medium**\n> Weil die Aufgabe Architekturabwägungen erfordert",
+            "> **Mistral Medium**\n> Weil die Aufgabe Architekturabwägungen erfordert",
         )
 
     def test_classifier_choice_compacts_reason(self):
@@ -73,7 +76,7 @@ class RouterTest(unittest.TestCase):
             router._model_notice_text(
                 "gpt-5.6-sol-fast", reason="Complex debugging and refactoring"
             ),
-            "> **gpt-5.6-sol-fast**\n> Complex debugging and refactoring",
+            "> **GPT-5.6 Sol Fast**\n> Complex debugging and refactoring",
         )
 
     def test_classifier_choice_requires_reason(self):
@@ -122,8 +125,8 @@ class RouterTest(unittest.TestCase):
     def test_classifier_treats_multiple_deliverables_as_complex_agentic(self):
         prompt = router._build_classification_prompt("user: Do all five tasks", True)
 
-        self.assertIn("Requests with several deliverables", prompt)
-        self.assertIn("explicitly asks the agent to continue until completion", prompt)
+        self.assertIn("Multiple deliverables or end-to-end implementation", prompt)
+        self.assertIn("at least gpt-5.6-sol", prompt)
 
     def test_failed_attempt_escalates_previous_model(self):
         messages = [
@@ -240,7 +243,7 @@ class RouterTest(unittest.TestCase):
         )
 
         content = converted["choices"][0]["message"]["content"]
-        self.assertTrue(content.startswith("> **auto -> gpt-5.6-sol-fast**\n> Complex debugging and refactoring\n\n"))
+        self.assertTrue(content.startswith("> **Auto → GPT-5.6 Sol Fast**\n> Complex debugging and refactoring\n\n"))
         self.assertTrue(content.endswith("Finished"))
 
 
