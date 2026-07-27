@@ -1,15 +1,3 @@
-# NixOS Configuration CI/CD Pipeline
-#
-# Comprehensive quality checks and configuration evaluation.
-#
-# Runs on:
-# - Push to main
-# - Pull requests against main
-#
-# Jobs:
-# 1. Lint: Code quality checks (conventions, anti-patterns, dead code)
-# 2. Evaluate: Validate all host configurations evaluate successfully
-
 name: CI
 
 on:
@@ -19,13 +7,10 @@ on:
     branches: [main]
 
 jobs:
-  #===========================================================================
-  # Job 1: Code Quality Checks
-  #===========================================================================
-  lint:
-    name: Code Quality
+  quality:
+    name: Code quality
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -34,22 +19,23 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Run custom convention linter
-        run: nix build .#checks.x86_64-linux.lint --show-trace
+      - name: Run all flake checks
+        run: nix flake check --show-trace
 
-      - name: Run statix (anti-patterns)
-        run: nix build .#checks.x86_64-linux.statix --show-trace
-
-      - name: Run deadnix (dead code detection)
-        run: nix build .#checks.x86_64-linux.deadnix --show-trace
-
-  #===========================================================================
-  # Job 2: Evaluate Configurations
-  #===========================================================================
-  evaluate:
-    name: Evaluate NixOS configurations
+  build:
+    name: Build ${{ matrix.host }}
+    needs: quality
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        host:
+          - samuels-pc
+          - samuels-razer
+          - samuels-ser9
+          - samuels-terra
 
     steps:
       - name: Checkout repository
@@ -58,22 +44,5 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Evaluate samuels-terra
-        run: |
-          nix eval \
-            .#nixosConfigurations.samuels-terra.config.system.build.toplevel
-
-      - name: Evaluate samuels-pc
-        run: |
-          nix eval \
-            .#nixosConfigurations.samuels-pc.config.system.build.toplevel
-
-      - name: Evaluate samuels-ser9
-        run: |
-          nix eval \
-            .#nixosConfigurations.samuels-ser9.config.system.build.toplevel
-
-      - name: Evaluate samuels-razer
-        run: |
-          nix eval \
-            .#nixosConfigurations.samuels-razer.config.system.build.toplevel
+      - name: Build host configuration
+        run: nix build ".#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel" --no-link --print-build-logs --show-trace
