@@ -199,6 +199,24 @@ MODEL_PROVIDERS = {
     **{model: "chatgpt" for model in CHATGPT_MODELS},
 }
 
+MODEL_DISPLAY_NAMES = {
+    "auto": "Auto",
+    "mistral-small": "Mistral Small",
+    "mistral-medium": "Mistral Medium",
+    "deepseek-v4-flash": "DeepSeek V4 Flash",
+    "deepseek-v4-pro": "DeepSeek V4 Pro",
+    "gpt-5.6-luna-fast": "GPT-5.6 Luna Fast",
+    "gpt-5.6-luna": "GPT-5.6 Luna",
+    "gpt-5.6-sol-fast": "GPT-5.6 Sol Fast",
+    "gpt-5.6-sol": "GPT-5.6 Sol",
+    "gpt-5.6-terra-fast": "GPT-5.6 Terra Fast",
+    "gpt-5.6-terra": "GPT-5.6 Terra",
+    "qwen3.7-plus": "Qwen3.7 Plus",
+    "qwen3.7-max": "Qwen3.7 Max",
+    "qwen3.6-plus": "Qwen3.6 Plus",
+    "qwen3:8b": "Qwen3 8B (Local)",
+}
+
 # Ensure every route covers all available providers. The local model is
 # filtered out when this host is configured without Ollama.
 GLOBAL_FALLBACKS = [
@@ -750,10 +768,12 @@ _FALLBACK_REASONS: dict[str, str] = {
 def _model_notice_text(
     model: str, original_model: str | None = None, reason: str = ""
 ) -> str:
+    display_name = MODEL_DISPLAY_NAMES.get(model, model)
     if original_model and original_model != model:
-        model_line = f"> **{original_model} -> {model}**"
+        original_display = MODEL_DISPLAY_NAMES.get(original_model, original_model)
+        model_line = f"> **{original_display} → {display_name}**"
     else:
-        model_line = f"> **{model}**"
+        model_line = f"> **{display_name}**"
     compact_reason = _compact_reason(reason)
     if not compact_reason:
         compact_reason = _FALLBACK_REASONS.get(model, "Auto-routed")
@@ -818,9 +838,10 @@ def _add_agent_instruction(body: dict[str, Any], has_tools: bool) -> dict[str, A
                 "Only return a final answer when the entire assignment is complete or a "
                 "genuine blocker prevents completion. If blocked, complete every unblocked "
                 "part first and state the exact blocker and remaining action. "
-                "CRITICAL RULE: NEVER generate model-routing annotations or model IDs "
-                "(like '> **model**', '> reason', 'deepseek-v4-flash', 'gpt-5.6-*' etc.) "
-                "in your responses. The auto-router system injects those automatically. "
+                "CRITICAL RULE: NEVER generate model-routing annotations "
+                "(like '> **DeepSeek V4 Flash**', '> **GPT-5.6 Sol**', '> Coding & "
+                "shell commands') or any model IDs in your responses. "
+                "The auto-router system injects those automatically. "
                 "You must not prefix, suffix, or embed any routing information."
             ),
         },
