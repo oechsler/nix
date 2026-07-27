@@ -9,6 +9,7 @@ jobs:
   update:
     name: Check and update CachyOS kernel
     runs-on: ubuntu-latest
+    timeout-minutes: 180
 
     steps:
       - name: Set kernel repo variables
@@ -67,17 +68,17 @@ jobs:
         if: steps.check-update.outputs.needs_update == 'true'
         run: nix flake update cachyos-kernel nixpkgs-kernel
 
-      - name: Evaluate configurations
+      - name: Run all flake checks
+        if: steps.check-update.outputs.needs_update == 'true'
+        run: nix flake check --show-trace
+
+      - name: Build all host configurations
         if: steps.check-update.outputs.needs_update == 'true'
         run: |
-          nix eval \
-            .#nixosConfigurations.samuels-terra.config.system.build.toplevel
-          nix eval \
-            .#nixosConfigurations.samuels-pc.config.system.build.toplevel
-          nix eval \
-            .#nixosConfigurations.samuels-ser9.config.system.build.toplevel
-          nix eval \
-            .#nixosConfigurations.samuels-razer.config.system.build.toplevel
+          for host in samuels-pc samuels-razer samuels-ser9 samuels-terra; do
+            nix build ".#nixosConfigurations.$host.config.system.build.toplevel" \
+              --no-link --print-build-logs --show-trace
+          done
 
       - name: Commit and push kernel update
         if: steps.check-update.outputs.needs_update == 'true'

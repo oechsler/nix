@@ -288,6 +288,12 @@
           ${pkgs.shellcheck}/bin/shellcheck ${./.}/*.sh
           touch $out
         '';
+
+        format = pkgs.runCommand "nixfmt-check" { } ''
+          find ${./.} -name '*.nix' ! -name 'hardware-configuration.generated.nix' -print0 \
+            | xargs --null --no-run-if-empty ${pkgs.nixfmt}/bin/nixfmt --check
+          touch $out
+        '';
       };
     };
 }
