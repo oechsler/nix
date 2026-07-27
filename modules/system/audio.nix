@@ -50,11 +50,14 @@ in
       mode = "0755";
       text = ''
         #!${pkgs.runtimeShell}
+        TO=${pkgs.coreutils}/bin/timeout
+
         mute_all() {
-          ${pkgs.alsa-utils}/bin/amixer scontrols 2>/dev/null \
+          $TO 0.5 ${pkgs.alsa-utils}/bin/amixer scontrols 2>/dev/null \
             | ${pkgs.coreutils}/bin/cut -d"'" -f2 \
             | while read -r ctrl; do
-              ${pkgs.alsa-utils}/bin/amixer --quiet set "$ctrl" "$1" || true
+              $TO 0.5 ${pkgs.alsa-utils}/bin/amixer --quiet set "$ctrl" "$1" \
+                2>/dev/null
             done
         }
         case "$1" in

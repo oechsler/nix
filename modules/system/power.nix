@@ -36,14 +36,14 @@ in
     HandleHibernateKey = "suspend";
     HandleLidSwitch = if isLaptop then "suspend" else "ignore";
     HandleLidSwitchExternalPower = if isLaptop then "ignore" else "ignore";
-    AllowSuspend = true;
-    AllowHibernation = false;
-    AllowSuspendThenHibernate = true;
   };
 
   systemd.sleep.settings.Sleep = {
     SuspendState = [ "mem" ];
     HibernateDelaySec = "360min";
+    AllowSuspend = true;
+    AllowHibernation = false;
+    AllowSuspendThenHibernate = false;
   };
 
   # amdgpu.runpm=0 disables GPU runtime PM.
