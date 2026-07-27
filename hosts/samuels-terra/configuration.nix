@@ -19,7 +19,12 @@
 # - DP-2 (right): Workspaces 1-4
 # - DP-3 (left): Workspaces 5-8
 
-{ config, lib, pkgs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   imports = [
