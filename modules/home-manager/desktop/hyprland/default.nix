@@ -229,6 +229,20 @@ in
           Install.WantedBy = [ "graphical-session.target" ];
         };
 
+        power-inhibit = {
+          Unit = {
+            Description = "Power button inhibitor for desktop mode";
+            Documentation = "man:systemd-inhibit(1)";
+            PartOf = [ "graphical-session.target" ];
+          };
+          Service = {
+            ExecStart = "${pkgs.systemd}/bin/systemd-inhibit --what=handle-power-key ${pkgs.coreutils}/bin/sleep infinity";
+            Type = "simple";
+            TimeoutStopSec = 5;
+          };
+          Install.WantedBy = [ "graphical-session.target" ];
+        };
+
       };
 
     # Reduce default stop timeout for user session
