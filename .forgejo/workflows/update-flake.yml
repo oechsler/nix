@@ -8,7 +8,7 @@ on:
 jobs:
   update:
     name: Update flake.lock
-    runs-on: ubuntu-latest
+    runs-on: native
     timeout-minutes: 180
 
     steps:
@@ -32,9 +32,26 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Run all flake checks
+      - name: Run linters
         if: steps.check.outputs.changed == 'true'
-        run: nix flake check --show-trace
+        run: >-
+          nix build
+          .#checks.x86_64-linux.lint
+          .#checks.x86_64-linux.statix
+          .#checks.x86_64-linux.deadnix
+          .#checks.x86_64-linux.shellcheck
+          .#checks.x86_64-linux.format
+          --no-link --print-build-logs
+
+      - name: Evaluate all host configurations
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          hosts=(samuels-terra samuels-pc samuels-razer samuels-ser9)
+          for host in "${hosts[@]}"; do
+            echo "Evaluating $host..."
+            nix eval ".#nixosConfigurations.$host.config.system.build.toplevel" --show-trace
+          done
 
       - name: Build all host configurations
         if: steps.check.outputs.changed == 'true'

@@ -1,0 +1,39 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy samuels-terra
+    runs-on: native
+    timeout-minutes: 180
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Run linters
+        run: >-
+          nix build
+          .#checks.x86_64-linux.lint
+          .#checks.x86_64-linux.statix
+          .#checks.x86_64-linux.deadnix
+          .#checks.x86_64-linux.shellcheck
+          .#checks.x86_64-linux.format
+          --no-link --print-build-logs
+
+      - name: Build samuels-terra
+        run: >-
+          nix build
+          ".#nixosConfigurations.samuels-terra.config.system.build.toplevel"
+          --print-build-logs --show-trace
+
+      - name: Activate samuels-terra
+        run: |
+          echo "=== Deployment would run here ==="
+          echo "Example: sudo nixos-rebuild switch --flake .#samuels-terra"
+          echo "Current build is at: $(readlink result)"
