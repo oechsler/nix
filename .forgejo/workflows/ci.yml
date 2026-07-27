@@ -9,7 +9,7 @@ on:
 jobs:
   quality:
     name: Code quality
-    runs-on: ubuntu-latest
+    runs-on: native
     timeout-minutes: 30
 
     steps:
@@ -19,23 +19,51 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Run all flake checks
-        run: nix flake check --show-trace
+      - name: Run linters
+        run: >-
+          nix build
+          .#checks.x86_64-linux.lint
+          .#checks.x86_64-linux.statix
+          .#checks.x86_64-linux.deadnix
+          .#checks.x86_64-linux.shellcheck
+          .#checks.x86_64-linux.format
+          --no-link --print-build-logs
+
+  evaluate:
+    name: Evaluate configurations
+    runs-on: native
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Evaluate all host configurations
+        run: |
+          set -euo pipefail
+          hosts=(samuels-terra samuels-pc samuels-razer samuels-ser9)
+          for host in "${hosts[@]}"; do
+            echo "Evaluating $host..."
+            nix eval ".#nixosConfigurations.$host.config.system.build.toplevel" --show-trace
+          done
 
   build:
     name: Build ${{ matrix.host }}
-    needs: quality
-    runs-on: ubuntu-latest
+    needs: evaluate
+    runs-on: native
     timeout-minutes: 180
     strategy:
       fail-fast: false
       max-parallel: 2
       matrix:
         host:
+          - samuels-terra
           - samuels-pc
           - samuels-razer
           - samuels-ser9
-          - samuels-terra
 
     steps:
       - name: Checkout repository
@@ -45,4 +73,7 @@ jobs:
         uses: DeterminateSystems/nix-installer-action@main
 
       - name: Build host configuration
-        run: nix build ".#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel" --no-link --print-build-logs --show-trace
+        run: >-
+          nix build
+          ".#nixosConfigurations.${{ matrix.host }}.config.system.build.toplevel"
+          --no-link --print-build-logs --show-trace
