@@ -18,7 +18,12 @@
 # - Pro audio support (JACK compatibility)
 # - Video processing pipeline integration
 
-{ lib, config, pkgs, ... }:
+{
+  lib,
+  config,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.features.audio;
@@ -45,17 +50,16 @@ in
       mode = "0755";
       text = ''
         #!${pkgs.runtimeShell}
+        mute_all() {
+          ${pkgs.alsa-utils}/bin/amixer scontrols 2>/dev/null \
+            | ${pkgs.coreutils}/bin/cut -d"'" -f2 \
+            | while read -r ctrl; do
+              ${pkgs.alsa-utils}/bin/amixer --quiet set "$ctrl" "$1" || true
+            done
+        }
         case "$1" in
-          pre)
-            ${pkgs.alsa-utils}/bin/amixer --quiet set Master mute || true
-            ${pkgs.alsa-utils}/bin/amixer --quiet set Speaker mute || true
-            ${pkgs.alsa-utils}/bin/amixer --quiet set Headphone mute || true
-            ;;
-          post)
-            ${pkgs.alsa-utils}/bin/amixer --quiet set Master unmute || true
-            ${pkgs.alsa-utils}/bin/amixer --quiet set Speaker unmute || true
-            ${pkgs.alsa-utils}/bin/amixer --quiet set Headphone unmute || true
-            ;;
+          pre)  mute_all mute ;;
+          post) mute_all unmute ;;
         esac
       '';
     };
