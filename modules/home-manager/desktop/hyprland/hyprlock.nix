@@ -58,25 +58,22 @@ in
       #---------------------------
       # Background
       #---------------------------
-      # Wallpaper with blur effect (per-monitor)
+      # Default wallpaper for all outputs (covers unknown monitors),
+      # overridden per-monitor for explicitly configured displays.
       background =
-        if displays.monitors == [ ] then
-          # Fallback for no monitor config
-          [
-            {
-              path = "${theme.wallpaperPath}";
-              blur_passes = 3;
-              blur_size = 8;
-            }
-          ]
-        else
-          # Per-monitor wallpaper support
-          map (m: {
-            monitor = m.name;
-            path = "${displayHelpers.monitorWallpaper theme m}";
-            blur_passes = 3; # Number of blur passes (more = stronger blur)
-            blur_size = 8; # Blur radius
-          }) displays.monitors;
+        [
+          {
+            path = "${theme.wallpaperPath}";
+            blur_passes = 3;
+            blur_size = 8;
+          }
+        ]
+        ++ map (m: {
+          monitor = m.name;
+          path = "${displayHelpers.monitorWallpaper theme m}";
+          blur_passes = 3;
+          blur_size = 8;
+        }) displays.monitors;
 
       #---------------------------
       # Input Field
