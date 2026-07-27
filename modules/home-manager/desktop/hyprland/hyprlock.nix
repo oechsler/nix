@@ -60,20 +60,19 @@ in
       #---------------------------
       # Default wallpaper for all outputs (covers unknown monitors),
       # overridden per-monitor for explicitly configured displays.
-      background =
-        [
-          {
-            path = "${theme.wallpaperPath}";
-            blur_passes = 3;
-            blur_size = 8;
-          }
-        ]
-        ++ map (m: {
-          monitor = m.name;
-          path = "${displayHelpers.monitorWallpaper theme m}";
+      background = [
+        {
+          path = "${theme.wallpaperPath}";
           blur_passes = 3;
           blur_size = 8;
-        }) displays.monitors;
+        }
+      ]
+      ++ map (m: {
+        monitor = m.name;
+        path = "${displayHelpers.monitorWallpaper theme m}";
+        blur_passes = 3;
+        blur_size = 8;
+      }) displays.monitors;
 
       #---------------------------
       # Input Field
