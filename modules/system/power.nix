@@ -8,11 +8,48 @@
 # - System and Steam Machine session: Suspend immediately like SteamOS
 # - Hyprland desktop: Inhibits logind and handles the button via Rofi power menu
 # - KDE desktop: Inhibits logind through PowerDevil and uses KDE power settings
-
-_:
+#
+# Machine-type behavior (derived from features.hardware.formFactor):
+# - Desktop:   Lid switch ignore, AMD GPU runpm disabled
+# - Laptop:    Lid switch suspend on battery, GPU runpm enabled
+# - Server:    Lid switch ignore, AMD GPU runpm disabled, no power-profiles-daemon
 
 {
-  services.power-profiles-daemon.enable = true;
+  config,
+  lib,
+  ...
+}:
 
-  services.logind.settings.Login.HandlePowerKey = "suspend";
+let
+  cfg = config.features.hardware;
+  isLaptop = cfg.formFactor == "laptop";
+  isServer = cfg.formFactor == "server";
+  hasAmdGpu = cfg.gpu == "amd";
+in
+{
+  services.power-profiles-daemon.enable = !isServer;
+
+  services.logind.settings.Login = {
+    HandlePowerKey = if isServer then "ignore" else "suspend";
+    HandlePowerKeyLongPress = "poweroff";
+    HandleSuspendKey = "suspend";
+    HandleHibernateKey = "suspend";
+    HandleLidSwitch = if isLaptop then "suspend" else "ignore";
+    HandleLidSwitchExternalPower = if isLaptop then "ignore" else "ignore";
+    AllowSuspend = true;
+    AllowHibernation = false;
+    AllowSuspendThenHibernate = true;
+  };
+
+  systemd.sleep.settings.Sleep = {
+    SuspendState = [ "mem" ];
+    HibernateDelaySec = "360min";
+  };
+
+  # amdgpu.runpm=0 disables GPU runtime PM.
+  # On desktop/server: prevents BACO transition issues during suspend (prevents resume hangs).
+  # On laptop: runtime PM must stay enabled to allow the GPU to power down on battery.
+  boot.kernelParams = lib.optionals (hasAmdGpu && !isLaptop) [
+    "amdgpu.runpm=0"
+  ];
 }

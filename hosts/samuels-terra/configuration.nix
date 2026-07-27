@@ -80,8 +80,11 @@
 
   features = {
     kernel = "cachyos-v4"; # Ryzen 9 9950X3D2 (Zen 5) — x86_64-v4 optimized build
-    hardware.cpu = "amd"; # Ryzen 9 9950X3D2 (Zen 5)
-    hardware.gpu = "amd"; # RX 9070 XT (RDNA4)
+    hardware = {
+      formFactor = "desktop";
+      cpu = "amd"; # Ryzen 9 9950X3D2 (Zen 5)
+      gpu = "amd"; # RX 9070 XT (RDNA4)
+    };
     secureBoot.enable = true;
     encryption.unlockMethod = "yubikey";
     gaming.steamMachine.enable = true;

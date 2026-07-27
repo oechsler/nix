@@ -30,7 +30,7 @@ in
     ipv6PrivacyExtensions.enable =
       (lib.mkEnableOption "IPv6 privacy extensions for NetworkManager profiles")
       // {
-        default = !config.features.server;
+        default = config.features.hardware.formFactor != "server";
       };
     wifi = {
       enable = (lib.mkEnableOption "WiFi with managed network profiles") // {
