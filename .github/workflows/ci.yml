@@ -1,16 +1,3 @@
-# NixOS Configuration CI/CD Pipeline
-#
-# Comprehensive quality checks and configuration evaluation.
-#
-# Runs on:
-# - Push to main
-# - Pull requests against main
-#
-# Jobs:
-# 1. Lint: Code quality checks (conventions, anti-patterns, dead code)
-# 2. Evaluate: Validate all host configurations evaluate successfully
-#    (sequentially)
-
 name: CI
 
 on:
@@ -20,11 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  #===========================================================================
-  # Job 1: Code Quality Checks
-  #===========================================================================
-  lint:
-    name: Code Quality
+  quality:
+    name: Code quality
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -35,24 +19,21 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Run custom convention linter
-        run: nix build .#checks.x86_64-linux.lint --show-trace
+      - name: Run linters
+        run: >-
+          nix build
+          .#checks.x86_64-linux.lint
+          .#checks.x86_64-linux.statix
+          .#checks.x86_64-linux.deadnix
+          .#checks.x86_64-linux.shellcheck
+          .#checks.x86_64-linux.format
+          --no-link --print-build-logs
 
-      - name: Run statix (anti-patterns)
-        run: nix build .#checks.x86_64-linux.statix --show-trace
-
-      - name: Run deadnix (dead code detection)
-        run: nix build .#checks.x86_64-linux.deadnix --show-trace
-
-      - name: Run shellcheck (shell script lint)
-        run: nix build .#checks.x86_64-linux.shellcheck --show-trace
-
-  #===========================================================================
-  # Job 2: Evaluate Configurations
-  #===========================================================================
   evaluate:
-    name: Evaluate NixOS configurations
+    name: Evaluate configurations
+    needs: quality
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -61,22 +42,11 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Evaluate samuels-terra
+      - name: Evaluate all host configurations
         run: |
-          nix eval \
-            .#nixosConfigurations.samuels-terra.config.system.build.toplevel
-
-      - name: Evaluate samuels-pc
-        run: |
-          nix eval \
-            .#nixosConfigurations.samuels-pc.config.system.build.toplevel
-
-      - name: Evaluate samuels-ser9
-        run: |
-          nix eval \
-            .#nixosConfigurations.samuels-ser9.config.system.build.toplevel
-
-      - name: Evaluate samuels-razer
-        run: |
-          nix eval \
-            .#nixosConfigurations.samuels-razer.config.system.build.toplevel
+          set -euo pipefail
+          hosts=(samuels-terra samuels-pc samuels-razer samuels-ser9)
+          for host in "${hosts[@]}"; do
+            echo "Evaluating $host..."
+            nix eval ".#nixosConfigurations.$host.config.system.build.toplevel" --show-trace
+          done
