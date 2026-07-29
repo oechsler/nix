@@ -266,6 +266,8 @@ let
         export KDE_FULL_SESSION=true
         export QT_QPA_PLATFORMTHEME=kde
 
+        input_method_args=()
+${lib.optionalString config.features.gaming.steamMachine.enable ''
         # First pass: collect vendor IDs that have joystick/gamepad devices.
         # The Steam Controller in Lizard Mode exposes TWO separate evdev devices:
         #   - keyboard half:  ID_INPUT_KEYBOARD=1, no joystick
@@ -301,13 +303,12 @@ let
           break
         done
 
-        input_method_args=()
         echo "sddm-kwin: has_keyboard=$has_keyboard joystick_vendors='$joystick_vendors'" >> /tmp/sddm-kwin.log
         if [ "$has_keyboard" -eq 0 ]; then
           echo "sddm-kwin: enabling plasma-keyboard via --inputmethod" >> /tmp/sddm-kwin.log
           input_method_args=(--inputmethod ${lib.getExe' pkgs.kdePackages.plasma-keyboard "plasma-keyboard"})
 
-           # Enable virtual keyboard in KWin config.
+          # Enable virtual keyboard in KWin config.
           # These keys match the kcm_virtualkeyboard KCM:
           #   VirtualKeyboardEnabled=true  – enable the virtual keyboard
           #   VirtualKeyboardMode=2        – "On" (always show)
@@ -326,6 +327,7 @@ EOF
           fi
           chown -R sddm:sddm "$kwinrc_dir"
         fi
+''}
 
         # plasma-keyboard's C wrapper only sets QT_VIRTUALKEYBOARD_HUNSPELL_DATA_PATH.
         # Its QML module (org.kde.plasma.keyboard) must be findable at runtime.
@@ -414,7 +416,7 @@ in
           };
         };
 
-        sddm-deploy-colors = {
+        sddm-deploy-colors = lib.mkIf config.features.gaming.steamMachine.enable {
           description = "Deploy Catppuccin color scheme for SDDM virtual keyboard";
           after = [ "var-lib-sddm.mount" ];
           before = [ "display-manager.service" ];
