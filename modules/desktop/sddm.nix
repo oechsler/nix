@@ -42,6 +42,17 @@ let
   cursorTheme = config.theme.cursor.name;
   cursorSize = config.theme.cursor.size;
   uiFont = config.fonts.defaults.ui;
+
+  capitalize = s: (lib.toUpper (builtins.substring 0 1 s)) + (builtins.substring 1 (builtins.stringLength s) s);
+  colorSchemeId = "Catppuccin${capitalize config.theme.catppuccin.flavor}${capitalize config.theme.catppuccin.accent}";
+  catppuccinColorsFile = "${pkgs.catppuccin-kde.override {
+    flavour = [ config.theme.catppuccin.flavor ];
+    accents = [ config.theme.catppuccin.accent ];
+  }}/share/color-schemes/${colorSchemeId}.colors";
+  sddmKdeglobals = pkgs.writeText "sddm-kdeglobals" ''
+    [General]
+    ColorScheme=${colorSchemeId}
+  '';
   sddmGreeterEnvironment = lib.concatStringsSep "," (
     [
       "QT_WAYLAND_SHELL_INTEGRATION=layer-shell"
@@ -179,104 +190,53 @@ let
   '';
 
   applySddmDisplayConfig = pkgs.writeShellScript "apply-sddm-display-config" ''
-    set -e
+    set -eu
 
     sddm_uid=$(${pkgs.coreutils}/bin/id -u sddm)
     export XDG_RUNTIME_DIR=/run/user/$sddm_uid
     export DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus
 
-    for attempt in $(${pkgs.coreutils}/bin/seq 1 50); do
-      for socket in "$XDG_RUNTIME_DIR"/wayland-*; do
-        [ -S "$socket" ] || continue
-        case "$socket" in
-          *.lock) continue ;;
-        esac
-
-        export WAYLAND_DISPLAY=$(${pkgs.coreutils}/bin/basename "$socket")
-        ${pkgs.kdePackages.libkscreen}/bin/kscreen-doctor ${sddmKscreenArgs} && break 2
-      done
-
+    echo "apply-sddm-display-config: waiting for sddm session bus (uid=$sddm_uid)" >&2
+    bus_ready=0
+    for attempt in $(${pkgs.coreutils}/bin/seq 1 600); do
+      if [ -S "$XDG_RUNTIME_DIR/bus" ]; then
+        bus_ready=1
+        break
+      fi
       ${pkgs.coreutils}/bin/sleep 0.1
     done
-
-    # Enable virtual keyboard via D-Bus.
-    # Even with [VirtualKeyboard] Mode=On in kwinrc, KWin's device detection may
-    # suppress the OSK when a keyboard evdev device is present (e.g. Steam
-    # Controller lizard-mode keyboard half). Calling setActive(true) overrides.
-    # Use org.freedesktop.DBus.Properties.Set on the Active property.
-    # KWin registers its D-Bus service as org.kde.KWin (mixed-case).
-    # The VirtualKeyboard interface is org.kde.kwin.VirtualKeyboard (lowercase).
-    echo "apply-sddm-display-config: DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS"
-    if [ -S "$XDG_RUNTIME_DIR/bus" ]; then
-      echo "apply-sddm-display-config: bus socket exists at $XDG_RUNTIME_DIR/bus"
-    else
-      echo "apply-sddm-display-config: bus socket NOT found at $XDG_RUNTIME_DIR/bus" >&2
-      ls -la "$XDG_RUNTIME_DIR"/ 2>/dev/null || true
+    if [ "$bus_ready" -ne 1 ]; then
+      echo "apply-sddm-display-config: sddm session bus never appeared, giving up" >&2
+      exit 0
     fi
 
-    bus_ok=0
-    for attempt in $(${pkgs.coreutils}/bin/seq 1 10); do
+    echo "apply-sddm-display-config: bus ready, waiting for KWin D-Bus…" >&2
+    for attempt in $(${pkgs.coreutils}/bin/seq 1 300); do
       if ${pkgs.dbus}/bin/dbus-send --session \
         --dest=org.freedesktop.DBus --type=method_call --print-reply \
-        /org/freedesktop/DBus org.freedesktop.DBus.ListNames; then
-        bus_ok=1
+        /org/freedesktop/DBus org.freedesktop.DBus.ListNames \
+        2>/dev/null | ${pkgs.gnugrep}/bin/grep -q org.kde.KWin; then
         break
       fi
       ${pkgs.coreutils}/bin/sleep 0.1
     done
-    if [ "$bus_ok" -eq 0 ]; then
-      echo "apply-sddm-display-config: D-Bus session bus unreachable" >&2
-    fi
 
-    # Force keyboard mode to "On" (2) so it shows without a text input field.
-    # KWin ignores VirtualKeyboardMode in kwinrc under certain conditions
-    # (e.g. --no-lockscreen), so we set it via D-Bus explicitly.
-    dbus_ok=0
-    for attempt in $(${pkgs.coreutils}/bin/seq 1 30); do
-      if ${pkgs.dbus}/bin/dbus-send --session \
-        --dest=org.kde.KWin --type=method_call --print-reply \
-        /VirtualKeyboard org.freedesktop.DBus.Properties.Set \
-        string:"org.kde.kwin.VirtualKeyboard" string:"mode" variant:int32:2; then
-        dbus_ok=1
-        break
-      fi
-      ${pkgs.coreutils}/bin/sleep 0.1
+    # kscreen-doctor (monitor layout)
+    for socket in "$XDG_RUNTIME_DIR"/wayland-*; do
+      [ -S "$socket" ] || continue
+      case "$socket" in *.lock) continue ;; esac
+      export WAYLAND_DISPLAY=$(${pkgs.coreutils}/bin/basename "$socket")
+      ${pkgs.kdePackages.libkscreen}/bin/kscreen-doctor ${sddmKscreenArgs} && break
     done
-    if [ "$dbus_ok" -eq 0 ]; then
-      echo "apply-sddm-display-config: D-Bus mode set failed after 30 retries (bus not ready?)" >&2
-      exit 0
-    fi
 
-    dbus_ok=0
-    for attempt in $(${pkgs.coreutils}/bin/seq 1 30); do
-      if ${pkgs.dbus}/bin/dbus-send --session \
-        --dest=org.kde.KWin --type=method_call --print-reply \
-        /VirtualKeyboard org.kde.kwin.VirtualKeyboard.forceActivate; then
-        dbus_ok=1
-        break
-      fi
-      ${pkgs.coreutils}/bin/sleep 0.1
-    done
-    if [ "$dbus_ok" -eq 0 ]; then
-      echo "apply-sddm-display-config: D-Bus activation failed after 30 retries (bus not ready?)" >&2
-      exit 0
-    fi
-
-    echo "apply-sddm-display-config: --- VirtualKeyboard diagnostic ---"
-    for method in willShowOnActive; do
-      val=$(${pkgs.dbus}/bin/dbus-send --session \
-        --dest=org.kde.KWin --type=method_call --print-reply \
-        /VirtualKeyboard org.kde.kwin.VirtualKeyboard."$method" 2>&1 || true)
-      echo "apply-sddm-display-config: $method = $val"
-    done
-    for prop in available active visible mode activeClientSupportsTextInput; do
-      val=$(${pkgs.dbus}/bin/dbus-send --session \
-        --dest=org.kde.KWin --type=method_call --print-reply \
-        /VirtualKeyboard org.freedesktop.DBus.Properties.Get \
-        string:"org.kde.kwin.VirtualKeyboard" string:"$prop" 2>&1 || true)
-      echo "apply-sddm-display-config: $prop = $val"
-    done
-    echo "apply-sddm-display-config: --- end diagnostic ---"
+    # Force virtual keyboard mode=2 (On) then activate
+    ${pkgs.dbus}/bin/dbus-send --session \
+      --dest=org.kde.KWin --type=method_call --print-reply \
+      /VirtualKeyboard org.freedesktop.DBus.Properties.Set \
+      string:"org.kde.kwin.VirtualKeyboard" string:"mode" variant:int32:2
+    ${pkgs.dbus}/bin/dbus-send --session \
+      --dest=org.kde.KWin --type=method_call --print-reply \
+      /VirtualKeyboard org.kde.kwin.VirtualKeyboard.forceActivate
 
     echo "apply-sddm-display-config: done" >&2
   '';
@@ -354,6 +314,8 @@ EOF
           pkgs.kdePackages.qtvirtualkeyboard
         ]}''${NIXPKGS_QT6_QML_IMPORT_PATH:+:$NIXPKGS_QT6_QML_IMPORT_PATH}"
 
+        export QT_VIRTUALKEYBOARD_STYLE=Breeze
+
         echo "sddm-kwin: XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> /tmp/sddm-kwin.log
         echo "sddm-kwin: NIXPKGS_QT6_QML_IMPORT_PATH=$NIXPKGS_QT6_QML_IMPORT_PATH" >> /tmp/sddm-kwin.log
 
@@ -418,25 +380,22 @@ in
         sddm-apply-display-config = lib.mkIf shouldManageSddmLayout {
           description = "Apply SDDM monitor layout after KWin starts";
           after = [ "display-manager.service" ];
+          wantedBy = [ "display-manager.service" ];
+          partOf = [ "display-manager.service" ];
           serviceConfig = {
             Type = "oneshot";
             User = "sddm";
             ExecStart = applySddmDisplayConfig;
+            RemainAfterExit = true;
           };
-        };
-      };
-
-      paths.sddm-apply-display-config = lib.mkIf shouldManageSddmLayout {
-        description = "Re-apply SDDM monitor layout when the greeter Wayland socket appears";
-        wantedBy = [ "display-manager.service" ];
-        pathConfig = {
-          PathExistsGlob = "/run/user/*/wayland-*";
-          Unit = "sddm-apply-display-config.service";
         };
       };
 
       tmpfiles.rules = [
         "d /var/lib/sddm/.config 0755 sddm sddm -"
+        "d /var/lib/sddm/.local/share/color-schemes 0755 sddm sddm -"
+        "L+ /var/lib/sddm/.local/share/color-schemes/${colorSchemeId}.colors 0755 sddm sddm - ${catppuccinColorsFile}"
+        "C+ /var/lib/sddm/.config/kdeglobals 0755 sddm sddm - ${sddmKdeglobals}"
         "r /var/lib/sddm/.config/kwinoutputconfig.json - - - - -"
       ];
     };
