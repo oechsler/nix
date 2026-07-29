@@ -53,6 +53,19 @@ let
     [General]
     ColorScheme=${colorSchemeId}
   '';
+
+  deploySddmColors = pkgs.writeShellScript "deploy-sddm-colors" ''
+    set -eu
+    colors_src="$1"
+    colors_name="$2"
+    kdeglobals_src="$3"
+
+    mkdir -p /var/lib/sddm/.config
+    mkdir -p /var/lib/sddm/.local/share/color-schemes
+    ln -sf "$colors_src" "/var/lib/sddm/.local/share/color-schemes/$colors_name.colors"
+    cp "$kdeglobals_src" /var/lib/sddm/.config/kdeglobals
+    chown -R sddm:sddm /var/lib/sddm/.config /var/lib/sddm/.local/share
+  '';
   sddmGreeterEnvironment = lib.concatStringsSep "," (
     [
       "QT_WAYLAND_SHELL_INTEGRATION=layer-shell"
@@ -246,6 +259,11 @@ let
   sddmKwin = pkgs.writeShellScript "sddm-kwin" ''
         set -eu
 
+        export HOME=/var/lib/sddm
+        export XDG_CONFIG_HOME=/var/lib/sddm/.config
+        export XDG_DATA_HOME=/var/lib/sddm/.local/share
+        export XDG_CURRENT_DESKTOP=KDE
+
         # First pass: collect vendor IDs that have joystick/gamepad devices.
         # The Steam Controller in Lizard Mode exposes TWO separate evdev devices:
         #   - keyboard half:  ID_INPUT_KEYBOARD=1, no joystick
@@ -316,7 +334,7 @@ EOF
 
         export QT_VIRTUALKEYBOARD_STYLE=Breeze
 
-        echo "sddm-kwin: XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> /tmp/sddm-kwin.log
+        echo "sddm-kwin: HOME=$HOME XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> /tmp/sddm-kwin.log
         echo "sddm-kwin: NIXPKGS_QT6_QML_IMPORT_PATH=$NIXPKGS_QT6_QML_IMPORT_PATH" >> /tmp/sddm-kwin.log
 
         exec ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
@@ -389,13 +407,20 @@ in
             RemainAfterExit = true;
           };
         };
+
+        sddm-deploy-colors = {
+          description = "Deploy Catppuccin color scheme for SDDM virtual keyboard";
+          after = [ "var-lib-sddm.mount" ];
+          before = [ "display-manager.service" ];
+          wantedBy = [ "display-manager.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = "${deploySddmColors} ${catppuccinColorsFile} ${colorSchemeId} ${sddmKdeglobals}";
+          };
+        };
       };
 
       tmpfiles.rules = [
-        "d /var/lib/sddm/.config 0755 sddm sddm -"
-        "d /var/lib/sddm/.local/share/color-schemes 0755 sddm sddm -"
-        "L+ /var/lib/sddm/.local/share/color-schemes/${colorSchemeId}.colors 0755 sddm sddm - ${catppuccinColorsFile}"
-        "C+ /var/lib/sddm/.config/kdeglobals 0755 sddm sddm - ${sddmKdeglobals}"
         "r /var/lib/sddm/.config/kwinoutputconfig.json - - - - -"
       ];
     };
