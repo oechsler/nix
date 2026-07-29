@@ -43,6 +43,7 @@ let
   sddmGreeterEnvironment = lib.concatStringsSep "," (
     [
       "QT_WAYLAND_SHELL_INTEGRATION=layer-shell"
+      "QT_IM_MODULE=qtvirtualkeyboard"
     ]
     ++ lib.optionals (!isKde) [ "QT_FONT_DPI=${toString scaledDpi}" ]
     ++ [
@@ -201,47 +202,6 @@ let
     exit 1
   '';
 
-  sddmKwin = pkgs.writeShellScript "sddm-kwin" ''
-    set -eu
-
-    has_keyboard=0
-    for dev in /dev/input/event*; do
-      [ -e "$dev" ] || continue
-      props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
-      ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_KEYBOARD=1' <<< "$props" || continue
-
-      model=$(${pkgs.gnugrep}/bin/grep '^ID_MODEL=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
-      if ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_JOYSTICK=1' <<< "$props"; then
-        echo "sddm-kwin: ignoring joystick keyboard interface $dev ($model)" >&2
-        continue
-      fi
-
-      case "$model" in
-        *Controller* | *Gamepad* | *Joystick*)
-          echo "sddm-kwin: ignoring controller keyboard interface $dev ($model)" >&2
-          continue
-          ;;
-      esac
-
-      echo "sddm-kwin: physical keyboard found at $dev ($model)" >&2
-      has_keyboard=1
-      break
-    done
-
-    input_method_args=()
-    if [ "$has_keyboard" -eq 0 ]; then
-      echo "sddm-kwin: no physical keyboard found, starting Plasma Keyboard" >&2
-      input_method_args=(--inputmethod ${lib.getExe' pkgs.kdePackages.plasma-keyboard "plasma-keyboard"})
-    fi
-
-    exec ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
-      --no-global-shortcuts \
-      --no-kactivities \
-      --no-lockscreen \
-      --locale1 \
-      "''${input_method_args[@]}"
-  '';
-
   removeLegacySddmVirtualKeyboard = ''
     rm -f /etc/sddm.conf.d/99-virtual-keyboard.conf
   '';
@@ -260,8 +220,7 @@ in
           enable = true;
           wayland.enable = true;
           wayland.compositor = "kwin";
-          wayland.compositorCommand = toString sddmKwin;
-          extraPackages = [ pkgs.kdePackages.plasma-keyboard ];
+          extraPackages = [ pkgs.qt6.qtvirtualkeyboard ];
           settings = {
             General.GreeterEnvironment = sddmGreeterEnvironment;
             Theme = {
