@@ -44,6 +44,7 @@ let
     [
       "QT_WAYLAND_SHELL_INTEGRATION=layer-shell"
       "QT_IM_MODULE=qtvirtualkeyboard"
+      "QT_VIRTUALKEYBOARD_DESKTOP=1"
     ]
     ++ lib.optionals (!isKde) [ "QT_FONT_DPI=${toString scaledDpi}" ]
     ++ [
