@@ -193,14 +193,22 @@ let
         esac
 
         export WAYLAND_DISPLAY=$(${pkgs.coreutils}/bin/basename "$socket")
-        ${pkgs.kdePackages.libkscreen}/bin/kscreen-doctor ${sddmKscreenArgs} && exit 0
+        ${pkgs.kdePackages.libkscreen}/bin/kscreen-doctor ${sddmKscreenArgs} && break 2
       done
 
       ${pkgs.coreutils}/bin/sleep 0.1
     done
 
-    echo "apply-sddm-display-config: no usable SDDM Wayland socket found" >&2
-    exit 1
+    # Enable virtual keyboard via D-Bus.
+    # Even with [VirtualKeyboard] Mode=On in kwinrc, KWin's device detection may
+    # suppress the OSK when a keyboard evdev device is present (e.g. Steam
+    # Controller lizard-mode keyboard half). Calling setActive(true) overrides.
+    ${pkgs.dbus}/bin/dbus-send --session \
+      --dest=org.kde.kwin --type=method_call \
+      /VirtualKeyboard org.kde.kwin.VirtualKeyboard.setActive \
+      boolean:true || true
+
+    echo "apply-sddm-display-config: done" >&2
   '';
 
   sddmThemeName = "catppuccin-${config.catppuccin.sddm.flavor}-${config.catppuccin.sddm.accent}";
@@ -246,6 +254,18 @@ let
     input_method_args=()
     if [ "$has_keyboard" -eq 0 ]; then
       input_method_args=(--inputmethod ${lib.getExe' pkgs.kdePackages.plasma-keyboard "plasma-keyboard"})
+
+      # Enable virtual keyboard in KWin config.
+      # Without this, KWin's InputMethod module won't forward text-input events
+      # to the OSK process. Mode=2 means "On" (always show with touch/tablet/mouse).
+      kwinrc_dir=/var/lib/sddm/.config
+      mkdir -p "$kwinrc_dir"
+      cat > "$kwinrc_dir"/kwinrc << 'EOF'
+[VirtualKeyboard]
+Mode=2
+InputMethod=org.kde.plasma.keyboard
+EOF
+      chown -R sddm:sddm "$kwinrc_dir"
     fi
 
     # plasma-keyboard's C wrapper only sets QT_VIRTUALKEYBOARD_HUNSPELL_DATA_PATH.
