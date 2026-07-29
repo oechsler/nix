@@ -9,8 +9,8 @@
 # - DPI scaling for Hyprland (calculated from primary monitor)
 # - Cursor theme and size (scaled for HiDPI)
 # - Login mode (features.desktop.login: "greeter" shows login, "autologin" skips it)
-# - Qt VirtualKeyboard via QT_IM_MODULE (no SDDM patch needed — SDDM's C++ only
-#   blocks qtvirtualkeyboard when read from InputMethod config, not the env)
+# - Dynamic on-screen keyboard: plasma-keyboard via kwin_wayland --inputmethod
+#   when no physical keyboard is detected at boot
 #
 # Why SDDM:
 # - Native Wayland support
@@ -50,7 +50,6 @@ let
     ++ [
       "XCURSOR_THEME=${cursorTheme}"
       "XCURSOR_SIZE=${toString (if isKde then cursorSize else scaledCursorSize)}"
-      "QT_VIRTUALKEYBOARD_DESKTOP=1"
     ]
   );
 
@@ -206,55 +205,55 @@ let
 
   sddmThemeName = "catppuccin-${config.catppuccin.sddm.flavor}-${config.catppuccin.sddm.accent}";
 
-  sddmKeyboardDetect = pkgs.writeShellScript "sddm-keyboard-detect" ''
-        set -eu
+  sddmKwin = pkgs.writeShellScript "sddm-kwin" ''
+    set -eu
 
-        env_file=/run/sddm-keyboard-env
+    # First pass: collect vendor IDs that have joystick/gamepad devices.
+    # The Steam Controller in Lizard Mode exposes TWO separate evdev devices:
+    #   - keyboard half:  ID_INPUT_KEYBOARD=1, no joystick
+    #   - gamepad half:   ID_INPUT_JOYSTICK=1
+    # A per-device check would miss the keyboard half, so we exclude by vendor.
+    joystick_vendors=""
+    for dev in /dev/input/event*; do
+      [ -e "$dev" ] || continue
+      props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
+      ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_JOYSTICK=1' <<< "$props" || continue
+      vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+      [ -n "$vendor" ] && joystick_vendors="$joystick_vendors $vendor"
+    done
 
-        # First pass: collect vendor IDs that have joystick/gamepad devices.
-        # The Steam Controller in Lizard Mode exposes TWO separate evdev devices:
-        #   - keyboard half:  ID_INPUT_KEYBOARD=1, no joystick
-        #   - gamepad half:   ID_INPUT_JOYSTICK=1
-        # A per-device check would miss the keyboard half, so we exclude by vendor.
-        joystick_vendors=""
-        for dev in /dev/input/event*; do
-          [ -e "$dev" ] || continue
-          props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
-          ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_JOYSTICK=1' <<< "$props" || continue
-          vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
-          [ -n "$vendor" ] && joystick_vendors="$joystick_vendors $vendor"
-        done
+    # Second pass: find real keyboards (exclude joystick vendors + model heuristics)
+    has_keyboard=0
+    for dev in /dev/input/event*; do
+      [ -e "$dev" ] || continue
+      props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
+      ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_KEYBOARD=1' <<< "$props" || continue
 
-        # Second pass: find real keyboards (exclude joystick vendors + model heuristics)
-        has_keyboard=0
-        for dev in /dev/input/event*; do
-          [ -e "$dev" ] || continue
-          props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
-          ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_KEYBOARD=1' <<< "$props" || continue
+      vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+      for jv in $joystick_vendors; do
+        [ "$vendor" = "$jv" ] && continue 2
+      done
 
-          vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
-          for jv in $joystick_vendors; do
-            [ "$vendor" = "$jv" ] && continue 2
-          done
+      model=$(${pkgs.gnugrep}/bin/grep '^ID_MODEL=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+      case "$model" in
+        *Controller*|*Gamepad*|*Joystick*|*Steam*Controller*) continue ;;
+      esac
 
-          model=$(${pkgs.gnugrep}/bin/grep '^ID_MODEL=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
-          case "$model" in
-            *Controller*|*Gamepad*|*Joystick*|*Steam*Controller*) continue ;;
-          esac
+      has_keyboard=1
+      break
+    done
 
-          has_keyboard=1
-          break
-        done
+    input_method_args=()
+    if [ "$has_keyboard" -eq 0 ]; then
+      input_method_args=(--inputmethod ${lib.getExe' pkgs.kdePackages.plasma-keyboard "plasma-keyboard"})
+    fi
 
-        if [ "$has_keyboard" -eq 0 ]; then
-          cat > "$env_file" <<EOF
-    QT_IM_MODULE=qtvirtualkeyboard
-    QT_PLUGIN_PATH=${pkgs.qt6.qtvirtualkeyboard}/lib/qt-6/plugins
-    QML2_IMPORT_PATH=${pkgs.qt6.qtvirtualkeyboard}/lib/qt-6/qml
-    EOF
-        else
-          : > "$env_file"
-        fi
+    exec ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
+      --no-global-shortcuts \
+      --no-kactivities \
+      --no-lockscreen \
+      --locale1 \
+      "''${input_method_args[@]}"
   '';
 
   isKde = config.features.desktop.wm == "kde";
@@ -270,8 +269,12 @@ in
         sddm = {
           enable = true;
           theme = sddmThemeName;
-          wayland.enable = true;
-          wayland.compositor = "kwin";
+          wayland = {
+            enable = true;
+            compositor = "kwin";
+            compositorCommand = toString sddmKwin;
+          };
+          extraPackages = [ pkgs.kdePackages.plasma-keyboard ];
           settings = {
             General.GreeterEnvironment = sddmGreeterEnvironment;
             Theme = {
@@ -313,17 +316,6 @@ in
             ExecStart = applySddmDisplayConfig;
           };
         };
-
-        sddm-keyboard-detect = {
-          description = "Detect physical keyboard and set SDDM virtual keyboard environment";
-          before = [ "display-manager.service" ];
-          wantedBy = [ "display-manager.service" ];
-          serviceConfig = {
-            Type = "oneshot";
-            RemainAfterExit = true;
-            ExecStart = sddmKeyboardDetect;
-          };
-        };
       };
 
       paths.sddm-apply-display-config = lib.mkIf shouldManageSddmLayout {
@@ -341,14 +333,9 @@ in
       ];
     };
 
-    # Load the env file unconditionally (the `-` prefix ignores missing files).
-    # sddm-keyboard-detect writes it with QT_IM_MODULE=qtvirtualkeyboard when
-    # no physical keyboard is detected. SDDM's C++ does not touch QT_IM_MODULE
-    # because InputMethod is "" (default) — the qtvirtualkeyboard-on-Wayland
-    # block in GreeterApp.cpp only fires when it reads the config value.
-    systemd.services.display-manager.serviceConfig.EnvironmentFile =
-      lib.mkBefore "-/run/sddm-keyboard-env";
-
+    # The on-screen keyboard is provided by plasma-keyboard via
+    # kwin_wayland --inputmethod when the sddmKwin script detects no
+    # physical keyboard. No theme files are modified.
     catppuccin.sddm = {
       enable = true;
       font = uiFont;
@@ -361,7 +348,6 @@ in
 
     environment.systemPackages = [
       config.theme.cursor.package
-      pkgs.qt6.qtvirtualkeyboard
     ];
   };
 }
