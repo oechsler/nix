@@ -43,8 +43,6 @@ let
   sddmGreeterEnvironment = lib.concatStringsSep "," (
     [
       "QT_WAYLAND_SHELL_INTEGRATION=layer-shell"
-      "QT_IM_MODULE=qtvirtualkeyboard"
-      "QT_VIRTUALKEYBOARD_DESKTOP=1"
     ]
     ++ lib.optionals (!isKde) [ "QT_FONT_DPI=${toString scaledDpi}" ]
     ++ [
@@ -203,8 +201,51 @@ let
     exit 1
   '';
 
+  sddmThemeName = "catppuccin-${config.catppuccin.sddm.flavor}-${config.catppuccin.sddm.accent}";
+  sddmControllerThemeName = "${sddmThemeName}-controller";
+  sddmControllerTheme = pkgs.runCommand sddmControllerThemeName { } ''
+    mkdir -p "$out/share/sddm/themes"
+    cp -r ${config.catppuccin.sources.sddm}/share/sddm/themes/${sddmThemeName} "$out/share/sddm/themes/${sddmControllerThemeName}"
+    chmod -R +w "$out/share/sddm/themes/${sddmControllerThemeName}"
+    cp ${./sddm-keyboard/LoginPanel.qml} "$out/share/sddm/themes/${sddmControllerThemeName}/Components/LoginPanel.qml"
+    cp ${./sddm-keyboard/VirtualKeyboard.qml} "$out/share/sddm/themes/${sddmControllerThemeName}/Components/VirtualKeyboard.qml"
+  '';
+
   removeLegacySddmVirtualKeyboard = ''
     rm -f /etc/sddm.conf.d/99-virtual-keyboard.conf
+  '';
+
+  sddmSelectTheme = pkgs.writeShellScript "sddm-select-theme" ''
+    set -eu
+    theme_dir="/run/sddm-theme"
+    mkdir -p "$theme_dir"
+
+    has_keyboard=0
+    for dev in /dev/input/event*; do
+      [ -e "$dev" ] || continue
+      props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
+      ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_KEYBOARD=1' <<< "$props" || continue
+
+      if ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_JOYSTICK=1' <<< "$props"; then
+        continue
+      fi
+
+      model=$(${pkgs.gnugrep}/bin/grep '^ID_MODEL=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+      case "$model" in
+        *Controller*|*Gamepad*|*Joystick*|*Steam*Controller*) continue ;;
+      esac
+
+      has_keyboard=1
+      break
+    done
+
+    if [ "$has_keyboard" -eq 1 ]; then
+      theme_src="${config.catppuccin.sources.sddm}/share/sddm/themes/${sddmThemeName}"
+    else
+      theme_src="${sddmControllerTheme}/share/sddm/themes/${sddmControllerThemeName}"
+    fi
+
+    ln -sfn "$theme_src" "$theme_dir/${sddmControllerThemeName}"
   '';
 
   isKde = config.features.desktop.wm == "kde";
@@ -219,12 +260,13 @@ in
       displayManager = {
         sddm = {
           enable = true;
+          theme = lib.mkForce sddmControllerThemeName;
           wayland.enable = true;
           wayland.compositor = "kwin";
-          extraPackages = [ pkgs.qt6.qtvirtualkeyboard ];
           settings = {
             General.GreeterEnvironment = sddmGreeterEnvironment;
             Theme = {
+              ThemeDir = "/run/sddm-theme";
               CursorTheme = cursorTheme;
               CursorSize = if isKde then cursorSize else scaledCursorSize;
             };
@@ -264,6 +306,17 @@ in
           };
         };
 
+        sddm-select-theme = {
+          description = "Select SDDM theme based on detected input devices";
+          before = [ "display-manager.service" ];
+          wantedBy = [ "display-manager.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+            ExecStart = sddmSelectTheme;
+          };
+        };
+
       };
 
       paths.sddm-apply-display-config = lib.mkIf shouldManageSddmLayout {
@@ -295,6 +348,7 @@ in
 
     environment.systemPackages = [
       config.theme.cursor.package
+      sddmControllerTheme
     ];
   };
 }
