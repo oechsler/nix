@@ -9,7 +9,7 @@
 # - DPI scaling for Hyprland (calculated from primary monitor)
 # - Cursor theme and size (scaled for HiDPI)
 # - Login mode (features.desktop.login: "greeter" shows login, "autologin" skips it)
-# - Dynamic on-screen keyboard: plasma-keyboard via kwin_wayland --inputmethod
+# - Dynamic on-screen keyboard: maliit-keyboard via zwp_input_method_v1 protocol
 #   when no physical keyboard is detected at boot
 #
 # Why SDDM:
@@ -264,9 +264,18 @@ let
         export XDG_DATA_HOME=/var/lib/sddm/.local/share
         export XDG_CURRENT_DESKTOP=KDE
         export KDE_FULL_SESSION=true
-        export QT_QPA_PLATFORMTHEME=kde
 
-        input_method_args=()
+        enable_keyboard=0
+        kwin_pid=""
+        maliit_pid=""
+
+        cleanup() {
+            kill "$kwin_pid" 2>/dev/null || true
+            kill "$maliit_pid" 2>/dev/null || true
+            exit 1
+        }
+        trap cleanup INT TERM
+
 ${lib.optionalString config.features.gaming.steamMachine.enable ''
         # First pass: collect vendor IDs that have joystick/gamepad devices.
         # The Steam Controller in Lizard Mode exposes TWO separate evdev devices:
@@ -305,15 +314,10 @@ ${lib.optionalString config.features.gaming.steamMachine.enable ''
 
         echo "sddm-kwin: has_keyboard=$has_keyboard joystick_vendors='$joystick_vendors'" >> /tmp/sddm-kwin.log
         if [ "$has_keyboard" -eq 0 ]; then
-          echo "sddm-kwin: enabling plasma-keyboard via --inputmethod" >> /tmp/sddm-kwin.log
-          input_method_args=(--inputmethod ${lib.getExe' pkgs.kdePackages.plasma-keyboard "plasma-keyboard"})
+          enable_keyboard=1
+          echo "sddm-kwin: enabling maliit-keyboard" >> /tmp/sddm-kwin.log
 
-          # Enable virtual keyboard in KWin config.
-          # These keys match the kcm_virtualkeyboard KCM:
-          #   VirtualKeyboardEnabled=true  – enable the virtual keyboard
-          #   VirtualKeyboardMode=2        – "On" (always show)
-          # KWin reads this at startup; the D-Bus call in
-          # applySddmDisplayConfig overrides runtime device detection.
+          # KWin reads kwinrc at startup for virtual keyboard settings.
           kwinrc_dir=/var/lib/sddm/.config
           mkdir -p "$kwinrc_dir"
           cat > "$kwinrc_dir"/kwinrc << 'EOF'
@@ -321,61 +325,40 @@ ${lib.optionalString config.features.gaming.steamMachine.enable ''
 VirtualKeyboardEnabled=true
 VirtualKeyboardMode=2
 EOF
-          # Fallback: deploy kdeglobals if systemd service didn't
-          if [ ! -f "$kwinrc_dir/kdeglobals" ]; then
-            printf '[General]\nColorScheme=${colorSchemeId}\n' > "$kwinrc_dir/kdeglobals"
-          fi
           chown -R sddm:sddm "$kwinrc_dir"
         fi
 ''}
 
-        # plasma-keyboard's C wrapper only sets QT_VIRTUALKEYBOARD_HUNSPELL_DATA_PATH.
-        # Its QML module (org.kde.plasma.keyboard) must be findable at runtime.
-        # Neither kwin's nor plasma-keyboard's wrapper sets the full QML import path,
-        # so we must provide QML paths for all plasma-keyboard dependencies here.
-        # Required: org.kde.plasma.keyboard, org.kde.kirigami, QtQuick.VirtualKeyboard.
-        export NIXPKGS_QT6_QML_IMPORT_PATH="${lib.concatMapStringsSep ":" (p: "${p}/lib/qt-6/qml") [
-          pkgs.kdePackages.plasma-keyboard
-          pkgs.kdePackages.kirigami
-          pkgs.kdePackages.qtvirtualkeyboard
-        ]}''${NIXPKGS_QT6_QML_IMPORT_PATH:+:$NIXPKGS_QT6_QML_IMPORT_PATH}"
-
-        export QT_VIRTUALKEYBOARD_STYLE=Breeze
-
-        # Kirigami platform plugins (KirigamiPlasmaStyle to load kdeglobals colors)
-        # are NOT in kwin's own plugin directory.  Add the base plugin paths of
-        # the KDE packages that provide them so Kirigami's plugin discovery can
-        # find and activate the Plasma-platform theme at runtime.
-        kdePluginDirs="${
-          lib.concatMapStringsSep ":" (p: "${p}/lib/qt-6/plugins")
-          [
-            pkgs.kdePackages.libplasma
-            pkgs.kdePackages.qqc2-breeze-style
-            pkgs.kdePackages.qqc2-desktop-style
-          ]
-        }"
-        export QT_PLUGIN_PATH="''${QT_PLUGIN_PATH:+$QT_PLUGIN_PATH:}$kdePluginDirs"
-        echo "sddm-kwin: QT_PLUGIN_PATH=$QT_PLUGIN_PATH" >> /tmp/sddm-kwin.log
-        export KDE_COLOR_SCHEME=${catppuccinColorsFile}
-
-        echo "sddm-kwin: HOME=$HOME XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> /tmp/sddm-kwin.log
-        echo "sddm-kwin: NIXPKGS_QT6_QML_IMPORT_PATH=$NIXPKGS_QT6_QML_IMPORT_PATH" >> /tmp/sddm-kwin.log
-        echo "sddm-kwin: KDE_COLOR_SCHEME=$KDE_COLOR_SCHEME" >> /tmp/sddm-kwin.log
-        echo "=== /var/lib/sddm/.config ===" >> /tmp/sddm-kwin.log
-        ls -la /var/lib/sddm/.config/ >> /tmp/sddm-kwin.log 2>&1 || true
-        echo "=== kdeglobals ===" >> /tmp/sddm-kwin.log
-        cat /var/lib/sddm/.config/kdeglobals >> /tmp/sddm-kwin.log 2>&1 || echo "NOT FOUND" >> /tmp/sddm-kwin.log
-        echo "=== color-schemes ===" >> /tmp/sddm-kwin.log
-        ls -la /var/lib/sddm/.local/share/color-schemes/ >> /tmp/sddm-kwin.log 2>&1 || true
-        echo "=== QT/KDE env ===" >> /tmp/sddm-kwin.log
-        env | sort >> /tmp/sddm-kwin.log 2>&1 || true
-
-        exec ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
+        # Start KWin as the Wayland compositor.
+        # Maliit-keyboard connects to it as an external Wayland client
+        # via the zwp_input_method_v1 protocol.
+        echo "sddm-kwin: starting kwin_wayland" >> /tmp/sddm-kwin.log
+        ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
           --no-global-shortcuts \
           --no-kactivities \
           --locale1 \
-          "''${input_method_args[@]}" \
-          >> /tmp/kwin_wayland.log 2>&1
+          >> /tmp/kwin_wayland.log 2>&1 &
+        kwin_pid=$!
+
+        if [ "$enable_keyboard" -eq 1 ]; then
+          export WAYLAND_DISPLAY="''${WAYLAND_DISPLAY:-wayland-0}"
+          export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+
+          # Wait for KWin to create the Wayland socket.
+          for i in $(seq 1 50); do
+            if [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; then
+              echo "sddm-kwin: Wayland socket ready after $i attempts" >> /tmp/sddm-kwin.log
+              break
+            fi
+            sleep 0.05
+          done
+
+          echo "sddm-kwin: starting maliit-keyboard (WAYLAND_DISPLAY=$WAYLAND_DISPLAY)" >> /tmp/sddm-kwin.log
+          ${lib.getExe' pkgs.maliit-keyboard "maliit-keyboard"} >> /tmp/maliit-keyboard.log 2>&1 &
+          maliit_pid=$!
+        fi
+
+        wait $kwin_pid
   '';
 
   isKde = config.features.desktop.wm == "kde";
@@ -396,7 +379,7 @@ in
             compositor = "kwin";
             compositorCommand = toString sddmKwin;
           };
-          extraPackages = [ pkgs.kdePackages.plasma-keyboard ];
+          extraPackages = [ pkgs.maliit-keyboard ];
           settings = {
             General.GreeterEnvironment = sddmGreeterEnvironment;
             Theme = {
@@ -442,7 +425,7 @@ in
         };
 
         sddm-deploy-colors = lib.mkIf config.features.gaming.steamMachine.enable {
-          description = "Deploy Catppuccin color scheme for SDDM virtual keyboard";
+          description = "Deploy Catppuccin color scheme for SDDM login screen";
           after = [ "var-lib-sddm.mount" ];
           before = [ "display-manager.service" ];
           wantedBy = [ "display-manager.service" ];
@@ -458,9 +441,9 @@ in
       ];
     };
 
-    # The on-screen keyboard is provided by plasma-keyboard via
-    # kwin_wayland --inputmethod when the sddmKwin script detects no
-    # physical keyboard. No theme files are modified.
+    # The on-screen keyboard is provided by maliit-keyboard via the
+    # zwp_input_method_v1 Wayland protocol when sddmKwin detects no
+    # physical keyboard. The Catppuccin SDDM theme is used as-is.
     catppuccin.sddm = {
       enable = true;
       font = uiFont;
