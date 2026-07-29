@@ -263,6 +263,8 @@ let
         export XDG_CONFIG_HOME=/var/lib/sddm/.config
         export XDG_DATA_HOME=/var/lib/sddm/.local/share
         export XDG_CURRENT_DESKTOP=KDE
+        export KDE_FULL_SESSION=true
+        export QT_QPA_PLATFORMTHEME=kde
 
         # First pass: collect vendor IDs that have joystick/gamepad devices.
         # The Steam Controller in Lizard Mode exposes TWO separate evdev devices:
@@ -305,7 +307,7 @@ let
           echo "sddm-kwin: enabling plasma-keyboard via --inputmethod" >> /tmp/sddm-kwin.log
           input_method_args=(--inputmethod ${lib.getExe' pkgs.kdePackages.plasma-keyboard "plasma-keyboard"})
 
-          # Enable virtual keyboard in KWin config.
+           # Enable virtual keyboard in KWin config.
           # These keys match the kcm_virtualkeyboard KCM:
           #   VirtualKeyboardEnabled=true  – enable the virtual keyboard
           #   VirtualKeyboardMode=2        – "On" (always show)
@@ -318,6 +320,10 @@ let
 VirtualKeyboardEnabled=true
 VirtualKeyboardMode=2
 EOF
+          # Fallback: deploy kdeglobals if systemd service didn't
+          if [ ! -f "$kwinrc_dir/kdeglobals" ]; then
+            printf '[General]\nColorScheme=${colorSchemeId}\n' > "$kwinrc_dir/kdeglobals"
+          fi
           chown -R sddm:sddm "$kwinrc_dir"
         fi
 
