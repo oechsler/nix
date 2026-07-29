@@ -9,6 +9,8 @@
 # - DPI scaling for Hyprland (calculated from primary monitor)
 # - Cursor theme and size (scaled for HiDPI)
 # - Login mode (features.desktop.login: "greeter" shows login, "autologin" skips it)
+# - Qt VirtualKeyboard via QT_IM_MODULE (no SDDM patch needed — SDDM's C++ only
+#   blocks qtvirtualkeyboard when read from InputMethod config, not the env)
 #
 # Why SDDM:
 # - Native Wayland support
@@ -48,6 +50,7 @@ let
     ++ [
       "XCURSOR_THEME=${cursorTheme}"
       "XCURSOR_SIZE=${toString (if isKde then cursorSize else scaledCursorSize)}"
+      "QT_VIRTUALKEYBOARD_DESKTOP=1"
     ]
   );
 
@@ -202,23 +205,11 @@ let
   '';
 
   sddmThemeName = "catppuccin-${config.catppuccin.sddm.flavor}-${config.catppuccin.sddm.accent}";
-  sddmControllerThemeName = "${sddmThemeName}-controller";
-  sddmControllerTheme = pkgs.runCommand sddmControllerThemeName { } ''
-    mkdir -p "$out/share/sddm/themes"
-    cp -r ${config.catppuccin.sources.sddm}/share/sddm/themes/${sddmThemeName} "$out/share/sddm/themes/${sddmControllerThemeName}"
-    chmod -R +w "$out/share/sddm/themes/${sddmControllerThemeName}"
-    cp ${./sddm-keyboard/LoginPanel.qml} "$out/share/sddm/themes/${sddmControllerThemeName}/Components/LoginPanel.qml"
-    cp ${./sddm-keyboard/VirtualKeyboard.qml} "$out/share/sddm/themes/${sddmControllerThemeName}/Components/VirtualKeyboard.qml"
-  '';
 
-  removeLegacySddmVirtualKeyboard = ''
-    rm -f /etc/sddm.conf.d/99-virtual-keyboard.conf
-  '';
-
-  sddmSelectTheme = pkgs.writeShellScript "sddm-select-theme" ''
+  sddmKeyboardDetect = pkgs.writeShellScript "sddm-keyboard-detect" ''
     set -eu
-    theme_dir="/run/sddm-theme"
-    mkdir -p "$theme_dir"
+
+    env_file=/run/sddm-keyboard-env
 
     has_keyboard=0
     for dev in /dev/input/event*; do
@@ -239,13 +230,11 @@ let
       break
     done
 
-    if [ "$has_keyboard" -eq 1 ]; then
-      theme_src="${config.catppuccin.sources.sddm}/share/sddm/themes/${sddmThemeName}"
+    if [ "$has_keyboard" -eq 0 ]; then
+      echo "QT_IM_MODULE=qtvirtualkeyboard" > "$env_file"
     else
-      theme_src="${sddmControllerTheme}/share/sddm/themes/${sddmControllerThemeName}"
+      : > "$env_file"
     fi
-
-    ln -sfn "$theme_src" "$theme_dir/${sddmControllerThemeName}"
   '';
 
   isKde = config.features.desktop.wm == "kde";
@@ -260,13 +249,12 @@ in
       displayManager = {
         sddm = {
           enable = true;
-          theme = lib.mkForce sddmControllerThemeName;
+          theme = sddmThemeName;
           wayland.enable = true;
           wayland.compositor = "kwin";
           settings = {
             General.GreeterEnvironment = sddmGreeterEnvironment;
             Theme = {
-              ThemeDir = "/run/sddm-theme";
               CursorTheme = cursorTheme;
               CursorSize = if isKde then cursorSize else scaledCursorSize;
             };
@@ -306,17 +294,16 @@ in
           };
         };
 
-        sddm-select-theme = {
-          description = "Select SDDM theme based on detected input devices";
+        sddm-keyboard-detect = {
+          description = "Detect physical keyboard and set SDDM virtual keyboard environment";
           before = [ "display-manager.service" ];
           wantedBy = [ "display-manager.service" ];
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
-            ExecStart = sddmSelectTheme;
+            ExecStart = sddmKeyboardDetect;
           };
         };
-
       };
 
       paths.sddm-apply-display-config = lib.mkIf shouldManageSddmLayout {
@@ -334,6 +321,14 @@ in
       ];
     };
 
+    # Load the env file unconditionally (the `-` prefix ignores missing files).
+    # sddm-keyboard-detect writes it with QT_IM_MODULE=qtvirtualkeyboard when
+    # no physical keyboard is detected. SDDM's C++ does not touch QT_IM_MODULE
+    # because InputMethod is "" (default) — the qtvirtualkeyboard-on-Wayland
+    # block in GreeterApp.cpp only fires when it reads the config value.
+    systemd.services.display-manager.serviceConfig.EnvironmentFile =
+      lib.mkBefore "-/run/sddm-keyboard-env";
+
     catppuccin.sddm = {
       enable = true;
       font = uiFont;
@@ -344,11 +339,9 @@ in
       clockEnabled = false;
     };
 
-    system.activationScripts.removeLegacySddmVirtualKeyboard = removeLegacySddmVirtualKeyboard;
-
     environment.systemPackages = [
       config.theme.cursor.package
-      sddmControllerTheme
+      pkgs.qt6.qtvirtualkeyboard
     ];
   };
 }
