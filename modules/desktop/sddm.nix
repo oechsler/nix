@@ -201,6 +201,29 @@ let
     exit 1
   '';
 
+  detectSddmKeyboard = pkgs.writeShellScript "detect-sddm-keyboard" ''
+    set -eu
+    config_dir="/etc/sddm.conf.d"
+    config_file="$config_dir/99-virtual-keyboard.conf"
+
+    has_keyboard=0
+    for dev in /dev/input/event*; do
+      [ -e "$dev" ] || continue
+      if ${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null | grep -qx 'ID_INPUT_KEYBOARD=1'; then
+        has_keyboard=1
+        break
+      fi
+    done
+
+    mkdir -p "$config_dir"
+
+    if [ "$has_keyboard" -eq 0 ]; then
+      printf '%s\n' '[General]' 'InputMethod=qtvirtualkeyboard' > "$config_file"
+    else
+      rm -f "$config_file"
+    fi
+  '';
+
   isKde = config.features.desktop.wm == "kde";
 in
 {
@@ -257,6 +280,16 @@ in
           };
         };
 
+        sddm-detect-keyboard = {
+          description = "Detect physical keyboard and configure SDDM virtual keyboard";
+          before = [ "display-manager.service" ];
+          wantedBy = [ "display-manager.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = detectSddmKeyboard;
+          };
+        };
+
       };
 
       paths.sddm-apply-display-config = lib.mkIf shouldManageSddmLayout {
@@ -286,6 +319,7 @@ in
 
     environment.systemPackages = [
       config.theme.cursor.package
+      pkgs.qt6.qtvirtualkeyboard
     ];
   };
 }
