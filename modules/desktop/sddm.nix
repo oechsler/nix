@@ -43,33 +43,38 @@ let
   cursorSize = config.theme.cursor.size;
   uiFont = config.fonts.defaults.ui;
 
-  capitalize = s: (lib.toUpper (builtins.substring 0 1 s)) + (builtins.substring 1 (builtins.stringLength s) s);
+  capitalize =
+    s: (lib.toUpper (builtins.substring 0 1 s)) + (builtins.substring 1 (builtins.stringLength s) s);
   colorSchemeId = "Catppuccin${capitalize config.theme.catppuccin.flavor}${capitalize config.theme.catppuccin.accent}";
-  catppuccinColorsFile = "${pkgs.catppuccin-kde.override {
-    flavour = [ config.theme.catppuccin.flavor ];
-    accents = [ config.theme.catppuccin.accent ];
-  }}/share/color-schemes/${colorSchemeId}.colors";
+  catppuccinColorsFile = "${
+    pkgs.catppuccin-kde.override {
+      flavour = [ config.theme.catppuccin.flavor ];
+      accents = [ config.theme.catppuccin.accent ];
+    }
+  }/share/color-schemes/${colorSchemeId}.colors";
   sddmKdeglobals = pkgs.writeText "sddm-kdeglobals" ''
     [General]
     ColorScheme=${colorSchemeId}
   '';
 
-  catppuccinAccentColor = {
-    rosewater = "f5e0dc";
-    flamingo = "f2cdcd";
-    pink = "f5c2e7";
-    mauve = "cba6f7";
-    red = "f38ba8";
-    maroon = "eba0ac";
-    peach = "fab387";
-    yellow = "f9e2af";
-    green = "a6e3a1";
-    teal = "94e2d5";
-    sky = "89dceb";
-    sapphire = "74c7ec";
-    blue = "89b4fa";
-    lavender = "b4befe";
-  }.${config.theme.catppuccin.accent};
+  catppuccinAccentColor =
+    {
+      rosewater = "f5e0dc";
+      flamingo = "f2cdcd";
+      pink = "f5c2e7";
+      mauve = "cba6f7";
+      red = "f38ba8";
+      maroon = "eba0ac";
+      peach = "fab387";
+      yellow = "f9e2af";
+      green = "a6e3a1";
+      teal = "94e2d5";
+      sky = "89dceb";
+      sapphire = "74c7ec";
+      blue = "89b4fa";
+      lavender = "b4befe";
+    }
+    .${config.theme.catppuccin.accent};
 
   catppuccinMochaBackground = "1e1e2e";
   catppuccinMochaForeground = "cdd6f4";
@@ -279,144 +284,144 @@ let
   sddmThemeName = "catppuccin-${config.catppuccin.sddm.flavor}-${config.catppuccin.sddm.accent}";
 
   sddmKwin = pkgs.writeShellScript "sddm-kwin" ''
-        set -eu
+            set -eu
 
-        export HOME=/var/lib/sddm
-        export XDG_CONFIG_HOME=/var/lib/sddm/.config
-        export XDG_DATA_HOME=/var/lib/sddm/.local/share
-        export XDG_CURRENT_DESKTOP=KDE
-        export KDE_FULL_SESSION=true
+            export HOME=/var/lib/sddm
+            export XDG_CONFIG_HOME=/var/lib/sddm/.config
+            export XDG_DATA_HOME=/var/lib/sddm/.local/share
+            export XDG_CURRENT_DESKTOP=KDE
+            export KDE_FULL_SESSION=true
 
-        enable_keyboard=0
-        kwin_pid=""
-        maliit_pid=""
+            enable_keyboard=0
+            kwin_pid=""
+            maliit_pid=""
 
-        cleanup() {
-            kill "$kwin_pid" 2>/dev/null || true
-            kill "$maliit_pid" 2>/dev/null || true
-            exit 1
-        }
-        trap cleanup INT TERM
+            cleanup() {
+                kill "$kwin_pid" 2>/dev/null || true
+                kill "$maliit_pid" 2>/dev/null || true
+                exit 1
+            }
+            trap cleanup INT TERM
 
-${lib.optionalString config.features.gaming.steamMachine.enable ''
-        # First pass: collect vendor IDs that have joystick/gamepad devices.
-        # The Steam Controller in Lizard Mode exposes TWO separate evdev devices:
-        #   - keyboard half:  ID_INPUT_KEYBOARD=1, no joystick
-        #   - gamepad half:   ID_INPUT_JOYSTICK=1
-        # A per-device check would miss the keyboard half, so we exclude by vendor.
-        joystick_vendors=""
-        for dev in /dev/input/event*; do
-          [ -e "$dev" ] || continue
-          props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
-          ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_JOYSTICK=1' <<< "$props" || continue
-          vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
-          [ -n "$vendor" ] && joystick_vendors="$joystick_vendors $vendor"
-        done
+    ${lib.optionalString config.features.gaming.steamMachine.enable ''
+              # First pass: collect vendor IDs that have joystick/gamepad devices.
+              # The Steam Controller in Lizard Mode exposes TWO separate evdev devices:
+              #   - keyboard half:  ID_INPUT_KEYBOARD=1, no joystick
+              #   - gamepad half:   ID_INPUT_JOYSTICK=1
+              # A per-device check would miss the keyboard half, so we exclude by vendor.
+              joystick_vendors=""
+              for dev in /dev/input/event*; do
+                [ -e "$dev" ] || continue
+                props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
+                ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_JOYSTICK=1' <<< "$props" || continue
+                vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+                [ -n "$vendor" ] && joystick_vendors="$joystick_vendors $vendor"
+              done
 
-        # Second pass: find real keyboards (exclude joystick vendors + model heuristics)
-        has_keyboard=0
-        for dev in /dev/input/event*; do
-          [ -e "$dev" ] || continue
-          props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
-          ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_KEYBOARD=1' <<< "$props" || continue
+              # Second pass: find real keyboards (exclude joystick vendors + model heuristics)
+              has_keyboard=0
+              for dev in /dev/input/event*; do
+                [ -e "$dev" ] || continue
+                props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
+                ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_KEYBOARD=1' <<< "$props" || continue
 
-          vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
-          for jv in $joystick_vendors; do
-            [ "$vendor" = "$jv" ] && continue 2
-          done
+                vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+                for jv in $joystick_vendors; do
+                  [ "$vendor" = "$jv" ] && continue 2
+                done
 
-          model=$(${pkgs.gnugrep}/bin/grep '^ID_MODEL=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
-          case "$model" in
-            *Controller*|*Gamepad*|*Joystick*|*Steam*Controller*) continue ;;
-          esac
+                model=$(${pkgs.gnugrep}/bin/grep '^ID_MODEL=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+                case "$model" in
+                  *Controller*|*Gamepad*|*Joystick*|*Steam*Controller*) continue ;;
+                esac
 
-          has_keyboard=1
-          break
-        done
+                has_keyboard=1
+                break
+              done
 
-        echo "sddm-kwin: has_keyboard=$has_keyboard joystick_vendors='$joystick_vendors'" >> /tmp/sddm-kwin.log
-        if [ "$has_keyboard" -eq 0 ]; then
-          enable_keyboard=1
-          echo "sddm-kwin: enabling maliit-keyboard" >> /tmp/sddm-kwin.log
+              echo "sddm-kwin: has_keyboard=$has_keyboard joystick_vendors='$joystick_vendors'" >> /tmp/sddm-kwin.log
+              if [ "$has_keyboard" -eq 0 ]; then
+                enable_keyboard=1
+                echo "sddm-kwin: enabling maliit-keyboard" >> /tmp/sddm-kwin.log
 
-          # KWin reads kwinrc at startup for virtual keyboard settings.
-          kwinrc_dir=/var/lib/sddm/.config
-          mkdir -p "$kwinrc_dir"
-          cat > "$kwinrc_dir"/kwinrc << 'EOF'
-[VirtualKeyboard]
-VirtualKeyboardEnabled=true
-VirtualKeyboardMode=2
-EOF
-          chown -R sddm:sddm "$kwinrc_dir"
-        fi
-''}
+                # KWin reads kwinrc at startup for virtual keyboard settings.
+                kwinrc_dir=/var/lib/sddm/.config
+                mkdir -p "$kwinrc_dir"
+                cat > "$kwinrc_dir"/kwinrc << 'EOF'
+      [VirtualKeyboard]
+      VirtualKeyboardEnabled=true
+      VirtualKeyboardMode=2
+      EOF
+                chown -R sddm:sddm "$kwinrc_dir"
+              fi
+    ''}
 
-        # Start KWin as the Wayland compositor.
-        # Maliit-keyboard connects to it as an external Wayland client
-        # via the zwp_input_method_v1 protocol.
-        echo "sddm-kwin: starting kwin_wayland" >> /tmp/sddm-kwin.log
-        ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
-          --no-global-shortcuts \
-          --no-kactivities \
-          --locale1 \
-          >> /tmp/kwin_wayland.log 2>&1 &
-        kwin_pid=$!
+            # Start KWin as the Wayland compositor.
+            # Maliit-keyboard connects to it as an external Wayland client
+            # via the zwp_input_method_v1 protocol.
+            echo "sddm-kwin: starting kwin_wayland" >> /tmp/sddm-kwin.log
+            ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
+              --no-global-shortcuts \
+              --no-kactivities \
+              --locale1 \
+              >> /tmp/kwin_wayland.log 2>&1 &
+            kwin_pid=$!
 
-        if [ "$enable_keyboard" -eq 1 ]; then
-          export WAYLAND_DISPLAY="''${WAYLAND_DISPLAY:-wayland-0}"
-          export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+            if [ "$enable_keyboard" -eq 1 ]; then
+              export WAYLAND_DISPLAY="''${WAYLAND_DISPLAY:-wayland-0}"
+              export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
 
-          # Wait for KWin to create the Wayland socket.
-          for i in $(seq 1 50); do
-            if [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; then
-              echo "sddm-kwin: Wayland socket ready after $i attempts" >> /tmp/sddm-kwin.log
-              break
+              # Wait for KWin to create the Wayland socket.
+              for i in $(seq 1 50); do
+                if [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; then
+                  echo "sddm-kwin: Wayland socket ready after $i attempts" >> /tmp/sddm-kwin.log
+                  break
+                fi
+                sleep 0.05
+              done
+
+              # GSettings keyfile backend for maliit-keyboard layout.
+              # Maliit reads active-language and enabled-languages from
+              # org.maliit.keyboard.maliit GSettings schema at startup.
+              export GSETTINGS_BACKEND=keyfile
+              export GSETTINGS_SCHEMA_DIR="${maliitGsettingsSchemaDir}"
+
+              gsettings_dir="$HOME/.config/glib-2.0/settings"
+              mkdir -p "$gsettings_dir"
+              cat > "$gsettings_dir/keyfile" << 'EOF'
+    [org/maliit/keyboard/maliit]
+    active-language='${config.locale.keyboard}'
+    enabled-languages=['${config.locale.keyboard}','en']
+    theme='breeze'
+    EOF
+
+              # Breeze icons for special keys (shift, backspace, return etc.)
+              export XDG_DATA_DIRS="${pkgs.kdePackages.breeze-icons}/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
+
+              # QQC2 Material Dark theme with Catppuccin colors for maliit-keyboard.
+              export QT_QUICK_CONTROLS_STYLE=Material
+              qtquick_dir="$HOME/.config/QtProject"
+              mkdir -p "$qtquick_dir"
+              cat > "$qtquick_dir/qtquickcontrols2.conf" << 'EOF'
+    [Controls]
+    Style=Material
+
+    [Material]
+    Theme=Dark
+    Variant=Dense
+    Background=#${catppuccinMochaBackground}
+    Foreground=#${catppuccinMochaForeground}
+    Primary=#${catppuccinAccentColor}
+    Accent=#${catppuccinAccentColor}
+    EOF
+              export QT_QUICK_CONTROLS_CONF="$qtquick_dir/qtquickcontrols2.conf"
+
+              echo "sddm-kwin: starting maliit-keyboard (WAYLAND_DISPLAY=$WAYLAND_DISPLAY)" >> /tmp/sddm-kwin.log
+              ${lib.getExe' pkgs.maliit-keyboard "maliit-keyboard"} >> /tmp/maliit-keyboard.log 2>&1 &
+              maliit_pid=$!
             fi
-            sleep 0.05
-          done
 
-          # GSettings keyfile backend for maliit-keyboard layout.
-          # Maliit reads active-language and enabled-languages from
-          # org.maliit.keyboard.maliit GSettings schema at startup.
-          export GSETTINGS_BACKEND=keyfile
-          export GSETTINGS_SCHEMA_DIR="${maliitGsettingsSchemaDir}"
-
-          gsettings_dir="$HOME/.config/glib-2.0/settings"
-          mkdir -p "$gsettings_dir"
-          cat > "$gsettings_dir/keyfile" << 'EOF'
-[org/maliit/keyboard/maliit]
-active-language='${config.locale.keyboard}'
-enabled-languages=['${config.locale.keyboard}','en']
-theme='breeze'
-EOF
-
-          # Breeze icons for special keys (shift, backspace, return etc.)
-          export XDG_DATA_DIRS="${pkgs.kdePackages.breeze-icons}/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
-
-          # QQC2 Material Dark theme with Catppuccin colors for maliit-keyboard.
-          export QT_QUICK_CONTROLS_STYLE=Material
-          qtquick_dir="$HOME/.config/QtProject"
-          mkdir -p "$qtquick_dir"
-          cat > "$qtquick_dir/qtquickcontrols2.conf" << 'EOF'
-[Controls]
-Style=Material
-
-[Material]
-Theme=Dark
-Variant=Dense
-Background=#${catppuccinMochaBackground}
-Foreground=#${catppuccinMochaForeground}
-Primary=#${catppuccinAccentColor}
-Accent=#${catppuccinAccentColor}
-EOF
-          export QT_QUICK_CONTROLS_CONF="$qtquick_dir/qtquickcontrols2.conf"
-
-          echo "sddm-kwin: starting maliit-keyboard (WAYLAND_DISPLAY=$WAYLAND_DISPLAY)" >> /tmp/sddm-kwin.log
-          ${lib.getExe' pkgs.maliit-keyboard "maliit-keyboard"} >> /tmp/maliit-keyboard.log 2>&1 &
-          maliit_pid=$!
-        fi
-
-        wait $kwin_pid
+            wait $kwin_pid
   '';
 
   isKde = config.features.desktop.wm == "kde";
@@ -437,7 +442,10 @@ in
             compositor = "kwin";
             compositorCommand = toString sddmKwin;
           };
-          extraPackages = [ pkgs.maliit-keyboard pkgs.kdePackages.breeze-icons ];
+          extraPackages = [
+            pkgs.maliit-keyboard
+            pkgs.kdePackages.breeze-icons
+          ];
           settings = {
             General.GreeterEnvironment = sddmGreeterEnvironment;
             Theme = {
