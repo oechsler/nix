@@ -342,8 +342,33 @@ EOF
 
         export QT_VIRTUALKEYBOARD_STYLE=Breeze
 
+        # Kirigami platform plugins (KirigamiPlasmaStyle to load kdeglobals colors)
+        # are NOT in kwin's own plugin directory.  Add the base plugin paths of
+        # the KDE packages that provide them so Kirigami's plugin discovery can
+        # find and activate the Plasma-platform theme at runtime.
+        kdePluginDirs="${
+          lib.concatMapStringsSep ":" (p: "${p}/lib/qt-6/plugins")
+          [
+            pkgs.kdePackages.libplasma
+            pkgs.kdePackages.qqc2-breeze-style
+            pkgs.kdePackages.qqc2-desktop-style
+          ]
+        }"
+        export QT_PLUGIN_PATH="''${QT_PLUGIN_PATH:+$QT_PLUGIN_PATH:}$kdePluginDirs"
+        echo "sddm-kwin: QT_PLUGIN_PATH=$QT_PLUGIN_PATH" >> /tmp/sddm-kwin.log
+        export KDE_COLOR_SCHEME=${catppuccinColorsFile}
+
         echo "sddm-kwin: HOME=$HOME XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> /tmp/sddm-kwin.log
         echo "sddm-kwin: NIXPKGS_QT6_QML_IMPORT_PATH=$NIXPKGS_QT6_QML_IMPORT_PATH" >> /tmp/sddm-kwin.log
+        echo "sddm-kwin: KDE_COLOR_SCHEME=$KDE_COLOR_SCHEME" >> /tmp/sddm-kwin.log
+        echo "=== /var/lib/sddm/.config ===" >> /tmp/sddm-kwin.log
+        ls -la /var/lib/sddm/.config/ >> /tmp/sddm-kwin.log 2>&1 || true
+        echo "=== kdeglobals ===" >> /tmp/sddm-kwin.log
+        cat /var/lib/sddm/.config/kdeglobals >> /tmp/sddm-kwin.log 2>&1 || echo "NOT FOUND" >> /tmp/sddm-kwin.log
+        echo "=== color-schemes ===" >> /tmp/sddm-kwin.log
+        ls -la /var/lib/sddm/.local/share/color-schemes/ >> /tmp/sddm-kwin.log 2>&1 || true
+        echo "=== QT/KDE env ===" >> /tmp/sddm-kwin.log
+        env | sort >> /tmp/sddm-kwin.log 2>&1 || true
 
         exec ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
           --no-global-shortcuts \
