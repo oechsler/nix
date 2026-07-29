@@ -211,7 +211,7 @@ let
       echo "apply-sddm-display-config: bus socket exists at $XDG_RUNTIME_DIR/bus"
     else
       echo "apply-sddm-display-config: bus socket NOT found at $XDG_RUNTIME_DIR/bus" >&2
-      ls -la "$XDG_RUNTIME_DIR"/ 2>&1
+      ls -la "$XDG_RUNTIME_DIR"/ 2>/dev/null || true
     fi
 
     bus_ok=0
@@ -243,8 +243,8 @@ let
       ${pkgs.coreutils}/bin/sleep 0.1
     done
     if [ "$dbus_ok" -eq 0 ]; then
-      echo "apply-sddm-display-config: D-Bus mode set failed after 30 retries" >&2
-      exit 1
+      echo "apply-sddm-display-config: D-Bus mode set failed after 30 retries (bus not ready?)" >&2
+      exit 0
     fi
 
     dbus_ok=0
@@ -258,8 +258,8 @@ let
       ${pkgs.coreutils}/bin/sleep 0.1
     done
     if [ "$dbus_ok" -eq 0 ]; then
-      echo "apply-sddm-display-config: D-Bus activation failed after 30 retries" >&2
-      exit 1
+      echo "apply-sddm-display-config: D-Bus activation failed after 30 retries (bus not ready?)" >&2
+      exit 0
     fi
 
     echo "apply-sddm-display-config: --- VirtualKeyboard diagnostic ---"
@@ -418,12 +418,10 @@ in
         sddm-apply-display-config = lib.mkIf shouldManageSddmLayout {
           description = "Apply SDDM monitor layout after KWin starts";
           after = [ "display-manager.service" ];
-          wantedBy = [ "display-manager.service" ];
           serviceConfig = {
             Type = "oneshot";
             User = "sddm";
             ExecStart = applySddmDisplayConfig;
-            RemainAfterExit = true;
           };
         };
       };
