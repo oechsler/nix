@@ -54,6 +54,25 @@ let
     ColorScheme=${colorSchemeId}
   '';
 
+  catppuccinAccentColor = {
+    rosewater = "f5e0dc";
+    flamingo = "f2cdcd";
+    pink = "f5c2e7";
+    mauve = "cba6f7";
+    red = "f38ba8";
+    maroon = "eba0ac";
+    peach = "fab387";
+    yellow = "f9e2af";
+    green = "a6e3a1";
+    teal = "94e2d5";
+    sky = "89dceb";
+    sapphire = "74c7ec";
+    blue = "89b4fa";
+    lavender = "b4befe";
+  }.${config.theme.catppuccin.accent};
+
+  maliitGsettingsSchemaDir = "${pkgs.maliit-keyboard}/share/gsettings-schemas/${pkgs.maliit-keyboard.name}/glib-2.0/schemas";
+
   deploySddmColors = pkgs.writeShellScript "deploy-sddm-colors" ''
     set -eu
     colors_src="$1"
@@ -352,6 +371,37 @@ EOF
             fi
             sleep 0.05
           done
+
+          # GSettings keyfile backend for maliit-keyboard layout.
+          # Maliit reads active-language and enabled-languages from
+          # org.maliit.keyboard.maliit GSettings schema at startup.
+          export GSETTINGS_BACKEND=keyfile
+          export GSETTINGS_SCHEMA_DIR="${maliitGsettingsSchemaDir}"
+
+          gsettings_dir="$HOME/.config/glib-2.0/settings"
+          mkdir -p "$gsettings_dir"
+          cat > "$gsettings_dir/keyfile" << 'EOF'
+[org/maliit/keyboard/maliit]
+active-language='${config.locale.keyboard}'
+enabled-languages=['${config.locale.keyboard}','en']
+EOF
+
+          # QQC2 Material Dark theme with Catppuccin accent for maliit-keyboard.
+          # Maliit's QML keys are styled via Qt Quick Controls 2 (ToolButton).
+          export QT_QUICK_CONTROLS_STYLE=Material
+          qtquick_dir="$HOME/.config/QtProject"
+          mkdir -p "$qtquick_dir"
+          cat > "$qtquick_dir/qtquickcontrols2.conf" << 'EOF'
+[Controls]
+Style=Material
+
+[Material]
+Theme=Dark
+Variant=Dense
+Primary=#${catppuccinAccentColor}
+Accent=#${catppuccinAccentColor}
+EOF
+          export QT_QUICK_CONTROLS_CONF="$qtquick_dir/qtquickcontrols2.conf"
 
           echo "sddm-kwin: starting maliit-keyboard (WAYLAND_DISPLAY=$WAYLAND_DISPLAY)" >> /tmp/sddm-kwin.log
           ${lib.getExe' pkgs.maliit-keyboard "maliit-keyboard"} >> /tmp/maliit-keyboard.log 2>&1 &
