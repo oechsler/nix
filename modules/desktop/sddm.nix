@@ -211,15 +211,31 @@ let
 
     env_file=/run/sddm-keyboard-env
 
+    # First pass: collect vendor IDs that have joystick/gamepad devices.
+    # The Steam Controller in Lizard Mode exposes TWO separate evdev devices:
+    #   - keyboard half:  ID_INPUT_KEYBOARD=1, no joystick
+    #   - gamepad half:   ID_INPUT_JOYSTICK=1
+    # A per-device check would miss the keyboard half, so we exclude by vendor.
+    joystick_vendors=""
+    for dev in /dev/input/event*; do
+      [ -e "$dev" ] || continue
+      props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
+      ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_JOYSTICK=1' <<< "$props" || continue
+      vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+      [ -n "$vendor" ] && joystick_vendors="$joystick_vendors $vendor"
+    done
+
+    # Second pass: find real keyboards (exclude joystick vendors + model heuristics)
     has_keyboard=0
     for dev in /dev/input/event*; do
       [ -e "$dev" ] || continue
       props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
       ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_KEYBOARD=1' <<< "$props" || continue
 
-      if ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_JOYSTICK=1' <<< "$props"; then
-        continue
-      fi
+      vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+      for jv in $joystick_vendors; do
+        [ "$vendor" = "$jv" ] && continue 2
+      done
 
       model=$(${pkgs.gnugrep}/bin/grep '^ID_MODEL=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
       case "$model" in
@@ -231,7 +247,11 @@ let
     done
 
     if [ "$has_keyboard" -eq 0 ]; then
-      echo "QT_IM_MODULE=qtvirtualkeyboard" > "$env_file"
+      cat > "$env_file" <<EOF
+QT_IM_MODULE=qtvirtualkeyboard
+QT_PLUGIN_PATH=${pkgs.qt6.qtvirtualkeyboard}/lib/qt-6/plugins
+QML2_IMPORT_PATH=${pkgs.qt6.qtvirtualkeyboard}/lib/qt-6/qml
+EOF
     else
       : > "$env_file"
     fi
