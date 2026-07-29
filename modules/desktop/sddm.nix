@@ -228,6 +228,25 @@ let
       echo "apply-sddm-display-config: D-Bus session bus unreachable" >&2
     fi
 
+    # Force keyboard mode to "On" (2) so it shows without a text input field.
+    # KWin ignores VirtualKeyboardMode in kwinrc under certain conditions
+    # (e.g. --no-lockscreen), so we set it via D-Bus explicitly.
+    dbus_ok=0
+    for attempt in $(${pkgs.coreutils}/bin/seq 1 30); do
+      if ${pkgs.dbus}/bin/dbus-send --session \
+        --dest=org.kde.KWin --type=method_call --print-reply \
+        /VirtualKeyboard org.freedesktop.DBus.Properties.Set \
+        string:"org.kde.kwin.VirtualKeyboard" string:"mode" variant:int32:2; then
+        dbus_ok=1
+        break
+      fi
+      ${pkgs.coreutils}/bin/sleep 0.1
+    done
+    if [ "$dbus_ok" -eq 0 ]; then
+      echo "apply-sddm-display-config: D-Bus mode set failed after 30 retries" >&2
+      exit 1
+    fi
+
     dbus_ok=0
     for attempt in $(${pkgs.coreutils}/bin/seq 1 30); do
       if ${pkgs.dbus}/bin/dbus-send --session \
@@ -242,6 +261,22 @@ let
       echo "apply-sddm-display-config: D-Bus activation failed after 30 retries" >&2
       exit 1
     fi
+
+    echo "apply-sddm-display-config: --- VirtualKeyboard diagnostic ---"
+    for method in willShowOnActive; do
+      val=$(${pkgs.dbus}/bin/dbus-send --session \
+        --dest=org.kde.KWin --type=method_call --print-reply \
+        /VirtualKeyboard org.kde.kwin.VirtualKeyboard."$method" 2>&1 || true)
+      echo "apply-sddm-display-config: $method = $val"
+    done
+    for prop in available active visible mode activeClientSupportsTextInput; do
+      val=$(${pkgs.dbus}/bin/dbus-send --session \
+        --dest=org.kde.KWin --type=method_call --print-reply \
+        /VirtualKeyboard org.freedesktop.DBus.Properties.Get \
+        string:"org.kde.kwin.VirtualKeyboard" string:"$prop" 2>&1 || true)
+      echo "apply-sddm-display-config: $prop = $val"
+    done
+    echo "apply-sddm-display-config: --- end diagnostic ---"
 
     echo "apply-sddm-display-config: done" >&2
   '';
@@ -301,26 +336,33 @@ let
           kwinrc_dir=/var/lib/sddm/.config
           mkdir -p "$kwinrc_dir"
           cat > "$kwinrc_dir"/kwinrc << 'EOF'
-    [VirtualKeyboard]
-    VirtualKeyboardEnabled=true
-    VirtualKeyboardMode=2
-    EOF
+[VirtualKeyboard]
+VirtualKeyboardEnabled=true
+VirtualKeyboardMode=2
+EOF
           chown -R sddm:sddm "$kwinrc_dir"
         fi
 
         # plasma-keyboard's C wrapper only sets QT_VIRTUALKEYBOARD_HUNSPELL_DATA_PATH.
         # Its QML module (org.kde.plasma.keyboard) must be findable at runtime.
-        # kwin_wayland's wrapper does NOT include this path, so we prepend it here.
-        export NIXPKGS_QT6_QML_IMPORT_PATH="${pkgs.kdePackages.plasma-keyboard}/lib/qt-6/qml''${NIXPKGS_QT6_QML_IMPORT_PATH:+:$NIXPKGS_QT6_QML_IMPORT_PATH}"
+        # Neither kwin's nor plasma-keyboard's wrapper sets the full QML import path,
+        # so we must provide QML paths for all plasma-keyboard dependencies here.
+        # Required: org.kde.plasma.keyboard, org.kde.kirigami, QtQuick.VirtualKeyboard.
+        export NIXPKGS_QT6_QML_IMPORT_PATH="${lib.concatMapStringsSep ":" (p: "${p}/lib/qt-6/qml") [
+          pkgs.kdePackages.plasma-keyboard
+          pkgs.kdePackages.kirigami
+          pkgs.kdePackages.qtvirtualkeyboard
+        ]}''${NIXPKGS_QT6_QML_IMPORT_PATH:+:$NIXPKGS_QT6_QML_IMPORT_PATH}"
 
         echo "sddm-kwin: XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> /tmp/sddm-kwin.log
+        echo "sddm-kwin: NIXPKGS_QT6_QML_IMPORT_PATH=$NIXPKGS_QT6_QML_IMPORT_PATH" >> /tmp/sddm-kwin.log
 
         exec ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
           --no-global-shortcuts \
           --no-kactivities \
-          --no-lockscreen \
           --locale1 \
-          "''${input_method_args[@]}"
+          "''${input_method_args[@]}" \
+          >> /tmp/kwin_wayland.log 2>&1
   '';
 
   isKde = config.features.desktop.wm == "kde";
