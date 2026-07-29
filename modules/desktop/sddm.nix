@@ -201,27 +201,49 @@ let
     exit 1
   '';
 
-  detectSddmKeyboard = pkgs.writeShellScript "detect-sddm-keyboard" ''
+  sddmKwin = pkgs.writeShellScript "sddm-kwin" ''
     set -eu
-    config_dir="/etc/sddm.conf.d"
-    config_file="$config_dir/99-virtual-keyboard.conf"
 
     has_keyboard=0
     for dev in /dev/input/event*; do
       [ -e "$dev" ] || continue
-      if ${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null | grep -qx 'ID_INPUT_KEYBOARD=1'; then
-        has_keyboard=1
-        break
+      props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
+      ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_KEYBOARD=1' <<< "$props" || continue
+
+      model=$(${pkgs.gnugrep}/bin/grep '^ID_MODEL=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+      if ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_JOYSTICK=1' <<< "$props"; then
+        echo "sddm-kwin: ignoring joystick keyboard interface $dev ($model)" >&2
+        continue
       fi
+
+      case "$model" in
+        *Controller* | *Gamepad* | *Joystick*)
+          echo "sddm-kwin: ignoring controller keyboard interface $dev ($model)" >&2
+          continue
+          ;;
+      esac
+
+      echo "sddm-kwin: physical keyboard found at $dev ($model)" >&2
+      has_keyboard=1
+      break
     done
 
-    mkdir -p "$config_dir"
-
+    input_method_args=()
     if [ "$has_keyboard" -eq 0 ]; then
-      printf '%s\n' '[General]' 'InputMethod=qtvirtualkeyboard' > "$config_file"
-    else
-      rm -f "$config_file"
+      echo "sddm-kwin: no physical keyboard found, starting Plasma Keyboard" >&2
+      input_method_args=(--inputmethod ${lib.getExe' pkgs.kdePackages.plasma-keyboard "plasma-keyboard"})
     fi
+
+    exec ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
+      --no-global-shortcuts \
+      --no-kactivities \
+      --no-lockscreen \
+      --locale1 \
+      "''${input_method_args[@]}"
+  '';
+
+  removeLegacySddmVirtualKeyboard = ''
+    rm -f /etc/sddm.conf.d/99-virtual-keyboard.conf
   '';
 
   isKde = config.features.desktop.wm == "kde";
@@ -238,6 +260,8 @@ in
           enable = true;
           wayland.enable = true;
           wayland.compositor = "kwin";
+          wayland.compositorCommand = toString sddmKwin;
+          extraPackages = [ pkgs.kdePackages.plasma-keyboard ];
           settings = {
             General.GreeterEnvironment = sddmGreeterEnvironment;
             Theme = {
@@ -280,16 +304,6 @@ in
           };
         };
 
-        sddm-detect-keyboard = {
-          description = "Detect physical keyboard and configure SDDM virtual keyboard";
-          before = [ "display-manager.service" ];
-          wantedBy = [ "display-manager.service" ];
-          serviceConfig = {
-            Type = "oneshot";
-            ExecStart = detectSddmKeyboard;
-          };
-        };
-
       };
 
       paths.sddm-apply-display-config = lib.mkIf shouldManageSddmLayout {
@@ -317,9 +331,10 @@ in
       clockEnabled = false;
     };
 
+    system.activationScripts.removeLegacySddmVirtualKeyboard = removeLegacySddmVirtualKeyboard;
+
     environment.systemPackages = [
       config.theme.cursor.package
-      pkgs.qt6.qtvirtualkeyboard
     ];
   };
 }
