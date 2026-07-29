@@ -206,13 +206,33 @@ let
     # Use org.freedesktop.DBus.Properties.Set on the Active property.
     # KWin registers its D-Bus service as org.kde.KWin (mixed-case).
     # The VirtualKeyboard interface is org.kde.kwin.VirtualKeyboard (lowercase).
+    echo "apply-sddm-display-config: DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS"
+    if [ -S "$XDG_RUNTIME_DIR/bus" ]; then
+      echo "apply-sddm-display-config: bus socket exists at $XDG_RUNTIME_DIR/bus"
+    else
+      echo "apply-sddm-display-config: bus socket NOT found at $XDG_RUNTIME_DIR/bus" >&2
+      ls -la "$XDG_RUNTIME_DIR"/ 2>&1
+    fi
+
+    bus_ok=0
+    for attempt in $(${pkgs.coreutils}/bin/seq 1 10); do
+      if ${pkgs.dbus}/bin/dbus-send --session \
+        --dest=org.freedesktop.DBus --type=method_call --print-reply \
+        /org/freedesktop/DBus org.freedesktop.DBus.ListNames; then
+        bus_ok=1
+        break
+      fi
+      ${pkgs.coreutils}/bin/sleep 0.1
+    done
+    if [ "$bus_ok" -eq 0 ]; then
+      echo "apply-sddm-display-config: D-Bus session bus unreachable" >&2
+    fi
+
     dbus_ok=0
     for attempt in $(${pkgs.coreutils}/bin/seq 1 30); do
       if ${pkgs.dbus}/bin/dbus-send --session \
         --dest=org.kde.KWin --type=method_call --print-reply \
-        /VirtualKeyboard org.freedesktop.DBus.Properties.Set \
-        string:"org.kde.kwin.VirtualKeyboard" string:"Active" variant:boolean:true \
-        2>/dev/null; then
+        /VirtualKeyboard org.kde.kwin.VirtualKeyboard.forceActivate; then
         dbus_ok=1
         break
       fi
@@ -220,6 +240,7 @@ let
     done
     if [ "$dbus_ok" -eq 0 ]; then
       echo "apply-sddm-display-config: D-Bus activation failed after 30 retries" >&2
+      exit 1
     fi
 
     echo "apply-sddm-display-config: done" >&2
@@ -266,7 +287,9 @@ let
         done
 
         input_method_args=()
+        echo "sddm-kwin: has_keyboard=$has_keyboard joystick_vendors='$joystick_vendors'" >> /tmp/sddm-kwin.log
         if [ "$has_keyboard" -eq 0 ]; then
+          echo "sddm-kwin: enabling plasma-keyboard via --inputmethod" >> /tmp/sddm-kwin.log
           input_method_args=(--inputmethod ${lib.getExe' pkgs.kdePackages.plasma-keyboard "plasma-keyboard"})
 
           # Enable virtual keyboard in KWin config.
@@ -289,6 +312,8 @@ let
         # Its QML module (org.kde.plasma.keyboard) must be findable at runtime.
         # kwin_wayland's wrapper does NOT include this path, so we prepend it here.
         export NIXPKGS_QT6_QML_IMPORT_PATH="${pkgs.kdePackages.plasma-keyboard}/lib/qt-6/qml''${NIXPKGS_QT6_QML_IMPORT_PATH:+:$NIXPKGS_QT6_QML_IMPORT_PATH}"
+
+        echo "sddm-kwin: XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR DBUS_SESSION_BUS_ADDRESS=$DBUS_SESSION_BUS_ADDRESS" >> /tmp/sddm-kwin.log
 
         exec ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
           --no-global-shortcuts \
@@ -356,6 +381,7 @@ in
             Type = "oneshot";
             User = "sddm";
             ExecStart = applySddmDisplayConfig;
+            RemainAfterExit = true;
           };
         };
       };
