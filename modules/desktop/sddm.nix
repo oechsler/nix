@@ -146,7 +146,7 @@ let
   '';
 
   configureSddmDisplays = pkgs.writeShellScript "configure-sddm-displays" ''
-    set -eu
+    set -e
 
     config_dir=/var/lib/sddm/.config
     config_file=$config_dir/kwinoutputconfig.json
@@ -179,7 +179,7 @@ let
   '';
 
   applySddmDisplayConfig = pkgs.writeShellScript "apply-sddm-display-config" ''
-    set -eu
+    set -e
 
     sddm_uid=$(${pkgs.coreutils}/bin/id -u sddm)
     export XDG_RUNTIME_DIR=/run/user/$sddm_uid
@@ -203,10 +203,24 @@ let
     # Even with [VirtualKeyboard] Mode=On in kwinrc, KWin's device detection may
     # suppress the OSK when a keyboard evdev device is present (e.g. Steam
     # Controller lizard-mode keyboard half). Calling setActive(true) overrides.
-    ${pkgs.dbus}/bin/dbus-send --session \
-      --dest=org.kde.kwin --type=method_call \
-      /VirtualKeyboard org.kde.kwin.VirtualKeyboard.setActive \
-      boolean:true || true
+    # Use org.freedesktop.DBus.Properties.Set on the Active property.
+    # KWin registers its D-Bus service as org.kde.KWin (mixed-case).
+    # The VirtualKeyboard interface is org.kde.kwin.VirtualKeyboard (lowercase).
+    dbus_ok=0
+    for attempt in $(${pkgs.coreutils}/bin/seq 1 30); do
+      if ${pkgs.dbus}/bin/dbus-send --session \
+        --dest=org.kde.KWin --type=method_call --print-reply \
+        /VirtualKeyboard org.freedesktop.DBus.Properties.Set \
+        string:"org.kde.kwin.VirtualKeyboard" string:"Active" variant:boolean:true \
+        2>/dev/null; then
+        dbus_ok=1
+        break
+      fi
+      ${pkgs.coreutils}/bin/sleep 0.1
+    done
+    if [ "$dbus_ok" -eq 0 ]; then
+      echo "apply-sddm-display-config: D-Bus activation failed after 30 retries" >&2
+    fi
 
     echo "apply-sddm-display-config: done" >&2
   '';
@@ -214,71 +228,74 @@ let
   sddmThemeName = "catppuccin-${config.catppuccin.sddm.flavor}-${config.catppuccin.sddm.accent}";
 
   sddmKwin = pkgs.writeShellScript "sddm-kwin" ''
-    set -eu
+        set -eu
 
-    # First pass: collect vendor IDs that have joystick/gamepad devices.
-    # The Steam Controller in Lizard Mode exposes TWO separate evdev devices:
-    #   - keyboard half:  ID_INPUT_KEYBOARD=1, no joystick
-    #   - gamepad half:   ID_INPUT_JOYSTICK=1
-    # A per-device check would miss the keyboard half, so we exclude by vendor.
-    joystick_vendors=""
-    for dev in /dev/input/event*; do
-      [ -e "$dev" ] || continue
-      props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
-      ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_JOYSTICK=1' <<< "$props" || continue
-      vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
-      [ -n "$vendor" ] && joystick_vendors="$joystick_vendors $vendor"
-    done
+        # First pass: collect vendor IDs that have joystick/gamepad devices.
+        # The Steam Controller in Lizard Mode exposes TWO separate evdev devices:
+        #   - keyboard half:  ID_INPUT_KEYBOARD=1, no joystick
+        #   - gamepad half:   ID_INPUT_JOYSTICK=1
+        # A per-device check would miss the keyboard half, so we exclude by vendor.
+        joystick_vendors=""
+        for dev in /dev/input/event*; do
+          [ -e "$dev" ] || continue
+          props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
+          ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_JOYSTICK=1' <<< "$props" || continue
+          vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+          [ -n "$vendor" ] && joystick_vendors="$joystick_vendors $vendor"
+        done
 
-    # Second pass: find real keyboards (exclude joystick vendors + model heuristics)
-    has_keyboard=0
-    for dev in /dev/input/event*; do
-      [ -e "$dev" ] || continue
-      props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
-      ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_KEYBOARD=1' <<< "$props" || continue
+        # Second pass: find real keyboards (exclude joystick vendors + model heuristics)
+        has_keyboard=0
+        for dev in /dev/input/event*; do
+          [ -e "$dev" ] || continue
+          props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
+          ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_KEYBOARD=1' <<< "$props" || continue
 
-      vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
-      for jv in $joystick_vendors; do
-        [ "$vendor" = "$jv" ] && continue 2
-      done
+          vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+          for jv in $joystick_vendors; do
+            [ "$vendor" = "$jv" ] && continue 2
+          done
 
-      model=$(${pkgs.gnugrep}/bin/grep '^ID_MODEL=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
-      case "$model" in
-        *Controller*|*Gamepad*|*Joystick*|*Steam*Controller*) continue ;;
-      esac
+          model=$(${pkgs.gnugrep}/bin/grep '^ID_MODEL=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+          case "$model" in
+            *Controller*|*Gamepad*|*Joystick*|*Steam*Controller*) continue ;;
+          esac
 
-      has_keyboard=1
-      break
-    done
+          has_keyboard=1
+          break
+        done
 
-    input_method_args=()
-    if [ "$has_keyboard" -eq 0 ]; then
-      input_method_args=(--inputmethod ${lib.getExe' pkgs.kdePackages.plasma-keyboard "plasma-keyboard"})
+        input_method_args=()
+        if [ "$has_keyboard" -eq 0 ]; then
+          input_method_args=(--inputmethod ${lib.getExe' pkgs.kdePackages.plasma-keyboard "plasma-keyboard"})
 
-      # Enable virtual keyboard in KWin config.
-      # Without this, KWin's InputMethod module won't forward text-input events
-      # to the OSK process. Mode=2 means "On" (always show with touch/tablet/mouse).
-      kwinrc_dir=/var/lib/sddm/.config
-      mkdir -p "$kwinrc_dir"
-      cat > "$kwinrc_dir"/kwinrc << 'EOF'
-[VirtualKeyboard]
-Mode=2
-InputMethod=org.kde.plasma.keyboard
-EOF
-      chown -R sddm:sddm "$kwinrc_dir"
-    fi
+          # Enable virtual keyboard in KWin config.
+          # These keys match the kcm_virtualkeyboard KCM:
+          #   VirtualKeyboardEnabled=true  – enable the virtual keyboard
+          #   VirtualKeyboardMode=2        – "On" (always show)
+          # KWin reads this at startup; the D-Bus call in
+          # applySddmDisplayConfig overrides runtime device detection.
+          kwinrc_dir=/var/lib/sddm/.config
+          mkdir -p "$kwinrc_dir"
+          cat > "$kwinrc_dir"/kwinrc << 'EOF'
+    [VirtualKeyboard]
+    VirtualKeyboardEnabled=true
+    VirtualKeyboardMode=2
+    EOF
+          chown -R sddm:sddm "$kwinrc_dir"
+        fi
 
-    # plasma-keyboard's C wrapper only sets QT_VIRTUALKEYBOARD_HUNSPELL_DATA_PATH.
-    # Its QML module (org.kde.plasma.keyboard) must be findable at runtime.
-    # kwin_wayland's wrapper does NOT include this path, so we prepend it here.
-    export NIXPKGS_QT6_QML_IMPORT_PATH="${pkgs.kdePackages.plasma-keyboard}/lib/qt-6/qml''${NIXPKGS_QT6_QML_IMPORT_PATH:+:$NIXPKGS_QT6_QML_IMPORT_PATH}"
+        # plasma-keyboard's C wrapper only sets QT_VIRTUALKEYBOARD_HUNSPELL_DATA_PATH.
+        # Its QML module (org.kde.plasma.keyboard) must be findable at runtime.
+        # kwin_wayland's wrapper does NOT include this path, so we prepend it here.
+        export NIXPKGS_QT6_QML_IMPORT_PATH="${pkgs.kdePackages.plasma-keyboard}/lib/qt-6/qml''${NIXPKGS_QT6_QML_IMPORT_PATH:+:$NIXPKGS_QT6_QML_IMPORT_PATH}"
 
-    exec ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
-      --no-global-shortcuts \
-      --no-kactivities \
-      --no-lockscreen \
-      --locale1 \
-      "''${input_method_args[@]}"
+        exec ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
+          --no-global-shortcuts \
+          --no-kactivities \
+          --no-lockscreen \
+          --locale1 \
+          "''${input_method_args[@]}"
   '';
 
   isKde = config.features.desktop.wm == "kde";
