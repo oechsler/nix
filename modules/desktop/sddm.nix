@@ -248,6 +248,11 @@ let
       input_method_args=(--inputmethod ${lib.getExe' pkgs.kdePackages.plasma-keyboard "plasma-keyboard"})
     fi
 
+    # plasma-keyboard's C wrapper only sets QT_VIRTUALKEYBOARD_HUNSPELL_DATA_PATH.
+    # Its QML module (org.kde.plasma.keyboard) must be findable at runtime.
+    # kwin_wayland's wrapper does NOT include this path, so we prepend it here.
+    export NIXPKGS_QT6_QML_IMPORT_PATH="${pkgs.kdePackages.plasma-keyboard}/lib/qt-6/qml''${NIXPKGS_QT6_QML_IMPORT_PATH:+:$NIXPKGS_QT6_QML_IMPORT_PATH}"
+
     exec ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
       --no-global-shortcuts \
       --no-kactivities \
