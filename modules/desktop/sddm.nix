@@ -71,6 +71,9 @@ let
     lavender = "b4befe";
   }.${config.theme.catppuccin.accent};
 
+  catppuccinMochaBackground = "1e1e2e";
+  catppuccinMochaForeground = "cdd6f4";
+
   maliitGsettingsSchemaDir = "${pkgs.maliit-keyboard}/share/gsettings-schemas/${pkgs.maliit-keyboard.name}/glib-2.0/schemas";
 
   deploySddmColors = pkgs.writeShellScript "deploy-sddm-colors" ''
@@ -384,10 +387,13 @@ EOF
 [org/maliit/keyboard/maliit]
 active-language='${config.locale.keyboard}'
 enabled-languages=['${config.locale.keyboard}','en']
+theme='breeze'
 EOF
 
-          # QQC2 Material Dark theme with Catppuccin accent for maliit-keyboard.
-          # Maliit's QML keys are styled via Qt Quick Controls 2 (ToolButton).
+          # Breeze icons for special keys (shift, backspace, return etc.)
+          export XDG_DATA_DIRS="${pkgs.kdePackages.breeze-icons}/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
+
+          # QQC2 Material Dark theme with Catppuccin colors for maliit-keyboard.
           export QT_QUICK_CONTROLS_STYLE=Material
           qtquick_dir="$HOME/.config/QtProject"
           mkdir -p "$qtquick_dir"
@@ -398,6 +404,8 @@ Style=Material
 [Material]
 Theme=Dark
 Variant=Dense
+Background=#${catppuccinMochaBackground}
+Foreground=#${catppuccinMochaForeground}
 Primary=#${catppuccinAccentColor}
 Accent=#${catppuccinAccentColor}
 EOF
@@ -429,7 +437,7 @@ in
             compositor = "kwin";
             compositorCommand = toString sddmKwin;
           };
-          extraPackages = [ pkgs.maliit-keyboard ];
+          extraPackages = [ pkgs.maliit-keyboard pkgs.kdePackages.breeze-icons ];
           settings = {
             General.GreeterEnvironment = sddmGreeterEnvironment;
             Theme = {
