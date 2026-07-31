@@ -256,9 +256,9 @@ Set in `home.nix`. Works on both Hyprland (via hypridle) and KDE (via PowerDevil
 | Option | Default | Description |
 |--------|---------|-------------|
 | `idle.timeouts.dimBattery` | `120` | Seconds until dim on battery |
-| `idle.timeouts.dimAcLockBattery` | `300` | Seconds until dim on AC / lock on battery |
-| `idle.timeouts.suspendBattery` | `300` | Seconds until suspend on battery |
-| `idle.timeouts.lockSuspendAc` | `1800` | Seconds until lock + suspend on AC |
+| `idle.timeouts.suspendBattery` | `300` | Seconds until lock + suspend on battery |
+| `idle.timeouts.dimAc` | `300` | Seconds until dim on AC |
+| `idle.timeouts.suspendAc` | `1800` | Seconds until lock + suspend on AC |
 
 ### Hyprland Dim Settings
 
