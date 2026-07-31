@@ -34,12 +34,12 @@ in
     AC = {
       dimDisplay = {
         enable = true;
-        idleTimeout = cfg.timeouts.dimAcLockBattery;
+        idleTimeout = cfg.timeouts.dimAc;
       };
-      turnOffDisplay.idleTimeout = cfg.timeouts.lockSuspendAc;
+      turnOffDisplay.idleTimeout = cfg.timeouts.suspendAc;
       autoSuspend = {
         action = "sleep";
-        idleTimeout = cfg.timeouts.lockSuspendAc;
+        idleTimeout = cfg.timeouts.suspendAc;
       };
     };
 
@@ -52,7 +52,7 @@ in
         enable = true;
         idleTimeout = cfg.timeouts.dimBattery;
       };
-      turnOffDisplay.idleTimeout = cfg.timeouts.dimAcLockBattery;
+      turnOffDisplay.idleTimeout = cfg.timeouts.suspendBattery;
       autoSuspend = {
         action = "sleep";
         idleTimeout = cfg.timeouts.suspendBattery;

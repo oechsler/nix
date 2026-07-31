@@ -35,6 +35,8 @@
     cpu.amd.updateMicrocode = lib.mkIf (config.features.hardware.cpu == "amd") true;
     cpu.intel.updateMicrocode = lib.mkIf (config.features.hardware.cpu == "intel") true;
 
+    i2c.enable = lib.mkIf (config.features.hardware.formFactor != "server") true;
+
     # Enable graphics support whenever a GPU is configured.
     # VA-API drivers are set here so hardware video decoding works in all contexts
     # (browser, video players) — not just when gaming is enabled.

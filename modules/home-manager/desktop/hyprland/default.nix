@@ -19,6 +19,11 @@
 # - Window rules and workspace rules
 # - Animations and visual effects
 #
+# Brightness control:
+# - Laptops: brightnessctl (kernel backlight)
+# - Desktops: ddcutil (DDC/CI monitor brightness) with hyprsunset gamma fallback
+#   for idle dimming when no DDC-capable monitor is attached
+#
 # Keybindings overview:
 #   Super+Q          - Close window
 #   Super+M          - Exit Hyprland
@@ -118,6 +123,44 @@ let
         m.workspaces != [ ]
       ) "${toString (builtins.head m.workspaces)}, monitor:${m.name}, default:true")
     ) displays.monitors
+  );
+
+  # ============================================================================
+  # DISPLAY BRIGHTNESS CONTROL (keybindings)
+  # ============================================================================
+  # Used by XF86MonBrightnessUp/Down keybindings.
+  # Runtime detection: kernel backlight (brightnessctl) > DDC/CI (ddcutil) > no-op
+  displayBrightness = toString (
+    pkgs.writeShellScript "display-brightness" ''
+      if (set -- /sys/class/backlight/*; test -e "$1"); then
+        if [ "$1" = "up" ]; then
+          exec ${pkgs.brightnessctl}/bin/brightnessctl -e4 -n2 set 5%+
+        else
+          exec ${pkgs.brightnessctl}/bin/brightnessctl -e4 -n2 set 5%-
+        fi
+      elif ${pkgs.ddcutil}/bin/ddcutil detect --terse 2>/dev/null | grep -q .; then
+        direction="$1"
+        displays=$(${pkgs.ddcutil}/bin/ddcutil detect --terse 2>/dev/null | ${pkgs.gawk}/bin/awk '$1 == "Display" { print $2 }')
+        for display in $displays; do
+          values=$(${pkgs.ddcutil}/bin/ddcutil --display "$display" getvcp 10 --terse 2>/dev/null | ${pkgs.gawk}/bin/awk '$1 == "VCP" { print $4, $5; exit }')
+          set -- $values
+          [ -z "$1" ] && continue
+          current=$1
+          maximum=$2
+          step=$((maximum * 5 / 100))
+          [ "$step" -lt 1 ] && step=1
+          if [ "$direction" = "up" ]; then
+            new=$((current + step))
+            [ "$new" -gt "$maximum" ] && new=$maximum
+          else
+            new=$((current - step))
+            [ "$new" -lt 0 ] && new=0
+          fi
+          ${pkgs.ddcutil}/bin/ddcutil --display "$display" setvcp 10 "$new" --noverify 2>/dev/null || true
+        done
+      fi
+      true
+    ''
   );
 
   # ============================================================================
@@ -253,6 +296,7 @@ in
 
     home.packages = [
       pkgs.brightnessctl
+      pkgs.ddcutil
       pkgs.playerctl
       pkgs.hyprshot
       pkgs.satty
@@ -502,8 +546,8 @@ in
           ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && ${volumeNotify}"
           ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && ${volumeNotify}"
           ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
-          ", XF86MonBrightnessUp, exec, brightnessctl -e4 -n2 set 5%+ && ${brightnessNotify}"
-          ", XF86MonBrightnessDown, exec, brightnessctl -e4 -n2 set 5%- && ${brightnessNotify}"
+          ", XF86MonBrightnessUp, exec, ${displayBrightness} up && ${brightnessNotify}"
+          ", XF86MonBrightnessDown, exec, ${displayBrightness} down && ${brightnessNotify}"
         ];
 
         bindl = [

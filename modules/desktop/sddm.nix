@@ -269,14 +269,15 @@ let
       ${pkgs.kdePackages.libkscreen}/bin/kscreen-doctor ${sddmKscreenArgs} && break
     done
 
-    # Force virtual keyboard mode=2 (On) then activate
-    ${pkgs.dbus}/bin/dbus-send --session \
-      --dest=org.kde.KWin --type=method_call --print-reply \
-      /VirtualKeyboard org.freedesktop.DBus.Properties.Set \
-      string:"org.kde.kwin.VirtualKeyboard" string:"mode" variant:int32:2
-    ${pkgs.dbus}/bin/dbus-send --session \
-      --dest=org.kde.KWin --type=method_call --print-reply \
-      /VirtualKeyboard org.kde.kwin.VirtualKeyboard.forceActivate
+    if [ -e /var/lib/sddm/.config/osk-needed ]; then
+      ${pkgs.dbus}/bin/dbus-send --session \
+        --dest=org.kde.KWin --type=method_call --print-reply \
+        /VirtualKeyboard org.freedesktop.DBus.Properties.Set \
+        string:"org.kde.kwin.VirtualKeyboard" string:"mode" variant:int32:2
+      ${pkgs.dbus}/bin/dbus-send --session \
+        --dest=org.kde.KWin --type=method_call --print-reply \
+        /VirtualKeyboard org.kde.kwin.VirtualKeyboard.forceActivate
+    fi
 
     echo "apply-sddm-display-config: done" >&2
   '';
@@ -303,58 +304,67 @@ let
             }
             trap cleanup INT TERM
 
-    ${lib.optionalString config.features.gaming.steamMachine.enable ''
-              # First pass: collect vendor IDs that have joystick/gamepad devices.
-              # The Steam Controller in Lizard Mode exposes TWO separate evdev devices:
-              #   - keyboard half:  ID_INPUT_KEYBOARD=1, no joystick
-              #   - gamepad half:   ID_INPUT_JOYSTICK=1
-              # A per-device check would miss the keyboard half, so we exclude by vendor.
+              # Detect whether a physical keyboard is present.
+              # This runs on every greeter appearance (KWin restarts on
+              # each logout → fresh detection every time the login screen shows).
               joystick_vendors=""
-              for dev in /dev/input/event*; do
-                [ -e "$dev" ] || continue
-                props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
-                ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_JOYSTICK=1' <<< "$props" || continue
-                vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
-                [ -n "$vendor" ] && joystick_vendors="$joystick_vendors $vendor"
-              done
+              ${lib.optionalString config.features.gaming.steamMachine.enable ''
+                # Steam Controller in Lizard Mode exposes TWO evdev devices:
+                # a keyboard half (ID_INPUT_KEYBOARD=1) and a gamepad half.
+                # Collect vendor IDs of joystick devices so we can exclude
+                # their keyboard halves from the real-keyboard check.
+                for dev in /dev/input/event*; do
+                  [ -e "$dev" ] || continue
+                  props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
+                  ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_JOYSTICK=1' <<< "$props" || continue
+                  vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+                  [ -n "$vendor" ] && joystick_vendors="$joystick_vendors $vendor"
+                done
+              ''}
 
-              # Second pass: find real keyboards (exclude joystick vendors + model heuristics)
+              # Scan for real keyboards (exclude gamepads/controllers).
               has_keyboard=0
               for dev in /dev/input/event*; do
                 [ -e "$dev" ] || continue
                 props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
                 ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_KEYBOARD=1' <<< "$props" || continue
-
-                vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
-                for jv in $joystick_vendors; do
-                  [ "$vendor" = "$jv" ] && continue 2
-                done
-
-                model=$(${pkgs.gnugrep}/bin/grep '^ID_MODEL=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
-                case "$model" in
-                  *Controller*|*Gamepad*|*Joystick*|*Steam*Controller*) continue ;;
-                esac
-
+                ${lib.optionalString config.features.gaming.steamMachine.enable ''
+                  vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+                  for jv in $joystick_vendors; do
+                    [ "$vendor" = "$jv" ] && continue 2
+                  done
+                  model=$(${pkgs.gnugrep}/bin/grep '^ID_MODEL=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+                  case "$model" in
+                    *Controller*|*Gamepad*|*Joystick*|*Steam*Controller*) continue ;;
+                  esac
+                ''}
                 has_keyboard=1
                 break
               done
 
-              echo "sddm-kwin: has_keyboard=$has_keyboard joystick_vendors='$joystick_vendors'" >> /tmp/sddm-kwin.log
+              echo "sddm-kwin: has_keyboard=$has_keyboard" >> /tmp/sddm-kwin.log
+
+              kwinrc_dir=/var/lib/sddm/.config
+              mkdir -p "$kwinrc_dir"
+              osk_flag="$kwinrc_dir/osk-needed"
               if [ "$has_keyboard" -eq 0 ]; then
                 enable_keyboard=1
-                echo "sddm-kwin: enabling maliit-keyboard" >> /tmp/sddm-kwin.log
-
-                # KWin reads kwinrc at startup for virtual keyboard settings.
-                kwinrc_dir=/var/lib/sddm/.config
-                mkdir -p "$kwinrc_dir"
+                echo "sddm-kwin: no keyboard detected, enabling maliit-keyboard" >> /tmp/sddm-kwin.log
                 cat > "$kwinrc_dir"/kwinrc << 'EOF'
       [VirtualKeyboard]
       VirtualKeyboardEnabled=true
       VirtualKeyboardMode=2
       EOF
-                chown -R sddm:sddm "$kwinrc_dir"
+                touch "$osk_flag"
+              else
+                cat > "$kwinrc_dir"/kwinrc << 'EOF'
+      [VirtualKeyboard]
+      VirtualKeyboardEnabled=false
+      VirtualKeyboardMode=0
+      EOF
+                rm -f "$osk_flag"
               fi
-    ''}
+              chown -R sddm:sddm "$kwinrc_dir"
 
             # Start KWin as the Wayland compositor.
             # Maliit-keyboard connects to it as an external Wayland client
@@ -419,12 +429,51 @@ let
               echo "sddm-kwin: starting maliit-keyboard (WAYLAND_DISPLAY=$WAYLAND_DISPLAY)" >> /tmp/sddm-kwin.log
               ${lib.getExe' pkgs.maliit-keyboard "maliit-keyboard"} >> /tmp/maliit-keyboard.log 2>&1 &
               maliit_pid=$!
+
+              for attempt in $(${pkgs.coreutils}/bin/seq 1 100); do
+                if ${pkgs.dbus}/bin/dbus-send --session \
+                  --dest=org.freedesktop.DBus --type=method_call --print-reply \
+                  /org/freedesktop/DBus org.freedesktop.DBus.ListNames \
+                  2>/dev/null | ${pkgs.gnugrep}/bin/grep -q org.kde.KWin; then
+                  break
+                fi
+                ${pkgs.coreutils}/bin/sleep 0.1
+              done
+              ${pkgs.dbus}/bin/dbus-send --session \
+                --dest=org.kde.KWin --type=method_call --print-reply \
+                /VirtualKeyboard org.freedesktop.DBus.Properties.Set \
+                string:"org.kde.kwin.VirtualKeyboard" string:"mode" variant:int32:2 \
+                2>/dev/null || true
+              ${pkgs.dbus}/bin/dbus-send --session \
+                --dest=org.kde.KWin --type=method_call --print-reply \
+                /VirtualKeyboard org.kde.kwin.VirtualKeyboard.forceActivate \
+                2>/dev/null || true
             fi
 
-            wait $kwin_pid
+          wait $kwin_pid
   '';
 
   isKde = config.features.desktop.wm == "kde";
+
+  sddmInputWait = pkgs.writeShellScript "sddm-input-wait" ''
+    set -eu
+    ${pkgs.systemd}/bin/udevadm settle -t 30 || true
+    waited=0
+    while [ "$waited" -lt 60 ]; do
+      found=0
+      for dev in /dev/input/event*; do
+        [ -e "$dev" ] || continue
+        found=1
+        break
+      done
+      if [ "$found" -eq 1 ]; then
+        exit 0
+      fi
+      ${pkgs.coreutils}/bin/sleep 0.5
+      waited=$((waited + 1))
+    done
+    exit 0
+  '';
 in
 {
   config = lib.mkIf config.features.desktop.enable {
@@ -462,11 +511,22 @@ in
       };
     };
 
-    # SDDM uses kwin_wayland. Without EDID hashes, keep the configured layout
-    # when all configured connectors are present. If EDID hashes are configured,
-    # require all monitors to match exactly.
     systemd = {
+      tmpfiles.rules = [
+        "r /var/lib/sddm/.config/kwinoutputconfig.json - - - - -"
+        "r /var/lib/sddm/.config/osk-needed - - - - -"
+      ];
       services = {
+        sddm-input-wait = {
+          description = "Wait for input devices before SDDM starts";
+          before = [ "display-manager.service" ];
+          wantedBy = [ "display-manager.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = sddmInputWait;
+          };
+        };
+
         sddm-display-config = lib.mkIf shouldManageSddmLayout {
           description = "Configure SDDM monitor layout";
           before = [ "display-manager.service" ];
@@ -501,15 +561,8 @@ in
           };
         };
       };
-
-      tmpfiles.rules = [
-        "r /var/lib/sddm/.config/kwinoutputconfig.json - - - - -"
-      ];
     };
 
-    # The on-screen keyboard is provided by maliit-keyboard via the
-    # zwp_input_method_v1 Wayland protocol when sddmKwin detects no
-    # physical keyboard. The Catppuccin SDDM theme is used as-is.
     catppuccin.sddm = {
       enable = true;
       font = uiFont;
