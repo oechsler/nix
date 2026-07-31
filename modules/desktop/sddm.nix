@@ -344,30 +344,37 @@ let
     trap cleanup EXIT INT TERM
 
     while true; do
-      greeter_pid=$(${pkgs.procps}/bin/pgrep -u sddm -f '/sddm-greeter-qt6([[:space:]]|$)' | ${pkgs.coreutils}/bin/head -n 1 || true)
-      if [ -z "$greeter_pid" ]; then
+      bus_ready=0
+      for attempt in $(${pkgs.coreutils}/bin/seq 1 600); do
+        if [ -S "$XDG_RUNTIME_DIR/bus" ]; then
+          bus_ready=1
+          break
+        fi
         ${pkgs.coreutils}/bin/sleep 0.1
-        continue
-      fi
+      done
+      [ "$bus_ready" -eq 1 ] || { ${pkgs.coreutils}/bin/sleep 1; continue; }
 
       wayland_display=""
-      while kill -0 "$greeter_pid" 2>/dev/null && [ -z "$wayland_display" ]; do
-        if [ -r "/proc/$greeter_pid/environ" ]; then
-          wayland_display=$(
-            ${pkgs.coreutils}/bin/tr '\0' '\n' < "/proc/$greeter_pid/environ" |
-              ${pkgs.gnugrep}/bin/grep -m 1 '^WAYLAND_DISPLAY=' |
-              ${pkgs.coreutils}/bin/cut -d= -f2- || true
-          )
-        fi
-        [ -n "$wayland_display" ] || ${pkgs.coreutils}/bin/sleep 0.1
+      for attempt in $(${pkgs.coreutils}/bin/seq 1 300); do
+        for socket in "$XDG_RUNTIME_DIR"/wayland-*; do
+          [ -S "$socket" ] || continue
+          case "$socket" in *.lock) continue ;; esac
+          wayland_display=$(${pkgs.coreutils}/bin/basename "$socket")
+          ${pkgs.dbus}/bin/dbus-send --session --reply-timeout=500 \
+            --dest=org.freedesktop.DBus --type=method_call --print-reply \
+            /org/freedesktop/DBus org.freedesktop.DBus.ListNames \
+            2>/dev/null | ${pkgs.gnugrep}/bin/grep -q org.kde.KWin && break 2
+        done
+        wayland_display=""
+        ${pkgs.coreutils}/bin/sleep 0.2
       done
-      [ -n "$wayland_display" ] || continue
+      [ -n "$wayland_display" ] || { ${pkgs.coreutils}/bin/sleep 1; continue; }
 
       QT_QPA_PLATFORM=wayland WAYLAND_DISPLAY=$wayland_display ${lib.getExe' pkgs.maliit-keyboard "maliit-keyboard"} &
       maliit_pid=$!
       applied_state=-1
 
-      while kill -0 "$greeter_pid" 2>/dev/null; do
+      while [ -S "$XDG_RUNTIME_DIR/bus" ] && [ -S "$XDG_RUNTIME_DIR/$wayland_display" ]; do
         if ! kill -0 "$maliit_pid" 2>/dev/null; then
           wait "$maliit_pid" 2>/dev/null || true
           QT_QPA_PLATFORM=wayland WAYLAND_DISPLAY=$wayland_display ${lib.getExe' pkgs.maliit-keyboard "maliit-keyboard"} &
