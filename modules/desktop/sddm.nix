@@ -313,10 +313,6 @@ let
       fi
     }
 
-    greeter_ready() {
-      ${pkgs.procps}/bin/pgrep -u sddm -f '/sddm-greeter-qt6([[:space:]]|$)' >/dev/null 2>&1
-    }
-
     current_keyboard_state() {
       if physical_keyboard_present; then
         printf '%s\n' 0
@@ -325,46 +321,62 @@ let
       fi
     }
 
-    while ! greeter_ready; do
-      ${pkgs.coreutils}/bin/sleep 0.1
-    done
+    maliit_pid=""
 
-    initial_state=$(current_keyboard_state)
-    while ! set_virtual_keyboard "$initial_state"; do
-      ${pkgs.coreutils}/bin/sleep 0.1
-    done
-
-    run_maliit() {
-      while true; do
-        wayland_display=""
-        for socket in "$XDG_RUNTIME_DIR"/wayland-*; do
-          [ -S "$socket" ] || continue
-          case "$socket" in *.lock) continue ;; esac
-          wayland_display=$(${pkgs.coreutils}/bin/basename "$socket")
-          break
-        done
-        if [ -z "$wayland_display" ]; then
-          ${pkgs.coreutils}/bin/sleep 0.5
-          continue
-        fi
-        WAYLAND_DISPLAY=$wayland_display ${lib.getExe' pkgs.maliit-keyboard "maliit-keyboard"} &
-        maliit_pid=$!
-        wait "$maliit_pid" || true
-        ${pkgs.coreutils}/bin/sleep 0.5
-      done
+    stop_maliit() {
+      [ -z "$maliit_pid" ] || kill "$maliit_pid" 2>/dev/null || true
+      [ -z "$maliit_pid" ] || wait "$maliit_pid" 2>/dev/null || true
+      maliit_pid=""
     }
 
-    run_maliit &
-    maliit_supervisor_pid=$!
-    trap 'kill "$maliit_supervisor_pid" 2>/dev/null || true; wait "$maliit_supervisor_pid" 2>/dev/null || true' EXIT INT TERM
+    cleanup() {
+      trap - EXIT INT TERM
+      stop_maliit
+      exit 0
+    }
 
-    applied_state=$initial_state
+    trap cleanup EXIT INT TERM
+
     while true; do
-      current_state=$(current_keyboard_state)
-      if [ "$current_state" -ne "$applied_state" ] && set_virtual_keyboard "$current_state"; then
-        applied_state=$current_state
+      greeter_pid=$(${pkgs.procps}/bin/pgrep -u sddm -f '/sddm-greeter-qt6([[:space:]]|$)' | ${pkgs.coreutils}/bin/head -n 1 || true)
+      if [ -z "$greeter_pid" ]; then
+        ${pkgs.coreutils}/bin/sleep 0.1
+        continue
       fi
-      ${pkgs.coreutils}/bin/sleep 0.5
+
+      wayland_display=""
+      while kill -0 "$greeter_pid" 2>/dev/null && [ -z "$wayland_display" ]; do
+        if [ -r "/proc/$greeter_pid/environ" ]; then
+          wayland_display=$(
+            ${pkgs.coreutils}/bin/tr '\0' '\n' < "/proc/$greeter_pid/environ" |
+              ${pkgs.gnugrep}/bin/grep -m 1 '^WAYLAND_DISPLAY=' |
+              ${pkgs.coreutils}/bin/cut -d= -f2- || true
+          )
+        fi
+        [ -n "$wayland_display" ] || ${pkgs.coreutils}/bin/sleep 0.1
+      done
+      [ -n "$wayland_display" ] || continue
+
+      QT_QPA_PLATFORM=wayland WAYLAND_DISPLAY=$wayland_display ${lib.getExe' pkgs.maliit-keyboard "maliit-keyboard"} &
+      maliit_pid=$!
+      applied_state=-1
+
+      while kill -0 "$greeter_pid" 2>/dev/null; do
+        if ! kill -0 "$maliit_pid" 2>/dev/null; then
+          wait "$maliit_pid" 2>/dev/null || true
+          QT_QPA_PLATFORM=wayland WAYLAND_DISPLAY=$wayland_display ${lib.getExe' pkgs.maliit-keyboard "maliit-keyboard"} &
+          maliit_pid=$!
+          applied_state=-1
+          ${pkgs.coreutils}/bin/sleep 0.1
+        fi
+        current_state=$(current_keyboard_state)
+        if [ "$current_state" -ne "$applied_state" ] && set_virtual_keyboard "$current_state"; then
+          applied_state=$current_state
+        fi
+        ${pkgs.coreutils}/bin/sleep 0.5
+      done
+
+      stop_maliit
     done
   '';
 
