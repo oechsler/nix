@@ -55,6 +55,28 @@ let
     ColorScheme=${colorSchemeId}
   '';
 
+  catppuccinAccentColor =
+    {
+      rosewater = "f5e0dc";
+      flamingo = "f2cdcd";
+      pink = "f5c2e7";
+      mauve = "cba6f7";
+      red = "f38ba8";
+      maroon = "eba0ac";
+      peach = "fab387";
+      yellow = "f9e2af";
+      green = "a6e3a1";
+      teal = "94e2d5";
+      sky = "89dceb";
+      sapphire = "74c7ec";
+      blue = "89b4fa";
+      lavender = "b4befe";
+    }
+    .${config.theme.catppuccin.accent};
+
+  catppuccinMochaBackground = "1e1e2e";
+  catppuccinMochaForeground = "cdd6f4";
+
   deploySddmColors = pkgs.writeShellScript "deploy-sddm-colors" ''
     set -eu
     colors_src="$1"
@@ -265,6 +287,7 @@ let
     export GSETTINGS_BACKEND=keyfile
     export GSETTINGS_SCHEMA_DIR="${pkgs.maliit-keyboard}/share/gsettings-schemas/${pkgs.maliit-keyboard.name}/glib-2.0/schemas"
     export XDG_DATA_DIRS="${pkgs.kdePackages.breeze-icons}/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
+    export QT_QUICK_CONTROLS_STYLE=Material
 
     gsettings_dir="$XDG_CONFIG_HOME/glib-2.0/settings"
     mkdir -p "$gsettings_dir"
@@ -274,6 +297,22 @@ let
       "enabled-languages=['${config.locale.keyboard}','en']" \
       "theme='breeze'" \
       > "$gsettings_dir/keyfile"
+
+    qtquick_dir="$XDG_CONFIG_HOME/QtProject"
+    mkdir -p "$qtquick_dir"
+    printf '%s\n' \
+      '[Controls]' \
+      'Style=Material' \
+      ' ' \
+      '[Material]' \
+      'Theme=Dark' \
+      'Variant=Dense' \
+      'Background=#${catppuccinMochaBackground}' \
+      'Foreground=#${catppuccinMochaForeground}' \
+      'Primary=#${catppuccinAccentColor}' \
+      'Accent=#${catppuccinAccentColor}' \
+      > "$qtquick_dir/qtquickcontrols2.conf"
+    export QT_QUICK_CONTROLS_CONF="$qtquick_dir/qtquickcontrols2.conf"
 
     physical_keyboard_present() {
       for event in /sys/class/input/event*; do
