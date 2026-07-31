@@ -128,7 +128,8 @@ in
         extraGroups = [
           "networkmanager" # Manage network connections
           "wheel" # Sudo access
-        ] ++ lib.optionals (config.features.hardware.formFactor != "server") [ "i2c" ];
+        ]
+        ++ lib.optionals (config.features.hardware.formFactor != "server") [ "i2c" ];
 
         shell = pkgs.fish;
         inherit (cfg) hashedPassword;
