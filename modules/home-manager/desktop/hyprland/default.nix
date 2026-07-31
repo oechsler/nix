@@ -36,7 +36,6 @@
 #   Super+C          - Clipboard manager
 #   Super+R          - Rofi toggle
 #   Super+W          - Window list
-#   Super+B          - Power profile switcher
 
 {
   config,
@@ -493,7 +492,6 @@ in
           "SHIFT, Print, exec, hyprshot -m region --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
           "$mainMod SHIFT, Print, exec, hyprshot -m window --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
           "$mainMod, C, exec, ${config.rofi.clipboard}"
-          "$mainMod, B, exec, ${config.rofi.powerProfile}"
           "$mainMod SHIFT, R, exec, ${config.waybar.reload}"
 
           "$mainMod, H, movefocus, l"
@@ -548,6 +546,8 @@ in
           ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
           ", XF86MonBrightnessUp, exec, ${displayBrightness} up && ${brightnessNotify}"
           ", XF86MonBrightnessDown, exec, ${displayBrightness} down && ${brightnessNotify}"
+          "$mainMod, F5, exec, ${displayBrightness} down && ${brightnessNotify}"
+          "$mainMod, F6, exec, ${displayBrightness} up && ${brightnessNotify}"
         ];
 
         bindl = [
