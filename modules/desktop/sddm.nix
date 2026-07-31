@@ -350,18 +350,18 @@ let
               if [ "$has_keyboard" -eq 0 ]; then
                 enable_keyboard=1
                 echo "sddm-kwin: no keyboard detected, enabling maliit-keyboard" >> /tmp/sddm-kwin.log
-                cat > "$kwinrc_dir"/kwinrc << 'EOF'
-      [VirtualKeyboard]
-      VirtualKeyboardEnabled=true
-      VirtualKeyboardMode=2
-      EOF
+                printf '%s\n' \
+                  '[VirtualKeyboard]' \
+                  'VirtualKeyboardEnabled=true' \
+                  'VirtualKeyboardMode=2' \
+                  > "$kwinrc_dir/kwinrc"
                 touch "$osk_flag"
               else
-                cat > "$kwinrc_dir"/kwinrc << 'EOF'
-      [VirtualKeyboard]
-      VirtualKeyboardEnabled=false
-      VirtualKeyboardMode=0
-      EOF
+                printf '%s\n' \
+                  '[VirtualKeyboard]' \
+                  'VirtualKeyboardEnabled=false' \
+                  'VirtualKeyboardMode=0' \
+                  > "$kwinrc_dir/kwinrc"
                 rm -f "$osk_flag"
               fi
               chown -R sddm:sddm "$kwinrc_dir"
