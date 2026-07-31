@@ -324,8 +324,14 @@ let
     maliit_pid=""
 
     stop_maliit() {
-      [ -z "$maliit_pid" ] || kill "$maliit_pid" 2>/dev/null || true
-      [ -z "$maliit_pid" ] || wait "$maliit_pid" 2>/dev/null || true
+      [ -z "$maliit_pid" ] && return
+      kill "$maliit_pid" 2>/dev/null || true
+      for _ in $(${pkgs.coreutils}/bin/seq 1 10); do
+        kill -0 "$maliit_pid" 2>/dev/null || break
+        ${pkgs.coreutils}/bin/sleep 0.1
+      done
+      kill -KILL "$maliit_pid" 2>/dev/null || true
+      wait "$maliit_pid" 2>/dev/null || true
       maliit_pid=""
     }
 
@@ -453,6 +459,7 @@ in
             Type = "simple";
             User = "sddm";
             ExecStart = sddmOsk;
+            TimeoutStopSec = 3;
             Restart = "always";
             RestartSec = 1;
           };
