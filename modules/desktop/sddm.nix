@@ -55,27 +55,14 @@ let
     ColorScheme=${colorSchemeId}
   '';
 
+  catppuccinFlavorColors =
+    (lib.importJSON "${config.catppuccin.sources.palette}/palette.json")
+    .${config.theme.catppuccin.flavor}.colors;
+  catppuccinSurface0 = lib.removePrefix "#" catppuccinFlavorColors.surface0.hex;
+  catppuccinText = lib.removePrefix "#" catppuccinFlavorColors.text.hex;
   catppuccinAccentColor =
-    {
-      rosewater = "f5e0dc";
-      flamingo = "f2cdcd";
-      pink = "f5c2e7";
-      mauve = "cba6f7";
-      red = "f38ba8";
-      maroon = "eba0ac";
-      peach = "fab387";
-      yellow = "f9e2af";
-      green = "a6e3a1";
-      teal = "94e2d5";
-      sky = "89dceb";
-      sapphire = "74c7ec";
-      blue = "89b4fa";
-      lavender = "b4befe";
-    }
-    .${config.theme.catppuccin.accent};
-
-  catppuccinMochaBackground = "1e1e2e";
-  catppuccinMochaForeground = "cdd6f4";
+    lib.removePrefix "#"
+      catppuccinFlavorColors.${config.theme.catppuccin.accent}.hex;
 
   deploySddmColors = pkgs.writeShellScript "deploy-sddm-colors" ''
     set -eu
@@ -307,8 +294,8 @@ let
       '[Material]' \
       'Theme=Dark' \
       'Variant=Dense' \
-      'Background=#${catppuccinMochaBackground}' \
-      'Foreground=#${catppuccinMochaForeground}' \
+      'Background=#${catppuccinSurface0}' \
+      'Foreground=#${catppuccinText}' \
       'Primary=#${catppuccinAccentColor}' \
       'Accent=#${catppuccinAccentColor}' \
       > "$qtquick_dir/qtquickcontrols2.conf"
