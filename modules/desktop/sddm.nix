@@ -58,11 +58,25 @@ let
   catppuccinFlavorColors =
     (lib.importJSON "${config.catppuccin.sources.palette}/palette.json")
     .${config.theme.catppuccin.flavor}.colors;
+  catppuccinBase = lib.removePrefix "#" catppuccinFlavorColors.base.hex;
   catppuccinSurface0 = lib.removePrefix "#" catppuccinFlavorColors.surface0.hex;
+  catppuccinSurface1 = lib.removePrefix "#" catppuccinFlavorColors.surface1.hex;
   catppuccinText = lib.removePrefix "#" catppuccinFlavorColors.text.hex;
   catppuccinAccentColor =
     lib.removePrefix "#"
       catppuccinFlavorColors.${config.theme.catppuccin.accent}.hex;
+
+  sddmMaliitKeyboard = pkgs.maliit-keyboard.overrideAttrs (oldAttrs: {
+    postInstall = (oldAttrs.postInstall or "") + ''
+      substituteInPlace "$out/lib/maliit/keyboard2/qml/keys/CharKey.qml" \
+        --replace-fail '            hoverEnabled: false' '            hoverEnabled: false
+
+            background: Rectangle {
+                color: keyButton.down ? "#${catppuccinSurface1}" : "#${catppuccinSurface0}"
+                radius: ${toString config.theme.radius.small}
+            }'
+    '';
+  });
 
   deploySddmColors = pkgs.writeShellScript "deploy-sddm-colors" ''
     set -eu
@@ -272,7 +286,7 @@ let
     export XDG_RUNTIME_DIR=/run/user/$(${pkgs.coreutils}/bin/id -u sddm)
     export DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus
     export GSETTINGS_BACKEND=keyfile
-    export GSETTINGS_SCHEMA_DIR="${pkgs.maliit-keyboard}/share/gsettings-schemas/${pkgs.maliit-keyboard.name}/glib-2.0/schemas"
+    export GSETTINGS_SCHEMA_DIR="${sddmMaliitKeyboard}/share/gsettings-schemas/${sddmMaliitKeyboard.name}/glib-2.0/schemas"
     export XDG_DATA_DIRS="${pkgs.kdePackages.breeze-icons}/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
     export QT_QUICK_CONTROLS_STYLE=Material
 
@@ -294,7 +308,7 @@ let
       '[Material]' \
       'Theme=Dark' \
       'Variant=Dense' \
-      'Background=#${catppuccinSurface0}' \
+      'Background=#${catppuccinBase}' \
       'Foreground=#${catppuccinText}' \
       'Primary=#${catppuccinAccentColor}' \
       'Accent=#${catppuccinAccentColor}' \
@@ -396,14 +410,14 @@ let
       done
       [ -n "$wayland_display" ] || { ${pkgs.coreutils}/bin/sleep 1; continue; }
 
-      QT_QPA_PLATFORM=wayland WAYLAND_DISPLAY=$wayland_display ${lib.getExe' pkgs.maliit-keyboard "maliit-keyboard"} &
+      QT_QPA_PLATFORM=wayland WAYLAND_DISPLAY=$wayland_display ${lib.getExe' sddmMaliitKeyboard "maliit-keyboard"} &
       maliit_pid=$!
       applied_state=-1
 
       while [ -S "$XDG_RUNTIME_DIR/bus" ] && [ -S "$XDG_RUNTIME_DIR/$wayland_display" ]; do
         if ! kill -0 "$maliit_pid" 2>/dev/null; then
           wait "$maliit_pid" 2>/dev/null || true
-          QT_QPA_PLATFORM=wayland WAYLAND_DISPLAY=$wayland_display ${lib.getExe' pkgs.maliit-keyboard "maliit-keyboard"} &
+          QT_QPA_PLATFORM=wayland WAYLAND_DISPLAY=$wayland_display ${lib.getExe' sddmMaliitKeyboard "maliit-keyboard"} &
           maliit_pid=$!
           applied_state=-1
           ${pkgs.coreutils}/bin/sleep 0.1
