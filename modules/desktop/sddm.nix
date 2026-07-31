@@ -10,7 +10,7 @@
 # - Cursor theme and size (scaled for HiDPI)
 # - Login mode (features.desktop.login: "greeter" shows login, "autologin" skips it)
 # - Dynamic on-screen keyboard: maliit-keyboard via zwp_input_method_v1 protocol
-#   when no physical keyboard is detected at boot
+#   when no physical keyboard is connected
 #
 # Why SDDM:
 # - Native Wayland support
@@ -269,211 +269,155 @@ let
       ${pkgs.kdePackages.libkscreen}/bin/kscreen-doctor ${sddmKscreenArgs} && break
     done
 
-    if [ -e /var/lib/sddm/.config/osk-needed ]; then
-      ${pkgs.dbus}/bin/dbus-send --session \
-        --dest=org.kde.KWin --type=method_call --print-reply \
-        /VirtualKeyboard org.freedesktop.DBus.Properties.Set \
-        string:"org.kde.kwin.VirtualKeyboard" string:"mode" variant:int32:2
-      ${pkgs.dbus}/bin/dbus-send --session \
-        --dest=org.kde.KWin --type=method_call --print-reply \
-        /VirtualKeyboard org.kde.kwin.VirtualKeyboard.forceActivate
-    fi
-
     echo "apply-sddm-display-config: done" >&2
   '';
 
   sddmThemeName = "catppuccin-${config.catppuccin.sddm.flavor}-${config.catppuccin.sddm.accent}";
 
   sddmKwin = pkgs.writeShellScript "sddm-kwin" ''
-            set -eu
+    set -eu
 
-            export HOME=/var/lib/sddm
-            export XDG_CONFIG_HOME=/var/lib/sddm/.config
-            export XDG_DATA_HOME=/var/lib/sddm/.local/share
-            export XDG_CURRENT_DESKTOP=KDE
-            export KDE_FULL_SESSION=true
+    export HOME=/var/lib/sddm
+    export XDG_CONFIG_HOME=/var/lib/sddm/.config
+    export XDG_DATA_HOME=/var/lib/sddm/.local/share
+    export XDG_CURRENT_DESKTOP=KDE
+    export KDE_FULL_SESSION=true
+    export WAYLAND_DISPLAY="''${WAYLAND_DISPLAY:-wayland-0}"
+    export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(${pkgs.coreutils}/bin/id -u)}"
 
-            enable_keyboard=0
-            kwin_pid=""
-            maliit_pid=""
+    kwin_pid=""
+    maliit_pid=""
+    monitor_pid=""
 
-            cleanup() {
-                kill "$kwin_pid" 2>/dev/null || true
-                kill "$maliit_pid" 2>/dev/null || true
-                exit 1
-            }
-            trap cleanup INT TERM
+    cleanup() {
+      status=$?
+      trap - EXIT INT TERM
+      [ -z "$monitor_pid" ] || kill "$monitor_pid" 2>/dev/null || true
+      [ -z "$maliit_pid" ] || kill "$maliit_pid" 2>/dev/null || true
+      [ -z "$kwin_pid" ] || kill "$kwin_pid" 2>/dev/null || true
+      exit "$status"
+    }
+    trap cleanup EXIT INT TERM
 
-              # Detect whether a physical keyboard is present.
-              # This runs on every greeter appearance (KWin restarts on
-              # each logout → fresh detection every time the login screen shows).
-              joystick_vendors=""
-              ${lib.optionalString config.features.gaming.steamMachine.enable ''
-                # Steam Controller in Lizard Mode exposes TWO evdev devices:
-                # a keyboard half (ID_INPUT_KEYBOARD=1) and a gamepad half.
-                # Collect vendor IDs of joystick devices so we can exclude
-                # their keyboard halves from the real-keyboard check.
-                for dev in /dev/input/event*; do
-                  [ -e "$dev" ] || continue
-                  props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
-                  ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_JOYSTICK=1' <<< "$props" || continue
-                  vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
-                  [ -n "$vendor" ] && joystick_vendors="$joystick_vendors $vendor"
-                done
-              ''}
+    physical_keyboard_present() {
+      for event in /sys/class/input/event*; do
+        [ -r "$event/dev" ] || continue
+        device_number=$(<"$event/dev")
+        properties="/run/udev/data/c$device_number"
+        [ -r "$properties" ] || continue
+        ${pkgs.gnugrep}/bin/grep -qx 'E:ID_INPUT_KEYBOARD=1' "$properties" || continue
+        model=$(${pkgs.gnugrep}/bin/grep -m1 '^E:ID_MODEL=' "$properties" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+        case "$model" in
+          *Controller* | *Gamepad* | *Joystick* | *YubiKey*) continue ;;
+        esac
+        return 0
+      done
+      return 1
+    }
 
-              # Scan for real keyboards (exclude gamepads/controllers).
-              has_keyboard=0
-              for dev in /dev/input/event*; do
-                [ -e "$dev" ] || continue
-                props=$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null) || continue
-                ${pkgs.gnugrep}/bin/grep -qx 'ID_INPUT_KEYBOARD=1' <<< "$props" || continue
-                ${lib.optionalString config.features.gaming.steamMachine.enable ''
-                  vendor=$(${pkgs.gnugrep}/bin/grep '^ID_VENDOR_ID=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
-                  for jv in $joystick_vendors; do
-                    [ "$vendor" = "$jv" ] && continue 2
-                  done
-                  model=$(${pkgs.gnugrep}/bin/grep '^ID_MODEL=' <<< "$props" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
-                  case "$model" in
-                    *Controller*|*Gamepad*|*Joystick*|*Steam*Controller*) continue ;;
-                  esac
-                ''}
-                has_keyboard=1
-                break
-              done
+    set_virtual_keyboard() {
+      has_keyboard=$1
+      if [ "$has_keyboard" -eq 1 ]; then
+        ${pkgs.dbus}/bin/dbus-send --session \
+          --dest=org.kde.KWin --type=method_call --print-reply \
+          /VirtualKeyboard org.freedesktop.DBus.Properties.Set \
+          string:"org.kde.kwin.VirtualKeyboard" string:"active" variant:boolean:false \
+          >/dev/null 2>&1 || return 1
+        ${pkgs.dbus}/bin/dbus-send --session \
+          --dest=org.kde.KWin --type=method_call --print-reply \
+          /VirtualKeyboard org.freedesktop.DBus.Properties.Set \
+          string:"org.kde.kwin.VirtualKeyboard" string:"mode" variant:int32:0 \
+          >/dev/null 2>&1 || return 1
+        echo "sddm-kwin: physical keyboard connected, OSK disabled" >> /tmp/sddm-kwin.log
+      else
+        ${pkgs.dbus}/bin/dbus-send --session \
+          --dest=org.kde.KWin --type=method_call --print-reply \
+          /VirtualKeyboard org.freedesktop.DBus.Properties.Set \
+          string:"org.kde.kwin.VirtualKeyboard" string:"mode" variant:int32:2 \
+          >/dev/null 2>&1 || return 1
+        ${pkgs.dbus}/bin/dbus-send --session \
+          --dest=org.kde.KWin --type=method_call --print-reply \
+          /VirtualKeyboard org.kde.kwin.VirtualKeyboard.forceActivate \
+          >/dev/null 2>&1 || return 1
+        echo "sddm-kwin: no physical keyboard, OSK enabled" >> /tmp/sddm-kwin.log
+      fi
+    }
 
-              echo "sddm-kwin: has_keyboard=$has_keyboard" >> /tmp/sddm-kwin.log
+    monitor_keyboards() {
+      applied_state=-1
+      while kill -0 "$kwin_pid" 2>/dev/null; do
+        if physical_keyboard_present; then
+          current_state=1
+        else
+          current_state=0
+        fi
+        if [ "$current_state" -ne "$applied_state" ] && set_virtual_keyboard "$current_state"; then
+          applied_state=$current_state
+        fi
+        ${pkgs.coreutils}/bin/sleep 0.5
+      done
+    }
 
-              kwinrc_dir=/var/lib/sddm/.config
-              mkdir -p "$kwinrc_dir"
-              osk_flag="$kwinrc_dir/osk-needed"
-              if [ "$has_keyboard" -eq 0 ]; then
-                enable_keyboard=1
-                echo "sddm-kwin: no keyboard detected, enabling maliit-keyboard" >> /tmp/sddm-kwin.log
-                printf '%s\n' \
-                  '[VirtualKeyboard]' \
-                  'VirtualKeyboardEnabled=true' \
-                  'VirtualKeyboardMode=2' \
-                  > "$kwinrc_dir/kwinrc"
-                touch "$osk_flag"
-              else
-                printf '%s\n' \
-                  '[VirtualKeyboard]' \
-                  'VirtualKeyboardEnabled=false' \
-                  'VirtualKeyboardMode=0' \
-                  > "$kwinrc_dir/kwinrc"
-                rm -f "$osk_flag"
-              fi
-              chown -R sddm:sddm "$kwinrc_dir"
+    mkdir -p "$XDG_CONFIG_HOME"
+    printf '%s\n' \
+      '[VirtualKeyboard]' \
+      'VirtualKeyboardEnabled=true' \
+      'VirtualKeyboardMode=0' \
+      > "$XDG_CONFIG_HOME/kwinrc"
 
-            # Start KWin as the Wayland compositor.
-            # Maliit-keyboard connects to it as an external Wayland client
-            # via the zwp_input_method_v1 protocol.
-            echo "sddm-kwin: starting kwin_wayland" >> /tmp/sddm-kwin.log
-            ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
-              --no-global-shortcuts \
-              --no-kactivities \
-              --locale1 \
-              >> /tmp/kwin_wayland.log 2>&1 &
-            kwin_pid=$!
+    export GSETTINGS_BACKEND=keyfile
+    export GSETTINGS_SCHEMA_DIR="${maliitGsettingsSchemaDir}"
+    gsettings_dir="$XDG_CONFIG_HOME/glib-2.0/settings"
+    mkdir -p "$gsettings_dir"
+    printf '%s\n' \
+      '[org/maliit/keyboard/maliit]' \
+      "active-language='${config.locale.keyboard}'" \
+      "enabled-languages=['${config.locale.keyboard}','en']" \
+      "theme='breeze'" \
+      > "$gsettings_dir/keyfile"
 
-            if [ "$enable_keyboard" -eq 1 ]; then
-              export WAYLAND_DISPLAY="''${WAYLAND_DISPLAY:-wayland-0}"
-              export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+    export XDG_DATA_DIRS="${pkgs.kdePackages.breeze-icons}/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
+    export QT_QUICK_CONTROLS_STYLE=Material
+    qtquick_dir="$XDG_CONFIG_HOME/QtProject"
+    mkdir -p "$qtquick_dir"
+    printf '%s\n' \
+      '[Controls]' \
+      'Style=Material' \
+      ' ' \
+      '[Material]' \
+      'Theme=Dark' \
+      'Variant=Dense' \
+      'Background=#${catppuccinMochaBackground}' \
+      'Foreground=#${catppuccinMochaForeground}' \
+      'Primary=#${catppuccinAccentColor}' \
+      'Accent=#${catppuccinAccentColor}' \
+      > "$qtquick_dir/qtquickcontrols2.conf"
+    export QT_QUICK_CONTROLS_CONF="$qtquick_dir/qtquickcontrols2.conf"
 
-              # Wait for KWin to create the Wayland socket.
-              for i in $(seq 1 50); do
-                if [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]; then
-                  echo "sddm-kwin: Wayland socket ready after $i attempts" >> /tmp/sddm-kwin.log
-                  break
-                fi
-                sleep 0.05
-              done
+    echo "sddm-kwin: starting kwin_wayland" >> /tmp/sddm-kwin.log
+    ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
+      --no-global-shortcuts \
+      --no-kactivities \
+      --locale1 \
+      >> /tmp/kwin_wayland.log 2>&1 &
+    kwin_pid=$!
 
-              # GSettings keyfile backend for maliit-keyboard layout.
-              # Maliit reads active-language and enabled-languages from
-              # org.maliit.keyboard.maliit GSettings schema at startup.
-              export GSETTINGS_BACKEND=keyfile
-              export GSETTINGS_SCHEMA_DIR="${maliitGsettingsSchemaDir}"
+    for attempt in $(${pkgs.coreutils}/bin/seq 1 100); do
+      [ -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ] && break
+      ${pkgs.coreutils}/bin/sleep 0.05
+    done
 
-              gsettings_dir="$HOME/.config/glib-2.0/settings"
-              mkdir -p "$gsettings_dir"
-              cat > "$gsettings_dir/keyfile" << 'EOF'
-    [org/maliit/keyboard/maliit]
-    active-language='${config.locale.keyboard}'
-    enabled-languages=['${config.locale.keyboard}','en']
-    theme='breeze'
-    EOF
+    echo "sddm-kwin: starting maliit-keyboard (WAYLAND_DISPLAY=$WAYLAND_DISPLAY)" >> /tmp/sddm-kwin.log
+    ${lib.getExe' pkgs.maliit-keyboard "maliit-keyboard"} >> /tmp/maliit-keyboard.log 2>&1 &
+    maliit_pid=$!
 
-              # Breeze icons for special keys (shift, backspace, return etc.)
-              export XDG_DATA_DIRS="${pkgs.kdePackages.breeze-icons}/share''${XDG_DATA_DIRS:+:$XDG_DATA_DIRS}"
+    monitor_keyboards &
+    monitor_pid=$!
 
-              # QQC2 Material Dark theme with Catppuccin colors for maliit-keyboard.
-              export QT_QUICK_CONTROLS_STYLE=Material
-              qtquick_dir="$HOME/.config/QtProject"
-              mkdir -p "$qtquick_dir"
-              cat > "$qtquick_dir/qtquickcontrols2.conf" << 'EOF'
-    [Controls]
-    Style=Material
-
-    [Material]
-    Theme=Dark
-    Variant=Dense
-    Background=#${catppuccinMochaBackground}
-    Foreground=#${catppuccinMochaForeground}
-    Primary=#${catppuccinAccentColor}
-    Accent=#${catppuccinAccentColor}
-    EOF
-              export QT_QUICK_CONTROLS_CONF="$qtquick_dir/qtquickcontrols2.conf"
-
-              echo "sddm-kwin: starting maliit-keyboard (WAYLAND_DISPLAY=$WAYLAND_DISPLAY)" >> /tmp/sddm-kwin.log
-              ${lib.getExe' pkgs.maliit-keyboard "maliit-keyboard"} >> /tmp/maliit-keyboard.log 2>&1 &
-              maliit_pid=$!
-
-              for attempt in $(${pkgs.coreutils}/bin/seq 1 100); do
-                if ${pkgs.dbus}/bin/dbus-send --session \
-                  --dest=org.freedesktop.DBus --type=method_call --print-reply \
-                  /org/freedesktop/DBus org.freedesktop.DBus.ListNames \
-                  2>/dev/null | ${pkgs.gnugrep}/bin/grep -q org.kde.KWin; then
-                  break
-                fi
-                ${pkgs.coreutils}/bin/sleep 0.1
-              done
-              ${pkgs.dbus}/bin/dbus-send --session \
-                --dest=org.kde.KWin --type=method_call --print-reply \
-                /VirtualKeyboard org.freedesktop.DBus.Properties.Set \
-                string:"org.kde.kwin.VirtualKeyboard" string:"mode" variant:int32:2 \
-                2>/dev/null || true
-              ${pkgs.dbus}/bin/dbus-send --session \
-                --dest=org.kde.KWin --type=method_call --print-reply \
-                /VirtualKeyboard org.kde.kwin.VirtualKeyboard.forceActivate \
-                2>/dev/null || true
-            fi
-
-          wait $kwin_pid
+    wait "$kwin_pid"
   '';
 
   isKde = config.features.desktop.wm == "kde";
-
-  sddmInputWait = pkgs.writeShellScript "sddm-input-wait" ''
-    set -eu
-    ${pkgs.systemd}/bin/udevadm settle -t 30 || true
-    waited=0
-    while [ "$waited" -lt 60 ]; do
-      found=0
-      for dev in /dev/input/event*; do
-        [ -e "$dev" ] || continue
-        found=1
-        break
-      done
-      if [ "$found" -eq 1 ]; then
-        exit 0
-      fi
-      ${pkgs.coreutils}/bin/sleep 0.5
-      waited=$((waited + 1))
-    done
-    exit 0
-  '';
 in
 {
   config = lib.mkIf config.features.desktop.enable {
@@ -514,19 +458,8 @@ in
     systemd = {
       tmpfiles.rules = [
         "r /var/lib/sddm/.config/kwinoutputconfig.json - - - - -"
-        "r /var/lib/sddm/.config/osk-needed - - - - -"
       ];
       services = {
-        sddm-input-wait = {
-          description = "Wait for input devices before SDDM starts";
-          before = [ "display-manager.service" ];
-          wantedBy = [ "display-manager.service" ];
-          serviceConfig = {
-            Type = "oneshot";
-            ExecStart = sddmInputWait;
-          };
-        };
-
         sddm-display-config = lib.mkIf shouldManageSddmLayout {
           description = "Configure SDDM monitor layout";
           before = [ "display-manager.service" ];
