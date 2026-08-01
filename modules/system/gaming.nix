@@ -51,6 +51,8 @@ let
     STEAM_GAMESCOPE_FANCY_SCALING_SUPPORT = "1";
     STEAM_GAMESCOPE_VIRTUAL_WHITE = "1";
     STEAM_DISABLE_MANGOAPP_ATOM_WORKAROUND = "1";
+    STEAM_GAMESCOPE_SCOPE = "1";
+    STEAM_USE_DYNAMIC_VRS = "1";
   }
   // lib.optionalAttrs steamMachineVrr {
     STEAM_GAMESCOPE_DYNAMIC_REFRESH_IN_STEAM_SUPPORTED = "1";
@@ -59,6 +61,28 @@ let
   // lib.optionalAttrs hasHdrDisplay {
     STEAM_GAMESCOPE_HDR_SUPPORTED = "1";
   };
+
+  terminateSteamGamescope = pkgs.writeShellScript "terminate-steam-gamescope" ''
+    set -eu
+
+    pid_file="''${XDG_RUNTIME_DIR:-/tmp}/steam-gamescope-pid"
+    [ -r "$pid_file" ] || exit 0
+    read -r session_pid < "$pid_file" || exit 0
+    kill -0 "$session_pid" 2>/dev/null || exit 0
+
+    ${pkgs.procps}/bin/pkill -TERM -P "$session_pid" 2>/dev/null || true
+    kill -TERM "$session_pid" 2>/dev/null || true
+    ${pkgs.coreutils}/bin/sleep 5
+
+    ${pkgs.procps}/bin/pkill -TERM -x gamescope 2>/dev/null || true
+    ${pkgs.procps}/bin/pkill -TERM -x steam 2>/dev/null || true
+    ${pkgs.procps}/bin/pkill -TERM -x steamwebhelper 2>/dev/null || true
+    ${pkgs.coreutils}/bin/sleep 2
+
+    ${pkgs.procps}/bin/pkill -KILL -x gamescope 2>/dev/null || true
+    ${pkgs.procps}/bin/pkill -KILL -x steam 2>/dev/null || true
+    ${pkgs.procps}/bin/pkill -KILL -x steamwebhelper 2>/dev/null || true
+  '';
 
   sessionSelect = pkgs.writeShellScriptBin "steamos-session-select" ''
     set -eu
@@ -76,8 +100,7 @@ let
     mkdir -p "$(${pkgs.coreutils}/bin/dirname "$exit_file")"
     : > "$exit_file"
 
-    ${pkgs.systemd}/bin/systemd-run --user --collect --on-active=1s \
-      ${pkgs.runtimeShell} -c '${pkgs.procps}/bin/pkill -TERM -x steam || true; ${pkgs.procps}/bin/pkill -TERM -x steamwebhelper || true; sleep 5; ${pkgs.procps}/bin/pkill -TERM -x gamescope || true' >/dev/null
+    ${terminateSteamGamescope} >/dev/null
   '';
 
   steamosctl = pkgs.writeShellScriptBin "steamosctl" ''
@@ -167,6 +190,8 @@ let
         export GAMESCOPE_PATCHED_EDID_FILE="''${XDG_CONFIG_HOME:-$HOME/.config}/gamescope/edid.bin"
         export GAMESCOPE_LIMITER_FILE="$session_dir/limiter"
         export GAMESCOPE_STATS="$stats_pipe"
+        echo $$ > "$XDG_RUNTIME_DIR/steam-gamescope-pid"
+
         export ENABLE_GAMESCOPE_WSI=1
         export STEAM_MANGOAPP_PRESETS_SUPPORTED=1
         export STEAM_USE_MANGOAPP=1
@@ -188,9 +213,18 @@ let
           [ -n "''${mangoapp_pid:-}" ] && kill "$mangoapp_pid" 2>/dev/null || true
           rm -f "$exit_file"
           rm -f "$XDG_RUNTIME_DIR/gamescope-stats"
+          rm -f "$XDG_RUNTIME_DIR/steam-gamescope-pid"
           rm -rf "$session_dir"
+          ${pkgs.systemd}/bin/systemctl --user unmask steam.service --runtime 2>/dev/null || true
         }
         trap cleanup EXIT HUP INT TERM
+
+        ${pkgs.systemd}/bin/systemctl --user stop steam.service 2>/dev/null || true
+        ${pkgs.systemd}/bin/systemctl --user mask steam.service --runtime 2>/dev/null || true
+
+        ${pkgs.procps}/bin/pkill -x steam 2>/dev/null || true
+        ${pkgs.procps}/bin/pkill -x steamwebhelper 2>/dev/null || true
+        ${pkgs.coreutils}/bin/sleep 2
 
         gamescope_bin=/run/wrappers/bin/gamescope
         [ -x "$gamescope_bin" ] || gamescope_bin=${pkgs.gamescope}/bin/gamescope
