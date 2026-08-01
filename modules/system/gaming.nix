@@ -23,10 +23,6 @@ let
   cfg = config.features.gaming;
   steamMachineCfg = cfg.steamMachine;
 
-  gamescopePackage = pkgs.gamescope;
-  gamescopeWsiPackage = pkgs.gamescope-wsi;
-  gamescopeWsi32Package = pkgs.pkgsi686Linux.gamescope-wsi;
-
   desktopSession = if config.features.desktop.wm == "kde" then "plasma" else "hyprland-uwsm";
 
   # Desktop compositors distinguish vrr=1 (always) from vrr=2 (fullscreen/automatic).
@@ -45,8 +41,6 @@ let
     STEAM_ALLOW_DRIVE_UNMOUNT = "1";
     STEAM_ENABLE_VOLUME_HANDLER = "1";
     STEAM_GAMESCOPE_DYNAMIC_FPSLIMITER = "1";
-    STEAM_GAMESCOPE_SCOPE = "1";
-    STEAM_USE_DYNAMIC_VRS = "1";
     SRT_URLOPEN_PREFER_STEAM = "1";
     STEAM_DISABLE_AUDIO_DEVICE_SWITCHING = "1";
     STEAM_MULTIPLE_XWAYLANDS = "1";
@@ -66,28 +60,6 @@ let
     STEAM_GAMESCOPE_HDR_SUPPORTED = "1";
   };
 
-  terminateSteamGamescope = pkgs.writeShellScript "terminate-steam-gamescope" ''
-    set -eu
-
-    pid_file="''${XDG_RUNTIME_DIR:-/tmp}/steam-gamescope-pid"
-    [ -r "$pid_file" ] || exit 0
-    read -r session_pid < "$pid_file" || exit 0
-    kill -0 "$session_pid" 2>/dev/null || exit 0
-
-    ${pkgs.procps}/bin/pkill -TERM -P "$session_pid" 2>/dev/null || true
-    kill -TERM "$session_pid" 2>/dev/null || true
-    ${pkgs.coreutils}/bin/sleep 5
-
-    ${pkgs.procps}/bin/pkill -TERM -x gamescope 2>/dev/null || true
-    ${pkgs.procps}/bin/pkill -TERM -x steam 2>/dev/null || true
-    ${pkgs.procps}/bin/pkill -TERM -x steamwebhelper 2>/dev/null || true
-    ${pkgs.coreutils}/bin/sleep 2
-
-    ${pkgs.procps}/bin/pkill -KILL -x gamescope 2>/dev/null || true
-    ${pkgs.procps}/bin/pkill -KILL -x steam 2>/dev/null || true
-    ${pkgs.procps}/bin/pkill -KILL -x steamwebhelper 2>/dev/null || true
-  '';
-
   sessionSelect = pkgs.writeShellScriptBin "steamos-session-select" ''
     set -eu
 
@@ -104,7 +76,8 @@ let
     mkdir -p "$(${pkgs.coreutils}/bin/dirname "$exit_file")"
     : > "$exit_file"
 
-    ${terminateSteamGamescope} >/dev/null
+    ${pkgs.systemd}/bin/systemd-run --user --collect --on-active=1s \
+      ${pkgs.runtimeShell} -c '${pkgs.procps}/bin/pkill -TERM -x steam || true; ${pkgs.procps}/bin/pkill -TERM -x steamwebhelper || true; sleep 5; ${pkgs.procps}/bin/pkill -TERM -x gamescope || true' >/dev/null
   '';
 
   steamosctl = pkgs.writeShellScriptBin "steamosctl" ''
@@ -194,8 +167,6 @@ let
         export GAMESCOPE_PATCHED_EDID_FILE="''${XDG_CONFIG_HOME:-$HOME/.config}/gamescope/edid.bin"
         export GAMESCOPE_LIMITER_FILE="$session_dir/limiter"
         export GAMESCOPE_STATS="$stats_pipe"
-        echo $$ > "$XDG_RUNTIME_DIR/steam-gamescope-pid"
-
         export ENABLE_GAMESCOPE_WSI=1
         export STEAM_MANGOAPP_PRESETS_SUPPORTED=1
         export STEAM_USE_MANGOAPP=1
@@ -217,21 +188,12 @@ let
           [ -n "''${mangoapp_pid:-}" ] && kill "$mangoapp_pid" 2>/dev/null || true
           rm -f "$exit_file"
           rm -f "$XDG_RUNTIME_DIR/gamescope-stats"
-          rm -f "$XDG_RUNTIME_DIR/steam-gamescope-pid"
           rm -rf "$session_dir"
-          ${pkgs.systemd}/bin/systemctl --user unmask steam.service --runtime 2>/dev/null || true
         }
         trap cleanup EXIT HUP INT TERM
 
-        ${pkgs.systemd}/bin/systemctl --user stop steam.service 2>/dev/null || true
-        ${pkgs.systemd}/bin/systemctl --user mask steam.service --runtime 2>/dev/null || true
-
-        ${pkgs.procps}/bin/pkill -x steam 2>/dev/null || true
-        ${pkgs.procps}/bin/pkill -x steamwebhelper 2>/dev/null || true
-        ${pkgs.coreutils}/bin/sleep 2
-
         gamescope_bin=/run/wrappers/bin/gamescope
-        [ -x "$gamescope_bin" ] || gamescope_bin=${gamescopePackage}/bin/gamescope
+        [ -x "$gamescope_bin" ] || gamescope_bin=${pkgs.gamescope}/bin/gamescope
 
         "$gamescope_bin" --steam ${gamescopeArgs} \
           --generate-drm-mode fixed \
@@ -316,31 +278,30 @@ in
             };
           };
 
-          gamescope = {
-            enable = lib.mkIf steamMachineCfg.enable true;
-            package = gamescopePackage;
-          };
+          gamescope.enable = lib.mkIf steamMachineCfg.enable true;
         };
 
-        environment.systemPackages = [
-          gamescopePackage
-          pkgs.mangohud # in-game overlay: FPS, GPU/CPU load, temps, VRAM
-          pkgs.protonup-qt # GUI to install/manage Proton-GE versions
-        ]
-        ++ lib.optionals steamMachineCfg.enable [
-          steamMachineTools
-        ];
+        environment.systemPackages =
+          with pkgs;
+          [
+            gamescope
+            mangohud # in-game overlay: FPS, GPU/CPU load, temps, VRAM
+            protonup-qt # GUI to install/manage Proton-GE versions
+          ]
+          ++ lib.optionals steamMachineCfg.enable [
+            steamMachineTools
+          ];
 
         security.wrappers.gamescope = lib.mkIf steamMachineCfg.enable {
           owner = "root";
           group = "root";
-          source = "${gamescopePackage}/bin/gamescope";
+          source = "${pkgs.gamescope}/bin/gamescope";
           capabilities = "cap_sys_nice+pie";
         };
 
         hardware.graphics = lib.mkIf steamMachineCfg.enable {
-          extraPackages = [ gamescopeWsiPackage ];
-          extraPackages32 = [ gamescopeWsi32Package ];
+          extraPackages = [ pkgs.gamescope-wsi ];
+          extraPackages32 = [ pkgs.pkgsi686Linux.gamescope-wsi ];
         };
 
         services.displayManager.sessionPackages = lib.mkIf steamMachineCfg.enable [
