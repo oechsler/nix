@@ -68,14 +68,29 @@ let
 
   sddmMaliitKeyboard = pkgs.maliit-keyboard.overrideAttrs (oldAttrs: {
     postInstall = (oldAttrs.postInstall or "") + ''
-      substituteInPlace "$out/lib/maliit/keyboard2/qml/keys/CharKey.qml" \
-        --replace-fail '            hoverEnabled: false' '            hoverEnabled: false
+        substituteInPlace "$out/lib/maliit/keyboard2/qml/keys/CharKey.qml" \
+          --replace-fail '            hoverEnabled: false' '            hoverEnabled: false
 
-            background: Rectangle {
-                visible: key.action !== "space"
-                color: keyButton.down ? "#${catppuccinSurface1}" : "#${catppuccinSurface0}"
-                radius: ${toString config.theme.radius.small}
-            }'
+              background: Rectangle {
+                  color: keyButton.down ? "#${catppuccinSurface1}" : "#${catppuccinSurface0}"
+                  radius: ${toString config.theme.radius.small}
+              }'
+      ${pkgs.buildPackages.python3}/bin/python3 <<'SPACEKEY'
+      import os
+      from pathlib import Path
+      path = Path(os.environ["out"]) / "lib/maliit/keyboard2/qml/keys/SpaceKey.qml"
+      text = path.read_text()
+      for old, new in [
+          ('    Rectangle {\n        anchors.margins: 8\n        anchors.fill: parent\n        color: "#888888"\n        radius: 8 / Screen.devicePixelRatio\n        opacity: spaceKey.currentlyPressed ? 0.0 : 0.25\n    }',
+           '    Rectangle {\n        visible: false\n        anchors.margins: 8\n        anchors.fill: parent\n        color: "#888888"\n        radius: 8 / Screen.devicePixelRatio\n        opacity: spaceKey.currentlyPressed ? 0.0 : 0.25\n    }'),
+          ('        opacity: 0.6',
+           '        color: "#${catppuccinText}"\n        opacity: 1.0'),
+      ]:
+          if text.count(old) != 1:
+              raise RuntimeError(f"unexpected SpaceKey pattern count: {text.count(old)}")
+          text = text.replace(old, new, 1)
+      path.write_text(text)
+      SPACEKEY
     '';
   });
 
