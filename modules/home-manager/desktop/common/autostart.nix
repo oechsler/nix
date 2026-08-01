@@ -34,15 +34,6 @@
 let
   cfg = config.autostart;
   isKde = features.desktop.wm == "kde";
-
-  desktopSteamCondition = pkgs.writeShellScript "steam-desktop-condition" ''
-    set -eu
-    pidf="''${XDG_RUNTIME_DIR:-/tmp}/steam-gamescope-pid"
-    if [ -r "$pidf" ] && read -r spid < "$pidf" && kill -0 "$spid" 2>/dev/null; then
-      exit 1
-    fi
-    exit 0
-  '';
 in
 {
   #===========================
@@ -182,7 +173,6 @@ in
         };
         Service = {
           ExecStart = "${pkgs.bash}/bin/sh -lc 'sleep 20; exec steam -silent'";
-          ExecCondition = "${desktopSteamCondition}";
           Environment = "PATH=/etc/profiles/per-user/${config.home.username}/bin:/run/current-system/sw/bin";
           Type = "exec";
           Restart = "on-failure";
