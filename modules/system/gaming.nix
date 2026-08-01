@@ -23,14 +23,6 @@ let
   cfg = config.features.gaming;
   steamMachineCfg = cfg.steamMachine;
 
-  gamescopeVersion = "3.16.25";
-  gamescopeSrc = pkgs.fetchFromGitHub {
-    owner = "ValveSoftware";
-    repo = "gamescope";
-    tag = gamescopeVersion;
-    fetchSubmodules = true;
-    hash = "sha256-KPIUoHMzArqEVbhS8hrvzQUV906MydBPm5ZmV/CVS3A=";
-  };
   vkrootsPostPatch = ''
     ${pkgs.buildPackages.python3}/bin/python3 <<'PY'
     from pathlib import Path
@@ -76,8 +68,6 @@ let
   patchGamescope =
     package:
     package.overrideAttrs (oldAttrs: {
-      version = gamescopeVersion;
-      src = gamescopeSrc;
       postPatch = (oldAttrs.postPatch or "") + vkrootsPostPatch;
     });
   gamescopePackage = patchGamescope pkgs.gamescope;
