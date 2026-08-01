@@ -72,6 +72,7 @@ let
         --replace-fail '            hoverEnabled: false' '            hoverEnabled: false
 
             background: Rectangle {
+                visible: key.action !== "space"
                 color: keyButton.down ? "#${catppuccinSurface1}" : "#${catppuccinSurface0}"
                 radius: ${toString config.theme.radius.small}
             }'
