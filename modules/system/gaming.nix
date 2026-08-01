@@ -23,56 +23,9 @@ let
   cfg = config.features.gaming;
   steamMachineCfg = cfg.steamMachine;
 
-  vkrootsPostPatch = ''
-    ${pkgs.buildPackages.python3}/bin/python3 <<'PY'
-    from pathlib import Path
-
-    helper = """  static inline VkQueue GetDeviceQueueByCreateInfo(const VkDeviceDispatch *deviceDispatch, VkDevice device, const VkDeviceQueueCreateInfo& queueInfo, uint32_t queueIndex) {
-      VkQueue queue = VK_NULL_HANDLE;
-      if (queueInfo.flags) {
-        VkDeviceQueueInfo2 queueInfo2 = {
-          .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_INFO_2,
-          .pNext = nullptr,
-          .flags = queueInfo.flags,
-          .queueFamilyIndex = queueInfo.queueFamilyIndex,
-          .queueIndex = queueIndex,
-        };
-        deviceDispatch->GetDeviceQueue2(device, &queueInfo2, &queue);
-      } else {
-        deviceDispatch->GetDeviceQueue(device, queueInfo.queueFamilyIndex, queueIndex, &queue);
-      }
-      return queue;
-    }
-    """
-    marker = "  static inline void CreateDispatchTable(const VkDeviceCreateInfo* pCreateInfo, PFN_vkGetDeviceProcAddr nextProcAddr, VkPhysicalDevice physicalDevice, VkDevice device) {"
-    replacements = {
-        "        VkQueue queue;\n        deviceDispatch->GetDeviceQueue(device, queueInfo.queueFamilyIndex, j, &queue);": "        VkQueue queue = GetDeviceQueueByCreateInfo(deviceDispatch, device, queueInfo, j);",
-        "        VkQueue queue;\n        deviceDispatch->GetDeviceQueue(device, queueInfo.queueFamilyIndex, i, &queue);": "        VkQueue queue = GetDeviceQueueByCreateInfo(deviceDispatch, device, queueInfo, i);",
-    }
-    paths = (
-        Path("subprojects/vkroots/gen/inc/vkroots_dispatches.h"),
-        Path("subprojects/vkroots/vkroots.h"),
-    )
-    for path in paths:
-        text = path.read_text()
-        if text.count(marker) != 1:
-            raise RuntimeError(f"unexpected CreateDispatchTable marker count in {path}")
-        text = text.replace(marker, helper + "\n" + marker, 1)
-        for old, new in replacements.items():
-            if text.count(old) != 1:
-                raise RuntimeError(f"unexpected queue retrieval block count in {path}")
-            text = text.replace(old, new, 1)
-        path.write_text(text)
-    PY
-  '';
-  patchGamescope =
-    package:
-    package.overrideAttrs (oldAttrs: {
-      postPatch = (oldAttrs.postPatch or "") + vkrootsPostPatch;
-    });
-  gamescopePackage = patchGamescope pkgs.gamescope;
-  gamescopeWsiPackage = patchGamescope pkgs.gamescope-wsi;
-  gamescopeWsi32Package = patchGamescope pkgs.pkgsi686Linux.gamescope-wsi;
+  gamescopePackage = pkgs.gamescope;
+  gamescopeWsiPackage = pkgs.gamescope-wsi;
+  gamescopeWsi32Package = pkgs.pkgsi686Linux.gamescope-wsi;
 
   desktopSession = if config.features.desktop.wm == "kde" then "plasma" else "hyprland-uwsm";
 
