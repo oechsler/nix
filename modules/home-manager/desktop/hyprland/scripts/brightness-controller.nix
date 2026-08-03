@@ -19,17 +19,12 @@ pkgs.writeShellScript "display-brightness-controller" ''
       kill "$(<"$gamma_pidfile")" 2>/dev/null || true
       ${pkgs.coreutils}/bin/rm -f "$gamma_pidfile"
     fi
-    ${pkgs.hyprsunset}/bin/hyprsunset -i >/dev/null 2>&1 || true
   }
 
   set_gamma() {
     local target="$1"
-    if [ -s "$gamma_pidfile" ]; then
-      kill "$(<"$gamma_pidfile")" 2>/dev/null || true
-      ${pkgs.coreutils}/bin/rm -f "$gamma_pidfile"
-    fi
+    clear_gamma
     if [ "$target" -ge 100 ]; then
-      ${pkgs.hyprsunset}/bin/hyprsunset -i >/dev/null 2>&1 || true
       return
     fi
     local gamma
