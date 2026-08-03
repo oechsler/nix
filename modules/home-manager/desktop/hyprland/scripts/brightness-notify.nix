@@ -7,8 +7,13 @@ pkgs.writeShellScript "brightness-notify" ''
   if (set -- /sys/class/backlight/*; test -e "$1"); then
     brightness=$(${pkgs.brightnessctl}/bin/brightnessctl -m | ${pkgs.gawk}/bin/awk -F, '{print substr($4, 0, length($4)-1)}')
   elif ${pkgs.ddcutil}/bin/ddcutil detect --terse 2>/dev/null | grep -q .; then
-    display=$(${pkgs.ddcutil}/bin/ddcutil detect --terse 2>/dev/null | ${pkgs.gawk}/bin/awk '$1 == "Display" { print $2; exit }')
-    values=$(${pkgs.ddcutil}/bin/ddcutil --display "$display" getvcp 10 --terse 2>/dev/null | ${pkgs.gawk}/bin/awk '$1 == "VCP" { print $4, $5; exit }')
+    lockdir="''${XDG_RUNTIME_DIR:-/tmp}/display-brightness.lock"
+    if ! mkdir "$lockdir" 2>/dev/null; then
+      exit 0
+    fi
+    trap 'rmdir "$lockdir"' EXIT
+    display=$(${pkgs.coreutils}/bin/timeout 5 ${pkgs.ddcutil}/bin/ddcutil detect --terse 2>/dev/null | ${pkgs.gawk}/bin/awk '$1 == "Display" { print $2; exit }')
+    values=$(${pkgs.coreutils}/bin/timeout 5 ${pkgs.ddcutil}/bin/ddcutil --display "$display" getvcp 10 --terse 2>/dev/null | ${pkgs.gawk}/bin/awk '$1 == "VCP" { print $4, $5; exit }')
     set -- $values
     if [ -n "$1" ]; then
       brightness=$((100 * $1 / $2))

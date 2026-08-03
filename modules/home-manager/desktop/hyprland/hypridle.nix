@@ -20,7 +20,7 @@
 # - suspendAc: Lock + suspend on AC
 #
 # Configuration options:
-#   hypridle.dim.percent = 10;         # Target brightness percentage when dimmed (default: 10%)
+#   hypridle.dim.percent = 30;         # Target brightness percentage when dimmed (default: 30%)
 #   hypridle.dim.stepPercent = 5;      # Brightness step size for smooth dim (default: 5%)
 #   hypridle.dim.stepDelay = "0.1";    # Delay between steps (default: 0.05s)
 #
@@ -88,7 +88,7 @@ let
   # DESKTOP DIM (hyprsunset gamma)
   # ============================================================================
   # hyprsunset applies a global gamma ramp via zwlr_gamma_control.
-  # gamma 1.0 = full brightness, gamma 0.1 = 10 % perceived brightness.
+  # gamma 1.0 = full brightness, gamma 0.30 = 30 % perceived brightness.
   # We keep the process alive (foreground) and store its PID so undim can kill it.
   #
   # When hyprsunset restarts (e.g. after a display sleep cycle) the gamma is
@@ -215,7 +215,7 @@ in
   options.hypridle.dim = {
     percent = lib.mkOption {
       type = lib.types.ints.between 1 100;
-      default = 10;
+      default = 30;
       description = "Target brightness percentage when dimmed";
     };
     stepPercent = lib.mkOption {
