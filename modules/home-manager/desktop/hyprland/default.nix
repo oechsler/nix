@@ -138,10 +138,15 @@ let
           exec ${pkgs.brightnessctl}/bin/brightnessctl -e4 -n2 set 5%-
         fi
       elif ${pkgs.ddcutil}/bin/ddcutil detect --terse 2>/dev/null | grep -q .; then
+        lockdir="''${XDG_RUNTIME_DIR:-/tmp}/display-brightness.lock"
+        if ! mkdir "$lockdir" 2>/dev/null; then
+          exit 0
+        fi
+        trap 'rmdir "$lockdir"' EXIT
         direction="$1"
-        displays=$(${pkgs.ddcutil}/bin/ddcutil detect --terse 2>/dev/null | ${pkgs.gawk}/bin/awk '$1 == "Display" { print $2 }')
+        displays=$(${pkgs.coreutils}/bin/timeout 5 ${pkgs.ddcutil}/bin/ddcutil detect --terse 2>/dev/null | ${pkgs.gawk}/bin/awk '$1 == "Display" { print $2 }')
         for display in $displays; do
-          values=$(${pkgs.ddcutil}/bin/ddcutil --display "$display" getvcp 10 --terse 2>/dev/null | ${pkgs.gawk}/bin/awk '$1 == "VCP" { print $4, $5; exit }')
+          values=$(${pkgs.coreutils}/bin/timeout 5 ${pkgs.ddcutil}/bin/ddcutil --display "$display" getvcp 10 --terse 2>/dev/null | ${pkgs.gawk}/bin/awk '$1 == "VCP" { print $4, $5; exit }')
           set -- $values
           [ -z "$1" ] && continue
           current=$1
@@ -153,9 +158,9 @@ let
             [ "$new" -gt "$maximum" ] && new=$maximum
           else
             new=$((current - step))
-            [ "$new" -lt 0 ] && new=0
+            [ "$new" -lt 1 ] && new=1
           fi
-          ${pkgs.ddcutil}/bin/ddcutil --display "$display" setvcp 10 "$new" --noverify 2>/dev/null || true
+          ${pkgs.coreutils}/bin/timeout 5 ${pkgs.ddcutil}/bin/ddcutil --display "$display" setvcp 10 "$new" --noverify 2>/dev/null || true
         done
       fi
       true
