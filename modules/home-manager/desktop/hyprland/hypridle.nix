@@ -4,14 +4,9 @@
 #
 # Key features:
 # - Battery-aware behavior (different timings for AC vs battery)
-# - Smooth screen dimming via brightnessctl (laptops) or hyprsunset gamma (desktops)
+# - Unified brightness control: backlight, DDC/CI, then gamma fallback
 # - Automatic lock and suspend
 # - Resume actions (restore brightness, turn on screen)
-#
-# Dimming approach per form factor:
-# - Laptops: brightnessctl controls the internal display backlight (smooth steps)
-# - Desktops: hyprsunset applies system-wide gamma to darken external monitors
-#   (brightnessctl has no effect on monitors that lack a kernel backlight interface)
 #
 # Timeouts (from config.idle.*):
 # - dimBattery: Dim screen on battery
@@ -49,101 +44,9 @@ let
   onBattery = "${hasBattery} && ! ${acOnline}";
   onAC = "! ${hasBattery} || ${acOnline}";
 
-  # ============================================================================
-  # BACKLIGHT DETECTION
-  # ============================================================================
-  hasBacklight = "(set -- /sys/class/backlight/*; test -e \"$1\")";
-
-  # Smooth dim configuration
-  dimPercent = config.hypridle.dim.percent;
-  dimStepPercent = config.hypridle.dim.stepPercent;
-  dimStepDelay = config.hypridle.dim.stepDelay;
-
-  # ============================================================================
-  # LAPTOP DIM (brightnessctl)
-  # ============================================================================
-  smoothDimLaptop = toString (
-    pkgs.writeShellScript "smooth-dim-laptop" ''
-      brightnessctl -s
-      current=$(brightnessctl get)
-      max=$(brightnessctl max)
-      target=$((max * ${toString dimPercent} / 100))
-      step=$((max * ${toString dimStepPercent} / 100))
-      while [ "$current" -gt "$target" ]; do
-        current=$((current - step))
-        [ "$current" -lt "$target" ] && current=$target
-        brightnessctl set "$current" -q
-        sleep ${dimStepDelay}
-      done
-    ''
-  );
-
-  undimLaptop = toString (
-    pkgs.writeShellScript "undim-laptop" ''
-      brightnessctl -r
-    ''
-  );
-
-  # ============================================================================
-  # DESKTOP DIM (hyprsunset gamma)
-  # ============================================================================
-  # hyprsunset applies a global gamma ramp via zwlr_gamma_control.
-  # gamma 1.0 = full brightness, gamma 0.30 = 30 % perceived brightness.
-  # We keep the process alive (foreground) and store its PID so undim can kill it.
-  #
-  # When hyprsunset restarts (e.g. after a display sleep cycle) the gamma is
-  # lost, so the listener re-applies it via on-resume.
-  # DDC/CI (ddcutil) is handled separately via the brightness keybindings.
-  dimDesktop = toString (
-    pkgs.writeShellScript "dim-desktop" ''
-      pidfile="''${XDG_RUNTIME_DIR:-/tmp}/hypridle-dim.pid"
-      if [ -f "$pidfile" ]; then
-        kill "$(cat "$pidfile")" 2>/dev/null || true
-        rm -f "$pidfile"
-      fi
-      target_gamma=$(printf "%d.%02d" $((${toString dimPercent} / 100)) $((${toString dimPercent} % 100)))
-      ${pkgs.hyprsunset}/bin/hyprsunset -g "$target_gamma" &
-      echo $! > "$pidfile"
-    ''
-  );
-
-  undimDesktop = toString (
-    pkgs.writeShellScript "undim-desktop" ''
-      pidfile="''${XDG_RUNTIME_DIR:-/tmp}/hypridle-dim.pid"
-      if [ -f "$pidfile" ]; then
-        kill "$(cat "$pidfile")" 2>/dev/null || true
-        rm -f "$pidfile"
-      fi
-      ${pkgs.hyprsunset}/bin/hyprsunset -i
-    ''
-  );
-
-  # ============================================================================
-  # DIM / UNDIM (form-factor-aware at runtime)
-  # ============================================================================
-  #
-  # Backlight presence is checked at runtime so the same script file works
-  # on both laptops (has backlight → brightnessctl) and desktops (no backlight
-  # → hyprsunset gamma).
-  selectDim = toString (
-    pkgs.writeShellScript "select-dim" ''
-      if ${hasBacklight}; then
-        ${smoothDimLaptop}
-      else
-        ${dimDesktop}
-      fi
-    ''
-  );
-
-  selectUndim = toString (
-    pkgs.writeShellScript "select-undim" ''
-      if ${hasBacklight}; then
-        ${undimLaptop}
-      else
-        ${undimDesktop}
-      fi
-    ''
-  );
+  brightnessController = import ./scripts/brightness-controller.nix { inherit pkgs; };
+  dimDisplay = "${brightnessController} dim ${toString config.hypridle.dim.percent} ${toString config.hypridle.dim.stepPercent} ${config.hypridle.dim.stepDelay}";
+  undimDisplay = "${brightnessController} restore";
 
   # ============================================================================
   # IDLE ACTION SCRIPTS
@@ -152,14 +55,14 @@ let
   # Dim screen on battery
   dimBattery = toString (
     pkgs.writeShellScript "dim-battery" ''
-      ${onBattery} && ${selectDim}
+      ${onBattery} && ${dimDisplay}
     ''
   );
 
   # Dim screen on AC
   dimAc = toString (
     pkgs.writeShellScript "dim-ac" ''
-      ${onAC} && ${selectDim}
+      ${onAC} && ${dimDisplay}
     ''
   );
 
@@ -186,7 +89,7 @@ let
     {
       timeout = idle.timeouts.dimAc;
       on-timeout = dimAc;
-      on-resume = selectUndim;
+      on-resume = undimDisplay;
     }
     {
       timeout = idle.timeouts.suspendAc;
@@ -199,7 +102,7 @@ let
     {
       timeout = idle.timeouts.dimBattery;
       on-timeout = dimBattery;
-      on-resume = selectUndim;
+      on-resume = undimDisplay;
     }
     {
       timeout = idle.timeouts.suspendBattery;
