@@ -15,7 +15,7 @@
 # - suspendAc: Lock + suspend on AC
 #
 # Configuration options:
-#   hypridle.dim.percent = 30;         # Target brightness percentage when dimmed (default: 30%)
+#   hypridle.dim.percent = 10;         # Target brightness percentage when dimmed (default: 10%)
 #   hypridle.dim.stepPercent = 5;      # Brightness step size for smooth dim (default: 5%)
 #   hypridle.dim.stepDelay = "0.1";    # Delay between steps (default: 0.05s)
 #
@@ -118,7 +118,7 @@ in
   options.hypridle.dim = {
     percent = lib.mkOption {
       type = lib.types.ints.between 1 100;
-      default = 30;
+      default = 10;
       description = "Target brightness percentage when dimmed";
     };
     stepPercent = lib.mkOption {
