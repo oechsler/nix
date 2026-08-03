@@ -84,14 +84,14 @@ let
       exit 0
     fi
     pgrep -x rofi > /dev/null && exit 0
-    choice=$(printf "󰌾  Sperren\n󰒲  Standby\n󰍃  Abmelden\n󰜉  Neustart\n󰐥  Herunterfahren\n󰘚  Firmware Setup" | rofi -dmenu -p "Energie" -i -no-custom)
+    choice=$(printf "󰌾  Sperren\n󰒲  Standby\n󰍃  Abmelden\n󰜉  Neustart\n󰐥  Herunterfahren\n󰘚  Firmware" | rofi -dmenu -p "Energie" -i -no-custom -no-show-icons -lines 6)
     case "$choice" in
       "󰌾  Sperren")        hyprlock ;;
       "󰒲  Standby")       loginctl lock-session && systemctl suspend ;;
       "󰍃  Abmelden")      hyprctl dispatch exit ;;
       "󰜉  Neustart")       systemctl reboot ;;
       "󰐥  Herunterfahren") systemctl poweroff ;;
-      "󰘚  Firmware Setup") systemctl reboot --firmware-setup ;;
+      "󰘚  Firmware") systemctl reboot --firmware-setup ;;
     esac
   '';
 
@@ -126,6 +126,7 @@ let
 
     cliphist list | while IFS= read -r line; do
       id="''${line%%	*}"
+      content="''${line#*	}"
       if printf '%s' "$line" | ${pkgs.gnugrep}/bin/grep -q '\[\[.*binary.*image'; then
         cache="$preview_dir/$id.png"
         if [ ! -s "$cache" ]; then
@@ -136,10 +137,18 @@ let
         else
           printf '%s\n' "$line"
         fi
+      elif [[ "$content" == file://* ]]; then
+        path=$(${pkgs.python3}/bin/python3 -c 'import sys, urllib.parse; print(urllib.parse.unquote(urllib.parse.urlparse(sys.argv[1]).path))' "$content")
+        mime=$(${pkgs.file}/bin/file --brief --mime-type -- "$path" 2>/dev/null || true)
+        if [[ "$mime" == image/* ]]; then
+          printf '%s\0icon\x1f%s\n' "$line" "$path"
+        else
+          printf '%s\0icon\x1ftext-x-generic\n' "$line"
+        fi
       else
-        printf '%s\n' "$line"
+        printf '%s\0icon\x1ftext-x-generic\n' "$line"
       fi
-    done | rofi -dmenu -p "Zwischenablage" -show-icons | cliphist decode | ${pkgs.wl-clipboard}/bin/wl-copy
+    done | rofi -dmenu -p "Zwischenablage" -show-icons -theme-str 'element-icon { size: 22px; }' | cliphist decode | ${pkgs.wl-clipboard}/bin/wl-copy
   '';
 
   # ============================================================================
@@ -177,7 +186,7 @@ let
         ;;
     esac
 
-    choice=$(printf "$profiles" | rofi -dmenu -p "Energieprofil" -i -no-custom)
+    choice=$(printf "$profiles" | rofi -dmenu -p "Energieprofil" -i -no-custom -no-show-icons)
     case "$choice" in
       "󰾆  Ausgewogen")     ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set balanced ;;
       "󰌪  Energiesparen")  ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set power-saver ;;
@@ -248,32 +257,106 @@ in
       theme =
         let
           inherit (config.lib.formats.rasi) mkLiteral;
+          palette = config.theme.catppuccinPalette;
+          stripHash = hex: lib.removePrefix "#" hex;
           accentColor = "@${config.catppuccin.accent}";
+          glassColor = mkLiteral "#${stripHash palette.base.hex}eb";
         in
         {
           "window" = {
-            width = mkLiteral "33%";
+            width = mkLiteral "680px";
             border = mkLiteral "${toString theme.border.width}px solid";
             border-color = mkLiteral accentColor;
             border-radius = mkLiteral "${toString theme.radius.default}px";
+            background-color = glassColor;
+          };
+          "mainbox" = {
+            padding = mkLiteral "18px";
+            background-color = mkLiteral "transparent";
+            spacing = mkLiteral "0px";
+          };
+          "inputbar" = {
+            height = mkLiteral "56px";
+            children = map mkLiteral [
+              "prompt"
+              "entry"
+            ];
+            background-color = mkLiteral "transparent";
+            border = mkLiteral "2px solid";
+            border-color = mkLiteral "@surface1";
+            border-radius = mkLiteral "18px";
+            padding = mkLiteral "12px 18px";
+            spacing = mkLiteral "8px";
+          };
+          "prompt" = {
+            text-color = mkLiteral accentColor;
+            font = "${fonts.ui} Bold ${toString fonts.size}";
+            background-color = mkLiteral "transparent";
+          };
+          "entry" = {
+            placeholder = "Suchen...";
+            placeholder-color = mkLiteral "@overlay1";
+            text-color = mkLiteral "@subtext1";
+            font = "${fonts.ui} Medium ${toString fonts.size}";
+            background-color = mkLiteral "transparent";
+          };
+          "listview" = {
+            lines = 6;
+            fixed-height = false;
+            dynamic = true;
+            padding = mkLiteral "16px 0px 0px 0px";
+            spacing = mkLiteral "0px";
+            border = mkLiteral "0px";
+            scrollbar = false;
+            background-color = mkLiteral "transparent";
           };
           "element" = {
-            border-radius = mkLiteral "${toString theme.radius.small}px";
+            padding = mkLiteral "10px 18px";
+            spacing = mkLiteral "14px";
+            background-color = mkLiteral "transparent";
+            text-color = mkLiteral "@subtext0";
+            border-radius = mkLiteral "${toString theme.radius.default}px";
+          };
+          "element normal.normal" = {
+            background-color = mkLiteral "transparent";
+            text-color = mkLiteral "@subtext0";
+          };
+          "element alternate.normal" = {
+            background-color = mkLiteral "transparent";
+            text-color = mkLiteral "@subtext0";
+          };
+          "element normal.active" = {
+            background-color = mkLiteral "transparent";
+            text-color = mkLiteral "@subtext0";
+          };
+          "element alternate.active" = {
+            background-color = mkLiteral "transparent";
+            text-color = mkLiteral "@subtext0";
           };
           "element selected.normal" = {
             background-color = mkLiteral accentColor;
             text-color = mkLiteral "@base";
+            border-radius = mkLiteral "${toString theme.radius.default}px";
           };
           "element selected.active" = {
             background-color = mkLiteral accentColor;
             text-color = mkLiteral "@base";
+            border-radius = mkLiteral "${toString theme.radius.default}px";
           };
           "element selected.urgent" = {
             background-color = mkLiteral "@red";
-            text-color = mkLiteral "@base";
+            text-color = mkLiteral "@crust";
+            border-radius = mkLiteral "${toString theme.radius.default}px";
           };
-          "inputbar" = {
-            border-radius = mkLiteral "${toString theme.radius.small}px";
+          "element-icon" = {
+            size = mkLiteral "22px";
+            text-color = mkLiteral "inherit";
+            background-color = mkLiteral "transparent";
+          };
+          "element-text" = {
+            font = "${fonts.ui} Medium ${toString fonts.size}";
+            text-color = mkLiteral "inherit";
+            background-color = mkLiteral "transparent";
           };
         };
     };

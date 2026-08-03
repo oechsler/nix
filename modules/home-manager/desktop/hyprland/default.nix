@@ -365,8 +365,8 @@ in
 
           blur = {
             enabled = true;
-            size = 3;
-            passes = 1;
+            size = 8;
+            passes = 2;
             vibrancy = 0.1696;
           };
         };
@@ -430,6 +430,12 @@ in
           cm_enabled = true;
           cm_sdr_eotf = "gamma22";
         };
+
+        layerrule = [
+          "blur on, match:namespace ^(rofi|waybar|hypr-dock)$"
+          "blur_popups on, match:namespace ^(rofi|waybar|hypr-dock)$"
+          "ignore_alpha 0.2, match:namespace ^(rofi|waybar|hypr-dock)$"
+        ];
 
         windowrule = [
           # System authentication
