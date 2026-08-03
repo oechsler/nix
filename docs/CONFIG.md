@@ -264,7 +264,7 @@ Set in `home.nix`. Works on both Hyprland (via hypridle) and KDE (via PowerDevil
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `hypridle.dim.percent` | `30` | Target brightness when dimmed (%) |
+| `hypridle.dim.percent` | `10` | Target brightness when dimmed (%) |
 | `hypridle.dim.stepPercent` | `5` | Brightness step size for smooth dimming (%) |
 | `hypridle.dim.stepDelay` | `"0.05"` | Delay between dim steps in seconds |
 
