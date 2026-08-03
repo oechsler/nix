@@ -129,41 +129,96 @@ let
   # ============================================================================
   # Used by XF86MonBrightnessUp/Down keybindings.
   # Runtime detection: kernel backlight (brightnessctl) > DDC/CI (ddcutil) > no-op
+  brightnessNotify = import ./scripts/brightness-notify.nix { inherit pkgs; };
+
+  displayBrightnessInit = toString (
+    pkgs.writeShellScript "display-brightness-init" ''
+      if (set -- /sys/class/backlight/*; test -e "$1"); then
+        exit 0
+      fi
+
+      state_dir="''${XDG_RUNTIME_DIR:-/tmp}/display-brightness"
+      ${pkgs.coreutils}/bin/mkdir -p "$state_dir"
+      exec 9>"$state_dir/init.lock"
+      ${pkgs.util-linux}/bin/flock 9
+      [ -s "$state_dir/displays" ] && [ -s "$state_dir/target" ] && exit 0
+
+      buses_tmp="$state_dir/buses.tmp.$$"
+      ${pkgs.coreutils}/bin/timeout 5 ${pkgs.ddcutil}/bin/ddcutil detect --terse 2>/dev/null \
+        | ${pkgs.gawk}/bin/awk '$1 == "I2C" && $2 == "bus:" { sub("/dev/i2c-", "", $3); print $3 }' \
+        > "$buses_tmp"
+      [ -s "$buses_tmp" ] || exit 0
+
+      displays_tmp="$state_dir/displays.tmp.$$"
+      : > "$displays_tmp"
+      while read -r bus; do
+        values=$(${pkgs.coreutils}/bin/timeout 3 ${pkgs.ddcutil}/bin/ddcutil --bus "$bus" getvcp 10 --terse 2>/dev/null | ${pkgs.gawk}/bin/awk '$1 == "VCP" { print $4, $5; exit }')
+        set -- $values
+        [ -n "$1" ] && [ -n "$2" ] && printf '%s %s\n' "$bus" "$2" >> "$displays_tmp"
+        if [ ! -s "$state_dir/target" ] && [ -n "$1" ] && [ -n "$2" ]; then
+          printf '%s\n' "$((100 * $1 / $2))" > "$state_dir/target"
+        fi
+      done < "$buses_tmp"
+      ${pkgs.coreutils}/bin/mv "$displays_tmp" "$state_dir/displays"
+      ${pkgs.coreutils}/bin/rm -f "$buses_tmp"
+    ''
+  );
+
+  displayBrightnessApply = toString (
+    pkgs.writeShellScript "display-brightness-apply" ''
+      state_dir="''${XDG_RUNTIME_DIR:-/tmp}/display-brightness"
+      exec 9>"$state_dir/apply.lock"
+      ${pkgs.util-linux}/bin/flock -n 9 || exit 0
+
+      while [ -s "$state_dir/displays" ] && [ -s "$state_dir/target" ]; do
+        target=$(<"$state_dir/target")
+        pids=""
+        while read -r bus maximum; do
+          value=$((target * maximum / 100))
+          ${pkgs.coreutils}/bin/timeout 2 ${pkgs.ddcutil}/bin/ddcutil --bus "$bus" setvcp 10 "$value" --noverify >/dev/null 2>&1 &
+          pids="$pids $!"
+        done < "$state_dir/displays"
+        for pid in $pids; do
+          wait "$pid" 2>/dev/null || true
+        done
+        latest=$(<"$state_dir/target")
+        [ "$latest" = "$target" ] && exit 0
+      done
+    ''
+  );
+
   displayBrightness = toString (
     pkgs.writeShellScript "display-brightness" ''
+      direction="$1"
       if (set -- /sys/class/backlight/*; test -e "$1"); then
-        if [ "$1" = "up" ]; then
-          exec ${pkgs.brightnessctl}/bin/brightnessctl -e4 -n2 set 5%+
+        if [ "$direction" = "up" ]; then
+          ${pkgs.brightnessctl}/bin/brightnessctl -e4 -n2 set 5%+ -q
         else
-          exec ${pkgs.brightnessctl}/bin/brightnessctl -e4 -n2 set 5%-
+          ${pkgs.brightnessctl}/bin/brightnessctl -e4 -n2 set 5%- -q
         fi
-      elif ${pkgs.ddcutil}/bin/ddcutil detect --terse 2>/dev/null | grep -q .; then
-        lockdir="''${XDG_RUNTIME_DIR:-/tmp}/display-brightness.lock"
-        if ! mkdir "$lockdir" 2>/dev/null; then
-          exit 0
-        fi
-        trap 'rmdir "$lockdir"' EXIT
-        direction="$1"
-        displays=$(${pkgs.coreutils}/bin/timeout 5 ${pkgs.ddcutil}/bin/ddcutil detect --terse 2>/dev/null | ${pkgs.gawk}/bin/awk '$1 == "Display" { print $2 }')
-        for display in $displays; do
-          values=$(${pkgs.coreutils}/bin/timeout 5 ${pkgs.ddcutil}/bin/ddcutil --display "$display" getvcp 10 --terse 2>/dev/null | ${pkgs.gawk}/bin/awk '$1 == "VCP" { print $4, $5; exit }')
-          set -- $values
-          [ -z "$1" ] && continue
-          current=$1
-          maximum=$2
-          step=$((maximum * 5 / 100))
-          [ "$step" -lt 1 ] && step=1
-          if [ "$direction" = "up" ]; then
-            new=$((current + step))
-            [ "$new" -gt "$maximum" ] && new=$maximum
-          else
-            new=$((current - step))
-            [ "$new" -lt 1 ] && new=1
-          fi
-          ${pkgs.coreutils}/bin/timeout 5 ${pkgs.ddcutil}/bin/ddcutil --display "$display" setvcp 10 "$new" --noverify 2>/dev/null || true
-        done
+        brightness=$(${pkgs.brightnessctl}/bin/brightnessctl -m | ${pkgs.gawk}/bin/awk -F, '{print substr($4, 0, length($4)-1)}')
+        exec ${brightnessNotify} "$brightness"
       fi
-      true
+
+      state_dir="''${XDG_RUNTIME_DIR:-/tmp}/display-brightness"
+      ${pkgs.coreutils}/bin/mkdir -p "$state_dir"
+      [ -s "$state_dir/displays" ] && [ -s "$state_dir/target" ] || ${displayBrightnessInit}
+      [ -s "$state_dir/displays" ] && [ -s "$state_dir/target" ] || exit 0
+
+      exec 9>"$state_dir/target.lock"
+      ${pkgs.util-linux}/bin/flock 9
+      brightness=$(<"$state_dir/target")
+      if [ "$direction" = "up" ]; then
+        brightness=$((brightness + 5))
+        [ "$brightness" -gt 100 ] && brightness=100
+      else
+        brightness=$((brightness - 5))
+        [ "$brightness" -lt 0 ] && brightness=0
+      fi
+      printf '%s\n' "$brightness" > "$state_dir/target"
+      ${pkgs.util-linux}/bin/flock -u 9
+      ${brightnessNotify} "$brightness" &
+      ${displayBrightnessApply} >/dev/null 2>&1 &
     ''
   );
 
@@ -173,7 +228,6 @@ let
   # Show volume level and mute status with dunst notification
   # Used by: Media keys (XF86AudioRaiseVolume, XF86AudioLowerVolume, XF86AudioMute)
   volumeNotify = import ./scripts/volume-notify.nix { inherit pkgs; };
-  brightnessNotify = import ./scripts/brightness-notify.nix { inherit pkgs; };
   batteryWarning = import ./scripts/battery-warning.nix { inherit pkgs; };
 
   fileManagerCommand =
@@ -245,6 +299,19 @@ in
             ExecStart = "${batteryWarning}";
             Restart = "on-failure";
             TimeoutStopSec = 5;
+          };
+          Install.WantedBy = [ "graphical-session.target" ];
+        };
+
+        display-brightness-init = {
+          Unit = {
+            Description = "Initialize display brightness control";
+            After = [ "graphical-session.target" ];
+            PartOf = [ "graphical-session.target" ];
+          };
+          Service = {
+            ExecStart = displayBrightnessInit;
+            Type = "oneshot";
           };
           Install.WantedBy = [ "graphical-session.target" ];
         };
@@ -549,10 +616,10 @@ in
           ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && ${volumeNotify}"
           ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && ${volumeNotify}"
           ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
-          ", XF86MonBrightnessUp, exec, ${displayBrightness} up && ${brightnessNotify}"
-          ", XF86MonBrightnessDown, exec, ${displayBrightness} down && ${brightnessNotify}"
-          "$mainMod, F5, exec, ${displayBrightness} down && ${brightnessNotify}"
-          "$mainMod, F6, exec, ${displayBrightness} up && ${brightnessNotify}"
+          ", XF86MonBrightnessUp, exec, ${displayBrightness} up"
+          ", XF86MonBrightnessDown, exec, ${displayBrightness} down"
+          "$mainMod, F5, exec, ${displayBrightness} down"
+          "$mainMod, F6, exec, ${displayBrightness} up"
         ];
 
         bindl = [
