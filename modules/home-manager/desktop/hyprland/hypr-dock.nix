@@ -110,7 +110,7 @@ in
         }
 
         #app {
-          background-color: alpha(${baseHex}, 0.85);
+          background-color: alpha(${baseHex}, 0.92);
           border-radius: ${toString theme.radius.default}px;
           border: 2px solid ${accentHex};
           padding: 6px;
