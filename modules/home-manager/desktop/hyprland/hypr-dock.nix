@@ -86,7 +86,7 @@ in
         ContextPos = 5
 
         [General.preview]
-        Mode = none
+        Mode = live
       '';
 
       #---------------------------

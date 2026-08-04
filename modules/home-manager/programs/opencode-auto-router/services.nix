@@ -191,13 +191,7 @@ in
             ++ lib.optionals useLocalClassifier [
               "opencode-auto-router-sync-models.service"
             ];
-            PartOf = [
-              "opencode-auto-router-pod.service"
-              "podman-opencode-litellm.service"
-            ]
-            ++ lib.optionals useLocalClassifier [
-              "podman-opencode-ollama.service"
-            ];
+            PartOf = [ "opencode-auto-router-pod.service" ];
           };
           Service = {
             ExecStartPre = [
