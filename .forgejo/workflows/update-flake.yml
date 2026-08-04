@@ -53,14 +53,6 @@ jobs:
             nix eval ".#nixosConfigurations.$host.config.system.build.toplevel" --show-trace
           done
 
-      - name: Build all host configurations
-        if: steps.check.outputs.changed == 'true'
-        run: |
-          for host in samuels-pc samuels-razer samuels-ser9 samuels-terra; do
-            nix build ".#nixosConfigurations.$host.config.system.build.toplevel" \
-              --no-link --print-build-logs --show-trace
-          done
-
       - name: Commit and push
         if: steps.check.outputs.changed == 'true'
         run: |
