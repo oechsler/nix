@@ -32,7 +32,9 @@
 #   Super+Tab        - Window list
 #   Super+[1-9]      - Switch workspace
 #   Super+Shift+[1-9] - Move window to workspace
-#   Super+F          - Toggle fullscreen
+#   Super+F          - Toggle maximize
+#   Super+Ctrl+H/L   - Resize window horizontally
+#   Super+Ctrl+J/K   - Resize window vertically
 #   Super+C          - Clipboard manager
 #   Super+R          - Rofi toggle
 #   Super+W          - Window list
@@ -404,6 +406,7 @@ in
 
         dwindle = {
           preserve_split = true;
+          split_width_multiplier = 1.0;
         };
 
         master = {
@@ -470,7 +473,7 @@ in
           "$mainMod, W, exec, ${config.rofi.windowList}"
           "$mainMod, P, pseudo,"
           "$mainMod, Space, layoutmsg, togglesplit"
-          "$mainMod, F, fullscreen,"
+          "$mainMod, F, fullscreen, 1"
 
           ", Print, exec, hyprshot -m output --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
           "SHIFT, Print, exec, hyprshot -m region --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
@@ -492,8 +495,8 @@ in
           "$mainMod SHIFT, K, movewindow, u"
           "$mainMod SHIFT, J, movewindow, d"
 
-          "$mainMod CTRL, H, focusmonitor, l"
-          "$mainMod CTRL, L, focusmonitor, r"
+          "$mainMod CTRL, left, focusmonitor, l"
+          "$mainMod CTRL, right, focusmonitor, r"
 
           "$mainMod, 1, workspace, 1"
           "$mainMod, 2, workspace, 2"
@@ -521,6 +524,13 @@ in
           "$mainMod SHIFT, S, movetoworkspace, special:magic"
           "$mainMod, mouse_down, workspace, e+1"
           "$mainMod, mouse_up, workspace, e-1"
+        ];
+
+        binde = [
+          "$mainMod CTRL, H, resizeactive, -10 0"
+          "$mainMod CTRL, L, resizeactive, 10 0"
+          "$mainMod CTRL, K, resizeactive, 0 -10"
+          "$mainMod CTRL, J, resizeactive, 0 10"
         ];
 
         bindel = [
