@@ -130,7 +130,6 @@ in
           format = "";
           all-outputs = false;
           persistent-workspaces = persistentWorkspaces;
-          on-click = "activate";
         };
 
         "hyprland/window" = {
