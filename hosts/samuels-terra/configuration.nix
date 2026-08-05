@@ -93,6 +93,7 @@
     secureBoot.enable = true;
     encryption.unlockMethod = "yubikey";
     gaming.steamMachine.enable = true;
+    gaming.steamMachine.catppuccin.enable = true;
     desktop.login = "greeter";
     desktop.fileManager = "terminal";
     smb.shares = [

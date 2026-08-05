@@ -20,7 +20,13 @@
 #   4. Creates CEF debugging flag (~/.steam/steam/.cef-enable-remote-debugging)
 #   5. CSS Loader must be enabled via Decky UI to activate the theme
 
-{ config, lib, pkgs, inputs, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  inputs,
+  ...
+}:
 
 let
   cfg = config.features.gaming.steamMachine.catppuccin;
@@ -28,8 +34,28 @@ let
   stateDir = "/var/lib/decky-loader";
   deckyUser = "decky";
 
+  jovianPkgs = pkgs.extend inputs.jovian-nixos.overlays.default;
   cssLoader = pkgs.callPackage ../../packages/css-loader.nix { };
   catppuccinDeck = pkgs.callPackage ../../packages/catppuccin-deck.nix { };
+  capitalize =
+    value:
+    (lib.toUpper (builtins.substring 0 1 value))
+    + (builtins.substring 1 (builtins.stringLength value) value);
+  themeConfig = pkgs.writeText "catppuccin-deck-config.json" (
+    builtins.toJSON {
+      active = true;
+      Flavor = capitalize cfg.flavor;
+      Accent = capitalize cfg.accent;
+      "Theme keyboard" = "No";
+      "Accented play button " = "No";
+      "Darker play bar" = "No";
+      "Colored xbox glyphs " = "Yes";
+      "Use accent for focus outline" = "No";
+      "Colored overlay blur" = "Yes";
+      "Background Blur Amount" = "10px";
+      "Backgroud Blur Opacity" = "0.8";
+    }
+  );
 in
 {
   options.features.gaming.steamMachine.catppuccin = {
@@ -69,7 +95,7 @@ in
   config = lib.mkIf (steamMachineCfg.enable && cfg.enable) {
     jovian.decky-loader = {
       enable = true;
-      package = inputs.jovian-nixos.legacyPackages.${pkgs.system}.decky-loader;
+      package = jovianPkgs.decky-loader;
     };
 
     # Directories for plugin and theme (mutable - CSS Loader writes config to them)
@@ -110,6 +136,7 @@ in
         cp --no-preserve=mode ${catppuccinDeck}/keyboard.css "$theme_dir/"
         cp --no-preserve=mode ${catppuccinDeck}/flavors/*.css "$theme_dir/flavors/"
         cp --no-preserve=mode ${catppuccinDeck}/tweaks/*.css "$theme_dir/tweaks/"
+        cp --no-preserve=mode ${themeConfig} "$theme_dir/config_USER.json"
 
         chown -R ${deckyUser}:${deckyUser} "$plugin_dir" "$theme_dir"
       '';
