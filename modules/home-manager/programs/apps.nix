@@ -32,6 +32,7 @@
 # - Baobab - Disk usage analyzer (GNOME)
 # - Loupe - Image viewer (GNOME)
 # - GNOME Keyring - Secret storage for browsers, desktop apps, etc.
+#   (Proton Pass uses kernel keyring via keyutils instead)
 # - libsecret - Tools for accessing gnome-keyring (used by Chrome, Vesktop, etc.)
 
 {
@@ -110,8 +111,6 @@ in
             ]
             ++ lib.optional features.apps.winboat.enable (wrapChromiumApp winboat "winboat");
 
-          # Mumble theme: don't set explicitly — uses system Qt theme (Catppuccin via Kvantum)
-
           activation.mumbleDefaults = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
             mumble_config="$HOME/.config/Mumble/Mumble/mumble_settings.json"
             if [ ! -e "$mumble_config" ]; then
@@ -170,14 +169,7 @@ in
       #---------------------------
       # Hyprland Apps
       #---------------------------
-      # GNOME/GTK utilities for tiling WMs
       (lib.mkIf (!isKde) {
-        # GNOME Keyring for credential storage
-        # Used by: Chrome/Chromium, Vesktop, etc.
-        # Note: Proton Pass uses kernel keyring instead (via keyutils)
-        # Unlock: pam_gnome_keyring captures the SDDM password at login and
-        # auto-unlocks the keyring. sddm/polkit/hyprlock are password-only for
-        # this reason (YubiKey login skips pam_gnome_keyring's auth phase).
         services.gnome-keyring = {
           enable = true;
           components = [ "secrets" ];
@@ -186,7 +178,7 @@ in
         home.packages = with pkgs; [
           baobab
           loupe
-          libsecret # Provides secret-tool and library for apps to access gnome-keyring
+          libsecret
         ];
       })
     ]
