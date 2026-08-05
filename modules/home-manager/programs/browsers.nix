@@ -35,6 +35,36 @@
   ...
 }:
 
+let
+  firefoxAddons = inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system};
+  stylusId = firefoxAddons.stylus.addonId;
+  catppuccinUserstylesExport = pkgs.fetchurl {
+    url = "https://github.com/catppuccin/userstyles/releases/download/all-userstyles-export/import.json";
+    hash = "sha256-+eqOt92dkNcnFK7L1jMrsMyOocxZXdbz1UdAOjZGsvw=";
+  };
+  catppuccinUserstylesLibrary = pkgs.fetchurl {
+    url = "https://userstyles.catppuccin.com/lib/lib.less";
+    hash = "sha256-XK9Oqan7Kz81DNyE3+ryl5sPi/OpvV+EkgL7WuLoGfM=";
+  };
+  catppuccinUserstylesStorage =
+    pkgs.runCommand "catppuccin-userstyles-storage.json"
+      {
+        nativeBuildInputs = [
+          pkgs.nodejs
+          pkgs.unzip
+        ];
+      }
+      ''
+        mkdir stylus
+        unzip -q ${firefoxAddons.stylus}/share/mozilla/extensions/'{ec8030f7-c20a-464f-9b0e-13a3a9e97384}'/${stylusId}.xpi -d stylus
+        node ${../../../scripts/compile-catppuccin-userstyles.js} \
+          stylus/js \
+          ${catppuccinUserstylesExport} \
+          ${catppuccinUserstylesLibrary} \
+          ${config.catppuccin.flavor} \
+          ${config.catppuccin.accent} > "$out"
+      '';
+in
 {
   #===========================
   # Configuration
@@ -69,6 +99,8 @@
             ublock-origin
             proton-pass
             new-tab-override
+            stylus
+            catppuccin-web-file-icons
           ]
           ++ lib.optionals (features.desktop.wm == "kde") [
             inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system}.plasma-integration
@@ -156,6 +188,7 @@
           "sidebar.revamp" = true;
           "sidebar.visibility" = "always-show";
           "sidebar.main.tools" = "";
+          "sidebar.installed.extensions" = stylusId;
 
           # DRM content (Netflix, Spotify, etc.)
           "media.eme.enabled" = true;
@@ -247,6 +280,8 @@
 
           # Enable userContent.css for font overrides
           "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
+
+          "extensions.webextensions.ExtensionStorageIDB.enabled" = false;
         };
 
         # Override system-ui / inherited fonts so web content stays sans-serif
@@ -266,6 +301,12 @@
 
     catppuccin.firefox = {
       enable = true;
+      force = true;
+    };
+
+    # Stylus extension data — pre-compiled Catppuccin userstyles
+    xdg.configFile."mozilla/firefox/default/browser-extension-data/${stylusId}/storage.js" = {
+      source = catppuccinUserstylesStorage;
       force = true;
     };
   };
