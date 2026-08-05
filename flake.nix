@@ -90,6 +90,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    spicetify-nix = {
+      url = "github:Gerg-L/spicetify-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     #===========================
     # External Packages
     #===========================
@@ -184,6 +189,7 @@
                   inputs.catppuccin.homeModules.catppuccin
                   inputs.sops-nix.homeManagerModules.sops
                   inputs.plasma-manager.homeModules.plasma-manager
+                  inputs.spicetify-nix.homeManagerModules.spicetify
                 ];
               };
             }

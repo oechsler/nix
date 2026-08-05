@@ -40,6 +40,8 @@
   displays,
   lib,
   fonts,
+  inputs,
+  theme,
   ...
 }:
 
@@ -82,7 +84,6 @@ in
               (wrapChromiumApp obsidian "obsidian")
               pika-backup
               prusa-slicer
-              (wrapChromiumApp spotify "spotify")
             ]
             ++ lib.optional features.apps.winboat.enable (wrapChromiumApp winboat "winboat");
 
@@ -113,6 +114,17 @@ in
             arRPC = true;
           };
         };
+
+        programs.spicetify =
+          let
+            spicePkgs = inputs.spicetify-nix.legacyPackages.${pkgs.stdenv.hostPlatform.system};
+          in
+          {
+            enable = true;
+            theme = spicePkgs.themes.catppuccin;
+            colorScheme = theme.catppuccin.flavor;
+            spotifyLaunchFlags = lib.optionalString hasHDR "--use-gl=egl";
+          };
       }
 
       #---------------------------
