@@ -194,18 +194,22 @@ in
               After = [ "graphical-session.target" ];
               PartOf = [ "graphical-session.target" ];
             };
-            Service = {
-              # Full bash path so systemd always finds it; exec replaces the shell
-              # with the app process so systemd tracks the right PID.
-              ExecStart = "${pkgs.bash}/bin/sh -c 'sleep 3; exec ${app.exec}'";
-              Environment = "PATH=/etc/profiles/per-user/${config.home.username}/bin:/run/current-system/sw/bin";
-              Type = "exec";
-              Restart = "on-failure";
-              # Exit code 1 often means another instance is already running — not a real crash.
-              RestartPreventExitStatus = 1;
-              RestartSec = 3;
-              TimeoutStopSec = 5;
-            };
+            Service =
+              {
+                # Full bash path so systemd always finds it; exec replaces the shell
+                # with the app process so systemd tracks the right PID.
+                ExecStart = "${pkgs.bash}/bin/sh -c 'sleep 3; exec ${app.exec}'";
+                Environment = "PATH=/etc/profiles/per-user/${config.home.username}/bin:/run/current-system/sw/bin";
+                Type = "exec";
+                Restart = "on-failure";
+                # Exit code 1 often means another instance is already running — not a real crash.
+                RestartPreventExitStatus = 1;
+                RestartSec = 3;
+                TimeoutStopSec = 5;
+              }
+              // lib.optionalAttrs (app.name == "Mumble") {
+                TimeoutStopSec = 15;
+              };
             Install.WantedBy = [ "graphical-session.target" ];
           };
         }) config.autostart.apps
