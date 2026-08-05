@@ -285,6 +285,15 @@ let
     echo "apply-sddm-display-config: done" >&2
   '';
 
+  sddmKwin = pkgs.writeShellScript "sddm-kwin" ''
+    ${applySddmDisplayConfig} &
+    exec ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
+      --no-global-shortcuts \
+      --no-kactivities \
+      --no-lockscreen \
+      --locale1
+  '';
+
   sddmThemeName = "catppuccin-${config.catppuccin.sddm.flavor}-${config.catppuccin.sddm.accent}";
 
   sddmKwinrc = pkgs.writeText "sddm-kwinrc" ''
@@ -465,6 +474,7 @@ in
           wayland = {
             enable = true;
             compositor = "kwin";
+            compositorCommand = lib.mkIf shouldManageSddmLayout (toString sddmKwin);
           };
           settings = {
             General.GreeterEnvironment = sddmGreeterEnvironment;
@@ -495,19 +505,6 @@ in
           serviceConfig = {
             Type = "oneshot";
             ExecStart = configureSddmDisplays;
-          };
-        };
-
-        sddm-apply-display-config = lib.mkIf shouldManageSddmLayout {
-          description = "Apply SDDM monitor layout after KWin starts";
-          after = [ "display-manager.service" ];
-          wantedBy = [ "display-manager.service" ];
-          partOf = [ "display-manager.service" ];
-          serviceConfig = {
-            Type = "oneshot";
-            User = "sddm";
-            ExecStart = applySddmDisplayConfig;
-            RemainAfterExit = true;
           };
         };
 
