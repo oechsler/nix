@@ -287,6 +287,10 @@ in
       DefaultTimeoutStopSec=10s
     '';
 
+    home.activation.removeLegacyHyprlandConfig = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+      rm -f "${config.xdg.configHome}/hypr/hyprland.conf"
+    '';
+
     home.packages = [
       pkgs.brightnessctl
       pkgs.ddcutil
