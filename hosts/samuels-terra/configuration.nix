@@ -130,10 +130,7 @@
     wantedBy = [ "multi-user.target" ];
     after = [ "sysinit.target" ];
     unitConfig.ConditionPathExists = "/sys/bus/usb/devices/usb3/3-0:1.0/usb3-port7/disable";
-    serviceConfig = {
-      Type = "oneshot";
-      RemainAfterExit = true;
-    };
+    serviceConfig.Type = "exec";
     script = ''
       echo 1 > /sys/bus/usb/devices/usb3/3-0:1.0/usb3-port7/disable
     '';
