@@ -274,24 +274,22 @@ let
       ${pkgs.coreutils}/bin/sleep 0.1
     done
 
-    # kscreen-doctor (monitor layout)
-    for socket in "$XDG_RUNTIME_DIR"/wayland-*; do
-      [ -S "$socket" ] || continue
-      case "$socket" in *.lock) continue ;; esac
-      export WAYLAND_DISPLAY=$(${pkgs.coreutils}/bin/basename "$socket")
-      ${pkgs.kdePackages.libkscreen}/bin/kscreen-doctor ${sddmKscreenArgs} && break
+    retry=0
+    while [ "$retry" -lt 50 ]; do
+      for socket in "$XDG_RUNTIME_DIR"/wayland-*; do
+        [ -S "$socket" ] || continue
+        case "$socket" in *.lock) continue ;; esac
+        export WAYLAND_DISPLAY=$(${pkgs.coreutils}/bin/basename "$socket")
+        if ${pkgs.kdePackages.libkscreen}/bin/kscreen-doctor ${sddmKscreenArgs} 2>/dev/null; then
+          echo "apply-sddm-display-config: done" >&2
+          exit 0
+        fi
+      done
+      retry=$((retry + 1))
+      ${pkgs.coreutils}/bin/sleep 0.1
     done
 
-    echo "apply-sddm-display-config: done" >&2
-  '';
-
-  sddmKwin = pkgs.writeShellScript "sddm-kwin" ''
-    ${applySddmDisplayConfig} &
-    exec ${lib.getExe' pkgs.kdePackages.kwin "kwin_wayland"} \
-      --no-global-shortcuts \
-      --no-kactivities \
-      --no-lockscreen \
-      --locale1
+    echo "apply-sddm-display-config: kscreen-doctor failed after retries" >&2
   '';
 
   sddmThemeName = "catppuccin-${config.catppuccin.sddm.flavor}-${config.catppuccin.sddm.accent}";
@@ -474,7 +472,6 @@ in
           wayland = {
             enable = true;
             compositor = "kwin";
-            compositorCommand = lib.mkIf shouldManageSddmLayout (toString sddmKwin);
           };
           settings = {
             General.GreeterEnvironment = sddmGreeterEnvironment;
@@ -508,6 +505,18 @@ in
           };
         };
 
+        sddm-apply-display-config = lib.mkIf shouldManageSddmLayout {
+          description = "Apply SDDM monitor layout after KWin starts";
+          after = [ "display-manager.service" ];
+          wantedBy = [ "display-manager.service" ];
+          partOf = [ "display-manager.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            User = "sddm";
+            ExecStart = applySddmDisplayConfig;
+          };
+        };
+
         sddm-osk = {
           description = "Manage the SDDM on-screen keyboard";
           after = [ "display-manager.service" ];
@@ -534,6 +543,15 @@ in
             Type = "oneshot";
             ExecStart = "${deploySddmColors} ${catppuccinColorsFile} ${colorSchemeId} ${sddmKdeglobals}";
           };
+        };
+      };
+      paths.sddm-apply-display-config-watch = lib.mkIf shouldManageSddmLayout {
+        description = "Reapply the SDDM monitor layout when a greeter Wayland socket appears";
+        wantedBy = [ "display-manager.service" ];
+        partOf = [ "display-manager.service" ];
+        pathConfig = {
+          PathChanged = "/run/user/${builtins.toString config.users.users.sddm.uid}";
+          Unit = "sddm-apply-display-config.service";
         };
       };
     };
