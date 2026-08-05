@@ -168,8 +168,16 @@
           "privacy.fingerprintingProtection" = true;
           "privacy.antitracking.enableWebcompat" = false;
           "privacy.globalprivacycontrol.enabled" = true;
+          "network.http.referer.XOriginTrimmingPolicy" = 2;
+
+          "network.prefetch-next" = false;
+          "network.dns.disablePrefetch" = true;
+          "network.dns.disablePrefetchFromHTTPS" = true;
+          "network.http.speculative-parallel-limit" = 0;
 
           "browser.urlbar.suggest.searches" = false;
+          "browser.urlbar.speculativeConnect.enabled" = false;
+          "browser.places.speculativeConnect.enabled" = false;
           "browser.urlbar.suggest.quicksuggest.sponsored" = false;
           "browser.urlbar.suggest.quicksuggest.nonsponsored" = false;
           "browser.urlbar.sponsoredTopSites" = false;
@@ -180,6 +188,7 @@
           "signon.rememberSignons" = false;
           "signon.autofillForms" = false;
           "signon.firefoxRelay.feature" = "disabled";
+          "browser.formfill.enable" = false;
           "extensions.formautofill.creditCards.enabled" = false;
           "extensions.formautofill.addresses.enabled" = false;
 
@@ -200,13 +209,27 @@
           "toolkit.telemetry.enabled" = false;
           "toolkit.telemetry.unified" = false;
           "toolkit.telemetry.archive.enabled" = false;
-          "browser.ping-centre.telemetry" = false;
           "app.shield.optoutstudies.enabled" = false;
+          "app.normandy.enabled" = false;
+          "app.normandy.api_url" = "";
+          "breakpad.reportURL" = "";
+          "browser.discovery.enabled" = false;
+          "extensions.htmlaboutaddons.recommendations.enabled" = false;
+
+          "network.captive-portal-service.enabled" = false;
+          "network.connectivity-service.enabled" = false;
 
           "dom.security.https_only_mode" = true;
           "dom.security.https_only_mode_ever_enabled" = true;
+          "security.ssl.require_safe_negotiation" = true;
+          "security.tls.enable_0rtt_data" = false;
+          "security.cert_pinning.enforcement_level" = 2;
 
-          "browser.translations.automaticallyPopup" = false;
+          "browser.uitour.enabled" = false;
+          "permissions.manager.defaultsUrl" = "";
+          "network.IDN_show_punycode" = true;
+          "dom.disable_window_move_resize" = true;
+
           "browser.translations.enable" = false;
 
           # Fonts — always use real font families for web content, regardless of uiStyle
