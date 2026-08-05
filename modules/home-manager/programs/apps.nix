@@ -39,7 +39,6 @@
   features,
   displays,
   lib,
-  theme,
   fonts,
   ...
 }:
@@ -48,7 +47,6 @@ let
   displayHelpers = import ../../lib/displays.nix { inherit lib; };
   hasHDR = displayHelpers.hasDesktopHDR displays.monitors || displays.defaults.hdr == 2;
   isKde = features.desktop.wm == "kde";
-  isLight = theme.catppuccin.flavor == "latte";
   chromium = import ../../lib/chromium.nix { inherit pkgs; };
   wrapChromiumApp =
     package: binary:
@@ -69,40 +67,44 @@ in
       # Common Apps (All DEs)
       #---------------------------
       {
-        home.packages =
-          with pkgs;
-          [
-            alsa-scarlett-gui
-            mumble
-            nheko
-            (wrapChromiumApp vesktop "vesktop")
-            freecad
-            libreoffice
-            nextcloud-client
-            (wrapChromiumApp obsidian "obsidian")
-            pika-backup
-            prusa-slicer
-            (wrapChromiumApp spotify "spotify")
-          ]
-          ++ lib.optional features.apps.winboat.enable (wrapChromiumApp winboat "winboat");
+        home = {
+          packages =
+            with pkgs;
+            [
+              alsa-scarlett-gui
+              mumble
+              nheko
+              (wrapChromiumApp vesktop "vesktop")
+              freecad
+              libreoffice
+              nextcloud-client
+              (wrapChromiumApp obsidian "obsidian")
+              pika-backup
+              prusa-slicer
+              (wrapChromiumApp spotify "spotify")
+            ]
+            ++ lib.optional features.apps.winboat.enable (wrapChromiumApp winboat "winboat");
 
-        # Mumble theme: don't set explicitly — uses system Qt theme (Catppuccin via Kvantum)
+          # Mumble theme: don't set explicitly — uses system Qt theme (Catppuccin via Kvantum)
 
-        # Nheko theme: Qt "system" detection doesn't work reliably with Kvantum,
-        # so we set the theme explicitly based on Catppuccin flavor
-        home.activation.nhekoTheme = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          conf="$HOME/.config/nheko/nheko.conf"
-          theme="${if isLight then "light" else "dark"}"
-          if [ -f "$conf" ]; then
-            ${pkgs.gnused}/bin/sed -i \
-              -e "s/^theme=.*/theme=$theme/" \
-              -e 's/^window\\start_in_tray=.*/window\\start_in_tray=true/' \
-              -e 's/^window\\tray=.*/window\\tray=true/' \
-              -e 's/^font_family=.*/font_family=${fonts.ui}/' \
-              -e 's/^font_size=.*/font_size=${toString fonts.size}/' \
-              "$conf"
-          fi
-        '';
+          activation.nhekoTheme = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+            conf="$HOME/.config/nheko/nheko.conf"
+            if [ -f "$conf" ]; then
+              ${pkgs.gnused}/bin/sed -i \
+                -e 's/^theme=.*/theme=system/' \
+                -e 's/^window\\start_in_tray=.*/window\\start_in_tray=true/' \
+                -e 's/^window\\tray=.*/window\\tray=true/' \
+                -e "s/^font_family=.*/font_family=${fonts.ui}/" \
+                -e "s/^font_size=.*/font_size=${toString fonts.size}/" \
+                "$conf"
+            fi
+          '';
+        };
+
+        programs.vesktop = {
+          enable = true;
+          package = null;
+        };
       }
 
       #---------------------------
