@@ -109,6 +109,8 @@ in
             minimizeToTray = true;
             autoStartMinimized = true;
             tray = true;
+            clickTrayToShowHide = true;
+            arRPC = true;
           };
         };
       }
