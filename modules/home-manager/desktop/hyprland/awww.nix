@@ -6,17 +6,8 @@
 # - Per-monitor wallpaper support
 # - Fade transition (1 second duration)
 # - Automatic wallpaper reload on home-manager activation
+# - Parallel startup with the graphical session
 # - Daemon-based (wallpaper persists across Hyprland restarts)
-#
-# How it works:
-# 1. Start awww-daemon in background
-# 2. Wait 2 seconds for daemon to be ready
-# 3. Set wallpaper(s) via awww img command
-# 4. Set default wallpaper on all monitors
-# 5. Per-monitor: Override wallpaper for explicitly configured monitors
-#
-# Scripts exposed:
-#   config.awww.start - Start daemon and set wallpaper (used by hyprland.nix)
 
 {
   config,
@@ -49,43 +40,70 @@ let
     )
   );
 
-  # Start script: Launch daemon and set wallpaper
   startScript = pkgs.writeShellScript "awww-start" ''
     ${awwwPkg}/bin/awww-daemon &
-    sleep 2  # Wait for daemon to be ready
-    ${wallpaperCommands}
+    daemon_pid=$!
+
+    for _ in $(seq 1 20); do
+      if ${awwwPkg}/bin/awww query > /dev/null 2>&1; then
+        ${wallpaperCommands}
+        wait "$daemon_pid"
+        exit 0
+      fi
+      sleep 0.1
+    done
+
+    wait "$daemon_pid"
+    exit 1
   '';
 
-  # Set wallpaper script (without daemon start)
   setWallpaperScript = pkgs.writeShellScript "awww-set" wallpaperCommands;
 in
 {
-  #===========================
-  # Options
-  #===========================
-
-  options.awww = {
-    start = lib.mkOption {
-      type = lib.types.path;
-      default = startScript;
-      readOnly = true;
-      description = "Script to start awww daemon and set wallpaper";
-    };
-  };
-
   #===========================
   # Configuration
   #===========================
 
   config = {
-    # Install awww package
     home.packages = [ awwwPkg ];
 
-    # Automatically reload wallpaper on home-manager activation
-    # (e.g., after changing theme.wallpaper or monitor config)
-    #
-    # Why explicit env vars: home-manager-samuel.service runs without WAYLAND_DISPLAY,
-    # so awww can't connect to the compositor unless we set it manually.
+    systemd.user = {
+      services = {
+        awww = {
+          Unit = {
+            Description = "Awww wallpaper daemon";
+            After = [ "graphical-session.target" ];
+            PartOf = [ "graphical-session.target" ];
+            ConditionEnvironment = "WAYLAND_DISPLAY";
+          };
+          Service = {
+            ExecStart = startScript;
+            Restart = "on-failure";
+            RestartSec = 2;
+          };
+          Install.WantedBy = [ "graphical-session.target" ];
+        };
+
+        awww-reload = {
+          Unit.Description = "Reload wallpaper on background change";
+          Service = {
+            Type = "oneshot";
+            ExecStart = setWallpaperScript;
+            Environment = [
+              "XDG_RUNTIME_DIR=%t"
+              "WAYLAND_DISPLAY=wayland-1"
+            ];
+          };
+        };
+      };
+
+      paths.awww-reload = {
+        Unit.Description = "Watch for wallpaper changes";
+        Install.WantedBy = [ "graphical-session.target" ];
+        Path.PathChanged = [ "/var/lib/backgrounds/.reload" ];
+      };
+    };
+
     home.activation.setWallpaper = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       if ${pkgs.procps}/bin/pgrep -x "awww-daemon" > /dev/null 2>&1; then
         export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
@@ -100,23 +118,5 @@ in
         run ${setWallpaperScript}
       fi
     '';
-
-    # Path unit: reload wallpaper whenever the extraction service signals a change
-    systemd.user.services.awww-reload = {
-      Unit.Description = "Reload wallpaper on background change";
-      Service = {
-        Type = "oneshot";
-        ExecStart = setWallpaperScript;
-        Environment = [
-          "XDG_RUNTIME_DIR=%t"
-          "WAYLAND_DISPLAY=wayland-1"
-        ];
-      };
-    };
-    systemd.user.paths.awww-reload = {
-      Unit.Description = "Watch for wallpaper changes";
-      Install.WantedBy = [ "graphical-session.target" ];
-      Path.PathChanged = [ "/var/lib/backgrounds/.reload" ];
-    };
   };
 }
