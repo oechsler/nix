@@ -69,6 +69,15 @@ let
     uwsm-app -- waybar &
   '';
 
+  waybar = pkgs.waybar.overrideAttrs (old: {
+    postPatch = (old.postPatch or "") + ''
+      substituteInPlace src/modules/hyprland/workspace.cpp \
+        --replace-fail \
+          'm_ipc.getSocket1Reply("dispatch workspace " + std::to_string(id()));' \
+          'm_ipc.getSocket1Reply("dispatch hl.dsp.focus({ workspace = " + std::to_string(id()) + " })");'
+    '';
+  });
+
 in
 {
   #===========================
@@ -92,6 +101,7 @@ in
     programs.waybar = {
       enable = true;
       systemd.enable = true;
+      package = waybar;
 
       settings.mainBar = {
         layer = "top";
@@ -130,6 +140,7 @@ in
           format = "";
           all-outputs = false;
           persistent-workspaces = persistentWorkspaces;
+          cursor = true;
         };
 
         "hyprland/window" = {
