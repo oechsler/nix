@@ -88,7 +88,7 @@ let
     case "$choice" in
       "󰌾  Sperren")        hyprlock ;;
       "󰒲  Standby")       loginctl lock-session && systemctl suspend ;;
-      "󰍃  Abmelden")      hyprctl dispatch exit ;;
+      "󰍃  Abmelden")      ${pkgs.uwsm}/bin/uwsm stop ;;
       "󰜉  Neustart")       systemctl reboot ;;
       "󰐥  Herunterfahren") systemctl poweroff ;;
       "󰘚  Firmware") systemctl reboot --firmware-setup ;;
