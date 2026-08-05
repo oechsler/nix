@@ -77,14 +77,16 @@ let
     }
     .${rot};
 
-  # Generate monitor configuration lines.
-  # Use the output's preferred mode instead of forcing a fixed resolution/refresh
-  # rate so unknown monitors on known connectors still come up.
-  # Format: "name, preferred, xPos x yPos, scale"
-  # Example: "DP-1, preferred, 0x0, 1.0"
-  monitorLines = [ ", preferred, auto, ${toString theme.scale}" ]; # Fallback for unknown monitors
+  monitorSpecs = [
+    {
+      output = "";
+      mode = "preferred";
+      position = "auto";
+      inherit (theme) scale;
 
-  monitorV2Lines = map (
+    }
+  ]
+  ++ map (
     m:
     {
       output = m.name;
@@ -105,26 +107,38 @@ let
   ) displays.defaults.vrr displays.monitors;
   hasHDR = displayHelpers.hasDesktopHDR displays.monitors || displays.defaults.hdr == 2;
 
-  # Workspace bindings: Bind specific workspaces to specific monitors
-  # Example: If monitor DP-1 has workspaces [1,2,3], generate:
-  # "1, DP-1"
-  # "2, DP-1"
-  # "3, DP-1"
-  workspaceBindings = lib.flatten (
-    map (m: map (ws: "${toString ws}, ${m.name}") m.workspaces) displays.monitors
-  );
-
-  # Workspace rules: Assign workspaces to monitors + set default workspace per monitor
-  # defaultWorkspace prevents Hyprland from creating a stray workspace on startup
   workspaceRules = lib.flatten (
     map (
       m:
-      (map (ws: "${toString ws}, monitor:${m.name}") m.workspaces)
-      ++ (lib.optional (
-        m.workspaces != [ ]
-      ) "${toString (builtins.head m.workspaces)}, monitor:${m.name}, default:true")
+      (map (ws: {
+        workspace = toString ws;
+        monitor = m.name;
+      }) m.workspaces)
+      ++ lib.optional (m.workspaces != [ ]) {
+        workspace = toString (builtins.head m.workspaces);
+        monitor = m.name;
+        default = true;
+      }
     ) displays.monitors
   );
+
+  luaInline = lib.generators.mkLuaInline;
+  modKey = key: luaInline ''mainMod .. " + ${key}"'';
+  dispatcher = expression: luaInline "hl.dsp.${expression}";
+  bind = key: expression: {
+    _args = [
+      key
+      (dispatcher expression)
+    ];
+  };
+  bindWith = options: key: expression: {
+    _args = [
+      key
+      (dispatcher expression)
+      options
+    ];
+  };
+  execBind = key: command: bind key "exec_cmd(${builtins.toJSON command})";
 
   brightnessController = import ./scripts/brightness-controller.nix { inherit pkgs; };
   displayBrightnessInit = "${brightnessController} init";
@@ -290,272 +304,466 @@ in
     wayland.windowManager.hyprland = {
       enable = true;
       xwayland.enable = true;
-      configType = "hyprlang";
+      configType = "lua";
 
       systemd.enable = false; # UWSM handles session management
 
       settings = {
-        "$accent" = accentColor;
-        "$surface0" = surface0Color;
+        accent._var = accentColor;
+        surface0._var = surface0Color;
+        mainMod._var = "SUPER";
 
-        monitor = monitorLines;
-        monitorv2 = monitorV2Lines;
-        workspace = workspaceRules;
-        wsbind = workspaceBindings;
+        monitor = monitorSpecs;
+        workspace_rule = workspaceRules;
 
-        exec-once = [
-          "hyprctl dispatch workspace 1"
-          "uwsm-app -- ${config.awww.start}"
+        on._args = [
+          "hyprland.start"
+          (luaInline ''
+            function()
+              hl.exec_cmd("hyprctl dispatch workspace 1")
+              hl.exec_cmd(${builtins.toJSON "uwsm-app -- ${config.awww.start}"})
+            end
+          '')
         ];
 
-        env = [
-          "XCURSOR_THEME,${theme.cursor.name}"
-          "XCURSOR_SIZE,${toString theme.cursor.size}"
-          "HYPRCURSOR_THEME,${theme.cursor.name}"
-          "HYPRCURSOR_SIZE,${toString theme.cursor.size}"
-          # gnome platform theme reads color-scheme from the XDG portal,
-          # enabling dark mode detection in QtWebEngine apps (CoolerControl etc.).
-          # qt6ct doesn't implement colorScheme(), so Qt always reports "light".
-          # Kvantum styling is preserved via QT_STYLE_OVERRIDE.
-          "QT_QPA_PLATFORMTHEME,gnome"
-          "GTK_THEME,catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-standard"
-          "HYPRSHOT_DIR,${config.xdg.userDirs.pictures}"
+        env = map (entry: { _args = entry; }) [
+          [
+            "XCURSOR_THEME"
+            theme.cursor.name
+          ]
+          [
+            "XCURSOR_SIZE"
+            (toString theme.cursor.size)
+          ]
+          [
+            "HYPRCURSOR_THEME"
+            theme.cursor.name
+          ]
+          [
+            "HYPRCURSOR_SIZE"
+            (toString theme.cursor.size)
+          ]
+          [
+            "QT_QPA_PLATFORMTHEME"
+            "gnome"
+          ]
+          [
+            "GTK_THEME"
+            "catppuccin-${config.catppuccin.flavor}-${config.catppuccin.accent}-standard"
+          ]
+          [
+            "HYPRSHOT_DIR"
+            config.xdg.userDirs.pictures
+          ]
         ];
 
-        cursor.no_hardware_cursors = true;
+        gesture = {
+          fingers = 3;
+          direction = "horizontal";
+          action = "workspace";
+        };
 
-        input = {
-          kb_layout = locale.keyboard;
-          kb_variant = "";
-          kb_model = "";
-          kb_options = "";
-          kb_rules = "";
+        config = {
+          cursor.no_hardware_cursors = true;
 
-          follow_mouse = 1;
-          sensitivity = 0;
-          natural_scroll = input.mouse.naturalScroll;
+          input = {
+            kb_layout = locale.keyboard;
+            kb_variant = "";
+            kb_model = "";
+            kb_options = "";
+            kb_rules = "";
+            follow_mouse = 1;
+            sensitivity = 0;
+            natural_scroll = input.mouse.naturalScroll;
+            touchpad.natural_scroll = input.touchpad.naturalScroll;
+          };
 
-          touchpad = {
-            natural_scroll = input.touchpad.naturalScroll;
+          general = {
+            gaps_in = theme.gaps.inner;
+            gaps_out = theme.gaps.outer;
+            border_size = theme.border.width;
+            col = {
+              active_border = luaInline "accent";
+              inactive_border = luaInline "surface0";
+            };
+            resize_on_border = true;
+            allow_tearing = false;
+            layout = "dwindle";
+          };
+
+          decoration = {
+            rounding = theme.radius.default;
+            active_opacity = 1.0;
+            inactive_opacity = 1.0;
+            shadow = {
+              enabled = true;
+              range = 4;
+              render_power = 3;
+              color = "rgba(1a1a1aee)";
+            };
+            blur = {
+              enabled = true;
+              size = 8;
+              passes = 3;
+              vibrancy = 0.0;
+            };
+          };
+
+          animations.enabled = true;
+
+          dwindle = {
+            preserve_split = true;
+            split_width_multiplier = 1.0;
+          };
+
+          master.new_status = "master";
+
+          misc = {
+            force_default_wallpaper = 0;
+            disable_hyprland_logo = true;
+            vrr = vrrMode;
+          };
+
+          ecosystem.no_update_news = true;
+
+          render = {
+            direct_scanout = 0;
+            non_shader_cm = 0;
+          }
+          // lib.optionalAttrs hasHDR {
+            cm_enabled = true;
+            cm_sdr_eotf = "gamma22";
           };
         };
 
-        gesture = "3, horizontal, workspace";
+        curve = map (curve: { _args = curve; }) [
+          [
+            "easeOutQuint"
+            {
+              type = "bezier";
+              points = [
+                [
+                  0.23
+                  1
+                ]
+                [
+                  0.32
+                  1
+                ]
+              ];
+            }
+          ]
+          [
+            "easeInOutCubic"
+            {
+              type = "bezier";
+              points = [
+                [
+                  0.65
+                  0.05
+                ]
+                [
+                  0.36
+                  1
+                ]
+              ];
+            }
+          ]
+          [
+            "linear"
+            {
+              type = "bezier";
+              points = [
+                [
+                  0
+                  0
+                ]
+                [
+                  1
+                  1
+                ]
+              ];
+            }
+          ]
+          [
+            "almostLinear"
+            {
+              type = "bezier";
+              points = [
+                [
+                  0.5
+                  0.5
+                ]
+                [
+                  0.75
+                  1
+                ]
+              ];
+            }
+          ]
+          [
+            "quick"
+            {
+              type = "bezier";
+              points = [
+                [
+                  0.15
+                  0
+                ]
+                [
+                  0.1
+                  1
+                ]
+              ];
+            }
+          ]
+        ];
 
-        general = {
-          gaps_in = theme.gaps.inner;
-          gaps_out = theme.gaps.outer;
-          border_size = theme.border.width;
-          "col.active_border" = "$accent";
-          "col.inactive_border" = "$surface0";
-          resize_on_border = true;
-          allow_tearing = false;
-          layout = "dwindle";
-        };
-
-        decoration = {
-          rounding = theme.radius.default;
-          active_opacity = 1.0;
-          inactive_opacity = 1.0;
-
-          shadow = {
+        animation = [
+          {
+            leaf = "global";
             enabled = true;
-            range = 4;
-            render_power = 3;
-            color = "rgba(1a1a1aee)";
-          };
-
-          blur = {
+            speed = 10;
+            bezier = "default";
+          }
+          {
+            leaf = "border";
             enabled = true;
-            size = 8;
-            passes = 3;
-            vibrancy = 0.0;
-          };
-        };
-
-        animations = {
-          enabled = true;
-
-          bezier = [
-            "easeOutQuint, 0.23, 1, 0.32, 1"
-            "easeInOutCubic, 0.65, 0.05, 0.36, 1"
-            "linear, 0, 0, 1, 1"
-            "almostLinear, 0.5, 0.5, 0.75, 1"
-            "quick, 0.15, 0, 0.1, 1"
-          ];
-
-          animation = [
-            "global, 1, 10, default"
-            "border, 1, 5.39, easeOutQuint"
-            "windows, 1, 4.79, easeOutQuint"
-            "windowsIn, 1, 4.1, easeOutQuint, popin 87%"
-            "windowsOut, 1, 1.49, linear, popin 87%"
-            "fadeIn, 1, 1.73, almostLinear"
-            "fadeOut, 1, 1.46, almostLinear"
-            "fade, 1, 3.03, quick"
-            "layers, 1, 3.81, easeOutQuint"
-            "layersIn, 1, 4, easeOutQuint, fade"
-            "layersOut, 1, 1.5, linear, fade"
-            "fadeLayersIn, 1, 1.79, almostLinear"
-            "fadeLayersOut, 1, 1.39, almostLinear"
-            "workspaces, 1, 1.94, almostLinear, fade"
-            "workspacesIn, 1, 1.21, almostLinear, fade"
-            "workspacesOut, 1, 1.94, almostLinear, fade"
-          ];
-        };
-
-        dwindle = {
-          preserve_split = true;
-          split_width_multiplier = 1.0;
-        };
-
-        master = {
-          new_status = "master";
-        };
-
-        misc = {
-          force_default_wallpaper = 0;
-          disable_hyprland_logo = true;
-          # 0=off, 1=always, 2=fullscreen-only. Hyprland exposes this globally,
-          # so use the highest requested mode from the configured monitors.
-          vrr = vrrMode;
-        };
-
-        ecosystem = {
-          no_update_news = true;
-        };
-
-        render = {
-          direct_scanout = 0;
-          non_shader_cm = 0;
-        }
-        // lib.optionalAttrs hasHDR {
-          cm_enabled = true;
-          cm_sdr_eotf = "gamma22";
-        };
-
-        layerrule = [
-          "blur on, match:namespace ^(rofi|waybar|hypr-dock)$"
-          "blur_popups on, match:namespace ^(rofi|waybar|hypr-dock)$"
-          "ignore_alpha 0.2, match:namespace ^(rofi|waybar|hypr-dock)$"
+            speed = 5.39;
+            bezier = "easeOutQuint";
+          }
+          {
+            leaf = "windows";
+            enabled = true;
+            speed = 4.79;
+            bezier = "easeOutQuint";
+          }
+          {
+            leaf = "windowsIn";
+            enabled = true;
+            speed = 4.1;
+            bezier = "easeOutQuint";
+            style = "popin 87%";
+          }
+          {
+            leaf = "windowsOut";
+            enabled = true;
+            speed = 1.49;
+            bezier = "linear";
+            style = "popin 87%";
+          }
+          {
+            leaf = "fadeIn";
+            enabled = true;
+            speed = 1.73;
+            bezier = "almostLinear";
+          }
+          {
+            leaf = "fadeOut";
+            enabled = true;
+            speed = 1.46;
+            bezier = "almostLinear";
+          }
+          {
+            leaf = "fade";
+            enabled = true;
+            speed = 3.03;
+            bezier = "quick";
+          }
+          {
+            leaf = "layers";
+            enabled = true;
+            speed = 3.81;
+            bezier = "easeOutQuint";
+          }
+          {
+            leaf = "layersIn";
+            enabled = true;
+            speed = 4;
+            bezier = "easeOutQuint";
+            style = "fade";
+          }
+          {
+            leaf = "layersOut";
+            enabled = true;
+            speed = 1.5;
+            bezier = "linear";
+            style = "fade";
+          }
+          {
+            leaf = "fadeLayersIn";
+            enabled = true;
+            speed = 1.79;
+            bezier = "almostLinear";
+          }
+          {
+            leaf = "fadeLayersOut";
+            enabled = true;
+            speed = 1.39;
+            bezier = "almostLinear";
+          }
+          {
+            leaf = "workspaces";
+            enabled = true;
+            speed = 1.94;
+            bezier = "almostLinear";
+            style = "fade";
+          }
+          {
+            leaf = "workspacesIn";
+            enabled = true;
+            speed = 1.21;
+            bezier = "almostLinear";
+            style = "fade";
+          }
+          {
+            leaf = "workspacesOut";
+            enabled = true;
+            speed = 1.94;
+            bezier = "almostLinear";
+            style = "fade";
+          }
         ];
 
-        windowrule = [
-          # System authentication
-          "match:class ^(org\\.freedesktop\\.impl\\.portal\\.desktop\\.hyprland)$, float on"
+        layer_rule = {
+          match.namespace = "^(rofi|waybar|hypr-dock)$";
+          blur = true;
+          blur_popups = true;
+          ignore_alpha = 0.2;
+        };
 
-          # File operations (Nautilus)
-          "match:title ^(File Operation Progress)$, float on"
-          "match:title ^(Confirm to replace files)$, float on"
-
-          # Picture-in-Picture
-          "match:title ^(Picture-in-Picture)$, float on"
-          "match:title ^(Picture-in-Picture)$, pin on"
-          "match:title ^(Picture-in-Picture)$, size 25% 25%"
-
-          # Satty (screenshot editor)
-          "match:class ^(com\\.gabm\\.satty)$, float on"
-          "match:class ^(com\\.gabm\\.satty)$, size 80% 80%"
-          "match:class ^(com\\.gabm\\.satty)$, center on"
+        window_rule = [
+          {
+            match.class = "^(org\\.freedesktop\\.impl\\.portal\\.desktop\\.hyprland)$";
+            float = true;
+          }
+          {
+            match.title = "^(File Operation Progress)$";
+            float = true;
+          }
+          {
+            match.title = "^(Confirm to replace files)$";
+            float = true;
+          }
+          {
+            match.title = "^(Picture-in-Picture)$";
+            float = true;
+            pin = true;
+            size = "25% 25%";
+          }
+          {
+            match.class = "^(com\\.gabm\\.satty)$";
+            float = true;
+            size = "80% 80%";
+            center = true;
+          }
         ];
-
-        "$mainMod" = "SUPER";
 
         bind = [
-          "$mainMod, Return, exec, kitty"
-          "$mainMod, Q, killactive,"
-          "$mainMod, M, exec, ${config.rofi.power}"
-          "$mainMod SHIFT, Q, exec, hyprlock"
-          "$mainMod, E, exec, ${fileManagerCommand}"
-          # Toggle floating — resize to 60 % of monitor (keeps 16:9 ratio) and center
-          "$mainMod, V, exec, hyprctl --batch 'dispatch togglefloating ; dispatch resizeactive exact 60% 60% ; dispatch centerwindow'"
-          "$mainMod, R, exec, ${config.rofi.toggle}"
-          "$mainMod, W, exec, ${config.rofi.windowList}"
-          "$mainMod, P, pseudo,"
-          "$mainMod, Space, layoutmsg, togglesplit"
-          "$mainMod, F, fullscreen, 1"
-
-          ", Print, exec, hyprshot -m output --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
-          "SHIFT, Print, exec, hyprshot -m region --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
-          "$mainMod SHIFT, Print, exec, hyprshot -m window --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
-          "$mainMod, C, exec, ${config.rofi.clipboard}"
-          "$mainMod SHIFT, R, exec, ${config.waybar.reload}"
-
-          "$mainMod, H, movefocus, l"
-          "$mainMod, L, movefocus, r"
-          "$mainMod, K, movefocus, u"
-          "$mainMod, J, movefocus, d"
-          "$mainMod, left, movefocus, l"
-          "$mainMod, right, movefocus, r"
-          "$mainMod, up, movefocus, u"
-          "$mainMod, down, movefocus, d"
-
-          "$mainMod SHIFT, H, movewindow, l"
-          "$mainMod SHIFT, L, movewindow, r"
-          "$mainMod SHIFT, K, movewindow, u"
-          "$mainMod SHIFT, J, movewindow, d"
-
-          "$mainMod CTRL, left, focusmonitor, l"
-          "$mainMod CTRL, right, focusmonitor, r"
-
-          "$mainMod, 1, workspace, 1"
-          "$mainMod, 2, workspace, 2"
-          "$mainMod, 3, workspace, 3"
-          "$mainMod, 4, workspace, 4"
-          "$mainMod, 5, workspace, 5"
-          "$mainMod, 6, workspace, 6"
-          "$mainMod, 7, workspace, 7"
-          "$mainMod, 8, workspace, 8"
-          #"$mainMod, 9, workspace, 9"
-          #"$mainMod, 0, workspace, 10"
-
-          "$mainMod SHIFT, 1, movetoworkspace, 1"
-          "$mainMod SHIFT, 2, movetoworkspace, 2"
-          "$mainMod SHIFT, 3, movetoworkspace, 3"
-          "$mainMod SHIFT, 4, movetoworkspace, 4"
-          "$mainMod SHIFT, 5, movetoworkspace, 5"
-          "$mainMod SHIFT, 6, movetoworkspace, 6"
-          "$mainMod SHIFT, 7, movetoworkspace, 7"
-          "$mainMod SHIFT, 8, movetoworkspace, 8"
-          #"$mainMod SHIFT, 9, movetoworkspace, 9"
-          #"$mainMod SHIFT, 0, movetoworkspace, 10"
-
-          "$mainMod, S, togglespecialworkspace, magic"
-          "$mainMod SHIFT, S, movetoworkspace, special:magic"
-          "$mainMod, mouse_down, workspace, e+1"
-          "$mainMod, mouse_up, workspace, e-1"
-        ];
-
-        binde = [
-          "$mainMod CTRL, H, resizeactive, -10 0"
-          "$mainMod CTRL, L, resizeactive, 10 0"
-          "$mainMod CTRL, K, resizeactive, 0 -10"
-          "$mainMod CTRL, J, resizeactive, 0 10"
-        ];
-
-        bindel = [
-          ", XF86AudioRaiseVolume, exec, wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+ && ${volumeNotify}"
-          ", XF86AudioLowerVolume, exec, wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && ${volumeNotify}"
-          ", XF86AudioMute, exec, wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && ${volumeNotify}"
-          ", XF86AudioMicMute, exec, wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"
-          ", XF86MonBrightnessUp, exec, ${displayBrightness} up"
-          ", XF86MonBrightnessDown, exec, ${displayBrightness} down"
-          "$mainMod, F5, exec, ${displayBrightness} down"
-          "$mainMod, F6, exec, ${displayBrightness} up"
-        ];
-
-        bindl = [
-          ", XF86AudioNext, exec, playerctl next"
-          ", XF86AudioPause, exec, playerctl play-pause"
-          ", XF86AudioPlay, exec, playerctl play-pause"
-          ", XF86AudioPrev, exec, playerctl previous"
-          ", XF86PowerOff, exec, pidof hyprlock && systemctl suspend || ${config.rofi.power}"
-        ];
-
-        bindm = [
-          "$mainMod, mouse:272, movewindow"
-          "$mainMod, mouse:273, resizewindow"
-        ];
+          (execBind (modKey "Return") "kitty")
+          (bind (modKey "Q") "window.close()")
+          (execBind (modKey "M") config.rofi.power)
+          (execBind (modKey "SHIFT + Q") "hyprlock")
+          (execBind (modKey "E") fileManagerCommand)
+          (execBind (modKey "V") "hyprctl --batch 'dispatch togglefloating ; dispatch resizeactive exact 60% 60% ; dispatch centerwindow'")
+          (execBind (modKey "R") config.rofi.toggle)
+          (execBind (modKey "W") config.rofi.windowList)
+          (bind (modKey "P") "window.pseudo()")
+          (bind (modKey "Space") ''layout("togglesplit")'')
+          (bind (modKey "F") ''window.fullscreen({ mode = "maximized" })'')
+          (execBind "Print" "hyprshot -m output --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png")
+          (execBind "SHIFT + Print" "hyprshot -m region --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png")
+          (execBind (modKey "SHIFT + Print") "hyprshot -m window --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png")
+          (execBind (modKey "C") config.rofi.clipboard)
+          (execBind (modKey "SHIFT + R") config.waybar.reload)
+          (bind (modKey "H") ''focus({ direction = "left" })'')
+          (bind (modKey "L") ''focus({ direction = "right" })'')
+          (bind (modKey "K") ''focus({ direction = "up" })'')
+          (bind (modKey "J") ''focus({ direction = "down" })'')
+          (bind (modKey "left") ''focus({ direction = "left" })'')
+          (bind (modKey "right") ''focus({ direction = "right" })'')
+          (bind (modKey "up") ''focus({ direction = "up" })'')
+          (bind (modKey "down") ''focus({ direction = "down" })'')
+          (bind (modKey "SHIFT + H") ''window.move({ direction = "left" })'')
+          (bind (modKey "SHIFT + L") ''window.move({ direction = "right" })'')
+          (bind (modKey "SHIFT + K") ''window.move({ direction = "up" })'')
+          (bind (modKey "SHIFT + J") ''window.move({ direction = "down" })'')
+          (bind (modKey "CTRL + left") ''focus({ monitor = "l" })'')
+          (bind (modKey "CTRL + right") ''focus({ monitor = "r" })'')
+          (bind (modKey "S") ''workspace.toggle_special("magic")'')
+          (bind (modKey "SHIFT + S") ''window.move({ workspace = "special:magic" })'')
+          (bind (modKey "mouse_down") ''focus({ workspace = "e+1" })'')
+          (bind (modKey "mouse_up") ''focus({ workspace = "e-1" })'')
+          (bindWith {
+            repeating = true;
+          } (modKey "CTRL + H") "window.resize({ x = -10, y = 0, relative = true })")
+          (bindWith {
+            repeating = true;
+          } (modKey "CTRL + L") "window.resize({ x = 10, y = 0, relative = true })")
+          (bindWith {
+            repeating = true;
+          } (modKey "CTRL + K") "window.resize({ x = 0, y = -10, relative = true })")
+          (bindWith {
+            repeating = true;
+          } (modKey "CTRL + J") "window.resize({ x = 0, y = 10, relative = true })")
+          (bindWith
+            {
+              locked = true;
+              repeating = true;
+            }
+            "XF86AudioRaiseVolume"
+            "exec_cmd(${builtins.toJSON "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+ && ${volumeNotify}"})"
+          )
+          (bindWith
+            {
+              locked = true;
+              repeating = true;
+            }
+            "XF86AudioLowerVolume"
+            "exec_cmd(${builtins.toJSON "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && ${volumeNotify}"})"
+          )
+          (bindWith
+            {
+              locked = true;
+              repeating = true;
+            }
+            "XF86AudioMute"
+            "exec_cmd(${builtins.toJSON "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && ${volumeNotify}"})"
+          )
+          (bindWith {
+            locked = true;
+            repeating = true;
+          } "XF86AudioMicMute" ''exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle")'')
+          (bindWith {
+            locked = true;
+            repeating = true;
+          } "XF86MonBrightnessUp" "exec_cmd(${builtins.toJSON "${displayBrightness} up"})")
+          (bindWith {
+            locked = true;
+            repeating = true;
+          } "XF86MonBrightnessDown" "exec_cmd(${builtins.toJSON "${displayBrightness} down"})")
+          (bindWith {
+            locked = true;
+            repeating = true;
+          } (modKey "F5") "exec_cmd(${builtins.toJSON "${displayBrightness} down"})")
+          (bindWith {
+            locked = true;
+            repeating = true;
+          } (modKey "F6") "exec_cmd(${builtins.toJSON "${displayBrightness} up"})")
+          (bindWith { locked = true; } "XF86AudioNext" ''exec_cmd("playerctl next")'')
+          (bindWith { locked = true; } "XF86AudioPause" ''exec_cmd("playerctl play-pause")'')
+          (bindWith { locked = true; } "XF86AudioPlay" ''exec_cmd("playerctl play-pause")'')
+          (bindWith { locked = true; } "XF86AudioPrev" ''exec_cmd("playerctl previous")'')
+          (bindWith { locked = true; } "XF86PowerOff"
+            "exec_cmd(${builtins.toJSON "pidof hyprlock && systemctl suspend || ${config.rofi.power}"})"
+          )
+          (bindWith { mouse = true; } (modKey "mouse:272") "window.drag()")
+          (bindWith { mouse = true; } (modKey "mouse:273") "window.resize()")
+        ]
+        ++ map (ws: bind (modKey (toString ws)) "focus({ workspace = ${toString ws} })") (lib.range 1 8)
+        ++ map (ws: bind (modKey "SHIFT + ${toString ws}") "window.move({ workspace = ${toString ws} })") (
+          lib.range 1 8
+        );
 
       };
 

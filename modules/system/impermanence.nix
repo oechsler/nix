@@ -94,6 +94,9 @@ in
       ++ lib.optionals config.features.desktop.enable [
         "/var/lib/sddm" # SDDM state
       ]
+      ++ lib.optionals config.features.gaming.steamMachine.catppuccin.enable [
+        "/var/lib/decky-loader"
+      ]
       ++ lib.optionals config.programs.coolercontrol.enable [
         "/etc/coolercontrol" # CoolerControl config & password
       ]
