@@ -73,8 +73,6 @@
   nixpkgs.config.permittedInsecurePackages = [
     # nheko depends on libolm, which has no maintained replacement yet.
     "olm-3.2.16"
-    # Jovian-NixOS uses pnpm 9 to build decky-loader.
-    "pnpm-9.15.9"
   ];
 
   #---------------------------
