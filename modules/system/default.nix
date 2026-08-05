@@ -35,6 +35,7 @@
     ./power.nix
     ./smb.nix
     ./gaming.nix
+    ./deck.nix
     ./packages.nix
     ./ssh.nix
     ./auth.nix

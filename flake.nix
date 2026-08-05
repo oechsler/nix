@@ -114,6 +114,11 @@
     };
 
     nix-flatpak.url = "github:gmodena/nix-flatpak";
+
+    jovian-nixos = {
+      url = "github:Jovian-Experiments/Jovian-NixOS";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -145,6 +150,7 @@
             inputs.sops-nix.nixosModules.sops
             inputs.disko.nixosModules.disko
             inputs.impermanence.nixosModules.impermanence
+            (inputs.jovian-nixos + "/modules/decky-loader.nix")
 
             # Shared overlays (always included)
             inputs.nix-flatpak.nixosModules.nix-flatpak
