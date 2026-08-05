@@ -50,6 +50,31 @@ let
   hasHDR = displayHelpers.hasDesktopHDR displays.monitors || displays.defaults.hdr == 2;
   isKde = features.desktop.wm == "kde";
   chromium = import ../../lib/chromium.nix { inherit pkgs; };
+  mumbleDefaults = pkgs.writeText "mumble-settings.json" (
+    builtins.toJSON {
+      audio = {
+        echo_cancel_mode = "Disabled";
+        input_system = "PulseAudio";
+        output_system = "PulseAudio";
+        play_mute_cue = false;
+        vad_max = 0.7165135741233826;
+        vad_min = 0.6448560953140259;
+      };
+      misc = {
+        audio_wizard_has_been_shown = true;
+        viewed_server_ping_consent_message = true;
+      };
+      network.auto_connect_to_last_server = true;
+      ui = {
+        channel_expansion_mode = "AllChannels";
+        disable_public_server_list = true;
+        quit_behavior = "AlwaysMinimize";
+        send_usage_statistics = false;
+        theme = "";
+        theme_style = "";
+      };
+    }
+  );
   wrapChromiumApp =
     package: binary:
     chromium.wrapHdrSdrApp {
@@ -88,6 +113,14 @@ in
             ++ lib.optional features.apps.winboat.enable (wrapChromiumApp winboat "winboat");
 
           # Mumble theme: don't set explicitly — uses system Qt theme (Catppuccin via Kvantum)
+
+          activation.mumbleDefaults = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+            mumble_config="$HOME/.config/Mumble/Mumble/mumble_settings.json"
+            if [ ! -e "$mumble_config" ]; then
+              mkdir -p "$(dirname "$mumble_config")"
+              cp ${mumbleDefaults} "$mumble_config"
+            fi
+          '';
 
           activation.nhekoTheme = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
             conf="$HOME/.config/nheko/nheko.conf"
