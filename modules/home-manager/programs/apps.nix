@@ -54,6 +54,11 @@ let
       inherit package binary;
       enable = hasHDR;
     };
+
+  nhekoWrapped = pkgs.writeShellScriptBin "nheko" ''
+    export QT_QPA_PLATFORMTHEME=qtct
+    exec ${pkgs.nheko}/bin/nheko "$@"
+  '';
 in
 {
   #===========================
@@ -73,7 +78,7 @@ in
             [
               alsa-scarlett-gui
               mumble
-              nheko
+              nhekoWrapped
               (wrapChromiumApp vesktop "vesktop")
               freecad
               libreoffice
