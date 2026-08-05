@@ -52,7 +52,9 @@ in
     systemd.user.services.hypr-dock = {
       Unit = {
         Description = "Hypr Dock";
+        After = [ "graphical-session.target" ];
         PartOf = [ "graphical-session.target" ];
+        ConditionEnvironment = "WAYLAND_DISPLAY";
       };
       Service = {
         ExecStart = "${pkgs.hypr-dock}/bin/hypr-dock";

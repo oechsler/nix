@@ -325,7 +325,6 @@ in
           (luaInline ''
             function()
               hl.exec_cmd("hyprctl dispatch workspace 1")
-              hl.exec_cmd(${builtins.toJSON "uwsm-app -- ${config.awww.start}"})
             end
           '')
         ];
