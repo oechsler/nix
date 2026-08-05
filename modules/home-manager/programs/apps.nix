@@ -55,10 +55,6 @@ let
       enable = hasHDR;
     };
 
-  nhekoWrapped = pkgs.writeShellScriptBin "nheko" ''
-    export QT_QPA_PLATFORMTHEME=qtct
-    exec ${pkgs.nheko}/bin/nheko "$@"
-  '';
 in
 {
   #===========================
@@ -78,7 +74,7 @@ in
             [
               alsa-scarlett-gui
               mumble
-              nhekoWrapped
+              nheko
               (wrapChromiumApp vesktop "vesktop")
               freecad
               libreoffice
@@ -96,7 +92,7 @@ in
             conf="$HOME/.config/nheko/nheko.conf"
             if [ -f "$conf" ]; then
               ${pkgs.gnused}/bin/sed -i \
-                -e 's/^theme=.*/theme=system/' \
+                -e 's/^theme=.*/theme=dark/' \
                 -e 's/^window\\start_in_tray=.*/window\\start_in_tray=true/' \
                 -e 's/^window\\tray=.*/window\\tray=true/' \
                 -e "s/^font_family=.*/font_family=${fonts.ui}/" \
