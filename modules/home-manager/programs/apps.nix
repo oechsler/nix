@@ -57,8 +57,6 @@ let
         input_system = "PulseAudio";
         output_system = "PulseAudio";
         play_mute_cue = false;
-        vad_max = 0.7165135741233826;
-        vad_min = 0.6448560953140259;
       };
       misc = {
         audio_wizard_has_been_shown = true;
