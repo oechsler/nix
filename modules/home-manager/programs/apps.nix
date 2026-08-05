@@ -105,6 +105,11 @@ in
         programs.vesktop = {
           enable = true;
           package = null;
+          settings = {
+            minimizeToTray = true;
+            autoStartMinimized = true;
+            tray = true;
+          };
         };
       }
 
