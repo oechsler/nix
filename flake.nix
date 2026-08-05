@@ -146,6 +146,19 @@
             {
               nixpkgs.overlays = [
                 inputs.cachyos-kernel.overlays.pinned
+                (final: prev: {
+                  hyprland =
+                    if prev.hyprland.version == "0.56.1" then
+                      prev.hyprland.overrideAttrs (old: {
+                        postPatch = (old.postPatch or "") + ''
+                          substituteInPlace CMakeLists.txt hyprpm/CMakeLists.txt start/CMakeLists.txt \
+                            --replace-fail "find_package(glaze 7...<8 QUIET)" \
+                            "find_package(glaze 8...<9 QUIET)"
+                        '';
+                      })
+                    else
+                      prev.hyprland;
+                })
               ];
             }
           ]
