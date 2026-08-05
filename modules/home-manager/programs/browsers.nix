@@ -142,10 +142,11 @@
           "ui.systemUsesDarkTheme" = 1; # Force dark theme for UI
 
           # Home Manager installs extensions into the profile. Keep them enabled
-          # without a first-run approval prompt and keep WebExtension storage on;
-          # Firefox Color / Catppuccin extension settings rely on it on newer Firefox.
+          # without a first-run approval prompt. Firefox Color / Catppuccin
+          # settings are written via storage.js, which requires
+          # extensions.webextensions.ExtensionStorageIDB.enabled = false.
+          # Home Manager sets this automatically when extension settings exist.
           "extensions.autoDisableScopes" = 0;
-          "extensions.webextensions.ExtensionStorageIDB.enabled" = true;
 
           "browser.startup.homepage" = "https://dash.at.oechsler.it";
           "browser.startup.page" = 3; # 3 = Restore previous session
