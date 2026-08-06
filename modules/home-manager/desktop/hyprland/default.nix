@@ -220,7 +220,6 @@ in
               TimeoutStopSec = 5;
             }
             // lib.optionalAttrs (app.name == "Mumble") {
-              TimeoutStopSec = 15;
               ExecStop = "${mumbleSetQuitFlag}";
             };
             Install.WantedBy = [ "graphical-session.target" ];
