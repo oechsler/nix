@@ -27,7 +27,7 @@ let
   # then override explicitly configured monitors with their per-monitor wallpaper.
   wallpaperCommands = lib.concatStringsSep "\n" (
     [
-      "${awwwPkg}/bin/awww img ${theme.wallpaperPath} --transition-type fade --transition-duration 1"
+      "${awwwPkg}/bin/awww img ${theme.wallpaperPath} --transition-type fade --transition-duration 0.6"
     ]
     ++ lib.optionals (displays.monitors != [ ]) (
       map (
@@ -35,7 +35,7 @@ let
         let
           wp = displayHelpers.monitorWallpaper theme m;
         in
-        "${awwwPkg}/bin/awww img ${wp} --outputs ${m.name} --transition-type fade --transition-duration 1"
+        "${awwwPkg}/bin/awww img ${wp} --outputs ${m.name} --transition-type fade --transition-duration 0.6"
       ) displays.monitors
     )
   );

@@ -151,29 +151,62 @@ let
   displayBrightnessInit = "${brightnessController} init";
   displayBrightness = "${brightnessController} adjust";
 
+  toggleFloating = luaInline ''
+    function()
+      local window = hl.get_active_window()
+      if not window then
+        return
+      end
+      if window.floating then
+        hl.dispatch(hl.dsp.window.float({ action = "disable" }))
+        return
+      end
+
+      local monitor = window.monitor or hl.get_active_monitor()
+      hl.dispatch(hl.dsp.window.float({ action = "enable" }))
+      if monitor then
+        hl.dispatch(hl.dsp.window.resize({
+          x = math.floor(monitor.width * 0.6),
+          y = math.floor(monitor.height * 0.6)
+        }))
+        hl.dispatch(hl.dsp.window.center())
+      end
+    end
+  '';
+
   acceleratedResize =
-    direction: x: y:
+    x: y:
     luaInline ''
       function()
-        local state = _G.hyprlandResizeState or { direction = "", count = 0, generation = 0 }
-        if state.direction ~= "${direction}" then
-          state.direction = "${direction}"
-          state.count = 0
-        else
-          state.count = state.count + 1
+        local state = _G.hyprlandResizeState
+        if not state or state.velocity == nil then
+          state = { velocity = 0, decayStart = 0, idleTicks = 0, generation = 0 }
         end
+        state.velocity = math.min(state.velocity + 0.5, 22)
         state.generation = state.generation + 1
         _G.hyprlandResizeState = state
 
-        local step = math.min(2 + math.floor(state.count / 2), 24)
-        hl.dispatch(hl.dsp.window.resize({ x = ${toString x} * step, y = ${toString y} * step, relative = true }))
+        if not state.timer then
+          local observedGeneration = state.generation
+          state.decayStart = state.velocity
+          state.timer = hl.timer(function()
+            local current = _G.hyprlandResizeState
+            if not current then
+              return
+            end
+            if current.generation ~= observedGeneration then
+              observedGeneration = current.generation
+              current.decayStart = current.velocity
+              current.idleTicks = 0
+            else
+              current.idleTicks = math.min(current.idleTicks + 1, 30)
+              current.velocity = current.decayStart * (1 - current.idleTicks / 30)
+            end
+          end, { timeout = 25, type = "repeat" })
+        end
 
-        local generation = state.generation
-        hl.timer(function()
-          if _G.hyprlandResizeState and _G.hyprlandResizeState.generation == generation then
-            _G.hyprlandResizeState.count = 0
-          end
-        end, { timeout = 750, type = "oneshot" })
+        local step = math.floor(2 + state.velocity)
+        hl.dispatch(hl.dsp.window.resize({ x = ${toString x} * step, y = ${toString y} * step, relative = true }))
       end
     '';
 
@@ -581,99 +614,156 @@ in
           {
             leaf = "border";
             enabled = true;
-            speed = 5.39;
+            speed = 5.5;
             bezier = "easeOutQuint";
           }
           {
             leaf = "windows";
             enabled = true;
-            speed = 4.79;
+            speed = 5.5;
             bezier = "easeOutQuint";
           }
           {
             leaf = "windowsIn";
             enabled = true;
-            speed = 4.1;
+            speed = 5;
             bezier = "easeOutQuint";
             style = "popin 87%";
           }
           {
             leaf = "windowsOut";
             enabled = true;
-            speed = 1.49;
-            bezier = "linear";
+            speed = 3.5;
+            bezier = "easeOutQuint";
             style = "popin 87%";
+          }
+          {
+            leaf = "windowsMove";
+            enabled = true;
+            speed = 6;
+            bezier = "easeOutQuint";
           }
           {
             leaf = "fadeIn";
             enabled = true;
-            speed = 1.73;
-            bezier = "almostLinear";
+            speed = 3;
+            bezier = "easeOutQuint";
           }
           {
             leaf = "fadeOut";
             enabled = true;
-            speed = 1.46;
-            bezier = "almostLinear";
+            speed = 3;
+            bezier = "easeOutQuint";
           }
           {
             leaf = "fade";
             enabled = true;
-            speed = 3.03;
+            speed = 4;
             bezier = "quick";
+          }
+          {
+            leaf = "fadeSwitch";
+            enabled = true;
+            speed = 4;
+            bezier = "easeOutQuint";
           }
           {
             leaf = "layers";
             enabled = true;
-            speed = 3.81;
+            speed = 5;
             bezier = "easeOutQuint";
           }
           {
             leaf = "layersIn";
             enabled = true;
-            speed = 4;
+            speed = 5;
             bezier = "easeOutQuint";
             style = "fade";
           }
           {
             leaf = "layersOut";
             enabled = true;
-            speed = 1.5;
-            bezier = "linear";
+            speed = 4;
+            bezier = "easeOutQuint";
             style = "fade";
           }
           {
             leaf = "fadeLayersIn";
             enabled = true;
-            speed = 1.79;
-            bezier = "almostLinear";
+            speed = 3;
+            bezier = "easeOutQuint";
           }
           {
             leaf = "fadeLayersOut";
             enabled = true;
-            speed = 1.39;
-            bezier = "almostLinear";
+            speed = 3;
+            bezier = "easeOutQuint";
+          }
+          {
+            leaf = "fadePopupsIn";
+            enabled = true;
+            speed = 4;
+            bezier = "easeOutQuint";
+          }
+          {
+            leaf = "fadePopupsOut";
+            enabled = true;
+            speed = 4;
+            bezier = "easeOutQuint";
+          }
+          {
+            leaf = "fadeDpms";
+            enabled = true;
+            speed = 4;
+            bezier = "easeOutQuint";
           }
           {
             leaf = "workspaces";
             enabled = true;
-            speed = 1.94;
-            bezier = "almostLinear";
-            style = "fade";
+            speed = 3.5;
+            bezier = "easeOutQuint";
+            style = "slidefade";
           }
           {
             leaf = "workspacesIn";
             enabled = true;
-            speed = 1.21;
-            bezier = "almostLinear";
-            style = "fade";
+            speed = 3.5;
+            bezier = "easeOutQuint";
+            style = "slidefade";
           }
           {
             leaf = "workspacesOut";
             enabled = true;
-            speed = 1.94;
-            bezier = "almostLinear";
-            style = "fade";
+            speed = 3.5;
+            bezier = "easeOutQuint";
+            style = "slidefade";
+          }
+          {
+            leaf = "specialWorkspace";
+            enabled = true;
+            speed = 3.5;
+            bezier = "easeOutQuint";
+            style = "slidefadevert";
+          }
+          {
+            leaf = "specialWorkspaceIn";
+            enabled = true;
+            speed = 3.5;
+            bezier = "easeOutQuint";
+            style = "slidefadevert";
+          }
+          {
+            leaf = "specialWorkspaceOut";
+            enabled = true;
+            speed = 3.5;
+            bezier = "easeOutQuint";
+            style = "slidefadevert";
+          }
+          {
+            leaf = "zoomFactor";
+            enabled = true;
+            speed = 6;
+            bezier = "easeOutQuint";
           }
         ];
 
@@ -717,7 +807,7 @@ in
           (execBind (modKey "M") config.rofi.power)
           (execBind (modKey "SHIFT + Q") "hyprlock")
           (execBind (modKey "E") fileManagerCommand)
-          (bind (modKey "V") ''window.float({ action = "toggle" })'')
+          (bindCallbackWith { } (modKey "V") toggleFloating)
           (execBind (modKey "R") config.rofi.toggle)
           (execBind (modKey "W") config.rofi.windowList)
           (bind (modKey "P") "window.pseudo()")
@@ -748,16 +838,16 @@ in
           (bind (modKey "mouse_up") ''focus({ workspace = "e-1" })'')
           (bindCallbackWith {
             repeating = true;
-          } (modKey "CTRL + H") (acceleratedResize "left" (-1) 0))
+          } (modKey "CTRL + H") (acceleratedResize (-1) 0))
           (bindCallbackWith {
             repeating = true;
-          } (modKey "CTRL + L") (acceleratedResize "right" 1 0))
+          } (modKey "CTRL + L") (acceleratedResize 1 0))
           (bindCallbackWith {
             repeating = true;
-          } (modKey "CTRL + K") (acceleratedResize "up" 0 (-1)))
+          } (modKey "CTRL + K") (acceleratedResize 0 (-1)))
           (bindCallbackWith {
             repeating = true;
-          } (modKey "CTRL + J") (acceleratedResize "down" 0 1))
+          } (modKey "CTRL + J") (acceleratedResize 0 1))
           (bindWith
             {
               locked = true;

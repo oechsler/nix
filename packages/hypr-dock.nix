@@ -36,6 +36,18 @@ buildGoModule rec {
 
   subPackages = [ "cmd/hypr-dock" ];
 
+  postPatch = ''
+    sed -i \
+      -e 's/"dispatch focuswindow address:" + \([^.]*\.Address\)/"dispatch hl.dsp.focus({ window = \\"address:" + \1 + "\\" })"/g' \
+      -e 's/"dispatch closewindow address:" + \([^.]*\.Address\)/"dispatch hl.dsp.window.close({ window = \\"address:" + \1 + "\\" })"/g' \
+      -e 's/fmt\.Sprintf("dispatch focuswindow address:%s"/fmt.Sprintf("dispatch hl.dsp.focus({ window = \\"address:%s\\" })"/g' \
+      internal/pvwidget/pvwidget.go \
+      internal/btnctl/btnctl.go \
+      internal/defaultControl/defaultControl.go \
+      internal/item/popup.go \
+      internal/switcher/navigation.go
+  '';
+
   postInstall = ''
     mkdir -p $out/share/hypr-dock
     cp -r $src/configs/* $out/share/hypr-dock/
