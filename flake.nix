@@ -115,6 +115,11 @@
 
     nix-flatpak.url = "github:gmodena/nix-flatpak";
 
+    Hyprspace = {
+      url = "github:KZDKM/Hyprspace/c109256f5a79a8694acd6176971c4a273d32264c";
+      flake = false;
+    };
+
   };
 
   outputs =
@@ -166,6 +171,9 @@
                       })
                     else
                       prev.hyprland;
+                  hyprspace = final.callPackage ./packages/hyprspace.nix {
+                    src = inputs.Hyprspace;
+                  };
                 })
               ];
             }

@@ -60,6 +60,11 @@ let
   stripHash = hex: lib.removePrefix "#" hex;
   accentColor = "rgba(${stripHash palette.${config.catppuccin.accent}.hex}ff)";
   surface0Color = "rgba(${stripHash palette.surface0.hex}ff)";
+  toLuaHex = color: alpha: luaInline "0x${stripHash color.hex}${alpha}";
+  accentHex = toLuaHex palette.${config.catppuccin.accent};
+  surface0Hex = toLuaHex palette.surface0;
+  baseHex = toLuaHex palette.base;
+  surface2Hex = toLuaHex palette.surface2;
   displayHelpers = import ../../../lib/displays.nix { inherit lib; };
 
   # ============================================================================
@@ -384,12 +389,14 @@ in
       # otherwise xdg-desktop-portal won't find gtk.portal and the
       # Settings interface (dark mode, color-scheme) won't work.
       pkgs.xdg-desktop-portal-gtk
+      pkgs.hyprspace
     ];
 
     wayland.windowManager.hyprland = {
       enable = true;
       xwayland.enable = true;
       configType = "lua";
+      plugins = [ pkgs.hyprspace ];
 
       systemd.enable = false; # UWSM handles session management
 
@@ -440,6 +447,30 @@ in
             config.xdg.userDirs.pictures
           ]
         ];
+
+        "plugin.overview.panelColor" = surface0Hex "ee";
+        "plugin.overview.panelBorderColor" = accentHex "ff";
+        "plugin.overview.workspaceActiveBackground" = accentHex "40";
+        "plugin.overview.workspaceInactiveBackground" = baseHex "40";
+        "plugin.overview.workspaceActiveBorder" = accentHex "aa";
+        "plugin.overview.workspaceInactiveBorder" = surface2Hex "20";
+        "plugin.overview.panelHeight" = 250;
+        "plugin.overview.panelBorderWidth" = 2;
+        "plugin.overview.workspaceMargin" = 12;
+        "plugin.overview.workspaceBorderSize" = 1;
+        "plugin.overview.centerAligned" = true;
+        "plugin.overview.drawActiveWorkspace" = true;
+        "plugin.overview.hideRealLayers" = true;
+        "plugin.overview.overrideGaps" = true;
+        "plugin.overview.gapsIn" = 20;
+        "plugin.overview.gapsOut" = 60;
+        "plugin.overview.autoDrag" = true;
+        "plugin.overview.autoScroll" = true;
+        "plugin.overview.exitOnClick" = true;
+        "plugin.overview.showNewWorkspace" = true;
+        "plugin.overview.showEmptyWorkspace" = true;
+        "plugin.overview.disableGestures" = true;
+        "plugin.overview.exitKey" = "Escape";
 
         gesture = {
           fingers = 3;
@@ -808,7 +839,7 @@ in
           (execBind (modKey "E") fileManagerCommand)
           (bindCallbackWith { } (modKey "V") toggleFloating)
           (execBind (modKey "R") config.rofi.toggle)
-          (execBind (modKey "W") config.rofi.windowList)
+          (execBind (modKey "W") "hyprctl dispatch overview:toggle")
           (bind (modKey "P") "window.pseudo()")
           (bind (modKey "Space") ''layout("togglesplit")'')
           (bind (modKey "F") ''window.fullscreen({ mode = "maximized" })'')
