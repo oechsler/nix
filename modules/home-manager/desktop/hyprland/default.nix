@@ -768,7 +768,7 @@ in
         ];
 
         layer_rule = {
-          match.namespace = "^(rofi|waybar|hypr-dock)$";
+          match.namespace = "^(rofi|waybar|hypr-dock|hypr-dock-switcher)$";
           blur = true;
           blur_popups = true;
           ignore_alpha = 0.2;
@@ -808,6 +808,9 @@ in
           (execBind (modKey "SHIFT + Q") "hyprlock")
           (execBind (modKey "E") fileManagerCommand)
           (bindCallbackWith { } (modKey "V") toggleFloating)
+          (bindWith {
+            repeating = true;
+          } (modKey "TAB") "exec_cmd(${builtins.toJSON "${pkgs.hypr-dock}/bin/hypr-alttab"})")
           (execBind (modKey "R") config.rofi.toggle)
           (execBind (modKey "W") config.rofi.windowList)
           (bind (modKey "P") "window.pseudo()")
