@@ -159,12 +159,12 @@ let
     [ -n "''${MAINPID:-}" ] && kill -0 "$MAINPID" 2>/dev/null || exit 0
     config_file="$HOME/.config/Mumble/Mumble/mumble_settings.json"
     [ -f "$config_file" ] || exit 0
-    config_dir="$(${pkgs.coreutils}/bin/dirname "$config_file")"
-    tmp_file="$(${pkgs.coreutils}/bin/mktemp --tmpdir="$config_dir" .mumble-settings.XXXXXX)" || exit 0
-    trap '${pkgs.coreutils}/bin/rm -f "$tmp_file"' EXIT
+    config_dir="$(${pkgs.uutils-coreutils-noprefix}/bin/dirname "$config_file")"
+    tmp_file="$(${pkgs.uutils-coreutils-noprefix}/bin/mktemp --tmpdir="$config_dir" .mumble-settings.XXXXXX)" || exit 0
+    trap '${pkgs.uutils-coreutils-noprefix}/bin/rm -f "$tmp_file"' EXIT
     if ${pkgs.jq}/bin/jq '.mumble_has_quit_normally = true' "$config_file" > "$tmp_file" \
-      && ${pkgs.coreutils}/bin/chmod --reference="$config_file" "$tmp_file"; then
-      ${pkgs.coreutils}/bin/mv "$tmp_file" "$config_file"
+      && ${pkgs.uutils-coreutils-noprefix}/bin/chmod --reference="$config_file" "$tmp_file"; then
+      ${pkgs.uutils-coreutils-noprefix}/bin/mv "$tmp_file" "$config_file"
     fi
   '';
 
@@ -288,7 +288,7 @@ in
             PartOf = [ "graphical-session.target" ];
           };
           Service = {
-            ExecStart = "${pkgs.systemd}/bin/systemd-inhibit --what=handle-power-key ${pkgs.coreutils}/bin/sleep infinity";
+            ExecStart = "${pkgs.systemd}/bin/systemd-inhibit --what=handle-power-key ${pkgs.uutils-coreutils-noprefix}/bin/sleep infinity";
             Type = "simple";
             TimeoutStopSec = 5;
           };

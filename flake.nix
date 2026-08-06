@@ -115,7 +115,6 @@
 
     nix-flatpak.url = "github:gmodena/nix-flatpak";
 
-
   };
 
   outputs =
@@ -154,6 +153,7 @@
               nixpkgs.overlays = [
                 inputs.cachyos-kernel.overlays.pinned
                 (final: prev: {
+                  coreutils-full = prev.uutils-coreutils-noprefix;
                   hyprland =
                     if prev.hyprland.version == "0.56.1" then
                       prev.hyprland.overrideAttrs (old: {
@@ -267,7 +267,7 @@
       #===========================
       # Formatter
       #===========================
-      formatter.${system} = pkgs.nixfmt;
+      formatter.${system} = pkgs.nixfmt-tree;
 
       #===========================
       # CI/CD Checks

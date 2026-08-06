@@ -88,7 +88,7 @@ let
   totp-init = pkgs.writeShellApplication {
     name = "totp-init";
     runtimeInputs = with pkgs; [
-      coreutils
+      uutils-coreutils-noprefix
       oath-toolkit
       qrencode
     ];
@@ -183,7 +183,7 @@ let
     runtimeInputs = with pkgs; [
       systemd
       gawk
-      coreutils
+      uutils-coreutils-noprefix
     ];
     text = ''
       if [[ $EUID -ne 0 ]]; then

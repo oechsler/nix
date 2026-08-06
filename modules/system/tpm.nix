@@ -21,7 +21,7 @@ let
     name = "tpm-luks-init";
     runtimeInputs = with pkgs; [
       systemd
-      coreutils
+      uutils-coreutils-noprefix
     ];
     text = ''
       if [[ $EUID -ne 0 ]]; then

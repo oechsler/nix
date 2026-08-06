@@ -110,7 +110,7 @@ in
 
         WAYLAND_SOCKET=$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | grep -v '\.lock$' | grep -v '\-awww-daemon\.sock$' | head -1)
         if [ -n "$WAYLAND_SOCKET" ]; then
-          export WAYLAND_DISPLAY=$(${pkgs.coreutils}/bin/basename "$WAYLAND_SOCKET")
+          export WAYLAND_DISPLAY=$(${pkgs.uutils-coreutils-noprefix}/bin/basename "$WAYLAND_SOCKET")
         else
           export WAYLAND_DISPLAY="wayland-1"
         fi

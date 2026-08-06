@@ -18,7 +18,7 @@ let
     runtimeInputs = [
       pkgs.sbctl
       pkgs.systemd
-      pkgs.coreutils
+      pkgs.uutils-coreutils-noprefix
       pkgs.jq
     ];
     text = ''

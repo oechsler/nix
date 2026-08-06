@@ -72,12 +72,12 @@ let
 
     ${pkgs.procps}/bin/pkill -TERM -P "$session_pid" 2>/dev/null || true
     kill -TERM "$session_pid" 2>/dev/null || true
-    ${pkgs.coreutils}/bin/sleep 5
+    ${pkgs.uutils-coreutils-noprefix}/bin/sleep 5
 
     ${pkgs.procps}/bin/pkill -TERM -x gamescope 2>/dev/null || true
     ${pkgs.procps}/bin/pkill -TERM -x steam 2>/dev/null || true
     ${pkgs.procps}/bin/pkill -TERM -x steamwebhelper 2>/dev/null || true
-    ${pkgs.coreutils}/bin/sleep 2
+    ${pkgs.uutils-coreutils-noprefix}/bin/sleep 2
 
     ${pkgs.procps}/bin/pkill -KILL -x gamescope 2>/dev/null || true
     ${pkgs.procps}/bin/pkill -KILL -x steam 2>/dev/null || true
@@ -97,7 +97,7 @@ let
     esac
 
     exit_file="''${STEAM_MACHINE_SESSION_EXIT_FILE:-''${XDG_RUNTIME_DIR:-/tmp}/steam-machine-session-exit}"
-    mkdir -p "$(${pkgs.coreutils}/bin/dirname "$exit_file")"
+    mkdir -p "$(${pkgs.uutils-coreutils-noprefix}/bin/dirname "$exit_file")"
     : > "$exit_file"
 
     ${terminateSteamGamescope} >/dev/null
@@ -176,11 +176,11 @@ let
         ${pkgs.dbus}/bin/dbus-update-activation-environment --systemd \
           DESKTOP_SESSION XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_RUNTIME_DIR || true
 
-        session_dir="$(${pkgs.coreutils}/bin/mktemp -p "$XDG_RUNTIME_DIR" -d -t steam-machine.XXXXXXX)"
+        session_dir="$(${pkgs.uutils-coreutils-noprefix}/bin/mktemp -p "$XDG_RUNTIME_DIR" -d -t steam-machine.XXXXXXX)"
         startup_socket="$session_dir/startup.socket"
         stats_pipe="$session_dir/stats.pipe"
         mangohud_config="$session_dir/mangohud.config"
-        ${pkgs.coreutils}/bin/mkfifo "$startup_socket" "$stats_pipe"
+        ${pkgs.uutils-coreutils-noprefix}/bin/mkfifo "$startup_socket" "$stats_pipe"
 
         exit_file="''${XDG_RUNTIME_DIR:-/tmp}/steam-machine-session-exit"
         export STEAM_MACHINE_SESSION_EXIT_FILE="$exit_file"
@@ -198,7 +198,7 @@ let
         export STEAM_MANGOAPP_HORIZONTAL_SUPPORTED=1
         export MANGOHUD_CONFIGFILE="$mangohud_config"
 
-        mkdir -p "$(${pkgs.coreutils}/bin/dirname "$GAMESCOPE_MODE_SAVE_FILE")"
+        mkdir -p "$(${pkgs.uutils-coreutils-noprefix}/bin/dirname "$GAMESCOPE_MODE_SAVE_FILE")"
         touch "$GAMESCOPE_MODE_SAVE_FILE"
         touch "$GAMESCOPE_PATCHED_EDID_FILE"
         touch "$GAMESCOPE_LIMITER_FILE"
@@ -224,7 +224,7 @@ let
 
         ${pkgs.procps}/bin/pkill -x steam 2>/dev/null || true
         ${pkgs.procps}/bin/pkill -x steamwebhelper 2>/dev/null || true
-        ${pkgs.coreutils}/bin/sleep 2
+        ${pkgs.uutils-coreutils-noprefix}/bin/sleep 2
 
         gamescope_bin=/run/wrappers/bin/gamescope
         [ -x "$gamescope_bin" ] || gamescope_bin=${pkgs.gamescope}/bin/gamescope
@@ -248,7 +248,7 @@ let
         # Let Gamescope finish applying HDR on the DRM output before Steam
         # initializes its client-side HDR/color pipeline. Without this, Steam can
         # start washed out until HDR is toggled off/on in Game Mode.
-        ${pkgs.coreutils}/bin/sleep 1
+        ${pkgs.uutils-coreutils-noprefix}/bin/sleep 1
 
         ${pkgs.mangohud}/bin/mangoapp &
         mangoapp_pid=$!
