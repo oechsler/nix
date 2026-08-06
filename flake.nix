@@ -154,6 +154,7 @@
                 inputs.cachyos-kernel.overlays.pinned
                 (final: prev: {
                   coreutils-full = prev.uutils-coreutils-noprefix;
+                  # Remove when nixpkgs updates Hyprland past 0.56.1.
                   hyprland =
                     if prev.hyprland.version == "0.56.1" then
                       prev.hyprland.overrideAttrs (old: {
