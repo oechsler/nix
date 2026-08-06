@@ -155,6 +155,19 @@ let
   fileManagerCommand =
     if features.desktop.fileManager == "terminal" then "kitty yazi" else "nautilus";
 
+  mumbleSetQuitFlag = pkgs.writeShellScript "mumble-set-quit-flag" ''
+    [ -n "''${MAINPID:-}" ] && kill -0 "$MAINPID" 2>/dev/null || exit 0
+    config_file="$HOME/.config/Mumble/Mumble/mumble_settings.json"
+    [ -f "$config_file" ] || exit 0
+    config_dir="$(${pkgs.coreutils}/bin/dirname "$config_file")"
+    tmp_file="$(${pkgs.coreutils}/bin/mktemp --tmpdir="$config_dir" .mumble-settings.XXXXXX)" || exit 0
+    trap '${pkgs.coreutils}/bin/rm -f "$tmp_file"' EXIT
+    if ${pkgs.jq}/bin/jq '.mumble_has_quit_normally = true' "$config_file" > "$tmp_file" \
+      && ${pkgs.coreutils}/bin/chmod --reference="$config_file" "$tmp_file"; then
+      ${pkgs.coreutils}/bin/mv "$tmp_file" "$config_file"
+    fi
+  '';
+
 in
 {
   #===========================
@@ -194,22 +207,22 @@ in
               After = [ "graphical-session.target" ];
               PartOf = [ "graphical-session.target" ];
             };
-            Service =
-              {
-                # Full bash path so systemd always finds it; exec replaces the shell
-                # with the app process so systemd tracks the right PID.
-                ExecStart = "${pkgs.bash}/bin/sh -c 'sleep 3; exec ${app.exec}'";
-                Environment = "PATH=/etc/profiles/per-user/${config.home.username}/bin:/run/current-system/sw/bin";
-                Type = "exec";
-                Restart = "on-failure";
-                # Exit code 1 often means another instance is already running — not a real crash.
-                RestartPreventExitStatus = 1;
-                RestartSec = 3;
-                TimeoutStopSec = 5;
-              }
-              // lib.optionalAttrs (app.name == "Mumble") {
-                TimeoutStopSec = 15;
-              };
+            Service = {
+              # Full bash path so systemd always finds it; exec replaces the shell
+              # with the app process so systemd tracks the right PID.
+              ExecStart = "${pkgs.bash}/bin/sh -c 'sleep 3; exec ${app.exec}'";
+              Environment = "PATH=/etc/profiles/per-user/${config.home.username}/bin:/run/current-system/sw/bin";
+              Type = "exec";
+              Restart = "on-failure";
+              # Exit code 1 often means another instance is already running — not a real crash.
+              RestartPreventExitStatus = 1;
+              RestartSec = 3;
+              TimeoutStopSec = 5;
+            }
+            // lib.optionalAttrs (app.name == "Mumble") {
+              TimeoutStopSec = 15;
+              ExecStop = "${mumbleSetQuitFlag}";
+            };
             Install.WantedBy = [ "graphical-session.target" ];
           };
         }) config.autostart.apps
