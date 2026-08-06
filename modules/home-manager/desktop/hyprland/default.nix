@@ -792,12 +792,6 @@ in
             pin = true;
             size = "25% 25%";
           }
-          {
-            match.class = "^(com\\.gabm\\.satty)$";
-            float = true;
-            size = "80% 80%";
-            center = true;
-          }
         ];
 
         bind = [
@@ -812,9 +806,9 @@ in
           (bind (modKey "P") "window.pseudo()")
           (bind (modKey "Space") ''layout("togglesplit")'')
           (bind (modKey "F") ''window.fullscreen({ mode = "maximized" })'')
-          (execBind "Print" "hyprshot -m output --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png")
-          (execBind "SHIFT + Print" "hyprshot -m region --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png")
-          (execBind (modKey "SHIFT + Print") "hyprshot -m window --raw | satty -f - --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png")
+          (execBind "Print" "hyprshot -m output --raw | satty -f - --copy-command '${pkgs.wl-clipboard}/bin/wl-copy --type image/png' --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png")
+          (execBind "SHIFT + Print" "hyprshot -m region --raw | satty -f - --copy-command '${pkgs.wl-clipboard}/bin/wl-copy --type image/png' --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png")
+          (execBind (modKey "SHIFT + Print") "hyprshot -m window --raw | satty -f - --copy-command '${pkgs.wl-clipboard}/bin/wl-copy --type image/png' --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png")
           (execBind (modKey "C") config.rofi.clipboard)
           (execBind (modKey "SHIFT + R") config.waybar.reload)
           (bind (modKey "H") ''focus({ direction = "left" })'')
