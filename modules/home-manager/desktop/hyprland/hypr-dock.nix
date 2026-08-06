@@ -124,7 +124,7 @@ in
           margin: 1px;
           border-radius: ${toString theme.radius.default}px;
           border: none;
-          transition: all 50ms ease;
+          transition: all 120ms cubic-bezier(0.23, 1, 0.32, 1);
         }
 
         button:hover {
@@ -154,7 +154,7 @@ in
           color: ${textHex};
           padding: 4px 8px;
           border-radius: ${toString theme.radius.small}px;
-          transition: all 0.15s ease;
+          transition: all 0.18s cubic-bezier(0.23, 1, 0.32, 1);
         }
 
         menuitem:hover {
@@ -164,7 +164,7 @@ in
 
         #pv-item {
           background-color: alpha(${surfaceHex}, 0.8);
-          transition: all 0.2s ease-out;
+          transition: all 0.18s cubic-bezier(0.23, 1, 0.32, 1);
           border-radius: ${toString theme.radius.small}px;
           border: 1px solid alpha(${accentHex}, 0.2);
         }

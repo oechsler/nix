@@ -26,7 +26,7 @@ window#waybar {
   border-radius: 1.5rem;
   border: 2px solid @blue;
   font-size: 14px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.18s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 #custom-launcher:hover {
@@ -55,7 +55,7 @@ window#waybar {
   margin: 0 0.25em;
   background-color: alpha(@text, 0.25);
   border-radius: 1.25em;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.18s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 #workspaces button.active {
