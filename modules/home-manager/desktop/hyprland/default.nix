@@ -144,6 +144,59 @@ let
   displayBrightnessInit = "${brightnessController} init";
   displayBrightness = "${brightnessController} adjust";
 
+  toggleFloating = pkgs.writeShellScript "hyprland-toggle-floating" ''
+    if ${pkgs.hyprland}/bin/hyprctl activewindow -j \
+      | ${pkgs.jq}/bin/jq -e '.floating == true' >/dev/null 2>&1; then
+      exec ${pkgs.hyprland}/bin/hyprctl dispatch togglefloating
+    fi
+    ${pkgs.hyprland}/bin/hyprctl dispatch togglefloating
+    ${pkgs.hyprland}/bin/hyprctl dispatch resizeactive exact 60% 60%
+    exec ${pkgs.hyprland}/bin/hyprctl dispatch centerwindow
+  '';
+
+  acceleratedResize = pkgs.writeShellScript "hyprland-accelerated-resize" ''
+    direction="''${1:-}"
+    case "$direction" in
+      left|right|up|down) ;;
+      *) exit 2 ;;
+    esac
+
+    state_dir="''${XDG_RUNTIME_DIR:-/tmp}/hyprland-resize"
+    state_file="$state_dir/state"
+    ${pkgs.uutils-coreutils-noprefix}/bin/mkdir -p "$state_dir"
+
+    now=$(${pkgs.uutils-coreutils-noprefix}/bin/date +%s%3N)
+    exec 7>"$state_file.lock"
+    ${pkgs.util-linux}/bin/flock 7
+
+    previous_direction=""
+    repeat_count=0
+    previous_time=0
+    if [ -s "$state_file" ]; then
+      IFS='|' read -r previous_direction repeat_count previous_time < "$state_file" || true
+    fi
+    case "$repeat_count:$previous_time" in
+      *[!0-9:]*) repeat_count=0; previous_time=0 ;;
+    esac
+
+    if [ "$direction" != "$previous_direction" ] || [ "$((now - previous_time))" -gt 500 ]; then
+      repeat_count=0
+    else
+      repeat_count=$((repeat_count + 1))
+    fi
+
+    step=$((2 + repeat_count / 2))
+    [ "$step" -gt 24 ] && step=24
+    printf '%s|%s|%s\n' "$direction" "$repeat_count" "$now" > "$state_file"
+
+    case "$direction" in
+      left) exec ${pkgs.hyprland}/bin/hyprctl dispatch resizeactive -"$step" 0 ;;
+      right) exec ${pkgs.hyprland}/bin/hyprctl dispatch resizeactive "$step" 0 ;;
+      up) exec ${pkgs.hyprland}/bin/hyprctl dispatch resizeactive 0 -"$step" ;;
+      down) exec ${pkgs.hyprland}/bin/hyprctl dispatch resizeactive 0 "$step" ;;
+    esac
+  '';
+
   # ============================================================================
   # VOLUME NOTIFICATION SCRIPT
   # ============================================================================
@@ -684,7 +737,7 @@ in
           (execBind (modKey "M") config.rofi.power)
           (execBind (modKey "SHIFT + Q") "hyprlock")
           (execBind (modKey "E") fileManagerCommand)
-          (execBind (modKey "V") "hyprctl --batch 'dispatch togglefloating ; dispatch resizeactive exact 60% 60% ; dispatch centerwindow'")
+          (execBind (modKey "V") toggleFloating)
           (execBind (modKey "R") config.rofi.toggle)
           (execBind (modKey "W") config.rofi.windowList)
           (bind (modKey "P") "window.pseudo()")
@@ -715,16 +768,16 @@ in
           (bind (modKey "mouse_up") ''focus({ workspace = "e-1" })'')
           (bindWith {
             repeating = true;
-          } (modKey "CTRL + H") "window.resize({ x = -10, y = 0, relative = true })")
+          } (modKey "CTRL + H") "exec_cmd(${builtins.toJSON "${acceleratedResize} left"})")
           (bindWith {
             repeating = true;
-          } (modKey "CTRL + L") "window.resize({ x = 10, y = 0, relative = true })")
+          } (modKey "CTRL + L") "exec_cmd(${builtins.toJSON "${acceleratedResize} right"})")
           (bindWith {
             repeating = true;
-          } (modKey "CTRL + K") "window.resize({ x = 0, y = -10, relative = true })")
+          } (modKey "CTRL + K") "exec_cmd(${builtins.toJSON "${acceleratedResize} up"})")
           (bindWith {
             repeating = true;
-          } (modKey "CTRL + J") "window.resize({ x = 0, y = 10, relative = true })")
+          } (modKey "CTRL + J") "exec_cmd(${builtins.toJSON "${acceleratedResize} down"})")
           (bindWith
             {
               locked = true;
