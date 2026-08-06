@@ -138,64 +138,44 @@ let
       options
     ];
   };
+  bindCallbackWith = options: key: callback: {
+    _args = [
+      key
+      callback
+      options
+    ];
+  };
   execBind = key: command: bind key "exec_cmd(${builtins.toJSON command})";
 
   brightnessController = import ./scripts/brightness-controller.nix { inherit pkgs; };
   displayBrightnessInit = "${brightnessController} init";
   displayBrightness = "${brightnessController} adjust";
 
-  toggleFloating = pkgs.writeShellScript "hyprland-toggle-floating" ''
-    if ${pkgs.hyprland}/bin/hyprctl activewindow -j \
-      | ${pkgs.jq}/bin/jq -e '.floating == true' >/dev/null 2>&1; then
-      exec ${pkgs.hyprland}/bin/hyprctl dispatch togglefloating
-    fi
-    ${pkgs.hyprland}/bin/hyprctl dispatch togglefloating
-    ${pkgs.hyprland}/bin/hyprctl dispatch resizeactive exact 60% 60%
-    exec ${pkgs.hyprland}/bin/hyprctl dispatch centerwindow
-  '';
+  acceleratedResize =
+    direction: x: y:
+    luaInline ''
+      function()
+        local state = _G.hyprlandResizeState or { direction = "", count = 0, generation = 0 }
+        if state.direction ~= "${direction}" then
+          state.direction = "${direction}"
+          state.count = 0
+        else
+          state.count = state.count + 1
+        end
+        state.generation = state.generation + 1
+        _G.hyprlandResizeState = state
 
-  acceleratedResize = pkgs.writeShellScript "hyprland-accelerated-resize" ''
-    direction="''${1:-}"
-    case "$direction" in
-      left|right|up|down) ;;
-      *) exit 2 ;;
-    esac
+        local step = math.min(2 + math.floor(state.count / 2), 24)
+        hl.dispatch(hl.dsp.window.resize({ x = ${toString x} * step, y = ${toString y} * step, relative = true }))
 
-    state_dir="''${XDG_RUNTIME_DIR:-/tmp}/hyprland-resize"
-    state_file="$state_dir/state"
-    ${pkgs.uutils-coreutils-noprefix}/bin/mkdir -p "$state_dir"
-
-    now=$(${pkgs.uutils-coreutils-noprefix}/bin/date +%s%3N)
-    exec 7>"$state_file.lock"
-    ${pkgs.util-linux}/bin/flock 7
-
-    previous_direction=""
-    repeat_count=0
-    previous_time=0
-    if [ -s "$state_file" ]; then
-      IFS='|' read -r previous_direction repeat_count previous_time < "$state_file" || true
-    fi
-    case "$repeat_count:$previous_time" in
-      *[!0-9:]*) repeat_count=0; previous_time=0 ;;
-    esac
-
-    if [ "$direction" != "$previous_direction" ] || [ "$((now - previous_time))" -gt 500 ]; then
-      repeat_count=0
-    else
-      repeat_count=$((repeat_count + 1))
-    fi
-
-    step=$((2 + repeat_count / 2))
-    [ "$step" -gt 24 ] && step=24
-    printf '%s|%s|%s\n' "$direction" "$repeat_count" "$now" > "$state_file"
-
-    case "$direction" in
-      left) exec ${pkgs.hyprland}/bin/hyprctl dispatch resizeactive -"$step" 0 ;;
-      right) exec ${pkgs.hyprland}/bin/hyprctl dispatch resizeactive "$step" 0 ;;
-      up) exec ${pkgs.hyprland}/bin/hyprctl dispatch resizeactive 0 -"$step" ;;
-      down) exec ${pkgs.hyprland}/bin/hyprctl dispatch resizeactive 0 "$step" ;;
-    esac
-  '';
+        local generation = state.generation
+        hl.timer(function()
+          if _G.hyprlandResizeState and _G.hyprlandResizeState.generation == generation then
+            _G.hyprlandResizeState.count = 0
+          end
+        end, { timeout = 750, type = "oneshot" })
+      end
+    '';
 
   # ============================================================================
   # VOLUME NOTIFICATION SCRIPT
@@ -737,7 +717,7 @@ in
           (execBind (modKey "M") config.rofi.power)
           (execBind (modKey "SHIFT + Q") "hyprlock")
           (execBind (modKey "E") fileManagerCommand)
-          (execBind (modKey "V") toggleFloating)
+          (bind (modKey "V") ''window.float({ action = "toggle" })'')
           (execBind (modKey "R") config.rofi.toggle)
           (execBind (modKey "W") config.rofi.windowList)
           (bind (modKey "P") "window.pseudo()")
@@ -766,18 +746,18 @@ in
           (bind (modKey "SHIFT + S") ''window.move({ workspace = "special:magic" })'')
           (bind (modKey "mouse_down") ''focus({ workspace = "e+1" })'')
           (bind (modKey "mouse_up") ''focus({ workspace = "e-1" })'')
-          (bindWith {
+          (bindCallbackWith {
             repeating = true;
-          } (modKey "CTRL + H") "exec_cmd(${builtins.toJSON "${acceleratedResize} left"})")
-          (bindWith {
+          } (modKey "CTRL + H") (acceleratedResize "left" (-1) 0))
+          (bindCallbackWith {
             repeating = true;
-          } (modKey "CTRL + L") "exec_cmd(${builtins.toJSON "${acceleratedResize} right"})")
-          (bindWith {
+          } (modKey "CTRL + L") (acceleratedResize "right" 1 0))
+          (bindCallbackWith {
             repeating = true;
-          } (modKey "CTRL + K") "exec_cmd(${builtins.toJSON "${acceleratedResize} up"})")
-          (bindWith {
+          } (modKey "CTRL + K") (acceleratedResize "up" 0 (-1)))
+          (bindCallbackWith {
             repeating = true;
-          } (modKey "CTRL + J") "exec_cmd(${builtins.toJSON "${acceleratedResize} down"})")
+          } (modKey "CTRL + J") (acceleratedResize "down" 0 1))
           (bindWith
             {
               locked = true;
