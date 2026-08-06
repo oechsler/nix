@@ -34,7 +34,10 @@ buildGoModule rec {
     librsvg
   ];
 
-  subPackages = [ "cmd/hypr-dock" ];
+  subPackages = [
+    "cmd/hypr-dock"
+    "cmd/hypr-alttab"
+  ];
 
   postPatch = ''
     sed -i \
