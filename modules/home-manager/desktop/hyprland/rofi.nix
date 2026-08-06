@@ -79,7 +79,7 @@ let
   # - 󰐥 Herunterfahren (Shutdown) - Power off system
   # - 󰘚 UEFI (Firmware Setup) - Reboot into UEFI firmware settings
   powerMenu = pkgs.writeShellScript "rofi-power-menu" ''
-    if pgrep -x rofi > /dev/null && pgrep -fa "rofi -dmenu -p power" > /dev/null; then
+    if pgrep -x rofi > /dev/null && pgrep -fa "rofi -dmenu -p Energie" > /dev/null; then
       pkill -x rofi
       exit 0
     fi
