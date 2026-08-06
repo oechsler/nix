@@ -56,7 +56,7 @@
         pkgs.xdg-desktop-portal-gtk
       ];
       # Hyprland portal handles screen/input; GTK portal handles Settings
-      # (color-scheme for WebKitGTK/Tauri apps like CoolerControl)
+      # (color-scheme for WebKitGTK/Tauri apps)
       config.hyprland = {
         default = [
           "hyprland"

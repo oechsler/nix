@@ -13,7 +13,6 @@
 # Default autostart apps:
 # - Proton Pass - Password manager
 # - Vesktop - Discord client (minimized)
-# - CoolerControl - Fan control
 # - Nextcloud - Cloud sync (Hyprland only, KDE uses XDG autostart)
 # - Pika Backup Monitor (if features.apps.enable)
 # - Nheko - Matrix client (tray, if features.apps.enable)
@@ -123,32 +122,6 @@ in
       };
 
     }
-
-    #---------------------------
-    # CoolerControl systemd service
-    # (must start after portal so Tauri/WebKitGTK picks up prefer-dark)
-    #---------------------------
-    (lib.mkIf (!isKde) {
-      systemd.user.services.coolercontrol = {
-        Unit = {
-          Description = "CoolerControl - Fan control";
-          After = [
-            "graphical-session.target"
-            "xdg-desktop-portal-gtk.service"
-          ];
-          PartOf = [ "graphical-session.target" ];
-        };
-        Service = {
-          ExecStart = "${pkgs.coolercontrol.coolercontrol-gui}/bin/coolercontrol";
-          Restart = "on-failure";
-          RestartSec = 3;
-          # Exit code 1 = another instance already running (single-instance detection).
-          # Don't restart in that case — it's not a real crash.
-          RestartPreventExitStatus = 1;
-        };
-        Install.WantedBy = [ "graphical-session.target" ];
-      };
-    })
 
     #---------------------------
     # Trayscale systemd service
