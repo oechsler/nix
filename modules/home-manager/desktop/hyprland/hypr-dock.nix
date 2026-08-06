@@ -175,17 +175,6 @@ in
         }
       '';
 
-      "hypr-dock/hypr-alttab.conf".text = ''
-        [General]
-        WidthPercent = 100
-        HeightPercent = 60
-        FontSize = 20
-        PreviewWidth = 400
-        ShowAllMonitors = false
-        CycleWorkspaces = true
-        IconSize = 0
-      '';
-
       # Point indicators (dots under icons) in accent color
       "hypr-dock/themes/catppuccin/point/0.svg".text = ''
         <svg width="48" height="8" viewBox="0 0 12.7 2.1167" xmlns="http://www.w3.org/2000/svg"></svg>

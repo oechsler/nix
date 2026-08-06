@@ -29,7 +29,6 @@
 #   Super+M          - Exit Hyprland
 #   Super+V          - Toggle floating
 #   Super+Space      - Application launcher (rofi)
-#   Super+Tab        - Window list
 #   Super+[1-9]      - Switch workspace
 #   Super+Shift+[1-9] - Move window to workspace
 #   Super+F          - Toggle maximize
@@ -768,7 +767,7 @@ in
         ];
 
         layer_rule = {
-          match.namespace = "^(rofi|waybar|hypr-dock|hypr-dock-switcher)$";
+          match.namespace = "^(rofi|waybar|hypr-dock)$";
           blur = true;
           blur_popups = true;
           ignore_alpha = 0.2;
@@ -808,9 +807,6 @@ in
           (execBind (modKey "SHIFT + Q") "hyprlock")
           (execBind (modKey "E") fileManagerCommand)
           (bindCallbackWith { } (modKey "V") toggleFloating)
-          (bindWith {
-            repeating = true;
-          } (modKey "TAB") "exec_cmd(${builtins.toJSON "${pkgs.hypr-dock}/bin/hypr-alttab"})")
           (execBind (modKey "R") config.rofi.toggle)
           (execBind (modKey "W") config.rofi.windowList)
           (bind (modKey "P") "window.pseudo()")
