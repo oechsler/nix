@@ -63,6 +63,11 @@
       bind -n M-Space if-shell -F "#{==:#{pane_width},#{window_width}}" "select-layout even-horizontal" "select-layout even-vertical"
       bind -n M-f resize-pane -Z
 
+      bind -n M-C-h resize-pane -L 5
+      bind -n M-C-j resize-pane -D 5
+      bind -n M-C-k resize-pane -U 5
+      bind -n M-C-l resize-pane -R 5
+
       bind -n M-r switch-client -T resize
       bind -T resize h resize-pane -L 5 \; switch-client -T resize
       bind -T resize j resize-pane -D 5 \; switch-client -T resize
