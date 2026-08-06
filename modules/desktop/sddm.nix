@@ -196,7 +196,7 @@ let
       for edid_file in /sys/class/drm/*-"$output"/edid; do
         status_file=''${edid_file%/edid}/status
         if [ -s "$edid_file" ] && [ -e "$status_file" ] && [ "$(cat "$status_file")" = connected ]; then
-          actual_edid=$(${pkgs.coreutils}/bin/sha256sum "$edid_file" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+          actual_edid=$(${pkgs.uutils-coreutils-noprefix}/bin/sha256sum "$edid_file" | ${pkgs.uutils-coreutils-noprefix}/bin/cut -d' ' -f1)
           if [ "$actual_edid" = "$expected_edid" ]; then
             matched_edid=1
           fi
@@ -245,18 +245,18 @@ let
   applySddmDisplayConfig = pkgs.writeShellScript "apply-sddm-display-config" ''
     set -eu
 
-    sddm_uid=$(${pkgs.coreutils}/bin/id -u sddm)
+    sddm_uid=$(${pkgs.uutils-coreutils-noprefix}/bin/id -u sddm)
     export XDG_RUNTIME_DIR=/run/user/$sddm_uid
     export DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus
 
     echo "apply-sddm-display-config: waiting for sddm session bus (uid=$sddm_uid)" >&2
     bus_ready=0
-    for attempt in $(${pkgs.coreutils}/bin/seq 1 600); do
+    for attempt in $(${pkgs.uutils-coreutils-noprefix}/bin/seq 1 600); do
       if [ -S "$XDG_RUNTIME_DIR/bus" ]; then
         bus_ready=1
         break
       fi
-      ${pkgs.coreutils}/bin/sleep 0.1
+      ${pkgs.uutils-coreutils-noprefix}/bin/sleep 0.1
     done
     if [ "$bus_ready" -ne 1 ]; then
       echo "apply-sddm-display-config: sddm session bus never appeared, giving up" >&2
@@ -264,14 +264,14 @@ let
     fi
 
     echo "apply-sddm-display-config: bus ready, waiting for KWin D-Bus…" >&2
-    for attempt in $(${pkgs.coreutils}/bin/seq 1 300); do
+    for attempt in $(${pkgs.uutils-coreutils-noprefix}/bin/seq 1 300); do
       if ${pkgs.dbus}/bin/dbus-send --session \
         --dest=org.freedesktop.DBus --type=method_call --print-reply \
         /org/freedesktop/DBus org.freedesktop.DBus.ListNames \
         2>/dev/null | ${pkgs.gnugrep}/bin/grep -q org.kde.KWin; then
         break
       fi
-      ${pkgs.coreutils}/bin/sleep 0.1
+      ${pkgs.uutils-coreutils-noprefix}/bin/sleep 0.1
     done
 
     retry=0
@@ -279,14 +279,14 @@ let
       for socket in "$XDG_RUNTIME_DIR"/wayland-*; do
         [ -S "$socket" ] || continue
         case "$socket" in *.lock) continue ;; esac
-        export WAYLAND_DISPLAY=$(${pkgs.coreutils}/bin/basename "$socket")
+        export WAYLAND_DISPLAY=$(${pkgs.uutils-coreutils-noprefix}/bin/basename "$socket")
         if ${pkgs.kdePackages.libkscreen}/bin/kscreen-doctor ${sddmKscreenArgs} 2>/dev/null; then
           echo "apply-sddm-display-config: done" >&2
           exit 0
         fi
       done
       retry=$((retry + 1))
-      ${pkgs.coreutils}/bin/sleep 0.1
+      ${pkgs.uutils-coreutils-noprefix}/bin/sleep 0.1
     done
 
     echo "apply-sddm-display-config: kscreen-doctor failed after retries" >&2
@@ -306,7 +306,7 @@ let
     export HOME=/var/lib/sddm
     export XDG_CONFIG_HOME=$HOME/.config
     export XDG_DATA_HOME=$HOME/.local/share
-    export XDG_RUNTIME_DIR=/run/user/$(${pkgs.coreutils}/bin/id -u sddm)
+    export XDG_RUNTIME_DIR=/run/user/$(${pkgs.uutils-coreutils-noprefix}/bin/id -u sddm)
     export DBUS_SESSION_BUS_ADDRESS=unix:path=$XDG_RUNTIME_DIR/bus
     export GSETTINGS_BACKEND=keyfile
     export GSETTINGS_SCHEMA_DIR="${sddmMaliitKeyboard}/share/gsettings-schemas/${sddmMaliitKeyboard.name}/glib-2.0/schemas"
@@ -345,7 +345,7 @@ let
         properties="/run/udev/data/c$device_number"
         [ -r "$properties" ] || continue
         ${pkgs.gnugrep}/bin/grep -qx 'E:ID_INPUT_KEYBOARD=1' "$properties" || continue
-        model=$(${pkgs.gnugrep}/bin/grep -m1 '^E:ID_MODEL=' "$properties" | ${pkgs.coreutils}/bin/cut -d= -f2- || true)
+        model=$(${pkgs.gnugrep}/bin/grep -m1 '^E:ID_MODEL=' "$properties" | ${pkgs.uutils-coreutils-noprefix}/bin/cut -d= -f2- || true)
         case "$model" in
           *Controller* | *Puck* | *Gamepad* | *Joystick* | *YubiKey*) continue ;;
         esac
@@ -389,9 +389,9 @@ let
     stop_maliit() {
       [ -z "$maliit_pid" ] && return
       kill "$maliit_pid" 2>/dev/null || true
-      for _ in $(${pkgs.coreutils}/bin/seq 1 10); do
+      for _ in $(${pkgs.uutils-coreutils-noprefix}/bin/seq 1 10); do
         kill -0 "$maliit_pid" 2>/dev/null || break
-        ${pkgs.coreutils}/bin/sleep 0.1
+        ${pkgs.uutils-coreutils-noprefix}/bin/sleep 0.1
       done
       kill -KILL "$maliit_pid" 2>/dev/null || true
       wait "$maliit_pid" 2>/dev/null || true
@@ -408,30 +408,30 @@ let
 
     while true; do
       bus_ready=0
-      for attempt in $(${pkgs.coreutils}/bin/seq 1 600); do
+      for attempt in $(${pkgs.uutils-coreutils-noprefix}/bin/seq 1 600); do
         if [ -S "$XDG_RUNTIME_DIR/bus" ]; then
           bus_ready=1
           break
         fi
-        ${pkgs.coreutils}/bin/sleep 0.1
+        ${pkgs.uutils-coreutils-noprefix}/bin/sleep 0.1
       done
-      [ "$bus_ready" -eq 1 ] || { ${pkgs.coreutils}/bin/sleep 1; continue; }
+      [ "$bus_ready" -eq 1 ] || { ${pkgs.uutils-coreutils-noprefix}/bin/sleep 1; continue; }
 
       wayland_display=""
-      for attempt in $(${pkgs.coreutils}/bin/seq 1 300); do
+      for attempt in $(${pkgs.uutils-coreutils-noprefix}/bin/seq 1 300); do
         for socket in "$XDG_RUNTIME_DIR"/wayland-*; do
           [ -S "$socket" ] || continue
           case "$socket" in *.lock) continue ;; esac
-          wayland_display=$(${pkgs.coreutils}/bin/basename "$socket")
+          wayland_display=$(${pkgs.uutils-coreutils-noprefix}/bin/basename "$socket")
           ${pkgs.dbus}/bin/dbus-send --session --reply-timeout=500 \
             --dest=org.freedesktop.DBus --type=method_call --print-reply \
             /org/freedesktop/DBus org.freedesktop.DBus.ListNames \
             2>/dev/null | ${pkgs.gnugrep}/bin/grep -q org.kde.KWin && break 2
         done
         wayland_display=""
-        ${pkgs.coreutils}/bin/sleep 0.2
+        ${pkgs.uutils-coreutils-noprefix}/bin/sleep 0.2
       done
-      [ -n "$wayland_display" ] || { ${pkgs.coreutils}/bin/sleep 1; continue; }
+      [ -n "$wayland_display" ] || { ${pkgs.uutils-coreutils-noprefix}/bin/sleep 1; continue; }
 
       QT_QPA_PLATFORM=wayland WAYLAND_DISPLAY=$wayland_display ${lib.getExe' sddmMaliitKeyboard "maliit-keyboard"} &
       maliit_pid=$!
@@ -443,13 +443,13 @@ let
           QT_QPA_PLATFORM=wayland WAYLAND_DISPLAY=$wayland_display ${lib.getExe' sddmMaliitKeyboard "maliit-keyboard"} &
           maliit_pid=$!
           applied_state=-1
-          ${pkgs.coreutils}/bin/sleep 0.1
+          ${pkgs.uutils-coreutils-noprefix}/bin/sleep 0.1
         fi
         current_state=$(current_keyboard_state)
         if [ "$current_state" -ne "$applied_state" ] && set_virtual_keyboard "$current_state"; then
           applied_state=$current_state
         fi
-        ${pkgs.coreutils}/bin/sleep 0.5
+        ${pkgs.uutils-coreutils-noprefix}/bin/sleep 0.5
       done
 
       stop_maliit

@@ -137,13 +137,13 @@ let
       exit 0
     fi
 
-    WIFI_CONNECTIONS=$(${pkgs.networkmanager}/bin/nmcli -t -f NAME,TYPE connection show | ${pkgs.gnugrep}/bin/grep ':802-11-wireless$' | ${pkgs.coreutils}/bin/cut -d: -f1)
+    WIFI_CONNECTIONS=$(${pkgs.networkmanager}/bin/nmcli -t -f NAME,TYPE connection show | ${pkgs.gnugrep}/bin/grep ':802-11-wireless$' | ${pkgs.uutils-coreutils-noprefix}/bin/cut -d: -f1)
 
     if [ -z "$WIFI_CONNECTIONS" ]; then
       exit 0
     fi
 
-    ACTIVE_ETHERNET=$(${pkgs.networkmanager}/bin/nmcli -t -f TYPE,DEVICE connection show --active | ${pkgs.gnugrep}/bin/grep '^802-3-ethernet:' | ${pkgs.coreutils}/bin/cut -d: -f2 || true)
+    ACTIVE_ETHERNET=$(${pkgs.networkmanager}/bin/nmcli -t -f TYPE,DEVICE connection show --active | ${pkgs.gnugrep}/bin/grep '^802-3-ethernet:' | ${pkgs.uutils-coreutils-noprefix}/bin/cut -d: -f2 || true)
 
     if [ -n "$ACTIVE_ETHERNET" ]; then
       ${pkgs.util-linux}/bin/logger "NetworkManager dispatcher: active Ethernet found ($ACTIVE_ETHERNET), disabling WiFi autoconnect"
@@ -162,7 +162,7 @@ let
       ${pkgs.networkmanager}/bin/nmcli connection modify "$conn" connection.autoconnect yes || true
     done <<< "$WIFI_CONNECTIONS"
 
-    WIFI_DEVICE=$(${pkgs.networkmanager}/bin/nmcli -t -f DEVICE,TYPE device status | ${pkgs.gnugrep}/bin/grep ':wifi$' | ${pkgs.coreutils}/bin/cut -d: -f1 | ${pkgs.coreutils}/bin/head -n1)
+    WIFI_DEVICE=$(${pkgs.networkmanager}/bin/nmcli -t -f DEVICE,TYPE device status | ${pkgs.gnugrep}/bin/grep ':wifi$' | ${pkgs.uutils-coreutils-noprefix}/bin/cut -d: -f1 | ${pkgs.uutils-coreutils-noprefix}/bin/head -n1)
 
     if [ -n "$WIFI_DEVICE" ]; then
       ${pkgs.networkmanager}/bin/nmcli radio wifi on || true

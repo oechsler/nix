@@ -157,7 +157,7 @@ in
         wantedBy = [ "default.target" ];
         path = with pkgs; [
           inotify-tools
-          coreutils
+          uutils-coreutils-noprefix
           findutils
           gnused
           squashfsTools
