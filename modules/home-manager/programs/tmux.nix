@@ -124,7 +124,7 @@
       set -g status-format[0] ""
       set -g status-left-length 20
       set -g status-left "#[fg=#{@thm_${config.catppuccin.accent}},bg=default]#[fg=#{@thm_crust},bg=#{@thm_${config.catppuccin.accent}}] #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #S#[fg=#{@thm_surface_0},bg=default] "
-      set -g status-right "#[fg=#{@thm_blue},bg=default]#[fg=#{@thm_crust},bg=#{@thm_blue}] #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #{=/24/…:#{s|$HOME|~|:pane_current_path}}#[fg=#{@thm_surface_0},bg=default] #[fg=#{@thm_${config.catppuccin.accent}},bg=default]#[fg=#{@thm_crust},bg=#{@thm_${config.catppuccin.accent}}]󰒋 #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #h#[fg=#{@thm_surface_0},bg=default]"
+      set -g status-right "#[fg=#{@thm_${config.catppuccin.accent}},bg=default]#[fg=#{@thm_crust},bg=#{@thm_${config.catppuccin.accent}}] #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #{=/24/…:#{s|$HOME|~|:pane_current_path}}#[fg=#{@thm_surface_0},bg=default] #[fg=#{@thm_${config.catppuccin.accent}},bg=default]#[fg=#{@thm_crust},bg=#{@thm_${config.catppuccin.accent}}]󰒋 #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #h#[fg=#{@thm_surface_0},bg=default]"
     '';
   };
 }
