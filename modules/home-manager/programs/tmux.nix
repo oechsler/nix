@@ -20,6 +20,18 @@
 { config, pkgs, ... }:
 
 {
+  catppuccin.tmux.extraConfig = ''
+    set -g @catppuccin_window_status_style "rounded"
+    set -g @catppuccin_window_text " #{pane_current_command}"
+    set -g @catppuccin_window_current_text " #{pane_current_command}"
+    set -g @catppuccin_window_number "#I"
+    set -g @catppuccin_window_current_number "#I"
+    set -g @catppuccin_window_text_color "#{@thm_surface_0}"
+    set -g @catppuccin_window_number_color "#{@thm_overlay_2}"
+    set -g @catppuccin_window_current_text_color "#{@thm_surface_1}"
+    set -g @catppuccin_window_current_number_color "#{@thm_${config.catppuccin.accent}}"
+  '';
+
   programs.tmux = {
     enable = true;
     shell = "${pkgs.fish}/bin/fish";
@@ -27,18 +39,6 @@
     escapeTime = 0;
     baseIndex = 1;
     keyMode = "vi";
-    plugins = with pkgs.tmuxPlugins; [
-      {
-        plugin = catppuccin;
-        extraConfig = ''
-          set -g @catppuccin_flavor "${config.catppuccin.flavor}"
-          set -g @catppuccin_window_status_style "basic"
-          set -g @catppuccin_window_text "#{pane_current_command}"
-          set -g @catppuccin_window_current_text "#{pane_current_command}"
-          set -g @catppuccin_status_left ""
-        '';
-      }
-    ];
     extraConfig = ''
       # Alt-based keybindings (matching Hyprland)
       set -g prefix None
@@ -91,10 +91,15 @@
 
       bind -n M-s choose-tree -s
       bind -n M-S new-session
+      bind -n M-n command-prompt -I '#{session_name}' -p 'Rename session:' 'rename-session "%%"'
+      bind -n M-N command-prompt -I '#{window_name}' -p 'Rename window:' 'rename-window "%%"'
       bind -n M-W kill-session
 
-      # Move pane to window (Alt+M, then 1-0)
+      # Move pane/window (Alt+M, then key)
+      #   s - Move current window to selected session
+      #   1-0 - Move current pane to window 1-10
       bind -n M-m switch-client -T move
+      bind -T move s choose-tree -s -F '#{session_name}' 'move-window -t "%%"'
       bind -T move 1 join-pane -t :1
       bind -T move 2 join-pane -t :2
       bind -T move 3 join-pane -t :3
@@ -109,8 +114,13 @@
       set -g mouse on
       set -g allow-passthrough on
 
-      # Status (after catppuccin plugin)
-      set -g status-right " #{=/30/…:#{s|$HOME|~|:pane_current_path}}  #h "
+      # Status bar (after catppuccin plugin)
+      set -g status 2
+      set -g status-style "bg=default"
+      set -gF status-format[1] "#{status-format[0]}"
+      set -g status-format[0] ""
+      set -g status-left ""
+      set -g status-right "#[fg=#{@thm_blue},bg=default]#[fg=#{@thm_crust},bg=#{@thm_blue}] #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #{=/24/…:#{s|$HOME|~|:pane_current_path}}#[fg=#{@thm_surface_0},bg=default] #[fg=#{@thm_${config.catppuccin.accent}},bg=default]#[fg=#{@thm_crust},bg=#{@thm_${config.catppuccin.accent}}]󰒋 #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #h#[fg=#{@thm_surface_0},bg=default]"
     '';
   };
 }
