@@ -119,7 +119,7 @@
       set -g status-style "bg=default"
       set -g message-style "fg=#{@thm_fg},bg=#{@thm_surface_0},fill=#{@thm_surface_0},align=left"
       set -g message-command-style "fg=#{@thm_fg},bg=#{@thm_surface_0},fill=#{@thm_surface_0},align=left"
-      set -g message-format "#[fg=#{@thm_${config.catppuccin.accent}},bg=#{@thm_surface_0}]#[fg=#{@thm_${config.catppuccin.accent}},bg=#{@thm_surface_0}] #[fg=#{@thm_fg},bg=#{@thm_surface_0}]#{message}"
+      set -g message-format "#[fg=#{@thm_${config.catppuccin.accent}},bg=#{@thm_surface_0}]#[fg=#{@thm_crust},bg=#{@thm_${config.catppuccin.accent}}] #[fg=#{@thm_fg},bg=#{@thm_surface_0}]#{message}"
       set -gF status-format[1] "#{status-format[0]}"
       set -g status-format[0] ""
       set -g status-left-length 20
