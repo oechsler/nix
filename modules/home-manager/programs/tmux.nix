@@ -91,8 +91,8 @@
 
       bind -n M-s choose-tree -s
       bind -n M-S new-session
-      bind -n M-n command-prompt -I '#{session_name}' -p 'Rename session:' 'rename-session "%%"'
-      bind -n M-N command-prompt -I '#{window_name}' -p 'Rename window:' 'rename-window "%%"'
+      bind -n M-n command-prompt -I '#{session_name}' -p 'Session name:' 'rename-session "%%"'
+      bind -n M-N command-prompt -I '#{window_name}' -p 'Window name:' 'rename-window "%%"'
       bind -n M-W kill-session
 
       # Move pane/window (Alt+M, then key)
@@ -117,9 +117,13 @@
       # Status bar (after catppuccin plugin)
       set -g status 2
       set -g status-style "bg=default"
+      set -g message-style "fg=#{@thm_fg},bg=#{@thm_surface_0},fill=#{@thm_surface_0},align=left"
+      set -g message-command-style "fg=#{@thm_fg},bg=#{@thm_surface_0},fill=#{@thm_surface_0},align=left"
+      set -g message-format "#[fg=#{@thm_${config.catppuccin.accent}},bg=#{@thm_surface_0}]#[fg=#{@thm_fg},bg=#{@thm_surface_0}] #{message}"
       set -gF status-format[1] "#{status-format[0]}"
       set -g status-format[0] ""
-      set -g status-left ""
+      set -g status-left-length 20
+      set -g status-left "#[fg=#{@thm_${config.catppuccin.accent}},bg=default]#[fg=#{@thm_crust},bg=#{@thm_${config.catppuccin.accent}}] #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #S#[fg=#{@thm_surface_0},bg=default] "
       set -g status-right "#[fg=#{@thm_blue},bg=default]#[fg=#{@thm_crust},bg=#{@thm_blue}] #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #{=/24/…:#{s|$HOME|~|:pane_current_path}}#[fg=#{@thm_surface_0},bg=default] #[fg=#{@thm_${config.catppuccin.accent}},bg=default]#[fg=#{@thm_crust},bg=#{@thm_${config.catppuccin.accent}}]󰒋 #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #h#[fg=#{@thm_surface_0},bg=default]"
     '';
   };
