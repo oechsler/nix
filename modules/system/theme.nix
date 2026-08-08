@@ -294,6 +294,11 @@
         style = "kvantum";
       };
 
+      environment.sessionVariables = {
+        QT_QPA_PLATFORMTHEME = "qt5ct";
+        QT_STYLE_OVERRIDE = "kvantum";
+      };
+
       # Qt theming packages
       environment.systemPackages = with pkgs; [
         libsForQt5.qt5ct # Qt5 configuration tool

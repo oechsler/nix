@@ -48,11 +48,13 @@ in
     catppuccin.hyprland.enable = false;
     catppuccin.kvantum.enable = true;
 
+    systemd.user.sessionVariables.QT_QPA_PLATFORM = "wayland";
+
     home = {
-      # gnome platform theme reads color-scheme from portal (dark mode detection)
-      # while QT_STYLE_OVERRIDE=kvantum preserves the Kvantum look
-      # mkForce overrides the value set by qt.platformTheme.name = "qtct"
-      sessionVariables.QT_QPA_PLATFORMTHEME = lib.mkForce "gnome";
+      sessionVariables = {
+        QT_QPA_PLATFORM = "wayland";
+        QT_STYLE_OVERRIDE = "kvantum";
+      };
 
       # Flatpak Qt apps can't follow symlinks to /nix/store.
       # The catppuccin Kvantum module creates symlinks via xdg.configFile.

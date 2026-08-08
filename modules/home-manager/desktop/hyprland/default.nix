@@ -428,8 +428,16 @@ in
             (toString theme.cursor.size)
           ]
           [
+            "QT_QPA_PLATFORM"
+            "wayland"
+          ]
+          [
             "QT_QPA_PLATFORMTHEME"
-            "gnome"
+            "qt5ct"
+          ]
+          [
+            "QT_STYLE_OVERRIDE"
+            "kvantum"
           ]
           [
             "GTK_THEME"

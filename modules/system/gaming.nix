@@ -23,6 +23,27 @@ let
   cfg = config.features.gaming;
   steamMachineCfg = cfg.steamMachine;
 
+  protonupQtThemed =
+    let
+      qtPluginPath = lib.makeSearchPath pkgs.qt6.qtbase.qtPluginPrefix [
+        pkgs.kdePackages.qt6ct
+        pkgs.kdePackages.qtstyleplugin-kvantum
+      ];
+      launcher = pkgs.writeShellScriptBin "protonup-qt" ''
+        export QT_PLUGIN_PATH=${lib.escapeShellArg qtPluginPath}
+        export QT_STYLE_OVERRIDE=kvantum
+        export DESKTOP_SESSION=plasma
+        exec -a "$0" ${pkgs.protonup-qt}/bin/.protonup-qt-wrapped "$@"
+      '';
+    in
+    pkgs.symlinkJoin {
+      name = "protonup-qt-themed";
+      paths = [
+        launcher
+        pkgs.protonup-qt
+      ];
+    };
+
   desktopSession = if config.features.desktop.wm == "kde" then "plasma" else "hyprland-uwsm";
 
   # Desktop compositors distinguish vrr=1 (always) from vrr=2 (fullscreen/automatic).
@@ -320,7 +341,8 @@ in
           [
             gamescope
             mangohud # in-game overlay: FPS, GPU/CPU load, temps, VRAM
-            protonup-qt # GUI to install/manage Proton-GE versions
+            prismlauncher # Minecraft launcher with modpack support
+            protonupQtThemed # GUI to install/manage Proton-GE versions
           ]
           ++ lib.optionals steamMachineCfg.enable [
             steamMachineTools
