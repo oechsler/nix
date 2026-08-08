@@ -120,6 +120,7 @@ Default mappings are feature-gated and automatically applied:
 | `features.apps.enable` | Nextcloud | `Nextcloud` | `state-ok` |
 | `features.apps.enable` | Mumble | `Mumble` | `mumble-indicator` |
 | `features.apps.enable` | Nheko | `nheko` | `applications-chat-panel` |
+| `features.apps.enable` | Proton Pass | `Proton Pass_status_icon_1` | `dialog-password-panel` |
 | `features.apps.enable` | Vesktop | `vesktop_status_icon_1` | `discord-tray` |
 | `features.tailscale.enable` | Trayscale | `dev.deedles.Trayscale` | `network-vpn` |
 

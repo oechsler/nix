@@ -78,6 +78,7 @@ let
       Nextcloud = "state-ok";
       Mumble = "mumble-indicator";
       nheko = "applications-chat-panel";
+      "Proton Pass_status_icon_1" = "dialog-password-panel";
       vesktop_status_icon_1 = "discord-tray";
     }
     // lib.optionalAttrs features.tailscale.enable (
@@ -96,6 +97,8 @@ let
   '';
 
   waybar = pkgs.waybar.overrideAttrs (old: {
+    patches = (old.patches or [ ]) ++ [ ./waybar-sni-custom-icon.patch ];
+
     postPatch = (old.postPatch or "") + ''
       substituteInPlace src/modules/hyprland/workspace.cpp \
         --replace-fail \
