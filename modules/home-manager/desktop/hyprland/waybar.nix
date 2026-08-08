@@ -13,6 +13,13 @@
 # - Custom SCSS styling with theme variables
 # - Transparent background (alpha 0.85)
 # - Icons from Nerd Fonts
+# - Papirus tray icons with customizable mappings (Hyprland only, ignored on KDE)
+#
+# Tray Icons:
+# - Default mappings use Papirus-Dark icons for Steam, Nextcloud, Mumble, Nheko, Vesktop, Trayscale
+# - Mappings are feature-gated (only active apps get their icons)
+# - Customize or add mappings via: waybar.tray.icons = { "AppId" = "icon-name"; };
+# - This option has no effect on KDE (Plasma manages its own tray icons)
 #
 # Styling:
 # - Uses waybar-style.scss with template variables
@@ -63,6 +70,25 @@ let
     }) displays.monitors
   );
 
+  defaultTrayIcons =
+    lib.optionalAttrs features.gaming.enable {
+      steam = "steam_tray_mono";
+    }
+    // lib.optionalAttrs features.apps.enable {
+      Nextcloud = "state-ok";
+      Mumble = "mumble-indicator";
+      nheko = "applications-chat-panel";
+      vesktop_status_icon_1 = "discord-tray";
+    }
+    // lib.optionalAttrs features.tailscale.enable (
+      lib.listToAttrs [
+        {
+          name = "dev.deedles.Trayscale";
+          value = "network-vpn";
+        }
+      ]
+    );
+
   # Reload script (used by Super+Shift+R keybinding)
   reload = pkgs.writeShellScript "waybar-reload" ''
     pkill waybar
@@ -89,6 +115,12 @@ in
     default = reload;
     readOnly = true;
     description = "Script to reload waybar (pkill + restart)";
+  };
+
+  options.waybar.tray.icons = lib.mkOption {
+    type = lib.types.attrsOf lib.types.str;
+    default = { };
+    description = "Additional or overriding StatusNotifierItem Id to Papirus icon name mappings";
   };
 
   #===========================
@@ -160,6 +192,7 @@ in
         "tray" = {
           spacing = 10;
           icon-size = 16;
+          icons = defaultTrayIcons // config.waybar.tray.icons;
         };
 
         "network" = {

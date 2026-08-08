@@ -226,7 +226,7 @@ GLOBAL_FALLBACKS = [
 ]
 
 _PROVIDER_COOLDOWN = int(os.environ.get("PROVIDER_COOLDOWN_SECONDS", "60"))
-_provider_unavailable_until: dict[str, float] = {}
+_model_cooldown_until: dict[str, float] = {}
 _PROVIDER_FAILURE_STATUSES = {401, 403, 408, 425, 429}
 
 # ---------------------------------------------------------------------------
@@ -640,20 +640,17 @@ def _provider(model: str) -> str:
 
 
 def _provider_available(model: str) -> bool:
-    provider = _provider(model)
-    unavailable_until = _provider_unavailable_until.get(provider, 0)
+    unavailable_until = _model_cooldown_until.get(model, 0)
     if unavailable_until <= time.monotonic():
-        _provider_unavailable_until.pop(provider, None)
+        _model_cooldown_until.pop(model, None)
         return True
     return False
 
 
 def _mark_provider_failure(model: str, reason: str) -> None:
-    provider = _provider(model)
-    _provider_unavailable_until[provider] = time.monotonic() + _PROVIDER_COOLDOWN
+    _model_cooldown_until[model] = time.monotonic() + _PROVIDER_COOLDOWN
     logger.warning(
-        "provider cooldown provider=%s model=%s seconds=%s reason=%s",
-        provider,
+        "model cooldown model=%s seconds=%s reason=%s",
         model,
         _PROVIDER_COOLDOWN,
         reason,
@@ -666,18 +663,18 @@ def _mark_provider_http_failure(model: str, status_code: int) -> None:
 
 
 def _mark_provider_success(model: str) -> None:
-    _provider_unavailable_until.pop(_provider(model), None)
+    _model_cooldown_until.pop(model, None)
 
 
 def _degraded_providers() -> dict[str, int]:
     now = time.monotonic()
     degraded = {}
-    for provider, unavailable_until in list(_provider_unavailable_until.items()):
+    for model, unavailable_until in list(_model_cooldown_until.items()):
         remaining = int(unavailable_until - now)
         if remaining > 0:
-            degraded[provider] = remaining
+            degraded[model] = remaining
         else:
-            _provider_unavailable_until.pop(provider, None)
+            _model_cooldown_until.pop(model, None)
     return degraded
 
 
@@ -1569,7 +1566,7 @@ async def health() -> dict[str, Any]:
     return {
         "status": "degraded" if degraded else "ok",
         "classifier_backend": CLASSIFIER_BACKEND,
-        "provider_cooldowns": degraded,
+        "model_cooldowns": degraded,
     }
 
 

@@ -88,7 +88,7 @@ The classifier considers:
 ### Fallback and Escalation
 
 - **Backend fallback**: If a provider fails before the first response chunk (network error, rate limit, authentication error, timeout, or upstream error), the router walks the fallback chain defined for each model.
-- **Provider circuit breaker**: An unavailable provider enters a 60-second cooldown. Other models from that provider are skipped instead of repeating the same slow failure.
+- **Model circuit breaker**: A failing model enters a 60-second cooldown. Other models from the same provider remain available as fallbacks.
 - **Offline safety net**: Local-classifier hosts end every fallback chain at `qwen3:8b`. Cloud-classifier hosts omit Ollama from their model list and fallback chains.
 - **Capability escalation**: If a user says the previous answer did not work (e.g., "that did not work", "funktioniert nicht"), the router reads the model from the previous response and escalates to the next capability tier on the next turn.
 
@@ -174,7 +174,7 @@ The router exposes OpenCode-compatible reasoning content for every model entry. 
 
 The router handles two different failure modes.
 
-**Backend fallback** applies when a provider fails before the first response chunk, for example because of a network failure, timeout, rate limit, missing authentication, context limit, or upstream server error. The router follows the configured fallback chain until a backend accepts the request. A provider-level circuit breaker prevents subsequent requests from retrying every model of a provider known to be unavailable. The cooldown state is visible in `/health`. Once streaming has started, the router cannot replace that response, but an interrupted stream puts that provider on cooldown for the next request.
+**Backend fallback** applies when a model fails before the first response chunk, for example because of a network failure, timeout, rate limit, missing authentication, context limit, or upstream server error. The router follows the configured fallback chain until a backend accepts the request. A model-level circuit breaker prevents subsequent requests from retrying the failing model while keeping other models from the same provider available. The cooldown state is visible in `/health`. Once streaming has started, the router cannot replace that response, but an interrupted stream puts that model on cooldown for the next request.
 
 **Capability escalation** applies when a backend returned an answer but the user says that the attempt failed or asks it to try again. On the next turn, the router reads the model recorded on the previous response and moves to the next capability tier. This is separate from provider availability fallback and prevents a failed task from repeatedly returning to the same small model.
 
