@@ -25,6 +25,10 @@ The router therefore follows three design choices:
 2. Choose the least expensive model expected to complete the task well.
 3. Keep provider failures and inadequate answers recoverable without hiding which model was used.
 
+### Routing policy update
+
+The automatic policy now treats DeepSeek and Qwen as the default cost/performance middle ground for tool-enabled work. DeepSeek Flash handles routine coding, DeepSeek Pro handles intermediate-to-complex tasks, and Qwen Plus handles general development and broad refactors. GPT models are reserved for work that is genuinely complex, ambiguous, high-stakes, or beyond the DeepSeek/Qwen capability, and for overflow when those providers are unavailable or saturated. This is a classifier preference, not a hard quota scheduler: provider availability fallback and capability escalation can still select another backend.
+
 You can still select any model manually when you need predictable behavior.
 
 ## Request Flow
@@ -67,9 +71,9 @@ The classifier evaluates requests on five levels:
 
 - **Level 1 — Simple (no tools)**: Greetings, translations, summaries, titles, simple Q&A. Routed to `mistral-small`.
 - **Level 2 — Medium reasoning (no tools)**: Architecture discussions, design tradeoffs, analysis, planning. Routed to `mistral-medium` (preferred) or `qwen3.7-max` for exceptionally complex algorithmic reasoning.
-- **Level 3 — Standard coding with tools**: File edits, refactoring, shell commands, debugging, testing, NixOS config. Routed to `deepseek-v4-flash`, `gpt-5.6-luna-fast`, `gpt-5.6-luna`, or `qwen3.7-plus`.
-- **Level 4 — Complex agentic with tools**: Multi-step exploration, difficult bugs, race conditions, high-stakes reviews, system administration. Routed to `deepseek-v4-pro`, `gpt-5.6-sol`, `gpt-5.6-sol-fast`, or `gpt-5.6-terra`.
-- **Level 5 — Very hard problems**: Extremely complex logic, distributed systems, critical bugs. Routed to `gpt-5.6-terra`, `deepseek-v4-pro`, or `qwen3.7-max`.
+- **Level 3 — Standard coding with tools**: File edits, refactoring, shell commands, debugging, testing, NixOS config. Prefer `deepseek-v4-flash` or `qwen3.7-plus`; GPT Luna is overflow when those providers are saturated.
+- **Level 4 — Intermediate-to-complex tools**: Multi-step refactors, hard bugs, deeper analysis, and broad edits. Prefer `deepseek-v4-pro` or `qwen3.7-plus`; GPT Sol is used when those models are insufficient.
+- **Level 5 — Very hard problems**: Ambiguous multi-step exploration, production failures, critical system administration, race conditions, and extremely complex logic. Routed to GPT Sol or Terra as the strongest escalation tier.
 
 ### Decision Criteria
 
@@ -102,14 +106,50 @@ Models are listed once below in the approximate order of work they are intended 
 - **`deepseek-v4-flash`** — Routine coding, debugging, shell work, tests, and file edits
 - **`deepseek-v4-pro`** — Difficult focused engineering and debugging
 - **`qwen3.7-plus`** — General development, broad edits, and an alternative to DeepSeek Flash
+- **`qwen3.8-max`** — Deep mathematical, theoretical, and formal reasoning without tools; use sparingly because its Go quota is small
 - **`qwen3.7-max`** — Advanced reasoning without broad tool coordination
 - **`qwen3.6-plus`** — General coding when other OpenCode Go models are unavailable
+- **`gpt-5.6-luna`** — Low-cost GPT overflow through OpenCode Go, with a hidden direct OpenAI route as its availability fallback
 
-### GPT-5.6
+### GPT-5.6 via ChatGPT OAuth
 
-- **`gpt-5.6-luna` / `gpt-5.6-luna-fast`** — Daily agentic development; fast uses the priority service tier
+- **`gpt-5.6-luna-fast`** — Fast GPT overflow using the priority service tier
 - **`gpt-5.6-sol` / `gpt-5.6-sol-fast`** — Complex debugging, refactoring, and multi-step tool use
 - **`gpt-5.6-terra` / `gpt-5.6-terra-fast`** — Ambiguous, critical, or high-stakes work; strongest tier
+
+### OpenCode Go limits and Zen billing
+
+OpenCode Go includes usage worth $12 per rolling five hours, $30 per week, and $60 per month. The approximate request allowances published for the Go models used here are:
+
+| Model | Requests per 5 hours |
+| --- | ---: |
+| `deepseek-v4-flash` | 31,650 |
+| `qwen3.7-plus` | 4,300 |
+| `deepseek-v4-pro` | 3,450 |
+| `qwen3.6-plus` | 3,300 |
+| `gpt-5.6-luna` | 2,050 |
+| `qwen3.7-max` | 340 |
+| `qwen3.8-max` | 160 |
+
+Reaching a Go limit is not necessarily observable as a rate-limit failure: subsequent Go traffic can consume the account's OpenCode Zen balance at pay-as-you-go rates. If Zen auto-reload is enabled, a balance at $5 automatically purchases $20 of credit and adds a $1.23 processing fee. Consequently, the router cannot reliably detect exhausted Go allowance from HTTP errors and switch providers before Zen is charged. Its DeepSeek/Qwen-first policy and quota hints reduce likely cost but do not enforce a spending cap; account billing settings remain the hard control.
+
+Relevant Zen prices per one million tokens are:
+
+| Model | Input | Output | Cached read | Cached write |
+| --- | ---: | ---: | ---: | ---: |
+| `deepseek-v4-flash` | $0.14 | $0.28 | $0.028 | — |
+| `gpt-5.6-luna` (up to 272K tokens) | $0.20 | $1.20 | $0.02 | $0.25 |
+| `gpt-5.6-luna` (over 272K tokens) | $0.40 | $1.80 | $0.04 | $0.50 |
+| `qwen3.7-plus` | $0.40 | $1.60 | $0.04 | $0.50 |
+| `qwen3.6-plus` | $0.50 | $3.00 | $0.05 | $0.625 |
+| `deepseek-v4-pro` | $1.74 | $3.48 | $0.145 | — |
+| `qwen3.7-max` | $2.50 | $7.50 | $0.50 | $3.125 |
+| `gpt-5.6-terra` (up to 272K tokens) | $2.00 | $12.00 | $0.20 | $2.50 |
+| `gpt-5.6-terra` (over 272K tokens) | $4.00 | $18.00 | $0.40 | $5.00 |
+| `gpt-5.6-sol` (up to 272K tokens) | $5.00 | $30.00 | $0.50 | $6.25 |
+| `gpt-5.6-sol` (over 272K tokens) | $10.00 | $45.00 | $1.00 | $12.50 |
+
+The supplied pricing table does not list a pay-as-you-go price for `qwen3.8-max`, so no price is assumed here. The direct GPT routes use ChatGPT OAuth rather than the OpenCode Go API; the Zen pricing table describes Go/Zen traffic, not ChatGPT subscription billing.
 
 ### Local Ollama
 
