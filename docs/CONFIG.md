@@ -104,6 +104,45 @@ Set in `configuration.nix`:
 | `theme.icons.name` | auto | Icon theme (`"Papirus-Light"` on latte, `"Papirus-Dark"` otherwise) |
 | `theme.icons.package` | Catppuccin Papirus | Icon theme package (auto-colored by flavor + accent) |
 
+## Waybar Tray Icons
+
+Set in `home.nix`. Waybar's system tray uses Papirus-Dark icons for common applications. **Hyprland only** — KDE manages tray icons through Plasma's own panel system and ignores this option.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `waybar.tray.icons` | `{}` | Custom StatusNotifierItem Id → Papirus icon name mappings |
+
+Default mappings are feature-gated and automatically applied:
+
+| Feature Flag | App | StatusNotifierItem Id | Papirus Icon |
+|--------------|-----|----------------------|--------------|
+| `features.gaming.enable` | Steam | `steam` | `steam_tray_mono` |
+| `features.apps.enable` | Nextcloud | `Nextcloud` | `state-ok` |
+| `features.apps.enable` | Mumble | `Mumble` | `mumble-indicator` |
+| `features.apps.enable` | Nheko | `nheko` | `applications-chat-panel` |
+| `features.apps.enable` | Vesktop | `vesktop_status_icon_1` | `discord-tray` |
+| `features.tailscale.enable` | Trayscale | `dev.deedles.Trayscale` | `network-vpn` |
+
+### Customizing Tray Icons
+
+Add or override mappings in `home.nix`:
+
+```nix
+waybar.tray.icons = {
+  "MyApp" = "my-app-icon";
+  steam = "custom_steam_icon";  # override default
+};
+```
+
+To find the StatusNotifierItem Id for an application:
+
+```bash
+busctl --user introspect org.kde.StatusNotifierWatcher /StatusNotifierWatcher \
+  org.kde.StatusNotifierWatcher RegisteredStatusNotifierItems
+```
+
+The Id is the last path component (e.g., `steam` from `:1.107/org/ayatana/NotificationItem/steam`).
+
 ## Font Options
 
 Set in `configuration.nix`:

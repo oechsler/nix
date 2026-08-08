@@ -6,7 +6,7 @@ import router
 
 class RouterTest(unittest.TestCase):
     def setUp(self):
-        router._provider_unavailable_until.clear()
+        router._model_cooldown_until.clear()
         router._classification_cache.clear()
 
     def test_fallback_chain_follows_all_configured_backends(self):
@@ -32,14 +32,15 @@ class RouterTest(unittest.TestCase):
         self.assertNotIn("qwen3:8b", chain)
         self.assertNotIn("ollama", {router._provider(model) for model in chain})
 
-    def test_provider_failure_temporarily_disables_all_provider_models(self):
-        router._mark_provider_failure("mistral-small", "test outage")
-        self.assertFalse(router._provider_available("mistral-small"))
-        self.assertFalse(router._provider_available("mistral-medium"))
+    def test_model_failure_isolates_opencode_go_model_cooldown(self):
+        router._mark_provider_failure("deepseek-v4-flash", "test outage")
+        self.assertFalse(router._provider_available("deepseek-v4-flash"))
+        self.assertTrue(router._provider_available("deepseek-v4-pro"))
+        self.assertTrue(router._provider_available("qwen3.7-plus"))
         self.assertTrue(router._provider_available("gpt-5.6-luna"))
 
-        router._mark_provider_success("mistral-medium")
-        self.assertTrue(router._provider_available("mistral-small"))
+        router._mark_provider_success("deepseek-v4-flash")
+        self.assertTrue(router._provider_available("deepseek-v4-flash"))
 
     def test_notice_is_minimal_for_initial_route(self):
         self.assertEqual(
@@ -249,7 +250,7 @@ class RouterTest(unittest.TestCase):
 
 class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
-        router._provider_unavailable_until.clear()
+        router._model_cooldown_until.clear()
         router._classification_cache.clear()
 
     async def test_cloud_classifier_uses_litellm(self):
@@ -411,7 +412,7 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
             routed_body["messages"][0]["content"],
         )
 
-    async def test_provider_outage_skips_sibling_model_and_fails_over(self):
+    async def test_model_outage_tries_sibling_model_then_fails_over(self):
         class Response:
             is_success = False
             status_code = 503
@@ -443,7 +444,7 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertEqual(result, "chatgpt fallback")
-        self.assertEqual(Client.post.await_count, 1)
+        self.assertEqual(Client.post.await_count, 2)
         chatgpt.assert_awaited_once()
 
 
