@@ -74,6 +74,7 @@ in
             mistral-medium = model "Mistral Medium";
             deepseek-v4-pro = model "DeepSeek V4 Pro";
             deepseek-v4-flash = model "DeepSeek V4 Flash";
+            "qwen3.8-max" = model "Qwen3.8 Max";
             "qwen3.7-max" = model "Qwen3.7 Max";
             "qwen3.7-plus" = model "Qwen3.7 Plus";
             "qwen3.6-plus" = model "Qwen3.6 Plus";

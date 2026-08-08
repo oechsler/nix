@@ -12,7 +12,7 @@ class RouterTest(unittest.TestCase):
     def test_fallback_chain_follows_all_configured_backends(self):
         self.assertEqual(
             router._fallback_chain("mistral-small"),
-            ["mistral-small", "mistral-medium", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.6-luna", "gpt-5.6-terra-fast", "gpt-5.6-sol-fast", "gpt-5.6-luna-fast", "deepseek-v4-flash", "qwen3:8b"],
+            ["mistral-small", "mistral-medium", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.6-luna", "gpt-5.6-luna-openai", "deepseek-v4-flash", "qwen3:8b"],
         )
 
     def test_every_fallback_chain_ends_with_local_model(self):
@@ -126,7 +126,7 @@ class RouterTest(unittest.TestCase):
         prompt = router._build_classification_prompt("user: Do all five tasks", True)
 
         self.assertIn("Multiple deliverables or end-to-end implementation", prompt)
-        self.assertIn("at least gpt-5.6-sol", prompt)
+        self.assertIn("at least deepseek-v4-pro or qwen3.7-plus", prompt)
 
     def test_failed_attempt_escalates_previous_model(self):
         messages = [
@@ -438,7 +438,7 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
         ):
             result = await router._stream_to_backend(
                 body={"stream": False},
-                candidates=["mistral-small", "mistral-medium", "gpt-5.6-luna"],
+                candidates=["mistral-small", "mistral-medium", "gpt-5.6-luna-openai"],
                 original_model="mistral-small",
             )
 
