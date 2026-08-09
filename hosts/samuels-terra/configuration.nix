@@ -41,6 +41,7 @@
   # Host-specific Overrides
   #===========================
   theme.catppuccin.accent = "lavender";
+  theme.wallpaper = "Forma_6k_6.png";
 
   displays.monitors = [
     {

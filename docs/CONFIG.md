@@ -93,6 +93,10 @@ Set in `configuration.nix`:
 | `theme.scale` | `1.0` | DPI / monitor scale factor |
 | `theme.wallpaper` | `"nix-black-4k.png"` | Wallpaper filename in archive, or path if `backgrounds.enable = false` |
 | `backgrounds.enable` | `true` | Extract wallpapers from encrypted archive at boot |
+| `backgrounds.catppuccinize.enable` | `true` | Grayscale duotone color grade with flavor+accent. Set false for raw wallpaper. |
+| `backgrounds.catppuccinize.flavor` | `theme.catppuccin.flavor` | Flavor for the duotone shadow anchor (e.g. mocha) |
+| `backgrounds.catppuccinize.accent` | `theme.catppuccin.accent` | Accent for the duotone highlight anchor (e.g. lavender) |
+| `backgrounds.catppuccinize.baseTint` | `22` | Base-color tint intensity over the duotone (0–100) |
 | `theme.radius.small` | `6` | Border radius for small elements (progress bars) |
 | `theme.radius.default` | `16` | Border radius for windows/panels/notifications |
 | `theme.gaps.inner` | `8` | Gaps between windows |
