@@ -177,12 +177,64 @@
       --------------------------------------------------------
       -- UI
       --------------------------------------------------------
-      require("lualine").setup({
-        options = { theme = "auto" },
-        sections = {
-          lualine_z = { function() return require("opencode").statusline() end },
-        },
-      })
+      do
+        local palette = require("catppuccin.palettes").get_palette()
+        local accent = palette.${theme.catppuccin.accent}
+        local custom_theme = {
+          normal = {
+            a = { fg = palette.crust, bg = accent, gui = "bold" },
+            b = { fg = palette.subtext0, bg = palette.surface0 },
+            c = { fg = palette.text, bg = palette.crust },
+          },
+          insert = {
+            a = { fg = palette.crust, bg = palette.green, gui = "bold" },
+            b = { fg = palette.subtext0, bg = palette.surface0 },
+            c = { fg = palette.text, bg = palette.crust },
+          },
+          visual = {
+            a = { fg = palette.crust, bg = palette.yellow, gui = "bold" },
+            b = { fg = palette.subtext0, bg = palette.surface0 },
+            c = { fg = palette.text, bg = palette.crust },
+          },
+          replace = {
+            a = { fg = palette.crust, bg = palette.red, gui = "bold" },
+            b = { fg = palette.subtext0, bg = palette.surface0 },
+            c = { fg = palette.text, bg = palette.crust },
+          },
+          command = {
+            a = { fg = palette.crust, bg = palette.peach, gui = "bold" },
+            b = { fg = palette.subtext0, bg = palette.surface0 },
+            c = { fg = palette.text, bg = palette.crust },
+          },
+          inactive = {
+            a = { fg = palette.overlay2, bg = palette.surface0, gui = "bold" },
+            b = { fg = palette.overlay2, bg = palette.surface0 },
+            c = { fg = palette.overlay2, bg = palette.mantle },
+          },
+        }
+        require("lualine").setup({
+          options = {
+            theme = custom_theme,
+            section_separators = { left = "", right = "" },
+            component_separators = { left = "", right = "" },
+            disabled_filetypes = { statusline = { "alpha", "dashboard", "neo-tree" } },
+          },
+          sections = {
+            lualine_a = { "mode" },
+            lualine_b = { "branch", "diff", "diagnostics" },
+            lualine_c = { "filename" },
+            lualine_x = { "encoding", "fileformat", "filetype" },
+            lualine_y = { "progress" },
+            lualine_z = {
+              {
+                function() return require("opencode").statusline() end,
+                color = { fg = palette.crust, bg = accent },
+              },
+            },
+          },
+          tabline = {},
+          extensions = {},
+        })
 
       require("bufferline").setup({
         options = {
@@ -201,7 +253,20 @@
             { filetype = "NvimTree", text = "Explorer", text_align = "center", separator = true },
           },
         },
+        highlights = {
+          buffer_selected = {
+            fg = accent,
+            gui = "bold",
+          },
+          separator_selected = {
+            fg = accent,
+          },
+          indicator_selected = {
+            fg = accent,
+          },
+        },
       })
+      end
 
       require("ibl").setup({
         indent = { char = "│" },
