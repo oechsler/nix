@@ -1,20 +1,20 @@
 # Wallpaper Management Configuration
 #
 # This module configures:
-# 1. Encrypted wallpaper archive extraction (backgrounds.enable = true)
-# 2. Direct wallpaper linking from Nix store (backgrounds.enable = false)
-# 3. Catppuccin color grading via gowall (catppuccinize.background.enable = true)
+# 1. Encrypted wallpaper archive extraction (theme.backgrounds.enable = true)
+# 2. Direct wallpaper linking from Nix store (theme.backgrounds.enable = false)
+# 3. Catppuccin color grading via gowall (theme.backgrounds.catppuccinize.enable = true)
 # 4. Blurred wallpaper generation for SDDM login screen
 # 5. Fallback solid color when SOPS key is missing
 #
 # Configuration options:
-#   backgrounds.enable = true;                        # Extract from encrypted archive (default: true)
-#   catppuccinize.background.enable = true;          # Catppuccin color grade via gowall (default: true)
-#   backgrounds.outputDir = "/var/lib/backgrounds";   # Output directory
-#   theme.wallpaper = "nix-black-4k.png";             # Wallpaper filename in archive or direct path
+#   theme.backgrounds.enable = true;                        # Extract from encrypted archive (default: true)
+#   theme.backgrounds.catppuccinize.enable = true;          # Catppuccin color grade via gowall (default: true)
+#   theme.backgrounds.outputDir = "/var/lib/backgrounds";   # Output directory
+#   theme.backgrounds.path = "nix-black-4k.png";           # Wallpaper filename in archive or direct path
 #
-# Catppuccin color grading (catppuccinize.background):
-#   Uses gowall with a custom wallpaper theme driven by catppuccinize.background.accent:
+# Catppuccin color grading (theme.backgrounds.catppuccinize):
+#   Uses gowall with a custom wallpaper theme driven by theme.backgrounds.catppuccinize.accent:
 #   - null               → all 14 real accent colours of the flavour (unshaded).
 #   - ["lavender"]        → 14 brightness-shaded variants of lavender (single-accent).
 #   - ["blue" "lavender"] → 14 slots cycled from the given accents, each shaded.
@@ -32,12 +32,12 @@
 # - Decrypt backgrounds/blob.tar.gz.enc using OpenSSL
 # - Extract selected wallpaper from tar.gz
 # - Convert to JPG (if needed) and save as current.jpg
-# - Apply gowall Catppuccin grade (if catppuccinize.enable && catppuccinize.background.enable are true)
+# - Apply gowall Catppuccin grade (if theme.backgrounds.catppuccinize.enable is true)
 # - Create blurred version for SDDM (blur radius 30)
 # - Fallback to solid color (#181818) if SOPS key is missing
 #
 # How it works (direct mode):
-# - Copy wallpaper from theme.wallpaper (path in Nix store)
+# - Copy wallpaper from theme.backgrounds.path (path in Nix store)
 # - Convert to JPG and apply gowall Catppuccin grade if enabled
 # - Create blurred version
 # - No encryption/decryption involved
@@ -50,7 +50,7 @@
 }:
 
 let
-  cfg = config.backgrounds;
+  cfg = config.theme.backgrounds;
 
   # ============================================================================
   # WALLPAPER ARCHIVE
@@ -70,7 +70,7 @@ let
   # ============================================================================
   # WALLPAPER GOWALL THEME
   # ============================================================================
-  # Generate a wallpaper gowall theme driven by catppuccinize.background.accent:
+  # Generate a wallpaper gowall theme driven by theme.backgrounds.catppuccinize.accent:
   # - null               → all 14 real accent colours of the flavour (unshaded).
   # - ["lavender"]        → 14 brightness-shaded variants of lavender (single-accent).
   # - ["blue" "lavender"] → 14 slots cycled from the given accents, each shaded.
@@ -132,7 +132,7 @@ let
     b = builtins.floor (c.b * f);
   };
 
-  wallpaperAccents = config.catppuccinize.background.accent;
+  wallpaperAccents = config.theme.backgrounds.catppuccinize.accent;
   wallpaperThemeJSON =
     let
       palette = lib.importJSON "${config.catppuccin.sources.palette}/palette.json";
@@ -220,7 +220,7 @@ let
   catppuccinizeStep =
     let
       invertStep =
-        if config.catppuccinize.background.invert then
+        if config.theme.backgrounds.catppuccinize.invert then
           "${pkgs.gowall}/bin/gowall invert \"$CURRENT\" --yes && "
         else
           "";
@@ -235,7 +235,7 @@ let
 
     SECRET_FILE="${config.sops.secrets."backgrounds/password".path}"
     OUTPUT_DIR="${cfg.outputDir}"
-    WALLPAPER_NAME="${config.theme.wallpaper}"
+    WALLPAPER_NAME="${cfg.path}"
     CURRENT="${cfg.outputDir}/${cfg.currentFile}"
     BLURRED="${cfg.outputDir}/${cfg.blurredFile}"
 
@@ -268,22 +268,20 @@ let
     rm "$OUTPUT_DIR/$WALLPAPER_NAME"
 
     # Apply Catppuccin color grade via gowall
-    if ${
-      if config.catppuccinize.enable && config.catppuccinize.background.enable then "true" else "false"
-    }; then
-      ${catppuccinizeStep}
-    fi
+    if ${if config.theme.backgrounds.catppuccinize.enable then "true" else "false"}; then
+       ${catppuccinizeStep}
+     fi
 
-    # Create blurred version for SDDM login screen
-    # Blur radius: 30 pixels (strong blur for background aesthetics)
-    ${pkgs.imagemagick}/bin/magick "$CURRENT" -blur 0x30 "$BLURRED"
+     # Create blurred version for SDDM login screen
+     # Blur radius: 30 pixels (strong blur for background aesthetics)
+     ${pkgs.imagemagick}/bin/magick "$CURRENT" -blur 0x30 "$BLURRED"
 
-    # Set world-readable permissions (needed for display manager)
-    chmod 644 "$CURRENT" "$BLURRED"
+     # Set world-readable permissions (needed for display manager)
+     chmod 644 "$CURRENT" "$BLURRED"
 
-    # Signal user-level awww to reload (see awww.nix path unit)
-    touch "/var/lib/backgrounds/.reload"
-    chmod 666 "/var/lib/backgrounds/.reload"
+     # Signal user-level awww to reload (see awww.nix path unit)
+     touch "/var/lib/backgrounds/.reload"
+     chmod 666 "/var/lib/backgrounds/.reload"
   '';
 in
 {
@@ -291,13 +289,39 @@ in
   # Options
   #===========================
 
-  options.catppuccinize = {
-    enable = lib.mkEnableOption "apply Catppuccin color grading to wallpapers via gowall" // {
-      default = true;
+  options.theme.backgrounds = {
+    path = lib.mkOption {
+      type = lib.types.either lib.types.path lib.types.str;
+      default = "nix-black-4k.png";
+      description = "Wallpaper: filename in encrypted archive (if enabled) or direct path to a file in Nix store";
     };
 
-    background = {
-      enable = lib.mkEnableOption "apply Catppuccin color grade to wallpapers via gowall" // {
+    enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Extract wallpapers from encrypted archive at boot (false = use direct path from theme.backgrounds.path)";
+    };
+
+    outputDir = lib.mkOption {
+      type = lib.types.str;
+      default = "/var/lib/backgrounds";
+      description = "Directory where wallpapers are extracted to";
+    };
+
+    currentFile = lib.mkOption {
+      type = lib.types.str;
+      default = "current.jpg";
+      description = "Filename for the processed current wallpaper (converted to JPG)";
+    };
+
+    blurredFile = lib.mkOption {
+      type = lib.types.str;
+      default = "current-blurred.jpg";
+      description = "Filename for the blurred wallpaper (used by SDDM login screen)";
+    };
+
+    catppuccinize = {
+      enable = lib.mkEnableOption "apply Catppuccin color grading to wallpapers via gowall" // {
         default = true;
       };
 
@@ -334,32 +358,6 @@ in
           - ["blue" "lavender"]: use only those accents, cycled across the 14 slots.
         '';
       };
-    };
-  };
-
-  options.backgrounds = {
-    enable = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Extract wallpapers from encrypted archive at boot (false = use direct path from theme.wallpaper)";
-    };
-
-    outputDir = lib.mkOption {
-      type = lib.types.str;
-      default = "/var/lib/backgrounds";
-      description = "Directory where wallpapers are extracted to";
-    };
-
-    currentFile = lib.mkOption {
-      type = lib.types.str;
-      default = "current.jpg";
-      description = "Filename for the processed current wallpaper (converted to JPG)";
-    };
-
-    blurredFile = lib.mkOption {
-      type = lib.types.str;
-      default = "current-blurred.jpg";
-      description = "Filename for the blurred wallpaper (used by SDDM login screen)";
     };
   };
 
@@ -409,7 +407,7 @@ in
     #---------------------------
     # 3. Direct Mode (No Encryption)
     #---------------------------
-    # Copy wallpaper directly from Nix store (theme.wallpaper path)
+    # Copy wallpaper directly from Nix store (theme.backgrounds.path)
     # Useful for testing or when encryption is not desired
     (lib.mkIf (!cfg.enable) {
       systemd.services.prepare-backgrounds = {
@@ -435,12 +433,10 @@ in
           BLURRED="${cfg.outputDir}/${cfg.blurredFile}"
 
           # Convert wallpaper to JPG and save as current.jpg
-          ${pkgs.imagemagick}/bin/magick "${config.theme.wallpaper}" "$CURRENT"
+          ${pkgs.imagemagick}/bin/magick "${cfg.path}" "$CURRENT"
 
           # Apply Catppuccin color grade via gowall
-          if ${
-            if config.catppuccinize.enable && config.catppuccinize.background.enable then "true" else "false"
-          }; then
+          if ${if config.theme.backgrounds.catppuccinize.enable then "true" else "false"}; then
             ${catppuccinizeStep}
           fi
 
