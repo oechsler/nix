@@ -39,6 +39,8 @@
 
   config = {
     programs = {
+      fastfetch.enable = true;
+
       kitty = {
         enable = true;
         font = {
@@ -92,7 +94,6 @@
       bluetui
       dust
       fd
-      fetch
       impala
       jq
       procs
