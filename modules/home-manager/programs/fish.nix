@@ -11,6 +11,7 @@
 #
 # Aliases:
 #   cat → bat, Kitty image preview for images
+#   ff → fetch (areofyl/fetch system info tool)
 #   ll → eza --long (better ls)
 #   lt → eza --tree --level 1 (tree view)
 #   rm → trash-put (move to trash)
@@ -69,6 +70,7 @@
     '';
     shellAliases = lib.mkForce {
       eza = "${pkgs.eza}/bin/eza --icons auto --group-directories-first";
+      ff = "fetch";
       la = "${pkgs.eza}/bin/eza --icons auto --group-directories-first -a";
       ll = "${pkgs.eza}/bin/eza --icons auto --group-directories-first --long";
       lla = "${pkgs.eza}/bin/eza --icons auto --group-directories-first -la";

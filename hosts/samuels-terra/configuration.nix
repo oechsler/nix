@@ -98,8 +98,10 @@
     };
     secureBoot.enable = true;
     encryption.unlockMethod = "yubikey";
-    desktop.login = "greeter";
-    desktop.fileManager = "terminal";
+    desktop = {
+      login = "greeter";
+      fileManager = "terminal";
+    };
     smb.shares = [
       {
         name = "personal-drive";
