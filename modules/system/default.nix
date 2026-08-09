@@ -44,5 +44,7 @@
     ./displays.nix
     ./input.nix
     ./home-manager.nix
+    ./terminal.nix
+    ./desktop
   ];
 }

@@ -57,7 +57,7 @@ let
       ''
         mkdir stylus
         unzip -q ${firefoxAddons.stylus}/share/mozilla/extensions/'{ec8030f7-c20a-464f-9b0e-13a3a9e97384}'/${stylusId}.xpi -d stylus
-        node ${../../../scripts/compile-catppuccin-userstyles.js} \
+        node ${./compile-catppuccin-userstyles.js} \
           stylus/js \
           ${catppuccinUserstylesExport} \
           ${catppuccinUserstylesLibrary} \

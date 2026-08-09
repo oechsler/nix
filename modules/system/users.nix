@@ -67,7 +67,7 @@ in
     # User Profile
     icon = lib.mkOption {
       type = lib.types.path;
-      default = ../../pictures/sam-memoji.png;
+      default = ../../.assets/sam-memoji.png;
       description = "User profile picture (displayed by SDDM, system settings, etc.)";
     };
 

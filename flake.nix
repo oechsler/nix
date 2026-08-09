@@ -162,7 +162,7 @@
             {
               nixpkgs.overlays = [
                 (final: prev: {
-                  hypr-dock = final.callPackage ./packages/hypr-dock.nix { };
+                  hypr-dock = final.callPackage ./modules/packages/hypr-dock.nix { };
                 })
               ];
             }

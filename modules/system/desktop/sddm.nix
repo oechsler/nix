@@ -117,11 +117,11 @@ let
     ]
   );
 
-  displayHelpers = import ../lib/displays.nix { inherit lib; };
+  displayHelpers = import ../../lib/displays.nix { inherit lib; };
   primaryScale = displayHelpers.primaryScale config.theme.scale monitors;
   scaledDpi = builtins.floor (96 * primaryScale);
   scaledCursorSize = builtins.floor (cursorSize * primaryScale);
-  kscreen = import ../lib/kscreen.nix { inherit lib; };
+  kscreen = import ../../lib/kscreen.nix { inherit lib; };
 
   kdeTransform =
     rot:
