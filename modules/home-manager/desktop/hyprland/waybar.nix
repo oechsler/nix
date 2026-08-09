@@ -75,7 +75,6 @@ let
       steam = "steam_tray_mono";
     }
     // lib.optionalAttrs features.apps.enable {
-      Nextcloud = "state-ok";
       Mumble = "mumble-indicator";
       nheko = "applications-chat-panel";
       "Proton Pass_status_icon_1" = "dialog-password-panel";
