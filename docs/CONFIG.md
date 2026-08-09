@@ -93,9 +93,6 @@ Set in `configuration.nix`:
 | `theme.scale` | `1.0` | DPI / monitor scale factor |
 | `theme.backgrounds.path` | `"nix-black-4k.png"` | Wallpaper filename in archive, or path if `theme.backgrounds.enable = false` |
 | `theme.backgrounds.enable` | `true` | Extract wallpapers from encrypted archive at boot |
-| `theme.backgrounds.outputDir` | `"/var/lib/backgrounds"` | Directory where wallpapers are extracted to |
-| `theme.backgrounds.currentFile` | `"current.jpg"` | Filename for the processed current wallpaper |
-| `theme.backgrounds.blurredFile` | `"current-blurred.jpg"` | Filename for the blurred wallpaper used by SDDM |
 | `theme.backgrounds.catppuccinize.enable` | `true` | Apply Catppuccin color grading to wallpapers via gowall |
 | `theme.backgrounds.catppuccinize.invert` | `false` | Invert wallpaper colors before Catppuccin color mapping |
 | `theme.backgrounds.catppuccinize.accent` | `[<system accent>]` | Wallpaper accent colors for gowall LUT mapping. `null` = all 14 flavour accents; `["lavender"]` = single accent shaded 14 ways; `["blue" "lavender"]` = cycled accents, each shaded. |

@@ -50,7 +50,9 @@
 }:
 
 let
-  cfg = config.theme.backgrounds;
+  outputDir = "/var/lib/backgrounds";
+  currentFile = "current.jpg";
+  blurredFile = "current-blurred.jpg";
 
   # ============================================================================
   # WALLPAPER ARCHIVE
@@ -234,10 +236,10 @@ let
     set -euo pipefail
 
     SECRET_FILE="${config.sops.secrets."backgrounds/password".path}"
-    OUTPUT_DIR="${cfg.outputDir}"
-    WALLPAPER_NAME="${cfg.path}"
-    CURRENT="${cfg.outputDir}/${cfg.currentFile}"
-    BLURRED="${cfg.outputDir}/${cfg.blurredFile}"
+    OUTPUT_DIR="${outputDir}"
+    WALLPAPER_NAME="${config.theme.backgrounds.path}"
+    CURRENT="${outputDir}/${currentFile}"
+    BLURRED="${outputDir}/${blurredFile}"
 
     mkdir -p "$OUTPUT_DIR"
 
@@ -302,24 +304,6 @@ in
       description = "Extract wallpapers from encrypted archive at boot (false = use direct path from theme.backgrounds.path)";
     };
 
-    outputDir = lib.mkOption {
-      type = lib.types.str;
-      default = "/var/lib/backgrounds";
-      description = "Directory where wallpapers are extracted to";
-    };
-
-    currentFile = lib.mkOption {
-      type = lib.types.str;
-      default = "current.jpg";
-      description = "Filename for the processed current wallpaper (converted to JPG)";
-    };
-
-    blurredFile = lib.mkOption {
-      type = lib.types.str;
-      default = "current-blurred.jpg";
-      description = "Filename for the blurred wallpaper (used by SDDM login screen)";
-    };
-
     catppuccinize = {
       enable = lib.mkEnableOption "apply Catppuccin color grading to wallpapers via gowall" // {
         default = true;
@@ -373,14 +357,14 @@ in
     # These paths are used by desktop environments, SDDM, and other modules
     # They point to the processed wallpapers, regardless of source (encrypted or direct)
     {
-      theme.wallpaperPath = "${cfg.outputDir}/${cfg.currentFile}";
-      theme.blurredWallpaperPath = "${cfg.outputDir}/${cfg.blurredFile}";
+      theme.wallpaperPath = "${outputDir}/${currentFile}";
+      theme.blurredWallpaperPath = "${outputDir}/${blurredFile}";
     }
 
     #---------------------------
     # 2. Encrypted Archive Mode
     #---------------------------
-    (lib.mkIf cfg.enable {
+    (lib.mkIf config.theme.backgrounds.enable {
       sops.secrets."backgrounds/password" = { };
 
       systemd.services.extract-backgrounds = {
@@ -393,8 +377,8 @@ in
         ];
         unitConfig.ConditionPathExists = config.sops.age.keyFile;
         environment = {
-          HOME = cfg.outputDir;
-          XDG_CONFIG_HOME = "${cfg.outputDir}/.config";
+          HOME = outputDir;
+          XDG_CONFIG_HOME = "${outputDir}/.config";
         };
         serviceConfig = {
           Type = "oneshot";
@@ -409,7 +393,7 @@ in
     #---------------------------
     # Copy wallpaper directly from Nix store (theme.backgrounds.path)
     # Useful for testing or when encryption is not desired
-    (lib.mkIf (!cfg.enable) {
+    (lib.mkIf (!config.theme.backgrounds.enable) {
       systemd.services.prepare-backgrounds = {
         description = "Prepare wallpapers from store";
         wantedBy = [ "multi-user.target" ];
@@ -417,8 +401,8 @@ in
         after = [ "local-fs.target" ]; # /persist must be mounted before writing wallpapers
 
         environment = {
-          HOME = cfg.outputDir;
-          XDG_CONFIG_HOME = "${cfg.outputDir}/.config";
+          HOME = outputDir;
+          XDG_CONFIG_HOME = "${outputDir}/.config";
         };
         serviceConfig = {
           Type = "oneshot";
@@ -428,12 +412,12 @@ in
         script = ''
           set -euo pipefail
 
-          mkdir -p "${cfg.outputDir}"
-          CURRENT="${cfg.outputDir}/${cfg.currentFile}"
-          BLURRED="${cfg.outputDir}/${cfg.blurredFile}"
+          mkdir -p "${outputDir}"
+          CURRENT="${outputDir}/${currentFile}"
+          BLURRED="${outputDir}/${blurredFile}"
 
           # Convert wallpaper to JPG and save as current.jpg
-          ${pkgs.imagemagick}/bin/magick "${cfg.path}" "$CURRENT"
+          ${pkgs.imagemagick}/bin/magick "${config.theme.backgrounds.path}" "$CURRENT"
 
           # Apply Catppuccin color grade via gowall
           if ${if config.theme.backgrounds.catppuccinize.enable then "true" else "false"}; then
