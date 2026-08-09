@@ -55,6 +55,7 @@ in
         After = [ "graphical-session.target" ];
         PartOf = [ "graphical-session.target" ];
         ConditionEnvironment = "WAYLAND_DISPLAY";
+        X-Restart-Triggers = [ config.theme.catppuccin.restartTrigger ];
       };
       Service = {
         ExecStart = "${pkgs.hypr-dock}/bin/hypr-dock";

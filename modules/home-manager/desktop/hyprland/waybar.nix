@@ -289,5 +289,9 @@ in
 
       inherit style;
     };
+
+    systemd.user.services.waybar = {
+      Unit.X-Restart-Triggers = [ config.theme.catppuccin.restartTrigger ];
+    };
   };
 }

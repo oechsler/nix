@@ -53,17 +53,29 @@ in
   # NOTE: Kickoff menu favorites (pinnedFavorites) cannot be set declaratively.
   # Plasma 6 manages them via kactivitymanagerd's internal stats database.
   # See: https://github.com/nix-community/plasma-manager/issues/376
-  options.desktop.pinnedApps = lib.mkOption {
-    type = lib.types.listOf lib.types.str;
-    default = [ ];
-    description = "Pinned dock/taskbar apps as desktop file names (without .desktop suffix)";
-  };
+  options = {
+    desktop.pinnedApps = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Pinned dock/taskbar apps as desktop file names (without .desktop suffix)";
+    };
 
-  options.theme.catppuccinPalette = lib.mkOption {
-    type = lib.types.attrs;
-    readOnly = true;
-    default = palette;
-    internal = true;
+    theme.catppuccinPalette = lib.mkOption {
+      type = lib.types.attrs;
+      readOnly = true;
+      default = palette;
+      internal = true;
+    };
+
+    theme.catppuccin.restartTrigger = lib.mkOption {
+      type = lib.types.path;
+      readOnly = true;
+      default = pkgs.writeText "catppuccin-theme" ''
+        ${flavor}
+        ${accent}
+      '';
+      internal = true;
+    };
   };
 
   #===========================
