@@ -255,8 +255,8 @@ let
       if ${pkgs.openssl}/bin/openssl enc -d -aes-256-cbc -pbkdf2 -pass file:"$SECRET_FILE" \
            < "${archiveFile}" 2>/dev/null \
         | ${pkgs.gzip}/bin/gzip -d 2>/dev/null \
-        | ${pkgs.gnutar}/bin/tar tf - 2>/dev/null \
-        | ${pkgs.gnugrep}/bin/grep -qxF "./${wallpaperPath}"; then
+         | ${pkgs.gnutar}/bin/tar tf - 2>/dev/null \
+         | ${pkgs.gnugrep}/bin/grep -xF "./${wallpaperPath}" >/dev/null; then
         echo "Extracting ${wallpaperPath} from archive"
         ${pkgs.openssl}/bin/openssl enc -d -aes-256-cbc -pbkdf2 -pass file:"$SECRET_FILE" \
           < "${archiveFile}" \
