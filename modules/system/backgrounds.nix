@@ -54,6 +54,9 @@ let
   currentFile = "current.jpg";
   blurredFile = "current-blurred.jpg";
 
+  wallpaperPath = config.theme.backgrounds.path;
+  isUrl = lib.hasPrefix "http://" wallpaperPath || lib.hasPrefix "https://" wallpaperPath;
+
   # ============================================================================
   # WALLPAPER ARCHIVE
   # ============================================================================
@@ -295,7 +298,7 @@ in
     path = lib.mkOption {
       type = lib.types.either lib.types.path lib.types.str;
       default = "nix-black-4k.png";
-      description = "Wallpaper: filename in encrypted archive (if enabled) or direct path to a file in Nix store";
+      description = "Wallpaper: filename in encrypted archive, direct path to a file, or URL to download";
     };
 
     enable = lib.mkOption {
@@ -362,9 +365,56 @@ in
     }
 
     #---------------------------
-    # 2. Encrypted Archive Mode
+    # 2. URL Download Mode
     #---------------------------
-    (lib.mkIf config.theme.backgrounds.enable {
+    # Download wallpaper from a URL, regardless of archive setting.
+    (lib.mkIf isUrl {
+      systemd.services.download-wallpaper = {
+        description = "Download wallpaper from URL";
+        wantedBy = [ "multi-user.target" ];
+        before = [ "display-manager.service" ];
+        after = [ "local-fs.target" ];
+
+        environment = {
+          HOME = outputDir;
+          XDG_CONFIG_HOME = "${outputDir}/.config";
+        };
+        serviceConfig = {
+          Type = "oneshot";
+          RemainAfterExit = true;
+        };
+
+        script = ''
+          set -euo pipefail
+
+          mkdir -p "${outputDir}"
+          CURRENT="${outputDir}/${currentFile}"
+          BLURRED="${outputDir}/${blurredFile}"
+
+          ${pkgs.curl}/bin/curl -fsSL -o "$CURRENT" "${wallpaperPath}"
+
+          # Apply Catppuccin color grade via gowall
+          if ${if config.theme.backgrounds.catppuccinize.enable then "true" else "false"}; then
+            ${catppuccinizeStep}
+          fi
+
+          # Create blurred version for SDDM (blur radius 30)
+          ${pkgs.imagemagick}/bin/magick "$CURRENT" -blur 0x30 "$BLURRED"
+
+          # Set world-readable permissions
+          chmod 644 "$CURRENT" "$BLURRED"
+
+          # Signal user-level awww to reload (see awww.nix path unit)
+          touch "/var/lib/backgrounds/.reload"
+          chmod 666 "/var/lib/backgrounds/.reload"
+        '';
+      };
+    })
+
+    #---------------------------
+    # 3. Encrypted Archive Mode
+    #---------------------------
+    (lib.mkIf (config.theme.backgrounds.enable && !isUrl) {
       sops.secrets."backgrounds/password" = { };
 
       systemd.services.extract-backgrounds = {
@@ -389,11 +439,11 @@ in
     })
 
     #---------------------------
-    # 3. Direct Mode (No Encryption)
+    # 4. Direct Mode (No Encryption)
     #---------------------------
     # Copy wallpaper directly from Nix store (theme.backgrounds.path)
     # Useful for testing or when encryption is not desired
-    (lib.mkIf (!config.theme.backgrounds.enable) {
+    (lib.mkIf (!config.theme.backgrounds.enable && !isUrl) {
       systemd.services.prepare-backgrounds = {
         description = "Prepare wallpapers from store";
         wantedBy = [ "multi-user.target" ];
@@ -417,7 +467,7 @@ in
           BLURRED="${outputDir}/${blurredFile}"
 
           # Convert wallpaper to JPG and save as current.jpg
-          ${pkgs.imagemagick}/bin/magick "${config.theme.backgrounds.path}" "$CURRENT"
+          ${pkgs.imagemagick}/bin/magick "${wallpaperPath}" "$CURRENT"
 
           # Apply Catppuccin color grade via gowall
           if ${if config.theme.backgrounds.catppuccinize.enable then "true" else "false"}; then
