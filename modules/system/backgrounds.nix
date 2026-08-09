@@ -251,15 +251,14 @@ let
 
     archive_ok=0
 
-    # Try archive extraction if the SOPS key is available
     if [[ -f "$SECRET_FILE" ]]; then
-      PASSWORD="$(cat "$SECRET_FILE")"
-      if ${pkgs.openssl}/bin/openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:"$PASSWORD" \
+      if ${pkgs.openssl}/bin/openssl enc -d -aes-256-cbc -pbkdf2 -pass file:"$SECRET_FILE" \
            < "${archiveFile}" 2>/dev/null \
         | ${pkgs.gzip}/bin/gzip -d 2>/dev/null \
         | ${pkgs.gnutar}/bin/tar tf - 2>/dev/null \
-        | grep -qxF "./${wallpaperPath}"; then
-        ${pkgs.openssl}/bin/openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:"$PASSWORD" \
+        | ${pkgs.gnugrep}/bin/grep -qxF "./${wallpaperPath}"; then
+        echo "Extracting ${wallpaperPath} from archive"
+        ${pkgs.openssl}/bin/openssl enc -d -aes-256-cbc -pbkdf2 -pass file:"$SECRET_FILE" \
           < "${archiveFile}" \
         | ${pkgs.gzip}/bin/gzip -d \
         | ${pkgs.gnutar}/bin/tar xf - -C "$OUTPUT_DIR" "./${wallpaperPath}"
@@ -267,13 +266,19 @@ let
         rm "$OUTPUT_DIR/${wallpaperPath}"
         archive_ok=1
       fi
+    else
+      echo "No SOPS key, skipping archive extraction"
     fi
 
-    # Fallback: use path directly from Nix store
     if [[ $archive_ok -eq 0 ]]; then
-      if ${pkgs.imagemagick}/bin/magick "${wallpaperPath}" "$CURRENT" 2>/dev/null; then
-        true
+      if [[ -f "${wallpaperPath}" ]]; then
+        echo "Using direct path: ${wallpaperPath}"
+        ${pkgs.imagemagick}/bin/magick "${wallpaperPath}" "$CURRENT" 2>/dev/null || {
+          echo "Direct path failed, using solid color fallback"
+          ${pkgs.imagemagick}/bin/magick -size 3840x2160 xc:"${fallbackColor}" "$CURRENT"
+        }
       else
+        echo "No wallpaper source available, using solid color fallback"
         ${pkgs.imagemagick}/bin/magick -size 3840x2160 xc:"${fallbackColor}" "$CURRENT"
       fi
     fi
