@@ -11,9 +11,9 @@
 #   - @persist subvolume: /persist (persistent)
 #   - @snapshots subvolume: /.snapshots (persistent)
 #
-# Differences from samuels-pc:
-# - No separate games partition (laptop, limited storage)
-# - Single 1TB NVMe drive
+# Differences from samuels-terra:
+# - Laptop form factor, single 1TB NVMe drive
+# - No separate games partition
 #
 # Encryption:
 # - LUKS with TPM2 auto-unlock (via luks.nix)

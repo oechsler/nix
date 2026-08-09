@@ -45,7 +45,7 @@ jobs:
       - name: Evaluate all host configurations
         run: |
           set -euo pipefail
-          hosts=(samuels-terra samuels-pc samuels-razer samuels-ser9)
+          hosts=(samuels-terra samuels-razer samuels-ser9)
           for host in "${hosts[@]}"; do
             echo "Evaluating $host..."
             nix eval ".#nixosConfigurations.$host.config.system.build.toplevel" --show-trace

@@ -7,13 +7,12 @@
 # - outputs:
 #   - lib.mkHost: Reusable function for building NixOS systems
 #   - lib.mkDisko: Helper for importing disko configurations (optional)
-#   - nixosConfigurations: Local host configurations (samuels-pc, samuels-razer, etc.)
+#   - nixosConfigurations: Local host configurations (samuels-terra, samuels-razer, etc.)
 #   - diskoConfigurations: Disk layouts for local hosts
 #   - formatter: nixfmt for `nix fmt`
 #   - checks: CI/CD linters (custom conventions, statix, deadnix)
 #
 # Local Hosts:
-# - samuels-pc: Desktop workstation (2x 1440p, Ryzen 9 5950X, RX 7900 XTX)
 # - samuels-razer: Razer Blade Stealth 13 2018 (i7-8550U, Intel UHD 620)
 # - samuels-ser9: Beelink SER9 Mini PC (Ryzen AI 9 HX 370, Radeon 890M)
 # - samuels-terra: Desktop workstation (2x 1440p, Ryzen 9 9950X3D2, RX 9070 XT)
@@ -33,7 +32,7 @@
 # - cachyos-kernel: Optimized Linux kernel (shared with external repos)
 #
 # Usage (local hosts):
-#   nixos-rebuild switch --flake .#samuels-pc
+#   nixos-rebuild switch --flake .#samuels-terra
 #   nixos-rebuild switch --flake .#samuels-razer
 #
 # Usage (as dependency in other repos):
@@ -227,13 +226,11 @@
       #===========================
       nixosConfigurations = {
         samuels-razer = mkHost "samuels-razer";
-        samuels-pc = mkHost "samuels-pc";
         samuels-ser9 = mkHost "samuels-ser9";
         samuels-terra = mkHost "samuels-terra";
       };
 
       diskoConfigurations = {
-        samuels-pc = mkDisko "samuels-pc";
         samuels-razer = mkDisko "samuels-razer";
         samuels-ser9 = mkDisko "samuels-ser9";
         samuels-terra = mkDisko "samuels-terra";

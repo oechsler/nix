@@ -11,7 +11,7 @@
 # - 2.5G LAN, WiFi 6, Bluetooth 5.2
 #
 # Features:
-# - Same desktop/gaming stack as samuels-terra and samuels-pc
+# - Same desktop/gaming stack as samuels-terra
 # - Hyprland desktop with SDDM greeter
 # - Steam Machine session available from SDDM
 # - Secure Boot + YubiKey-backed LUKS unlock
