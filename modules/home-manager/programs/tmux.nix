@@ -23,6 +23,8 @@
   catppuccin.tmux.extraConfig = ''
     set -g @catppuccin_status_background "none"
     set -g @catppuccin_window_status_style "rounded"
+    set -g @catppuccin_window_left_separator "#[fg=#{@catppuccin_window_number_color},reverse,nobold,nounderscore,noitalics]#[none]"
+    set -g @catppuccin_window_right_separator "#[fg=#{@catppuccin_window_text_color},reverse,nobold,nounderscore,noitalics]#[none]"
     set -g @catppuccin_window_text " #{pane_current_command}"
     set -g @catppuccin_window_current_text " #{pane_current_command}"
     set -g @catppuccin_window_number "#I"
