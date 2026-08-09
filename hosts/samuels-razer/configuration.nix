@@ -12,7 +12,7 @@
 # - Gaming disabled (not primary gaming machine)
 # - Smaller terminal font (10pt for high DPI screen)
 #
-# Differences from samuels-pc:
+# Differences from samuels-terra:
 # - Single internal display vs dual external
 # - KDE instead of Hyprland
 # - No gaming support

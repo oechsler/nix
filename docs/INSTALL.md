@@ -77,15 +77,6 @@ All hosts use LUKS full disk encryption with btrfs subvolumes:
             └── @snapshots → mounted at /mnt/btrfs-root/@snapshots by btrbk
 ```
 
-samuels-pc has an additional encrypted games disk:
-```
-/dev/nvme... (second disk)
-└── games
-    └── LUKS (cryptgames)
-        └── btrfs (label: games)
-            └── @games → /mnt/games
-```
-
 ## Impermanence
 
 Root (`@`) is wiped on every boot. Persistent data goes in `/persist`:

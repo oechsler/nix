@@ -12,7 +12,7 @@
 #   YubiKey: yubikey-luks-init
 #   TPM2:    tpm-luks-init
 #
-# Differences from samuels-pc:
+# Differences from samuels-terra:
 # - Only one encrypted partition (no separate games partition)
 
 { config, lib, ... }:
