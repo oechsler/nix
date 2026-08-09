@@ -120,9 +120,9 @@
       set -g status 2
       set -g status-style "bg=default"
 
-      set -gF window-status-separator ""
-      set -gF window-status-format "#[fg=#{@thm_overlay_2},bg=default]#[fg=#{@thm_crust},bg=#{@thm_overlay_2}] #I #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #{pane_current_command} #[fg=#{@thm_surface_0},bg=default]"
-      set -gF window-status-current-format "#[fg=#{@thm_${config.catppuccin.accent}},bg=default]#[fg=#{@thm_crust},bg=#{@thm_${config.catppuccin.accent}}] #I #[fg=#{@thm_fg},bg=#{@thm_surface_1}] #{pane_current_command} #[fg=#{@thm_surface_1},bg=default]"
+      set -g window-status-separator ""
+      set -g window-status-format "#[fg=#{@thm_overlay_2},bg=default]#[fg=#{@thm_crust},bg=#{@thm_overlay_2}] #I #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #{pane_current_command} #[fg=#{@thm_surface_0},bg=default] "
+      set -g window-status-current-format "#[fg=#{@thm_${config.catppuccin.accent}},bg=default]#[fg=#{@thm_crust},bg=#{@thm_${config.catppuccin.accent}}] #I #[fg=#{@thm_fg},bg=#{@thm_surface_1}] #{pane_current_command} #[fg=#{@thm_surface_1},bg=default] "
 
       set -g message-style "fg=#{@thm_fg},bg=#{@thm_surface_0},fill=#{@thm_surface_0},align=left"
       set -g message-command-style "fg=#{@thm_fg},bg=#{@thm_surface_0},fill=#{@thm_surface_0},align=left"
