@@ -190,6 +190,7 @@ pkgs.writeShellScript "display-brightness-controller" ''
     ${pkgs.util-linux}/bin/flock -w 3 8 || return
     if [ -s "$state_dir/displays" ]; then
       ${pkgs.uutils-coreutils-noprefix}/bin/cp "$state_dir/displays" "$state_dir/idle-ddc-state"
+      printf 'ddc\n' > "$state_dir/idle-backend"
 
       read -r _ current max < "$state_dir/displays"
       start_pct=$((100 * current / max))
@@ -208,14 +209,13 @@ pkgs.writeShellScript "display-brightness-controller" ''
       if [ "$failed" -eq 0 ]; then
         update_ddc_state "$target"
         clear_gamma
-        printf 'ddc\n' > "$state_dir/idle-backend"
         return
       fi
       restore_ddc_values "$state_dir/idle-ddc-state"
       ${pkgs.uutils-coreutils-noprefix}/bin/rm -f "$state_dir/idle-ddc-state"
     fi
-    set_gamma "$target"
     printf 'gamma\n' > "$state_dir/idle-backend"
+    set_gamma "$target"
   }
 
   restore() {

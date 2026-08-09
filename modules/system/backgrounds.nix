@@ -3,32 +3,45 @@
 # This module configures:
 # 1. Encrypted wallpaper archive extraction (backgrounds.enable = true)
 # 2. Direct wallpaper linking from Nix store (backgrounds.enable = false)
-# 3. Blurred wallpaper generation for SDDM login screen
-# 4. Fallback solid color when SOPS key is missing
+# 3. Catppuccin duotone color grading (backgrounds.catppuccinize.enable = true)
+# 4. Blurred wallpaper generation for SDDM login screen
+# 5. Fallback solid color when SOPS key is missing
 #
 # Configuration options:
-#   backgrounds.enable = true;              # Extract from encrypted archive (default: true)
-#   backgrounds.outputDir = "/var/lib/backgrounds";  # Output directory (default: "/var/lib/backgrounds")
-#   theme.wallpaper = "nix-black-4k.png";   # Wallpaper filename in archive or direct path
+#   backgrounds.enable = true;                        # Extract from encrypted archive (default: true)
+#   backgrounds.catppuccinize.enable = true;          # Duotone color grading (default: true)
+#   backgrounds.catppuccinize.flavor = "mocha";       # Shadow anchor (default: theme flavor)
+#   backgrounds.catppuccinize.accent = "mauve";       # Highlight anchor (default: theme accent)
+#   backgrounds.catppuccinize.baseTint = 22;          # Base-color overlay intensity 0–100 (default: 22)
+#   backgrounds.outputDir = "/var/lib/backgrounds";   # Output directory
+#   theme.wallpaper = "nix-black-4k.png";             # Wallpaper filename in archive or direct path
 #
 # Wallpaper archive:
 #   Location: backgrounds/blob.tar.gz.enc (AES-256-CBC encrypted tar.gz)
 #   Password: Stored in SOPS secret "backgrounds/password"
 #
 # Output files:
-#   /var/lib/backgrounds/current.jpg         - Current wallpaper (converted to JPG)
-#   /var/lib/backgrounds/current-blurred.jpg - Blurred for SDDM
+#   /var/lib/backgrounds/current.jpg         - Current wallpaper (Catppuccinized + JPG)
+#   /var/lib/backgrounds/current-blurred.jpg - Catppuccinized + blurred for SDDM
+#
+# Catppuccin LUT (backgrounds.catppuccinize):
+#   Grayscale duotone: black→flavor base, white→accent1.
+#   A second accent (if set) is applied only to bright highlights
+#   via a luma-threshold mask, keeping shadows pure duotone.
+#   Then a base-color tint overlays the whole image.
 #
 # How it works (encrypted mode):
 # - Decrypt backgrounds/blob.tar.gz.enc using OpenSSL
 # - Extract selected wallpaper from tar.gz
 # - Convert to JPG (if needed) and save as current.jpg
+# - Apply Catppuccin duotone grade (if catppuccinize.enable = true)
 # - Create blurred version for SDDM (blur radius 30)
 # - Fallback to solid color (#181818) if SOPS key is missing
 #
 # How it works (direct mode):
 # - Copy wallpaper from theme.wallpaper (path in Nix store)
-# - Convert to JPG and create blurred version
+# - Convert to JPG and apply Catppuccin LUT if enabled
+# - Create blurred version
 # - No encryption/decryption involved
 
 {
@@ -55,6 +68,30 @@ let
   # Neutral dark gray used when SOPS key is not available
   # Example: Fresh install before SOPS age key is set up
   fallbackColor = "#181818";
+
+  # ============================================================================
+  # CATPPUCCIN LUT COLORS
+  # ============================================================================
+  # Why: Catppuccinize wallpapers so every wallpaper matches the selected
+  # flavor+accent automatically on nix rebuild.
+  #
+  # Approach: First convert to grayscale luminance, then apply a two-point
+  # +level-colors with the flavor base and accent. This creates a cohesive
+  # duotone effect: all original color information is stripped, and every
+  # pixel is tinted on the base→accent spectrum.
+  #
+  # No saturation issues — there is no saturation after grayscale.
+  # No separate -colorize — accent is already the white-point anchor.
+  #
+  #  black     → base    (flavor shadow, e.g. mocha #1e1e2e)
+  #  white     → accent  (highlight tint, e.g. lavender #b4befe)
+  #  midtones  → linear blend between base and accent
+  catppuccinPalette = lib.importJSON "${config.catppuccin.sources.palette}/palette.json";
+  catppuccinFlavorColors = catppuccinPalette.${cfg.catppuccinize.flavor}.colors;
+  catppuccinBaseColor = catppuccinFlavorColors.base.hex;
+  catppuccinAccentColor = catppuccinFlavorColors.${cfg.catppuccinize.accent}.hex;
+
+  catppuccinizeStep = "${pkgs.imagemagick}/bin/magick \"$CURRENT\" -colorspace gray +level-colors \"${catppuccinBaseColor}\",\"${catppuccinAccentColor}\" -fill \"${catppuccinBaseColor}\" -colorize ${toString cfg.catppuccinize.baseTint}% \"$CURRENT\"";
 
   # ============================================================================
   # WALLPAPER EXTRACTION SCRIPT
@@ -115,6 +152,11 @@ let
     # Remove extracted original (keep only current.jpg)
     rm "$OUTPUT_DIR/$WALLPAPER_NAME"
 
+    # Apply Catppuccin duotone: grayscale → level-colors(base,accent) → base tint
+    if ${if cfg.catppuccinize.enable then "true" else "false"}; then
+      ${catppuccinizeStep}
+    fi
+
     # Create blurred version for SDDM login screen
     # Blur radius: 30 pixels (strong blur for background aesthetics)
     ${pkgs.imagemagick}/bin/magick "$CURRENT" -blur 0x30 "$BLURRED"
@@ -155,6 +197,36 @@ in
       type = lib.types.str;
       default = "current-blurred.jpg";
       description = "Filename for the blurred wallpaper (used by SDDM login screen)";
+    };
+
+    catppuccinize = lib.mkOption {
+      type = lib.types.submodule {
+        options = {
+          enable = lib.mkEnableOption "apply a Catppuccin duotone grade to wallpapers" // {
+            default = true;
+          };
+
+          flavor = lib.mkOption {
+            type = lib.types.str;
+            default = config.theme.catppuccin.flavor;
+            description = "Catppuccin flavor used as the shadow anchor.";
+          };
+
+          accent = lib.mkOption {
+            type = lib.types.str;
+            default = config.theme.catppuccin.accent;
+            description = "Catppuccin accent used as the duotone highlight anchor.";
+          };
+
+          baseTint = lib.mkOption {
+            type = lib.types.ints.between 0 100;
+            default = 22;
+            description = "Percentage of base color applied over the duotone result.";
+          };
+        };
+      };
+      default = { };
+      description = "Catppuccin wallpaper color-grade settings.";
     };
   };
 
@@ -215,16 +287,25 @@ in
         };
 
         script = ''
+          set -euo pipefail
+
           mkdir -p "${cfg.outputDir}"
+          CURRENT="${cfg.outputDir}/${cfg.currentFile}"
+          BLURRED="${cfg.outputDir}/${cfg.blurredFile}"
 
           # Convert wallpaper to JPG and save as current.jpg
-          ${pkgs.imagemagick}/bin/magick "${config.theme.wallpaper}" "${cfg.outputDir}/${cfg.currentFile}"
+          ${pkgs.imagemagick}/bin/magick "${config.theme.wallpaper}" "$CURRENT"
+
+          # Apply Catppuccin duotone: grayscale → level-colors(base,accent) → base tint
+          if ${if cfg.catppuccinize.enable then "true" else "false"}; then
+            ${catppuccinizeStep}
+          fi
 
           # Create blurred version for SDDM (blur radius 30)
-          ${pkgs.imagemagick}/bin/magick "${cfg.outputDir}/${cfg.currentFile}" -blur 0x30 "${cfg.outputDir}/${cfg.blurredFile}"
+          ${pkgs.imagemagick}/bin/magick "$CURRENT" -blur 0x30 "$BLURRED"
 
           # Set world-readable permissions
-          chmod 644 "${cfg.outputDir}/${cfg.currentFile}" "${cfg.outputDir}/${cfg.blurredFile}"
+          chmod 644 "$CURRENT" "$BLURRED"
         '';
       };
     })
