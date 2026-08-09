@@ -91,8 +91,14 @@ Set in `configuration.nix`:
 | `theme.catppuccin.flavor` | `"mocha"` | `"latte"` / `"frappe"` / `"macchiato"` / `"mocha"` |
 | `theme.catppuccin.accent` | `"mauve"` | Accent color (14 options: blue, flamingo, green, lavender, maroon, mauve, peach, pink, red, rosewater, sapphire, sky, teal, yellow) |
 | `theme.scale` | `1.0` | DPI / monitor scale factor |
-| `theme.wallpaper` | `"nix-black-4k.png"` | Wallpaper filename in archive, or path if `backgrounds.enable = false` |
-| `backgrounds.enable` | `true` | Extract wallpapers from encrypted archive at boot |
+| `theme.backgrounds.path` | `"nix-black-4k.png"` | Wallpaper filename in archive, or path if `theme.backgrounds.enable = false` |
+| `theme.backgrounds.enable` | `true` | Extract wallpapers from encrypted archive at boot |
+| `theme.backgrounds.outputDir` | `"/var/lib/backgrounds"` | Directory where wallpapers are extracted to |
+| `theme.backgrounds.currentFile` | `"current.jpg"` | Filename for the processed current wallpaper |
+| `theme.backgrounds.blurredFile` | `"current-blurred.jpg"` | Filename for the blurred wallpaper used by SDDM |
+| `theme.backgrounds.catppuccinize.enable` | `true` | Apply Catppuccin color grading to wallpapers via gowall |
+| `theme.backgrounds.catppuccinize.invert` | `false` | Invert wallpaper colors before Catppuccin color mapping |
+| `theme.backgrounds.catppuccinize.accent` | `[<system accent>]` | Wallpaper accent colors for gowall LUT mapping. `null` = all 14 flavour accents; `["lavender"]` = single accent shaded 14 ways; `["blue" "lavender"]` = cycled accents, each shaded. |
 | `theme.radius.small` | `6` | Border radius for small elements (progress bars) |
 | `theme.radius.default` | `16` | Border radius for windows/panels/notifications |
 | `theme.gaps.inner` | `8` | Gaps between windows |
@@ -102,18 +108,7 @@ Set in `configuration.nix`:
 | `theme.cursor.package` | `kdePackages.breeze` | Cursor theme package |
 | `theme.cursor.size` | `24` | Cursor size |
 | `theme.icons.name` | auto | Icon theme (`"Papirus-Light"` on latte, `"Papirus-Dark"` otherwise) |
-| `theme.icons.package` | Catppuccin Papirus | Icon theme package (see `catppuccinize.enable` and `catppuccinize.icons.enable`) |
-
-## Catppuccinize Options
-
-Wallpaper Catppuccin color-grade feature — set in `configuration.nix`. Controls gowall-based wallpaper processing only.
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `catppuccinize.enable` | `true` | Master toggle for wallpaper Catppuccin color grading. Set to `false` to disable completely. |
-| `catppuccinize.background.enable` | `true` | Apply Catppuccin color grade to wallpapers via gowall. Requires `catppuccinize.enable = true`. |
-| `catppuccinize.background.invert` | `false` | Invert wallpaper colors before Catppuccin color mapping. Useful when source images have dark backgrounds that map poorly. |
-| `catppuccinize.background.accent` | `[<system accent>]` | Wallpaper accent colors for gowall LUT mapping. `null` = all 14 flavour accents (unshaded); `["lavender"]` = single accent shaded 14 ways; `["blue" "lavender"]` = cycled accents, each shaded. |
+| `theme.icons.package` | Catppuccin Papirus | Icon theme package (always Catppuccin Papirus) |
 
 ## Waybar Tray Icons
 
@@ -218,7 +213,7 @@ displays.monitors = [
 | `monitors.*.y` | `0` | Vertical position offset |
 | `monitors.*.scale` | `theme.scale` | Scale factor (defaults to `theme.scale`) |
 | `monitors.*.rotation` | `"normal"` | Rotation (`"normal"` / `"90"` / `"180"` / `"270"`) |
-| `monitors.*.wallpaper` | `null` | Per-monitor wallpaper (`null` = use `theme.wallpaper`) |
+| `monitors.*.wallpaper` | `null` | Per-monitor wallpaper (`null` = use the processed `theme.backgrounds.path` wallpaper) |
 | `monitors.*.workspaces` | `[]` | Workspace IDs to bind to this monitor (Hyprland only, e.g. `[1 2 3 4 5]`) |
 | `monitors.*.vrr` | `0` | Explicit VRR mode for this monitor: `0` off, `1` always, `2` fullscreen/automatic |
 | `monitors.*.hdr` | `0` | Explicit HDR mode for this monitor: `0` off, `1` Steam/Gamescope HDR, `2` full desktop HDR |

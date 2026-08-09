@@ -11,7 +11,7 @@
 #   theme.catppuccin.flavor = "mocha";     # Catppuccin flavor (default: "mocha")
 #   theme.catppuccin.accent = "mauve";     # Accent color (default: "mauve")
 #   theme.scale = 1.0;                     # DPI/Monitor scale (default: 1.0)
-#   theme.wallpaper = "nix-black-4k.png";  # Wallpaper filename/path (default: "nix-black-4k.png")
+#   theme.backgrounds.path = "nix-black-4k.png";  # Wallpaper filename/path (default: "nix-black-4k.png")
 #
 # The module automatically:
 # - Adjusts icon/cursor themes based on light/dark flavor
@@ -142,11 +142,6 @@
     };
 
     # Wallpaper
-    wallpaper = lib.mkOption {
-      type = lib.types.either lib.types.path lib.types.str;
-      default = "nix-black-4k.png";
-      description = "Wallpaper: filename in encrypted archive (if backgrounds.enable) or direct path";
-    };
 
     wallpaperPath = lib.mkOption {
       type = lib.types.str;
