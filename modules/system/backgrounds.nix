@@ -310,6 +310,10 @@ in
           "sops-install-secrets.service"
         ];
         unitConfig.ConditionPathExists = config.sops.age.keyFile;
+        environment = {
+          HOME = cfg.outputDir;
+          XDG_CONFIG_HOME = "${cfg.outputDir}/.config";
+        };
         serviceConfig = {
           Type = "oneshot";
           ExecStart = extractScript;
@@ -330,6 +334,10 @@ in
         before = [ "display-manager.service" ];
         after = [ "local-fs.target" ]; # /persist must be mounted before writing wallpapers
 
+        environment = {
+          HOME = cfg.outputDir;
+          XDG_CONFIG_HOME = "${cfg.outputDir}/.config";
+        };
         serviceConfig = {
           Type = "oneshot";
           RemainAfterExit = true;
