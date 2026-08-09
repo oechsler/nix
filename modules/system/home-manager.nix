@@ -39,10 +39,17 @@ let
 in
 {
   # Ensure secrets and wallpaper are ready before home-manager activation
-  systemd.services."home-manager-${config.user.name}".after = [
-    "sops-install-secrets.service"
-    "extract-backgrounds.service"
-  ];
+  systemd.services."home-manager-${config.user.name}".after =
+    let
+      isUrl =
+        lib.hasPrefix "http://" config.theme.backgrounds.path
+        || lib.hasPrefix "https://" config.theme.backgrounds.path;
+    in
+    [
+      "sops-install-secrets.service"
+    ]
+    ++ lib.optional isUrl "download-wallpaper.service"
+    ++ lib.optional (!isUrl) "prepare-wallpaper.service";
 
   home-manager = {
     useGlobalPkgs = true;
