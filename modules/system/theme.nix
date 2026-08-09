@@ -74,10 +74,14 @@
       };
       package = lib.mkOption {
         type = lib.types.package;
-        default = pkgs.catppuccin-papirus-folders.override {
-          inherit (config.theme.catppuccin) flavor accent;
-        };
-        description = "Icon theme package (Papirus with Catppuccin folder colors)";
+        default =
+          if config.catppuccinize.enable && config.catppuccinize.icons.enable then
+            pkgs.catppuccin-papirus-folders.override {
+              inherit (config.theme.catppuccin) flavor accent;
+            }
+          else
+            pkgs.papirus-icon-theme;
+        description = "Icon theme package (Catppuccin Papirus when catppuccinize.enable and catppuccinize.icons.enable are true)";
       };
     };
 

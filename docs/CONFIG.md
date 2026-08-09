@@ -93,10 +93,6 @@ Set in `configuration.nix`:
 | `theme.scale` | `1.0` | DPI / monitor scale factor |
 | `theme.wallpaper` | `"nix-black-4k.png"` | Wallpaper filename in archive, or path if `backgrounds.enable = false` |
 | `backgrounds.enable` | `true` | Extract wallpapers from encrypted archive at boot |
-| `backgrounds.catppuccinize.enable` | `true` | Grayscale duotone color grade with flavor+accent. Set false for raw wallpaper. |
-| `backgrounds.catppuccinize.flavor` | `theme.catppuccin.flavor` | Flavor for the duotone shadow anchor (e.g. mocha) |
-| `backgrounds.catppuccinize.accent` | `theme.catppuccin.accent` | Accent for the duotone highlight anchor (e.g. lavender) |
-| `backgrounds.catppuccinize.baseTint` | `22` | Base-color tint intensity over the duotone (0–100) |
 | `theme.radius.small` | `6` | Border radius for small elements (progress bars) |
 | `theme.radius.default` | `16` | Border radius for windows/panels/notifications |
 | `theme.gaps.inner` | `8` | Gaps between windows |
@@ -106,11 +102,24 @@ Set in `configuration.nix`:
 | `theme.cursor.package` | `kdePackages.breeze` | Cursor theme package |
 | `theme.cursor.size` | `24` | Cursor size |
 | `theme.icons.name` | auto | Icon theme (`"Papirus-Light"` on latte, `"Papirus-Dark"` otherwise) |
-| `theme.icons.package` | Catppuccin Papirus | Icon theme package (auto-colored by flavor + accent) |
+| `theme.icons.package` | Catppuccin Papirus | Icon theme package (see `catppuccinize.enable` and `catppuccinize.icons.enable`) |
+
+## Catppuccinize Options
+
+Global Catppuccin color-grade feature — set in `configuration.nix`. Controls wallpaper and icon Catppuccin processing via gowall.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `catppuccinize.enable` | `true` | Master toggle for all Catppuccin color grading. Set to `false` to disable wallpaper grading and icon processing completely. |
+| `catppuccinize.icons.enable` | `true` | Use Catppuccin-colored icon theme + gowall-processed tray icons. Requires `catppuccinize.enable = true`. |
+| `catppuccinize.background.enable` | `true` | Apply Catppuccin color grade to wallpapers via gowall. Requires `catppuccinize.enable = true`. |
+| `catppuccinize.background.invert` | `false` | Invert wallpaper colors before Catppuccin color mapping. Useful when source images have dark backgrounds that map poorly. |
 
 ## Waybar Tray Icons
 
 Set in `home.nix`. Waybar's system tray uses Papirus-Dark icons for common applications. **Hyprland only** — KDE manages tray icons through Plasma's own panel system and ignores this option.
+
+When `catppuccinize.enable` and `catppuccinize.icons.enable` are both `true` (default), tray icons are automatically Catppuccin-color-graded via gowall at build time. Icons are selected based on active feature flags — no manual icon list needed. Also controls whether the system uses the Catppuccin-colored Papirus icon theme (`catppuccin-papirus-folders`) or plain Papirus.
 
 | Option | Default | Description |
 |--------|---------|-------------|
