@@ -40,8 +40,13 @@
   #===========================
   # Host-specific Overrides
   #===========================
-  theme.catppuccin.accent = "lavender";
-  theme.backgrounds.path = "Forma_6k_6.png";
+  theme = {
+    catppuccin.accent = "lavender";
+    backgrounds = {
+      path = "Forma_6k_6.png";
+      catppuccinize.accent = null;
+    };
+  };
 
   displays.monitors = [
     {
@@ -93,7 +98,6 @@
     };
     secureBoot.enable = true;
     encryption.unlockMethod = "yubikey";
-    gaming.steamMachine.enable = true;
     desktop.login = "greeter";
     desktop.fileManager = "terminal";
     smb.shares = [
@@ -108,16 +112,21 @@
         path = "//unas.srv.oechsler.it/Pika";
       }
     ];
-    # MT7927 (Filogic 380) WiFi/BT non-functional until kernel 7.2+ — disable for now
-    wifi.enable = false;
-    bluetooth.enable = false;
-    wifi.networks = [
-      {
-        name = "home";
-        ssid = "Oechsler!Box";
-      }
-    ];
+
+    gaming.steamMachine.enable = true;
     development.opencode.classifier = "local";
+
+    # MT7927 (Filogic 380) WiFi/BT non-functional until kernel 7.2+ — disable for now
+    wifi = {
+      enable = false;
+      networks = [
+        {
+          name = "home";
+          ssid = "Oechsler!Box";
+        }
+      ];
+    };
+    bluetooth.enable = false;
   };
 
   # ASUS ROG STRIX X870-I GAMING WIFI has a phantom USB port 3-7 on the
