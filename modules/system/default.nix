@@ -28,6 +28,8 @@
     ./bluetooth.nix
     ./fonts.nix
     ./theme.nix
+    ./gowall-theme.nix
+    ./gowall-tray.nix
     ./backgrounds.nix
     ./impermanence.nix
     ./hardware.nix
