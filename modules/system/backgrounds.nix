@@ -1,17 +1,21 @@
 # Wallpaper Management Configuration
 #
 # This module configures:
-# 1. Encrypted wallpaper archive extraction (theme.backgrounds.enable = true)
-# 2. Direct wallpaper linking from Nix store (theme.backgrounds.enable = false)
+# 1. Auto-detection: encrypted archive → fallback to Nix store path
+# 2. URL download (theme.backgrounds.path = "https://...")
 # 3. Catppuccin color grading via gowall (theme.backgrounds.catppuccinize.enable = true)
 # 4. Blurred wallpaper generation for SDDM login screen
 # 5. Fallback solid color when SOPS key is missing
 #
+# Modes (auto-detected from theme.backgrounds.path):
+#   URL (http:// or https://) → download via curl
+#   Otherwise                 → try archive extraction first,
+#                                fall back to direct Nix store path
+#
 # Configuration options:
-#   theme.backgrounds.enable = true;                        # Extract from encrypted archive (default: true)
+#   theme.backgrounds.path = "nix-black-4k.png";           # Filename in archive, path, or URL
 #   theme.backgrounds.catppuccinize.enable = true;          # Catppuccin color grade via gowall (default: true)
-#   theme.backgrounds.outputDir = "/var/lib/backgrounds";   # Output directory
-#   theme.backgrounds.path = "nix-black-4k.png";           # Wallpaper filename in archive or direct path
+#   theme.backgrounds.outputDir = "/var/lib/backgrounds";   # Output directory (derived)
 #
 # Catppuccin color grading (theme.backgrounds.catppuccinize):
 #   Uses gowall with a custom wallpaper theme driven by theme.backgrounds.catppuccinize.accent:
@@ -28,19 +32,15 @@
 #   /var/lib/backgrounds/current.jpg         - Current wallpaper (Catppuccinized + JPG)
 #   /var/lib/backgrounds/current-blurred.jpg - Catppuccinized + blurred for SDDM
 #
-# How it works (encrypted mode):
-# - Decrypt backgrounds/blob.tar.gz.enc using OpenSSL
-# - Extract selected wallpaper from tar.gz
+# How it works:
+# - If path is a URL → download via curl
+# - If SOPS key is available → try to decrypt archive and extract the file
+# - If archive extraction fails (wrong password, file not found) → fall back to direct path
+# - If no SOPS key → fall back to direct path;
+#   if that also fails → solid color fallback
 # - Convert to JPG (if needed) and save as current.jpg
 # - Apply gowall Catppuccin grade (if theme.backgrounds.catppuccinize.enable is true)
 # - Create blurred version for SDDM (blur radius 30)
-# - Fallback to solid color (#181818) if SOPS key is missing
-#
-# How it works (direct mode):
-# - Copy wallpaper from theme.backgrounds.path (path in Nix store)
-# - Convert to JPG and apply gowall Catppuccin grade if enabled
-# - Create blurred version
-# - No encryption/decryption involved
 
 {
   config,
@@ -233,60 +233,65 @@ let
     "${invertStep}${pkgs.gowall}/bin/gowall convert \"$CURRENT\" --theme ${wallpaperThemeJSON} --output \"$CURRENT\" --yes";
 
   # ============================================================================
-  # WALLPAPER EXTRACTION SCRIPT
+  # WALLPAPER PREPARATION SCRIPT
   # ============================================================================
-  extractScript = pkgs.writeShellScript "extract-backgrounds" ''
+  # Tries archive extraction first, falls back to direct Nix store path if:
+  # - SOPS key is unavailable
+  # - Password is wrong
+  # - File is not in the archive
+  prepareScript = pkgs.writeShellScript "prepare-wallpaper" ''
     set -euo pipefail
 
     SECRET_FILE="${config.sops.secrets."backgrounds/password".path}"
     OUTPUT_DIR="${outputDir}"
-    WALLPAPER_NAME="${config.theme.backgrounds.path}"
     CURRENT="${outputDir}/${currentFile}"
     BLURRED="${outputDir}/${blurredFile}"
 
     mkdir -p "$OUTPUT_DIR"
 
-    # Check if SOPS secret is available (age key set up)
-    if [[ ! -f "$SECRET_FILE" ]]; then
-      echo "SOPS secret not available, creating fallback wallpaper"
-      # Create solid color wallpaper (4K resolution)
-      ${pkgs.imagemagick}/bin/magick -size 3840x2160 xc:"${fallbackColor}" "$CURRENT"
-      cp "$CURRENT" "$BLURRED"
-      chmod 644 "$CURRENT" "$BLURRED"
-      exit 0
+    archive_ok=0
+
+    # Try archive extraction if the SOPS key is available
+    if [[ -f "$SECRET_FILE" ]]; then
+      PASSWORD="$(cat "$SECRET_FILE")"
+      if ${pkgs.openssl}/bin/openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:"$PASSWORD" \
+           < "${archiveFile}" 2>/dev/null \
+        | ${pkgs.gzip}/bin/gzip -d 2>/dev/null \
+        | ${pkgs.gnutar}/bin/tar tf - 2>/dev/null \
+        | grep -qxF "./${wallpaperPath}"; then
+        ${pkgs.openssl}/bin/openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:"$PASSWORD" \
+          < "${archiveFile}" \
+        | ${pkgs.gzip}/bin/gzip -d \
+        | ${pkgs.gnutar}/bin/tar xf - -C "$OUTPUT_DIR" "./${wallpaperPath}"
+        ${pkgs.imagemagick}/bin/magick "$OUTPUT_DIR/${wallpaperPath}" "$CURRENT"
+        rm "$OUTPUT_DIR/${wallpaperPath}"
+        archive_ok=1
+      fi
     fi
 
-    # Read decryption password from SOPS secret
-    PASSWORD="$(cat "$SECRET_FILE")"
-
-    # Decrypt and extract wallpaper
-    # Pipeline: decrypt (openssl) → decompress (gzip) → extract (tar)
-    ${pkgs.openssl}/bin/openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:"$PASSWORD" < "${archiveFile}" | \
-      ${pkgs.gzip}/bin/gzip -d | \
-      ${pkgs.gnutar}/bin/tar xf - -C "$OUTPUT_DIR" "./$WALLPAPER_NAME"
-
-    # Convert to JPG and save as current.jpg
-    # ImageMagick handles any format (PNG, JPG, etc.)
-    ${pkgs.imagemagick}/bin/magick "$OUTPUT_DIR/$WALLPAPER_NAME" "$CURRENT"
-
-    # Remove extracted original (keep only current.jpg)
-    rm "$OUTPUT_DIR/$WALLPAPER_NAME"
+    # Fallback: use path directly from Nix store
+    if [[ $archive_ok -eq 0 ]]; then
+      if ${pkgs.imagemagick}/bin/magick "${wallpaperPath}" "$CURRENT" 2>/dev/null; then
+        true
+      else
+        ${pkgs.imagemagick}/bin/magick -size 3840x2160 xc:"${fallbackColor}" "$CURRENT"
+      fi
+    fi
 
     # Apply Catppuccin color grade via gowall
     if ${if config.theme.backgrounds.catppuccinize.enable then "true" else "false"}; then
-       ${catppuccinizeStep}
-     fi
+      ${catppuccinizeStep}
+    fi
 
-     # Create blurred version for SDDM login screen
-     # Blur radius: 30 pixels (strong blur for background aesthetics)
-     ${pkgs.imagemagick}/bin/magick "$CURRENT" -blur 0x30 "$BLURRED"
+    # Create blurred version for SDDM login screen
+    ${pkgs.imagemagick}/bin/magick "$CURRENT" -blur 0x30 "$BLURRED"
 
-     # Set world-readable permissions (needed for display manager)
-     chmod 644 "$CURRENT" "$BLURRED"
+    # Set world-readable permissions
+    chmod 644 "$CURRENT" "$BLURRED"
 
-     # Signal user-level awww to reload (see awww.nix path unit)
-     touch "/var/lib/backgrounds/.reload"
-     chmod 666 "/var/lib/backgrounds/.reload"
+    # Signal user-level awww to reload (see awww.nix path unit)
+    touch "/var/lib/backgrounds/.reload"
+    chmod 666 "/var/lib/backgrounds/.reload"
   '';
 in
 {
@@ -298,13 +303,7 @@ in
     path = lib.mkOption {
       type = lib.types.either lib.types.path lib.types.str;
       default = "nix-black-4k.png";
-      description = "Wallpaper: filename in encrypted archive, direct path to a file, or URL to download";
-    };
-
-    enable = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = "Extract wallpapers from encrypted archive at boot (false = use direct path from theme.backgrounds.path)";
+      description = "Wallpaper: filename in encrypted archive, direct path, or URL to download";
     };
 
     catppuccinize = {
@@ -357,8 +356,6 @@ in
     #---------------------------
     # 1. Wallpaper Paths (Always Set)
     #---------------------------
-    # These paths are used by desktop environments, SDDM, and other modules
-    # They point to the processed wallpapers, regardless of source (encrypted or direct)
     {
       theme.wallpaperPath = "${outputDir}/${currentFile}";
       theme.blurredWallpaperPath = "${outputDir}/${blurredFile}";
@@ -367,7 +364,6 @@ in
     #---------------------------
     # 2. URL Download Mode
     #---------------------------
-    # Download wallpaper from a URL, regardless of archive setting.
     (lib.mkIf isUrl {
       systemd.services.download-wallpaper = {
         description = "Download wallpaper from URL";
@@ -412,43 +408,20 @@ in
     })
 
     #---------------------------
-    # 3. Encrypted Archive Mode
+    # 3. Archive + Direct Mode (Non-URL)
     #---------------------------
-    (lib.mkIf (config.theme.backgrounds.enable && !isUrl) {
+    # Tries archive extraction first; falls back to direct Nix store path
+    (lib.mkIf (!isUrl) {
       sops.secrets."backgrounds/password" = { };
 
-      systemd.services.extract-backgrounds = {
-        description = "Extract encrypted wallpapers";
+      systemd.services.prepare-wallpaper = {
+        description = "Prepare wallpaper (archive or direct)";
         wantedBy = [ "multi-user.target" ];
         before = [ "display-manager.service" ];
         after = [
-          "local-fs.target" # /persist must be mounted before writing wallpapers
+          "local-fs.target"
           "sops-install-secrets.service"
         ];
-        unitConfig.ConditionPathExists = config.sops.age.keyFile;
-        environment = {
-          HOME = outputDir;
-          XDG_CONFIG_HOME = "${outputDir}/.config";
-        };
-        serviceConfig = {
-          Type = "oneshot";
-          ExecStart = extractScript;
-          RemainAfterExit = true;
-        };
-      };
-    })
-
-    #---------------------------
-    # 4. Direct Mode (No Encryption)
-    #---------------------------
-    # Copy wallpaper directly from Nix store (theme.backgrounds.path)
-    # Useful for testing or when encryption is not desired
-    (lib.mkIf (!config.theme.backgrounds.enable && !isUrl) {
-      systemd.services.prepare-backgrounds = {
-        description = "Prepare wallpapers from store";
-        wantedBy = [ "multi-user.target" ];
-        before = [ "display-manager.service" ];
-        after = [ "local-fs.target" ]; # /persist must be mounted before writing wallpapers
 
         environment = {
           HOME = outputDir;
@@ -456,30 +429,9 @@ in
         };
         serviceConfig = {
           Type = "oneshot";
+          ExecStart = prepareScript;
           RemainAfterExit = true;
         };
-
-        script = ''
-          set -euo pipefail
-
-          mkdir -p "${outputDir}"
-          CURRENT="${outputDir}/${currentFile}"
-          BLURRED="${outputDir}/${blurredFile}"
-
-          # Convert wallpaper to JPG and save as current.jpg
-          ${pkgs.imagemagick}/bin/magick "${wallpaperPath}" "$CURRENT"
-
-          # Apply Catppuccin color grade via gowall
-          if ${if config.theme.backgrounds.catppuccinize.enable then "true" else "false"}; then
-            ${catppuccinizeStep}
-          fi
-
-          # Create blurred version for SDDM (blur radius 30)
-          ${pkgs.imagemagick}/bin/magick "$CURRENT" -blur 0x30 "$BLURRED"
-
-          # Set world-readable permissions
-          chmod 644 "$CURRENT" "$BLURRED"
-        '';
       };
     })
   ];
