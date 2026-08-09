@@ -6,6 +6,7 @@
 # - development.nix - Development tools and languages
 # - fish.nix - Fish shell configuration
 # - git.nix - Git and SSH configuration
+# - mangohud.nix - MangoHud gaming overlay (Catppuccin-themed)
 # - neovim.nix - Neovim editor
 # - proton-pass.nix - Proton Pass password manager and SSH agent
 # - terminal.nix - Kitty terminal emulator
@@ -19,6 +20,7 @@
     ./development.nix
     ./fish.nix
     ./git.nix
+    ./mangohud.nix
     ./neovim.nix
     ./opencode-auto-router
     ./proton-pass.nix
