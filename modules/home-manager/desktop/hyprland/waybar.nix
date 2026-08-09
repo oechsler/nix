@@ -89,13 +89,6 @@ let
       ]
     );
 
-  hasGowallTray = builtins.attrNames config.gowall.trayIconPaths or { } != [ ];
-  trayIcons =
-    let
-      paths = config.gowall.trayIconPaths or { };
-    in
-    lib.mapAttrs (_: iconName: paths.${iconName} or iconName) defaultTrayIcons;
-
   # Reload script (used by Super+Shift+R keybinding)
   reload = pkgs.writeShellScript "waybar-reload" ''
     pkill waybar
@@ -201,7 +194,7 @@ in
         "tray" = {
           spacing = 10;
           icon-size = 16;
-          icons = trayIcons // config.waybar.tray.icons;
+          icons = defaultTrayIcons // config.waybar.tray.icons;
         };
 
         "network" = {

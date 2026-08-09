@@ -324,6 +324,10 @@ in
           --key NaturalScroll "$scroll"
       done
 
+      # Rebuild KDE system configuration cache so apps pick up changed icon themes.
+      # Runs in the user session; if not logged in, fails gracefully.
+      ${pkgs.kdePackages.kded}/bin/kbuildsycoca6 --noincremental 2>/dev/null || true
+
       # Tell running KWin to reload decoration settings (if KWin is running)
       ${pkgs.kdePackages.qttools}/bin/qdbus org.kde.KWin /KWin reconfigure 2>/dev/null || true
     '';

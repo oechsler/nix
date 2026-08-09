@@ -106,20 +106,18 @@ Set in `configuration.nix`:
 
 ## Catppuccinize Options
 
-Global Catppuccin color-grade feature — set in `configuration.nix`. Controls wallpaper and icon Catppuccin processing via gowall.
+Wallpaper Catppuccin color-grade feature — set in `configuration.nix`. Controls gowall-based wallpaper processing only.
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `catppuccinize.enable` | `true` | Master toggle for all Catppuccin color grading. Set to `false` to disable wallpaper grading and icon processing completely. |
-| `catppuccinize.icons.enable` | `true` | Use Catppuccin-colored icon theme + gowall-processed tray icons. Requires `catppuccinize.enable = true`. |
+| `catppuccinize.enable` | `true` | Master toggle for wallpaper Catppuccin color grading. Set to `false` to disable completely. |
 | `catppuccinize.background.enable` | `true` | Apply Catppuccin color grade to wallpapers via gowall. Requires `catppuccinize.enable = true`. |
 | `catppuccinize.background.invert` | `false` | Invert wallpaper colors before Catppuccin color mapping. Useful when source images have dark backgrounds that map poorly. |
+| `catppuccinize.background.accent` | `[<system accent>]` | Wallpaper accent colors for gowall LUT mapping. `null` = all 14 flavour accents (unshaded); `["lavender"]` = single accent shaded 14 ways; `["blue" "lavender"]` = cycled accents, each shaded. |
 
 ## Waybar Tray Icons
 
-Set in `home.nix`. Waybar's system tray uses Papirus-Dark icons for common applications. **Hyprland only** — KDE manages tray icons through Plasma's own panel system and ignores this option.
-
-When `catppuccinize.enable` and `catppuccinize.icons.enable` are both `true` (default), tray icons are automatically Catppuccin-color-graded via gowall at build time. Icons are selected based on active feature flags — no manual icon list needed. Also controls whether the system uses the Catppuccin-colored Papirus icon theme (`catppuccin-papirus-folders`) or plain Papirus.
+Set in `home.nix`. Waybar's system tray uses Papirus-Dark icon names for common applications. **Hyprland only** — KDE manages tray icons through Plasma's own panel system and ignores this option.
 
 | Option | Default | Description |
 |--------|---------|-------------|
