@@ -30,6 +30,7 @@
     set -g @catppuccin_window_number_color "#{@thm_overlay_2}"
     set -g @catppuccin_window_current_text_color "#{@thm_surface_1}"
     set -g @catppuccin_window_current_number_color "#{@thm_${config.catppuccin.accent}}"
+    set -g @catppuccin_window_default_fill "none"
   '';
 
   programs.tmux = {
