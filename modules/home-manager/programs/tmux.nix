@@ -23,8 +23,6 @@
   catppuccin.tmux.extraConfig = ''
     set -g @catppuccin_status_background "none"
     set -g @catppuccin_window_status_style "rounded"
-    set -g @catppuccin_window_left_separator "#[fg=#{@catppuccin_window_number_color},reverse,nobold,nounderscore,noitalics]#[none]"
-    set -g @catppuccin_window_right_separator "#[fg=#{@catppuccin_window_text_color},reverse,nobold,nounderscore,noitalics]#[none]"
     set -g @catppuccin_window_text " #{pane_current_command}"
     set -g @catppuccin_window_current_text " #{pane_current_command}"
     set -g @catppuccin_window_number "#I"
@@ -121,6 +119,10 @@
       # Status bar (after catppuccin plugin)
       set -g status 2
       set -g status-style "bg=default"
+
+      set -gF window-status-separator ""
+      set -gF window-status-format "#[fg=#{@thm_overlay_2},bg=default]#[fg=#{@thm_crust},bg=#{@thm_overlay_2}] #I #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #{pane_current_command} #[fg=#{@thm_surface_0},bg=default]"
+      set -gF window-status-current-format "#[fg=#{@thm_${config.catppuccin.accent}},bg=default]#[fg=#{@thm_crust},bg=#{@thm_${config.catppuccin.accent}}] #I #[fg=#{@thm_fg},bg=#{@thm_surface_1}] #{pane_current_command} #[fg=#{@thm_surface_1},bg=default]"
 
       set -g message-style "fg=#{@thm_fg},bg=#{@thm_surface_0},fill=#{@thm_surface_0},align=left"
       set -g message-command-style "fg=#{@thm_fg},bg=#{@thm_surface_0},fill=#{@thm_surface_0},align=left"
