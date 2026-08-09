@@ -14,9 +14,11 @@
 #   theme.wallpaper = "nix-black-4k.png";             # Wallpaper filename in archive or direct path
 #
 # Catppuccin color grading (catppuccinize.background):
-#   Uses gowall with a custom wallpaper theme where all 14 accent slots
-#   are shades of the system accent color. Surface/base colors stay from the flavor palette.
-#   This emphasizes a single accent color while keeping the catppuccin gray tones.
+#   Uses gowall with a custom wallpaper theme driven by catppuccinize.background.accent:
+#   - null               → all 14 real accent colours of the flavour (unshaded).
+#   - ["lavender"]        → 14 brightness-shaded variants of lavender (single-accent).
+#   - ["blue" "lavender"] → 14 slots cycled from the given accents, each shaded.
+#   Defaults to [<system accent>], so the old single-accent behaviour is preserved.
 #
 # Wallpaper archive:
 #   Location: backgrounds/blob.tar.gz.enc (AES-256-CBC encrypted tar.gz)
@@ -68,9 +70,11 @@ let
   # ============================================================================
   # WALLPAPER GOWALL THEME
   # ============================================================================
-  # Generate a wallpaper gowall theme where all 14 accent-color slots are shades
-  # of the system accent color. Surface/base colors stay the same as the global theme.
-  # This emphasizes a single accent color while keeping the catppuccin gray tones.
+  # Generate a wallpaper gowall theme driven by catppuccinize.background.accent:
+  # - null               → all 14 real accent colours of the flavour (unshaded).
+  # - ["lavender"]        → 14 brightness-shaded variants of lavender (single-accent).
+  # - ["blue" "lavender"] → 14 slots cycled from the given accents, each shaded.
+  # Defaults to [<system accent>], so the old single-accent behaviour is preserved.
 
   hexMap = {
     "0" = 0;
@@ -128,12 +132,11 @@ let
     b = builtins.floor (c.b * f);
   };
 
-  wallpaperAccent = config.catppuccin.accent;
+  wallpaperAccents = config.catppuccinize.background.accent;
   wallpaperThemeJSON =
     let
       palette = lib.importJSON "${config.catppuccin.sources.palette}/palette.json";
       flavorC = palette.${config.catppuccin.flavor}.colors;
-      accentRgb = hexToRgb flavorC.${wallpaperAccent}.hex;
 
       accentFactors = [
         0.08
@@ -151,7 +154,38 @@ let
         1.0
         1.0
       ];
-      accentColors = map (f: rgbToHex (shadeRgb accentRgb f)) accentFactors;
+
+      accentColors =
+        if wallpaperAccents == null then
+          map (name: flavorC.${name}.hex) [
+            "rosewater"
+            "flamingo"
+            "pink"
+            "mauve"
+            "red"
+            "maroon"
+            "peach"
+            "yellow"
+            "green"
+            "teal"
+            "sky"
+            "sapphire"
+            "blue"
+            "lavender"
+          ]
+        else
+          let
+            numAccents = builtins.length wallpaperAccents;
+          in
+          lib.imap0 (
+            idx: _:
+            let
+              acc = builtins.elemAt wallpaperAccents (lib.mod idx numAccents);
+              accRgb = hexToRgb flavorC.${acc}.hex;
+              factor = builtins.elemAt accentFactors idx;
+            in
+            rgbToHex (shadeRgb accRgb factor)
+          ) accentFactors;
 
       surfaceOrder = [
         "text"
@@ -170,7 +204,11 @@ let
       surfaceColors = map (name: flavorC.${name}.hex) surfaceOrder;
 
       colors = accentColors ++ surfaceColors;
-      themeName = "catppuccin-wallpaper-${config.catppuccin.flavor}-${wallpaperAccent}";
+      themeName =
+        if wallpaperAccents == null then
+          "catppuccin-wallpaper-${config.catppuccin.flavor}-all"
+        else
+          "catppuccin-wallpaper-${config.catppuccin.flavor}-${lib.concatStringsSep "-" wallpaperAccents}";
     in
     pkgs.writeText "gowall-${themeName}.json" (
       builtins.toJSON {
@@ -252,6 +290,52 @@ in
   #===========================
   # Options
   #===========================
+
+  options.catppuccinize = {
+    enable = lib.mkEnableOption "apply Catppuccin color grading to wallpapers via gowall" // {
+      default = true;
+    };
+
+    background = {
+      enable = lib.mkEnableOption "apply Catppuccin color grade to wallpapers via gowall" // {
+        default = true;
+      };
+
+      invert = lib.mkEnableOption "invert wallpaper colors before gowall LUT mapping" // {
+        default = false;
+      };
+
+      accent = lib.mkOption {
+        type = lib.types.nullOr (
+          lib.types.listOf (
+            lib.types.enum [
+              "rosewater"
+              "flamingo"
+              "pink"
+              "mauve"
+              "red"
+              "maroon"
+              "peach"
+              "yellow"
+              "green"
+              "teal"
+              "sky"
+              "sapphire"
+              "blue"
+              "lavender"
+            ]
+          )
+        );
+        default = [ config.catppuccin.accent ];
+        description = ''
+          Wallpaper accent colors for gowall LUT mapping.
+          - null: use the actual palette accent colors of the flavour (all 14).
+          - ["lavender"]: shade the system accent across all 14 slots (default behaviour).
+          - ["blue" "lavender"]: use only those accents, cycled across the 14 slots.
+        '';
+      };
+    };
+  };
 
   options.backgrounds = {
     enable = lib.mkOption {
