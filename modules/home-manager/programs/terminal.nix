@@ -82,8 +82,6 @@
         enableFishIntegration = true;
       };
 
-      fastfetch.enable = true;
-
       zoxide = {
         enable = true;
         enableFishIntegration = true;
@@ -94,6 +92,7 @@
       bluetui
       dust
       fd
+      fetch
       impala
       jq
       procs
