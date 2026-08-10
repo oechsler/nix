@@ -24,6 +24,8 @@ in
       enable = true;
 
       settings = {
+        lsp = true;
+
         enabled_providers = [
           "local"
           "openai"

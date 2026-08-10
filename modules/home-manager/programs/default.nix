@@ -20,6 +20,7 @@
     ./development.nix
     ./fish.nix
     ./git.nix
+    ./lsp.nix
     ./mangohud.nix
     ./neovim.nix
     ./opencode-auto-router
