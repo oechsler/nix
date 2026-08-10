@@ -123,11 +123,11 @@ class RouterTest(unittest.TestCase):
 
         self.assertIs(router._add_agent_instruction(body, has_tools=False), body)
 
-    def test_classifier_treats_multiple_deliverables_as_complex_agentic(self):
+    def test_classifier_uses_approximate_matching_not_rigid_rules(self):
         prompt = router._build_classification_prompt("user: Do all five tasks", True)
 
-        self.assertIn("Multiple deliverables or end-to-end implementation", prompt)
-        self.assertIn("at least deepseek-v4-pro or qwen3.7-plus", prompt)
+        self.assertIn("Match approximately", prompt)
+        self.assertIn("no rigid 1:1 mapping", prompt)
 
     def test_failed_attempt_escalates_previous_model(self):
         messages = [

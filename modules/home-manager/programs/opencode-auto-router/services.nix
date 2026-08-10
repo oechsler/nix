@@ -206,7 +206,7 @@ in
               "-e OLLAMA_URL=http://127.0.0.1:11434"
               "-e LITELLM_URL=http://127.0.0.1:8000/v1"
               "-e OPENCODE_AUTH_FILE=/var/lib/opencode/auth.json"
-              "-e DEFAULT_MODEL=deepseek-v4-pro"
+              "-e DEFAULT_MODEL=deepseek-v4-flash"
               "-e CLASSIFIER_BACKEND=${classifier}"
               "opencode-auto-router:latest"
             ];

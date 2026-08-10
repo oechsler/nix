@@ -26,7 +26,7 @@ OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 ROUTER_MODELS = os.environ.get(
     "ROUTER_MODELS", "qwen3:8b"
 ).split(",")
-DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "deepseek-v4-pro")
+DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "deepseek-v4-flash")
 OPENCODE_AUTH_FILE = os.environ.get(
     "OPENCODE_AUTH_FILE", "/var/lib/opencode/auth.json"
 )
@@ -69,8 +69,8 @@ MODEL_ROUTING = {
     },
     "deepseek-v4-pro": {
         "description": (
-            "PREFERRED for highest-complexity coding: multi-step exploration, "
-            "deep analysis with tools. Use when Flash would be insufficient."
+            "Stronger DeepSeek for complex work: multi-step exploration, "
+            "deep analysis with tools. More capable than Flash but limited quota (3450)."
         ),
         "fallbacks": ["gpt-5.6-sol"],
     },
@@ -301,41 +301,31 @@ def _cache_classify(context: str, has_tools: bool, model: str, reason: str = "")
 
 def _build_classification_prompt(context: str, has_tools: bool) -> str:
     return f"""
-Classify for OpenCode routing. Return: model_id - reason (2-6 words in user's language).
+Classify for OpenCode routing. Match approximately based on the task – no rigid 1:1 mapping. Think about what model fits best for THIS specific request. Return: model_id - reason (2-6 words in user's language).
 
 Without tools (has_tools=False):
-- Trivial: greetings, Q&A, translations, titles → mistral-small (ONLY simplest tasks)
-- Reasoning: architecture, design tradeoffs, analysis, planning, reviews → mistral-medium (PREFERRED default)
-- Advanced pure reasoning: complex algorithmic analysis (consensus, crypto, formal verification) → qwen3.7-max
-- Deepest reasoning: math proofs, complex theory, formal methods → qwen3.8-max (use sparingly)
+- Simple Q&A, greetings, translations → mistral-small is often enough
+- Architecture, design tradeoffs, analysis, planning → mistral-medium tends to handle these well
+- Complex algorithmic analysis (consensus, crypto, formal verification) → consider qwen3.7-max
+- Deepest reasoning (math proofs, formal methods) → qwen3.8-max but very limited quota (160)
 
 With tools (has_tools=True):
-- Routine coding: file edits, shell, NixOS, containers, search → deepseek-v4-flash (PRIMARY) or qwen3.7-plus (good alternative)
-- Broad refactors, general development → qwen3.7-plus (PREFERRED – 4300 quota) or deepseek-v4-flash
-- Architecture, planning, analysis with tools → mistral-medium (capable with tools, good for mixed analysis/coding)
-- Intermediate complexity: hard bugs, multi-step refactors, deeper analysis → deepseek-v4-flash (PREFERRED – trust it first), deepseek-v4-pro if truly complex
-- Provider diversification: when Flash has been used a lot in conversation → qwen3.7-plus or mistral-medium
-- Fast overflow when DeepSeek/Qwen saturated → gpt-5.6-luna-fast
-- General overflow when DeepSeek/Qwen capacity exhausted → gpt-5.6-luna
-- Highest complexity: multi-step exploration, very difficult bugs → deepseek-v4-pro or gpt-5.6-terra
-- Complex agentic: ambiguous exploration, production debugging → gpt-5.6-terra or gpt-5.6-terra-fast
-- Hardest/ambiguous: system admin, critical bugs, race conditions → gpt-5.6-sol
-- Urgent hardest problems at high throughput → gpt-5.6-sol-fast
-- Multiple deliverables or end-to-end implementation → at least deepseek-v4-pro or qwen3.7-plus
+- Most everyday coding (file edits, shell, NixOS, containers, search) → deepseek-v4-flash is the go-to starting point (63300 quota, huge capacity)
+- Hard bugs, multi-step refactors, deeper tool-based analysis → deepseek-v4-flash is worth trying first, but deepseek-v4-pro (3450) or qwen3.7-plus (4300) may also fit
+- Broad refactors, general development → weigh between deepseek-v4-flash and qwen3.7-plus depending on scope
+- Architecture/planning that also needs tools → mistral-medium can cover this well
+- Overflow when DeepSeek/Qwen saturated → gpt-5.6-luna-fast, gpt-5.6-luna
+- Ambiguous production issues, critical bugs → gpt-5.6-sol or gpt-5.6-terra depending on severity
 
-GPT-5.6 tiers: Luna=entry/overflow, Terra=complex work, Sol=strongest/last-resort. Prefer DeepSeek, Qwen, and Mistral for most work. DeepSeek Flash has 2X quota – use it by default. -fast variants when latency matters.
+Approximate quotas (req/5h): deepseek-v4-flash:63300, qwen3.7-plus:4300, deepseek-v4-pro:3450, qwen3.6-plus:3300, gpt-5.6-luna:2050, qwen3.7-max:340, qwen3.8-max:160.
 
-Go quotas (req/5h): deepseek-v4-flash:63300, qwen3.7-plus:4300, deepseek-v4-pro:3450, qwen3.6-plus:3300, gpt-5.6-luna:2050, qwen3.7-max:340, qwen3.8-max:160.
+Guidelines:
+- deepseek-v4-flash is the general recommendation for most tool-based work – large quota, good quality
+- deepseek-v4-pro is stronger but has much less quota – weigh whether the extra depth is really needed
+- Rotate to qwen3.7-plus periodically for provider diversification (good quota)
+- Only escalate to GPT* when task clearly exceeds DeepSeek/Qwen/Mistral capability
+- -fast variants help with latency but are a bit less thorough
 
-HARD CONSTRAINTS:
-- All coding tasks with tools → deepseek-v4-flash by default; only escalate for hardest problems
-- Hard bugs, complex refactors → still try deepseek-v4-flash first (it has 63K quota!)
-- mistral-medium is capable with tools – use it for architecture/planning/cross-cutting analysis
-- Actively use qwen3.7-plus (4300 quota) for general dev work and provider diversification – it's underused
-- logs/services/containers/production/ambiguous failures → gpt-5.6-sol (ambiguous/critical) or gpt-5.6-terra (structured)
-- Prefer -fast variants unless task is critically complex
-
-Examples: "mistral-medium - Analyse und Planung" / "deepseek-v4-pro - Complex multi-step refactor" / "deepseek-v4-flash - File edits and shell commands"
 Context (has_tools={has_tools}):
 {context}
 """.strip()
@@ -685,12 +675,12 @@ def _degraded_providers() -> dict[str, int]:
 _FALLBACK_REASONS: dict[str, str] = {
     "mistral-small": "Trivial Q&A / title",
     "mistral-medium": "Architecture & planning",
-    "deepseek-v4-flash": "Coding & shell commands",
-    "deepseek-v4-pro": "Hard debugging",
-    "gpt-5.6-luna-fast": "Daily development",
-    "gpt-5.6-luna": "General coding",
-    "gpt-5.6-terra-fast": "Complex debugging",
-    "gpt-5.6-terra": "Complex problems",
+    "deepseek-v4-flash": "Coding, debugging, refactors",
+    "deepseek-v4-pro": "Exceptional complexity",
+    "gpt-5.6-luna-fast": "Quick overflow",
+    "gpt-5.6-luna": "General overflow",
+    "gpt-5.6-terra-fast": "Complex overflow",
+    "gpt-5.6-terra": "Highest complexity",
     "gpt-5.6-sol-fast": "Critical fixes",
     "gpt-5.6-sol": "Hardest problems",
     "qwen3.7-plus": "General development",
