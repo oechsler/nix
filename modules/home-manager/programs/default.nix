@@ -8,6 +8,7 @@
 # - git.nix - Git and SSH configuration
 # - mangohud.nix - MangoHud gaming overlay (Catppuccin-themed)
 # - neovim.nix - Neovim editor
+# - opencode.nix - OpenCode auto-router configuration
 # - proton-pass.nix - Proton Pass password manager and SSH agent
 # - terminal.nix - Kitty terminal emulator
 # - tmux.nix - Tmux terminal multiplexer
@@ -23,7 +24,7 @@
     ./lsp.nix
     ./mangohud.nix
     ./neovim.nix
-    ./opencode-router
+    ./opencode.nix
     ./proton-pass.nix
     ./terminal.nix
     ./tmux.nix

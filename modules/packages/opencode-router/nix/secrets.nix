@@ -7,21 +7,23 @@
 
 let
   cfg = config.programs.opencode-router;
+
+  secretKeys = lib.mapAttrs' (envVar: sopsPath: lib.nameValuePair sopsPath { }) cfg.litellmApiKeys;
+
+  envContent = lib.concatStringsSep "\n" (
+    lib.mapAttrsToList (
+      envVar: sopsPath: "${envVar}=${config.sops.placeholder.${sopsPath}}"
+    ) cfg.litellmApiKeys
+  );
 in
 {
   config =
     lib.mkIf (features.development.enable && features.development.opencode.enable && cfg.enable)
       {
-        sops.secrets = {
-          "opencode/mistral/api-key" = { };
-          "opencode/opencode-go/api-key" = { };
-        };
+        sops.secrets = secretKeys;
 
         sops.templates."opencode-router-litellm.env" = {
-          content = ''
-            MISTRAL_API_KEY=${config.sops.placeholder."opencode/mistral/api-key"}
-            OPENCODE_GO_API_KEY=${config.sops.placeholder."opencode/opencode-go/api-key"}
-          '';
+          content = envContent;
         };
       };
 }
