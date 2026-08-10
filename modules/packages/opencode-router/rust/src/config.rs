@@ -307,6 +307,8 @@ pub struct AgentInstructionConfig {
 
 #[derive(Deserialize, Clone, Debug)]
 pub struct NoticeConfig {
+    #[serde(default = "default_true")]
+    pub enabled: bool,
     #[serde(default = "default_notice_format")]
     pub format: String,
     #[serde(default = "default_redirect_format")]
@@ -316,6 +318,7 @@ pub struct NoticeConfig {
 impl Default for NoticeConfig {
     fn default() -> Self {
         Self {
+            enabled: true,
             format: default_notice_format(),
             redirect_format: default_redirect_format(),
         }

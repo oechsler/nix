@@ -9,7 +9,8 @@
 let
   cfg = config.programs.opencode-router;
 
-  toModelEntry = name: model:
+  toModelEntry =
+    name: model:
     {
       inherit (model)
         description
@@ -38,9 +39,11 @@ let
 
   modelsToml = lib.mapAttrs toModelEntry cfg.models;
 
-  aliases = lib.optionalAttrs (cfg.defaults.model != "") {
-    auto = cfg.defaults.model;
-  } // cfg.aliases;
+  aliases =
+    lib.optionalAttrs (cfg.defaults.model != "") {
+      auto = cfg.defaults.model;
+    }
+    // cfg.aliases;
 
   guidanceText = cfg.prompts.guidance;
   modelGuidance = lib.mapAttrs (model: line: {
@@ -121,6 +124,7 @@ let
     agent_instruction.text = cfg.agentInstruction;
 
     notice = {
+      enabled = cfg.notice.enabled;
       format = cfg.notice.format;
       redirect_format = cfg.notice.redirectFormat;
     };
