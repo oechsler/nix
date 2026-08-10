@@ -81,7 +81,6 @@ let
 
   directProviderConfigs = lib.mapAttrs mkProviderConfig directModelsByProvider;
 
-  hasOpenAiDirect = directProviderConfigs ? openai;
   otherDirectProviders = lib.removeAttrs directProviderConfigs [ "openai" ];
 in
 {
@@ -145,7 +144,6 @@ in
                 // clientModels;
               };
 
-              provider.openai = lib.mkIf hasOpenAiDirect directProviderConfigs.openai;
             }
             (lib.mapAttrs' (name: config: {
               name = "provider.${name}";

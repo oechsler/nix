@@ -179,7 +179,7 @@ async fn forward_to_backend(
         "ollama" => {
             let response = state
                 .ollama_backend
-                .forward("/api/chat", body.clone())
+                .forward("/v1/chat/completions", body.clone())
                 .await?;
 
             if is_stream {
