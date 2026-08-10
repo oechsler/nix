@@ -209,6 +209,22 @@ let
       displayName = "GPT-5.6 Luna Fast";
     };
 
+    "gpt-5.6-luna-openai" = {
+      description = "Direct OpenAI fallback for the OpenCode Go Luna route. Never select automatically.";
+      family = "gpt";
+      provider = "chatgpt";
+      tier = 2;
+      fallbacks = [ "gpt-5.6-terra" ];
+      backend.chatgpt.model = "gpt-5.6-luna";
+      hidden = true;
+      displayName = "GPT-5.6 Luna (OpenAI)";
+      direct = {
+        enable = true;
+        base = "https://api.openai.com/v1";
+        provider = "openai";
+      };
+    };
+
     "qwen3.7-plus" = {
       description = "General development and broad refactors with tools. Solid coding model. 21600 req/month quota.";
       family = "qwen";
