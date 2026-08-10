@@ -24,7 +24,7 @@ logger = logging.getLogger("opencode-auto-router")
 LITELLM_URL = os.environ.get("LITELLM_URL", "http://127.0.0.1:8000/v1")
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 ROUTER_MODELS = os.environ.get(
-    "ROUTER_MODELS", "llama3.2:3b,qwen3:8b"
+    "ROUTER_MODELS", "qwen3:8b"
 ).split(",")
 DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "deepseek-v4-pro")
 OPENCODE_AUTH_FILE = os.environ.get(
@@ -47,36 +47,37 @@ CLOUD_CLASSIFIER_MODEL = os.environ.get(
 MODEL_ROUTING = {
     "mistral-small": {
         "description": (
-            "Fast model for greetings, summaries, simple Q&A, titles, translation. "
-            "PREFERRED for simple non-agentic tasks without tools."
+            "Fast model for greetings, Q&A, titles, translation. "
+            "ONLY for trivial tasks; skip for anything substantive."
         ),
         "fallbacks": ["mistral-medium"],
     },
     "mistral-medium": {
         "description": (
             "Strong model for architecture, design tradeoffs, reviews, planning, "
-            "analysis. PREFERRED for reasoning-heavy tasks without tools."
+            "analysis. Capable with and without tools. PREFERRED for reasoning-heavy tasks."
         ),
         "fallbacks": ["gpt-5.6-terra"],
     },
     "deepseek-v4-flash": {
         "description": (
-            "PRIMARY coding model with tools: file edits, shell commands, "
-            "search, refactors, NixOS, containers. Largest Go quota."
+            "PRIMARY coding model: handles most coding tasks including "
+            "hard bugs, refactors, multi-step changes, file edits, shell, "
+            "NixOS, containers. 63300 req/5h – TEMPORARILY 2X quota."
         ),
         "fallbacks": ["gpt-5.6-luna-fast"],
     },
     "deepseek-v4-pro": {
         "description": (
-            "PREFERRED for intermediate-to-complex coding: hard bugs, "
-            "multi-step refactors, deeper analysis with tools."
+            "PREFERRED for highest-complexity coding: multi-step exploration, "
+            "deep analysis with tools. Use when Flash would be insufficient."
         ),
         "fallbacks": ["gpt-5.6-sol"],
     },
     "gpt-5.6-terra": {
         "description": (
-            "Last-resort GPT for hardest agentic work: ambiguous multi-step "
-            "exploration, race conditions, high-stakes system administration, critical bugs."
+            "GPT for complex agentic coding and multi-step exploration. "
+            "Use when DeepSeek Pro or Qwen Plus insufficient."
         ),
         "chatgpt_model": "gpt-5.6-terra",
         "fallbacks": ["gpt-5.6-sol"],
@@ -89,22 +90,23 @@ MODEL_ROUTING = {
     },
     "gpt-5.6-sol": {
         "description": (
-            "GPT for complex agentic coding and multi-step exploration. "
-            "Use when DeepSeek Pro or Qwen Plus insufficient."
+            "Top-tier GPT for hardest agentic work: ambiguous multi-step "
+            "exploration, race conditions, high-stakes system administration, critical bugs. "
+            "Strongest model – use only when Terra insufficient."
         ),
         "chatgpt_model": "gpt-5.6-sol",
         "fallbacks": ["gpt-5.6-luna"],
     },
     "gpt-5.6-luna": {
         "description": (
-            "GPT Luna via OpenCode Go. Use sparingly when DeepSeek/Qwen "
+            "GPT entry tier via OpenCode Go. Use when DeepSeek/Qwen "
             "capacity is saturated. 2050 req/5h quota."
         ),
         "fallbacks": ["gpt-5.6-luna-openai"],
     },
     "gpt-5.6-terra-fast": {
         "description": (
-            "Faster Terra variant for urgent complex tasks at higher throughput."
+            "Faster Terra variant for complex tasks at higher throughput."
         ),
         "chatgpt_model": "gpt-5.6-terra",
         "service_tier": "priority",
@@ -112,15 +114,15 @@ MODEL_ROUTING = {
     },
     "gpt-5.6-sol-fast": {
         "description": (
-            "Faster GPT Sol for complex debugging when DeepSeek Pro insufficient."
+            "Fast top-tier GPT for hardest debugging when Terra insufficient."
         ),
         "chatgpt_model": "gpt-5.6-sol",
         "service_tier": "priority",
-        "fallbacks": ["gpt-5.6-luna-fast"],
+        "fallbacks": ["gpt-5.6-terra-fast"],
     },
     "gpt-5.6-luna-fast": {
         "description": (
-            "Fast GPT for simple-to-medium coding. Use when DeepSeek/Qwen saturated."
+            "Fast entry-tier GPT for simple-to-medium coding. Use when DeepSeek/Qwen saturated."
         ),
         "chatgpt_model": "gpt-5.6-luna",
         "service_tier": "priority",
@@ -128,10 +130,10 @@ MODEL_ROUTING = {
     },
     "qwen3.7-plus": {
         "description": (
-            "PREFERRED for general development and broad refactors with tools. "
-            "Primary Go model alongside DeepSeek Flash. 4300 req/5h quota."
+            "PREFERRED alternative for general development and broad refactors "
+            "with tools. Solid coding model alongside DeepSeek Flash. 4300 req/5h quota."
         ),
-        "fallbacks": ["gpt-5.6-luna"],
+        "fallbacks": ["qwen3.6-plus", "gpt-5.6-luna"],
     },
     "qwen3.8-max": {
         "description": (
@@ -149,7 +151,8 @@ MODEL_ROUTING = {
     },
     "qwen3.6-plus": {
         "description": (
-            "Older Qwen coding fallback. 3300 req/5h quota."
+            "Older Qwen coding fallback for availability only. Not for direct routing. "
+            "3300 req/5h quota."
         ),
         "fallbacks": ["qwen3.7-plus"],
     },
@@ -159,13 +162,6 @@ MODEL_ROUTING = {
             "light tasks when privacy critical. Not for auto-routing."
         ),
         "fallbacks": ["mistral-small"],
-    },
-    "llama3.2:3b": {
-        "description": (
-            "Local Llama 3.2 3B on Ollama. Lightweight classifier model. "
-            "Not for auto-routing."
-        ),
-        "fallbacks": ["qwen3:8b"],
     },
 }
 
@@ -193,7 +189,6 @@ MODEL_PROVIDERS = {
     "qwen3.7-max": "opencode-go",
     "qwen3.6-plus": "opencode-go",
     "qwen3:8b": "ollama",
-    "llama3.2:3b": "ollama",
     **{model: "chatgpt" for model in CHATGPT_MODELS},
 }
 
@@ -221,7 +216,7 @@ MODEL_DISPLAY_NAMES = {
 GLOBAL_FALLBACKS = [
     "mistral-small",
     "deepseek-v4-flash",
-    "gpt-5.6-luna",
+    "gpt-5.6-luna-openai",
     "qwen3:8b",
 ]
 
@@ -309,34 +304,38 @@ def _build_classification_prompt(context: str, has_tools: bool) -> str:
 Classify for OpenCode routing. Return: model_id - reason (2-6 words in user's language).
 
 Without tools (has_tools=False):
-- Simple: greetings, Q&A, translations, titles, summaries → mistral-small
-- Reasoning: architecture, design tradeoffs, analysis, planning, reviews → mistral-medium (PREFERRED)
-- Advanced pure reasoning: complex algorithmic analysis (consensus, crypto, formal verification) → qwen3.7-max (PREFERRED when mistral-medium insufficient)
-- Deepest reasoning: math proofs, complex theory, formal methods → qwen3.8-max (use sparingly, limited quota)
+- Trivial: greetings, Q&A, translations, titles → mistral-small (ONLY simplest tasks)
+- Reasoning: architecture, design tradeoffs, analysis, planning, reviews → mistral-medium (PREFERRED default)
+- Advanced pure reasoning: complex algorithmic analysis (consensus, crypto, formal verification) → qwen3.7-max
+- Deepest reasoning: math proofs, complex theory, formal methods → qwen3.8-max (use sparingly)
 
 With tools (has_tools=True):
-- Daily coding: file edits, shell, NixOS, containers, search → deepseek-v4-flash (PRIMARY)
-- Intermediate complexity: hard bugs, multi-step refactors, deeper analysis → deepseek-v4-pro (PREFERRED)
-- General development, broad refactors, provider diversification → qwen3.7-plus (PREFERRED)
+- Routine coding: file edits, shell, NixOS, containers, search → deepseek-v4-flash (PRIMARY) or qwen3.7-plus (good alternative)
+- Broad refactors, general development → qwen3.7-plus (PREFERRED – 4300 quota) or deepseek-v4-flash
+- Architecture, planning, analysis with tools → mistral-medium (capable with tools, good for mixed analysis/coding)
+- Intermediate complexity: hard bugs, multi-step refactors, deeper analysis → deepseek-v4-flash (PREFERRED – trust it first), deepseek-v4-pro if truly complex
+- Provider diversification: when Flash has been used a lot in conversation → qwen3.7-plus or mistral-medium
 - Fast overflow when DeepSeek/Qwen saturated → gpt-5.6-luna-fast
 - General overflow when DeepSeek/Qwen capacity exhausted → gpt-5.6-luna
-- Complex agentic: multi-step exploration, difficult bugs → gpt-5.6-sol or gpt-5.6-sol-fast
-- Hardest/ambiguous: system admin, production debugging, critical bugs → gpt-5.6-terra
-- Urgent complex tasks at high throughput → gpt-5.6-terra-fast
+- Highest complexity: multi-step exploration, very difficult bugs → deepseek-v4-pro or gpt-5.6-terra
+- Complex agentic: ambiguous exploration, production debugging → gpt-5.6-terra or gpt-5.6-terra-fast
+- Hardest/ambiguous: system admin, critical bugs, race conditions → gpt-5.6-sol
+- Urgent hardest problems at high throughput → gpt-5.6-sol-fast
 - Multiple deliverables or end-to-end implementation → at least deepseek-v4-pro or qwen3.7-plus
 
-GPT-5.6 tiers: Luna=general overflow, Sol=complex fallback, Terra=last-resort. Prefer DeepSeek and Qwen for most work. -fast variants when latency matters.
+GPT-5.6 tiers: Luna=entry/overflow, Terra=complex work, Sol=strongest/last-resort. Prefer DeepSeek, Qwen, and Mistral for most work. DeepSeek Flash has 2X quota – use it by default. -fast variants when latency matters.
 
-Go quotas (req/5h): deepseek-v4-flash:31650, qwen3.7-plus:4300, deepseek-v4-pro:3450, qwen3.6-plus:3300, gpt-5.6-luna:2050, qwen3.7-max:340, qwen3.8-max:160.
+Go quotas (req/5h): deepseek-v4-flash:63300, qwen3.7-plus:4300, deepseek-v4-pro:3450, qwen3.6-plus:3300, gpt-5.6-luna:2050, qwen3.7-max:340, qwen3.8-max:160.
 
 HARD CONSTRAINTS:
-- Most coding tasks → DeepSeek or Qwen; only escalate to GPT when task exceeds their capability
-- logs/services/containers/production/ambiguous failures → gpt-5.6-terra (ambiguous) or gpt-5.6-sol (structured)
-- Do NOT route qwen3.7-max or qwen3.8-max for tool-based workflows
+- All coding tasks with tools → deepseek-v4-flash by default; only escalate for hardest problems
+- Hard bugs, complex refactors → still try deepseek-v4-flash first (it has 63K quota!)
+- mistral-medium is capable with tools – use it for architecture/planning/cross-cutting analysis
+- Actively use qwen3.7-plus (4300 quota) for general dev work and provider diversification – it's underused
+- logs/services/containers/production/ambiguous failures → gpt-5.6-sol (ambiguous/critical) or gpt-5.6-terra (structured)
 - Prefer -fast variants unless task is critically complex
 
 Examples: "mistral-medium - Analyse und Planung" / "deepseek-v4-pro - Complex multi-step refactor" / "deepseek-v4-flash - File edits and shell commands"
-
 Context (has_tools={has_tools}):
 {context}
 """.strip()
@@ -499,33 +498,33 @@ CAPABILITY_ESCALATION = {
     "mistral-small": "mistral-medium",
     "mistral-medium": "gpt-5.6-terra",
     "deepseek-v4-flash": "deepseek-v4-pro",
-    "deepseek-v4-pro": "gpt-5.6-terra",
+    "deepseek-v4-pro": "qwen3.8-max",
     "qwen3.6-plus": "qwen3.7-plus",
-    "qwen3.7-plus": "deepseek-v4-pro",
+    "qwen3.7-plus": "qwen3.7-max",
     "qwen3.7-max": "qwen3.8-max",
-    "qwen3.8-max": "gpt-5.6-terra",
-    "gpt-5.6-luna-fast": "gpt-5.6-sol-fast",
-    "gpt-5.6-luna": "gpt-5.6-sol",
-    "gpt-5.6-sol-fast": "gpt-5.6-terra-fast",
-    "gpt-5.6-sol": "gpt-5.6-terra",
-    "gpt-5.6-terra-fast": "gpt-5.6-terra",
+    "qwen3.8-max": "gpt-5.6-sol",
+    "gpt-5.6-luna-fast": "gpt-5.6-terra-fast",
+    "gpt-5.6-luna": "gpt-5.6-terra",
+    "gpt-5.6-terra-fast": "gpt-5.6-sol-fast",
+    "gpt-5.6-terra": "gpt-5.6-sol",
+    "gpt-5.6-sol-fast": "gpt-5.6-sol",
 }
 
 CAPABILITY_LEVEL = {
     "mistral-small": 1,
+    "qwen3.6-plus": 1,
     "deepseek-v4-flash": 2,
     "mistral-medium": 2,
     "gpt-5.6-luna-fast": 2,
     "gpt-5.6-luna": 2,
-    "qwen3.6-plus": 2,
     "qwen3.7-plus": 2,
+    "gpt-5.6-terra-fast": 3,
+    "gpt-5.6-terra": 3,
     "deepseek-v4-pro": 3,
-    "gpt-5.6-sol-fast": 3,
-    "gpt-5.6-sol": 3,
     "qwen3.7-max": 3,
-    "qwen3.8-max": 3,
-    "gpt-5.6-terra-fast": 4,
-    "gpt-5.6-terra": 4,
+    "gpt-5.6-sol-fast": 4,
+    "qwen3.8-max": 4,
+    "gpt-5.6-sol": 5,
 }
 
 _RETRY_MARKERS = (
@@ -684,20 +683,20 @@ def _degraded_providers() -> dict[str, int]:
 
 
 _FALLBACK_REASONS: dict[str, str] = {
-    "mistral-small": "Simple Q&A / summary",
+    "mistral-small": "Trivial Q&A / title",
     "mistral-medium": "Architecture & planning",
     "deepseek-v4-flash": "Coding & shell commands",
     "deepseek-v4-pro": "Hard debugging",
     "gpt-5.6-luna-fast": "Daily development",
     "gpt-5.6-luna": "General coding",
-    "gpt-5.6-sol-fast": "Complex debugging",
-    "gpt-5.6-sol": "Refactoring & debugging",
-    "gpt-5.6-terra-fast": "Critical fixes",
-    "gpt-5.6-terra": "Hardest problems",
-    "qwen3.7-plus": "Routine refactoring",
-    "qwen3.8-max": "Deep reasoning & analysis",
+    "gpt-5.6-terra-fast": "Complex debugging",
+    "gpt-5.6-terra": "Complex problems",
+    "gpt-5.6-sol-fast": "Critical fixes",
+    "gpt-5.6-sol": "Hardest problems",
+    "qwen3.7-plus": "General development",
+    "qwen3.8-max": "Deepest reasoning",
     "qwen3.7-max": "Advanced reasoning",
-    "qwen3.6-plus": "General coding",
+    "qwen3.6-plus": "Availability fallback",
 }
 
 
