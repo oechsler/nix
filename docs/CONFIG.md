@@ -41,6 +41,7 @@ features.ssh.enable = true;
 | `features.wifi.networks` | `[]` | WPA2-PSK networks — list of `{ name, ssid }`. Only `wifi/<name>/psk` needs a SOPS secret. |
 | `features.wifi.enterpriseNetworks` | `[]` | WPA2 Enterprise (EAP-PEAP) networks — list of `{ name, ssid, identity }`. Only `wifi/<name>/password` needs a SOPS secret. |
 | `features.development.enable` | `true` | Languages, CLI dev tools, Kubernetes tools, desktop IDEs on desktop hosts |
+| `features.development.opencode.enable` | `development.enable` | OpenCode AI coding agent with Mistral/OpenAI/opencode-go providers |
 | `features.apps.enable` | `true` | Desktop apps (Discord, Spotify, Obsidian, LibreOffice, ...) |
 | `features.apps.winboat.enable` | `false` | WinBoat Windows VM (seamless integration) |
 | `features.auth.totp.enable` | `true` | TOTP for sudo, SSH (see [AUTH.md](AUTH.md)) |

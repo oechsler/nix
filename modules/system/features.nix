@@ -72,6 +72,7 @@
 #   features.auth.yubikey.enable = true;        # YubiKey PAM (default: on when unlockMethod = "yubikey")
 #   features.auth.totp.enable = true;           # TOTP 2FA (default: true)
 #   features.development.enable = true;         # Dev tools (default: true)
+#   features.development.opencode.enable = true; # OpenCode AI agent (default: development.enable)
 #   features.apps.enable = true;                # Desktop apps (default: true)
 #
 
@@ -252,14 +253,6 @@ in
       opencode = {
         enable = (lib.mkEnableOption "OpenCode AI coding agent") // {
           default = config.features.development.enable;
-        };
-        classifier = lib.mkOption {
-          type = lib.types.enum [
-            "local"
-            "cloud"
-          ];
-          default = "cloud";
-          description = "Classifier backend. Local uses Ollama; cloud uses a small model through LiteLLM.";
         };
       };
     };

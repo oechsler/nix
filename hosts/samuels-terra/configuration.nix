@@ -20,7 +20,6 @@
 # - DP-3 (left): Workspaces 5-8
 
 {
-  config,
   lib,
   pkgs,
   ...
@@ -116,7 +115,6 @@
     ];
 
     gaming.steamMachine.enable = true;
-    development.opencode.classifier = "local";
 
     # MT7927 (Filogic 380) WiFi/BT non-functional until kernel 7.2+ — disable for now
     wifi = {
