@@ -88,7 +88,6 @@ The classifier considers:
 ### Fallback and Escalation
 
 - **Backend fallback**: If a provider fails before the first response chunk (network error, rate limit, authentication error, timeout, or upstream error), the router walks the fallback chain defined for each model. Fallback routes through the same provider first (e.g., `qwen3.7-plus` → `qwen3.6-plus`) before crossing to other providers.
-- **Mistral fallback boundary**: `mistral-medium` never falls back to `mistral-small`. Small is reserved for greetings, titles, translations, and truly trivial Q&A; coding, debugging, shell, NixOS, and file-edit requests use a coding model instead.
 - **Model circuit breaker**: A failing model enters a 60-second cooldown. Repeated failures create a 10-minute model ban. Other models from the same provider remain available as fallbacks.
 - **Load-balancing rotation**: After five consecutive requests, the selected model is temporarily banned for five minutes. The classifier receives the ban list and the router prefers an equivalent sibling, such as Qwen 3.7 Plus instead of DeepSeek Flash.
 - **Title fallback**: Title and summary requests use a cheap-only chain: Mistral Small, Mistral Medium, DeepSeek Flash, then GPT Luna Fast. Local-classifier hosts add local Qwen as the final safety net; expensive Terra/Sol models are not used for metadata.
