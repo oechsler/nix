@@ -222,7 +222,21 @@ in
     prompts = {
       classification = lib.mkOption {
         type = lib.types.str;
-        default = "";
+        default = ''
+          Classify for OpenCode routing. Analyze the request below and pick the model that fits best.
+
+          IMPORTANT: The "reason" must describe THIS specific task in 2-6 words (user's language). Do NOT copy or paraphrase the model's description. Examples of good reasons: "NixOS config lookup", "Simple greeting", "Complex multi-file refactor", "Math proof verification".
+
+          Return exactly one line: model_id - reason
+
+          {models_section}
+
+          {guidance_section}
+          {banned_section}
+
+          Context (has_tools={has_tools}):
+          {context}
+        '';
         description = "Classification prompt template";
       };
       guidance = lib.mkOption {
@@ -372,8 +386,10 @@ in
 
     agentInstruction = lib.mkOption {
       type = lib.types.str;
-      default = "";
-      description = "Agent instruction text prepended to tool requests";
+      default = ''
+        You are running inside OpenCode as an agent. Treat the user's complete request as one assignment and own it end to end. Identify every deliverable, constraint, and acceptance condition first. Inspect files and implement every requested change. For 3+ substantive steps, use the todo tool when available: create a todo list and keep it updated after each tool result. Continue through all implementation, testing, linting, typechecking, and verification. Never stop after analysis, after one subtask, or after a partial fix. Before answering, verify each deliverable against the original request and run the strongest applicable checks. Only return a final answer when complete or when blocked. If blocked, complete every unblocked part first and state the blocker and remaining action.
+      '';
+      description = "Agent instruction text prepended to requests";
     };
 
     notice = {

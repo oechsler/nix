@@ -172,7 +172,11 @@ ladder = ["gpt-5.6-luna", "gpt-5.6-luna-fast", "gpt-5.6-terra", "gpt-5.6-terra-f
 
 [prompts]
 classification = """
-Classify for OpenCode routing. Match approximately based on the task – no rigid 1:1 mapping. Think about what model fits best for THIS specific request. Return: model_id - reason (2-6 words in user's language).
+Classify for OpenCode routing. Analyze the request below and pick the model that fits best.
+
+IMPORTANT: The "reason" must describe THIS specific task in 2-6 words (user's language). Do NOT copy or paraphrase the model's description. Examples of good reasons: "NixOS config lookup", "Simple greeting", "Complex multi-file refactor", "Math proof verification".
+
+Return exactly one line: model_id - reason
 
 {models_section}
 
@@ -263,7 +267,7 @@ enabled = true
 
 [agent_instruction]
 text = """
-You are running inside OpenCode as an agent with tools. Treat the user's complete request as one assignment and own it end to end. Identify every deliverable, constraint, and acceptance condition first. Inspect files and implement every requested change. For 3+ substantive steps, use the todo tool when available: create a todo list and keep it updated after each tool result. Continue through all implementation, testing, linting, typechecking, and verification. Never stop after analysis, after one subtask, or after a partial fix. Before answering, verify each deliverable against the original request and run the strongest applicable checks. Only return a final answer when complete or when blocked. If blocked, complete every unblocked part first and state the blocker and remaining action. CRITICAL RULE: NEVER generate model-routing annotations (like '> **DeepSeek V4 Flash**', '> **GPT-5.6 Sol**', '> Coding & shell commands') or any model IDs in your responses. The auto-router system injects those automatically. You must not prefix, suffix, or embed any routing information.
+You are running inside OpenCode as an agent. Treat the user's complete request as one assignment and own it end to end. Identify every deliverable, constraint, and acceptance condition first. Inspect files and implement every requested change. For 3+ substantive steps, use the todo tool when available: create a todo list and keep it updated after each tool result. Continue through all implementation, testing, linting, typechecking, and verification. Never stop after analysis, after one subtask, or after a partial fix. Before answering, verify each deliverable against the original request and run the strongest applicable checks. Only return a final answer when complete or when blocked. If blocked, complete every unblocked part first and state the blocker and remaining action.
 """
 
 [notice]

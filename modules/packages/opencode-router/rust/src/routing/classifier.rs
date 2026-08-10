@@ -11,6 +11,8 @@ use crate::utils::notice::build_models_section;
 use crate::utils::tasks::analyze_tasks;
 use crate::utils::text::routing_context;
 
+const CLASSIFICATION_REASON_INSTRUCTION: &str = "IMPORTANT: The \"reason\" must describe THIS specific task in 2-6 words (user's language). Do NOT copy or paraphrase the model's description. Examples of good reasons: \"NixOS config lookup\", \"Simple greeting\", \"Complex multi-file refactor\", \"Math proof verification\".";
+
 struct CacheEntry {
     expires: Instant,
     model: String,
@@ -158,16 +160,32 @@ impl Classifier {
             String::new()
         };
 
-        config
-            .prompts
-            .classification
-            .replace("{models_section}", &models_section)
-            .replace("{guidance_section}", &guidance_section)
-            .replace("{banned_section}", &banned_section)
-            .replace("{has_tools}", &has_tools.to_string())
-            .replace("{context}", context)
-            + &task_section
-            + "\n\nDecision method: evaluate the complete task, estimate its complexity and required capability, then choose the best model by weighing the model matrix above. Use tiers as relative capability levels, not as rigid rules. Consider tools, ambiguity, reasoning depth, expected work size, latency, quota, and the cost of failure."
+        let user_prompt = if config.prompts.classification.trim().is_empty() {
+            format!(
+                "Classify for OpenCode routing. Analyze the request below and pick the model that fits best.\n\n{}\n\nReturn exactly one line: model_id - reason\n\n{}\n\n{}\n{}\n\nContext (has_tools={}):\n{}",
+                CLASSIFICATION_REASON_INSTRUCTION,
+                models_section,
+                guidance_section,
+                banned_section,
+                has_tools,
+                context
+            )
+        } else {
+            config
+                .prompts
+                .classification
+                .replace("{models_section}", &models_section)
+                .replace("{guidance_section}", &guidance_section)
+                .replace("{banned_section}", &banned_section)
+                .replace("{has_tools}", &has_tools.to_string())
+                .replace("{context}", context)
+        };
+
+        format!(
+            "{}{}\n\nDecision method: evaluate the complete task, estimate its complexity and required capability, then choose the best model by weighing the model matrix above. Use tiers as relative capability levels, not as rigid rules. Consider tools, ambiguity, reasoning depth, expected work size, latency, quota, and the cost of failure.",
+            user_prompt,
+            task_section
+        )
     }
 
     async fn classify_cloud(

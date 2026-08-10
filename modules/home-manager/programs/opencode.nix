@@ -331,20 +331,6 @@ let
   };
 
   prompts = {
-    classification = ''
-      Classify for OpenCode routing. Match approximately based on the task – no rigid 1:1 mapping. 
-      Think about what model fits best for THIS specific request. 
-      Return: model_id - reason (2-6 words in user's language).
-
-      {models_section}
-
-      {guidance_section}
-      {banned_section}
-
-      Context (has_tools={has_tools}):
-      {context}
-    '';
-
     guidance = ''
       Guidance (not rules – use your judgment):
       - Consider: capability needs, tool usage, quota availability, and how hard the task really is.
@@ -448,10 +434,6 @@ let
       "refactoren"
     ];
   };
-
-  agentInstruction = ''
-    You are running inside OpenCode as an agent with tools. Treat the user's complete request as one assignment and own it end to end. Identify every deliverable, constraint, and acceptance condition first. Inspect files and implement every requested change. For 3+ substantive steps, use the todo tool when available: create a todo list and keep it updated after each tool result. Continue through all implementation, testing, linting, typechecking, and verification. Never stop after analysis, after one subtask, or after a partial fix. Before answering, verify each deliverable against the original request and run the strongest applicable checks. Only return a final answer when complete or when blocked. If blocked, complete every unblocked part first and state the blocker and remaining action. CRITICAL RULE: NEVER generate model-routing annotations (like '> **DeepSeek V4 Flash**', '> **GPT-5.6 Sol**', '> Coding & shell commands') or any model IDs in your responses. The auto-router system injects those automatically. You must not prefix, suffix, or embed any routing information.
-  '';
 
   displayNames = {
     "auto" = "Auto";
@@ -561,7 +543,6 @@ in
         crossFamilyEscalation
         prompts
         markers
-        agentInstruction
         displayNames
         chatgpt
         ollamaModels
