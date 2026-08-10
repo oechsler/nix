@@ -7,6 +7,7 @@ use tokio::net::TcpListener;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use opencode_router::auth::openai::OpenAiAuthManager;
 use opencode_router::backend::chatgpt::ChatGptBackend;
 use opencode_router::backend::litellm::LiteLlmBackend;
 use opencode_router::backend::ollama::OllamaBackend;
@@ -50,7 +51,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Duration::from_secs(30),
     );
 
-    let state = SharedState::new(config, litellm_backend, chatgpt_backend, ollama_backend);
+    let openai_auth = OpenAiAuthManager::new(config.chatgpt.clone());
+
+    let state = SharedState::new(config, litellm_backend, chatgpt_backend, ollama_backend, openai_auth);
     let state = Arc::new(state);
 
     let host = &state.config.server.host;

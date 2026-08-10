@@ -158,9 +158,14 @@ async fn forward_to_backend(
             let service_tier = model_config.service_tier.as_deref();
 
             let responses_body = chat_to_responses_body(body, chatgpt_model, service_tier);
+            let auth = state.openai_auth.get_auth().await?;
+            let Some(auth) = auth else {
+                return Err(RouterError::Auth("OpenAI credentials not available. Please login in OpenCode.".to_string()));
+            };
+            let auth_header = format!("Bearer {}", auth.access_token);
             let response = state
                 .chatgpt_backend
-                .forward("/v1/responses", responses_body)
+                .forward_authorized("/v1/responses", responses_body, &auth_header)
                 .await?;
 
             if is_stream {

@@ -18,10 +18,10 @@ let
       fallbacks
       hidden
       ;
-    litellm_model = model.litellmModel;
-    litellm_api_base = model.litellmApiBase;
-    chatgpt_model = model.chatgptModel;
-    service_tier = model.serviceTier;
+    litellm_model = model.backend.litellm.model;
+    litellm_api_base = model.backend.litellm.apiBase;
+    chatgpt_model = model.backend.chatgpt.model;
+    service_tier = model.backend.chatgpt.serviceTier;
     display_name = model.displayName;
   };
 

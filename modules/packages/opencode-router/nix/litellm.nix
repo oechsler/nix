@@ -10,17 +10,17 @@ let
   cfg = config.programs.opencode-router;
 
   litellmModels = lib.filterAttrs (
-    n: m: m.provider == "litellm" && m.litellmModel != null
+    n: m: m.provider == "litellm" && m.backend.litellm.model != null
   ) cfg.models;
 
   litellmModelList = lib.mapAttrsToList (name: model: {
     model_name = name;
     litellm_params = {
-      model = model.litellmModel;
-      api_key = "os.environ/${model.apiKeyEnv}";
+      model = model.backend.litellm.model;
+      api_key = "os.environ/${model.backend.litellm.apiKeyEnv}";
     }
-    // lib.optionalAttrs (model.litellmApiBase != null) {
-      api_base = model.litellmApiBase;
+    // lib.optionalAttrs (model.backend.litellm.apiBase != null) {
+      api_base = model.backend.litellm.apiBase;
     };
   }) litellmModels;
 

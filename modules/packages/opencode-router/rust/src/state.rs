@@ -4,6 +4,7 @@ use std::time::Instant;
 
 use tokio::sync::RwLock;
 
+use crate::auth::openai::OpenAiAuthManager;
 use crate::backend::chatgpt::ChatGptBackend;
 use crate::backend::litellm::LiteLlmBackend;
 use crate::backend::ollama::OllamaBackend;
@@ -29,6 +30,7 @@ pub struct SharedState {
     pub litellm_backend: LiteLlmBackend,
     pub chatgpt_backend: ChatGptBackend,
     pub ollama_backend: OllamaBackend,
+    pub openai_auth: Arc<OpenAiAuthManager>,
     pub state: Arc<RwLock<AppState>>,
 }
 
@@ -38,6 +40,7 @@ impl SharedState {
         litellm_backend: LiteLlmBackend,
         chatgpt_backend: ChatGptBackend,
         ollama_backend: OllamaBackend,
+        openai_auth: OpenAiAuthManager,
     ) -> Self {
         let use_local_classifier = config.classifier.backend == "local";
         Self {
@@ -46,6 +49,7 @@ impl SharedState {
             litellm_backend,
             chatgpt_backend,
             ollama_backend,
+            openai_auth: Arc::new(openai_auth),
             state: Arc::new(RwLock::new(AppState {
                 model_cooldown_until: HashMap::new(),
                 model_bans: HashMap::new(),
