@@ -63,9 +63,9 @@ MODEL_ROUTING = {
     },
     "deepseek-v4-flash": {
         "description": (
-            "Coding model: handles coding tasks including bugs, refactors, "
-            "multi-step changes, file edits, shell, NixOS, containers. "
-            "63300 req/5h. Use qwen3.7-plus for general dev to balance load."
+            "PRIMARY coding model: bugs, refactors, multi-step changes, file edits, "
+            "shell, NixOS, containers. Cheap & fast (63300 req/5h). "
+            "PREFERRED over qwen3.7-plus unless the task is broad multi-file refactoring."
         ),
         "fallbacks": ["qwen3.7-plus", "gpt-5.6-luna-fast"],
     },
@@ -349,19 +349,20 @@ Classify for OpenCode routing. Match approximately based on the task – no rigi
 Model tiers (cheapest → strongest):
 - mistral-small: trivial – greetings, simple Q&A, titles, translations, one-line answers. No tools needed.
 - mistral-medium: analysis, architecture, design tradeoffs, planning, reviews.
-- deepseek-v4-flash: everyday coding with tools – file edits, shell, tests, small features (63300 quota).
-- qwen3.7-plus: general development, broad refactors, multi-file changes (4300).
-- deepseek-v4-pro: deep multi-step exploration, complex debugging (3450).
+- deepseek-v4-flash: PRIMARY for coding with tools – file edits, shell, tests, small-to-medium features (63300 quota). Use this as default for most coding tasks.
+- qwen3.7-plus: broad multi-file refactors, large-scale changes where Flash struggles (4300 quota). Only use when task is clearly too broad for Flash.
+- deepseek-v4-pro: deep multi-step exploration, complex debugging with many files (3450).
 - qwen3.7-max: advanced reasoning, math, algorithmic analysis (340).
 - qwen3.8-max: deepest reasoning, proofs, formal methods (160).
 - gpt-5.6-luna-fast / gpt-5.6-luna: overflow when DeepSeek/Qwen saturated.
 - gpt-5.6-terra / gpt-5.6-sol: hardest problems – ambiguous production issues, critical bugs, high-stakes system work.
 
 Rules:
-- Choose the cheapest tier that plausibly handles the task. Do NOT default to deepseek-v4-flash – it is one option, not the default.
-- LOAD BALANCING: deepseek-v4-flash and qwen3.7-plus are EQUALLY valid for routine tool-enabled coding. Alternate between them based on the task flavor (qwen for broad refactors/multi-file, deepseek for focused fixes/shell); vary your choice instead of repeating the same model.
+- DEFAULT to deepseek-v4-flash for coding tasks with tools. It is the most cost-effective choice.
+- ONLY escalate to qwen3.7-plus when the task involves >5 files or broad architectural refactoring.
+- ONLY escalate to deepseek-v4-pro or GPT* when task clearly requires exceptional reasoning or has failed with Flash/Pro.
 - Small is ONLY for greetings, titles, translations, and truly trivial Q&A. Never use mistral-small for coding, debugging, shell, NixOS, file edits, or any substantive request, even without tools.
-- Coding without tools → qwen3.7-plus or deepseek-v4-flash, not mistral-small.
+- Coding without tools → deepseek-v4-flash, not mistral-small.
 - Architecture/planning → mistral-medium, not flash.
 - Math/algorithm analysis → qwen3.7-max, not flash.
 - Escalate to GPT* only when DeepSeek/Qwen/Mistral clearly cannot do the job.
