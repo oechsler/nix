@@ -76,6 +76,7 @@
       home.packages = with pkgs; [
         dbeaver-bin # Database GUI
         jetbrains.goland # Go IDE
+        jetbrains.rust-rover # Rust IDE
       ];
     })
   ];

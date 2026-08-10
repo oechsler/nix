@@ -129,6 +129,29 @@ class RouterTest(unittest.TestCase):
         self.assertIn("Match approximately", prompt)
         self.assertIn("no rigid 1:1 mapping", prompt)
 
+    def test_classifier_prompt_does_not_favor_flash(self):
+        prompt = router._build_classification_prompt("user: Do all five tasks", True)
+
+        self.assertNotIn("go-to starting point", prompt)
+        self.assertNotIn("general recommendation", prompt)
+        self.assertIn("Do NOT default to deepseek-v4-flash", prompt)
+
+    def test_routing_context_strips_model_notices(self):
+        messages = [
+            {"role": "user", "content": "Help with coding"},
+            {
+                "role": "assistant",
+                "content": "> **DeepSeek V4 Flash**\n> Coding, debugging\n\nHere is the fix.",
+            },
+            {"role": "user", "content": "Now check the tests"},
+        ]
+        context = router.routing_context(messages)
+
+        self.assertNotIn("DeepSeek V4 Flash", context)
+        self.assertNotIn("> **", context)
+        self.assertIn("Here is the fix.", context)
+        self.assertIn("Now check the tests", context)
+
     def test_failed_attempt_escalates_previous_model(self):
         messages = [
             {
@@ -411,6 +434,33 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
             "one assignment and own it end to end",
             routed_body["messages"][0]["content"],
         )
+
+    async def test_metadata_request_routes_to_mistral_small_without_classification(self):
+        body = {
+            "model": "auto",
+            "messages": [
+                {"role": "user", "content": "Generate a short title for this conversation"}
+            ],
+        }
+
+        class Request:
+            async def json(self):
+                return body
+
+        with (
+            patch.object(router, "_classify", AsyncMock()) as classify,
+            patch.object(
+                router, "_stream_to_backend", AsyncMock(return_value="ok")
+            ) as stream,
+        ):
+            self.assertEqual(await router.chat_completions(Request()), "ok")
+
+        classify.assert_not_awaited()
+        routed_body, candidates, notice_model, show_notice, reason = stream.await_args.args
+        self.assertEqual(candidates[0], "mistral-small")
+        self.assertEqual(notice_model, "mistral-small")
+        self.assertFalse(show_notice)
+        self.assertEqual(reason, "Titel/Summary")
 
     async def test_model_outage_tries_sibling_model_then_fails_over(self):
         class Response:

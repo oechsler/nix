@@ -255,6 +255,18 @@ def message_text(message: dict[str, Any]) -> str:
     return str(content)
 
 
+def _strip_model_notices(text: str) -> str:
+    """Remove opencode model-notice blockquotes ("> **Model**" tag lines).
+
+    The notices annotate which model answered last. If they leak into the
+    classification context they prime the classifier, which then keeps picking
+    the same model ("flash answered -> pick flash again" loop).
+    """
+    return "\n".join(
+        line for line in text.splitlines() if not line.startswith(">")
+    ).strip()
+
+
 def routing_context(messages: list[dict[str, Any]]) -> str:
     """Last few conversation turns, truncated, for the classification prompt."""
     relevant = []
@@ -262,7 +274,7 @@ def routing_context(messages: list[dict[str, Any]]) -> str:
         role = message.get("role", "unknown")
         if role not in {"user", "assistant", "system", "developer"}:
             continue
-        text = message_text(message).strip()
+        text = _strip_model_notices(message_text(message)).strip()
         if not text:
             continue
         if len(text) > 800:
@@ -303,28 +315,26 @@ def _build_classification_prompt(context: str, has_tools: bool) -> str:
     return f"""
 Classify for OpenCode routing. Match approximately based on the task – no rigid 1:1 mapping. Think about what model fits best for THIS specific request. Return: model_id - reason (2-6 words in user's language).
 
-Without tools (has_tools=False):
-- Simple Q&A, greetings, translations → mistral-small is often enough
-- Architecture, design tradeoffs, analysis, planning → mistral-medium tends to handle these well
-- Complex algorithmic analysis (consensus, crypto, formal verification) → consider qwen3.7-max
-- Deepest reasoning (math proofs, formal methods) → qwen3.8-max but very limited quota (160)
+Model tiers (cheapest → strongest):
+- mistral-small: trivial – greetings, simple Q&A, titles, translations, one-line answers. No tools needed.
+- mistral-medium: analysis, architecture, design tradeoffs, planning, reviews.
+- deepseek-v4-flash: everyday coding with tools – file edits, shell, tests, small features (63300 quota).
+- qwen3.7-plus: general development, broad refactors, multi-file changes (4300).
+- deepseek-v4-pro: deep multi-step exploration, complex debugging (3450).
+- qwen3.7-max: advanced reasoning, math, algorithmic analysis (340).
+- qwen3.8-max: deepest reasoning, proofs, formal methods (160).
+- gpt-5.6-luna-fast / gpt-5.6-luna: overflow when DeepSeek/Qwen saturated.
+- gpt-5.6-terra / gpt-5.6-sol: hardest problems – ambiguous production issues, critical bugs, high-stakes system work.
 
-With tools (has_tools=True):
-- Most everyday coding (file edits, shell, NixOS, containers, search) → deepseek-v4-flash is the go-to starting point (63300 quota, huge capacity)
-- Hard bugs, multi-step refactors, deeper tool-based analysis → deepseek-v4-flash is worth trying first, but deepseek-v4-pro (3450) or qwen3.7-plus (4300) may also fit
-- Broad refactors, general development → weigh between deepseek-v4-flash and qwen3.7-plus depending on scope
-- Architecture/planning that also needs tools → mistral-medium can cover this well
-- Overflow when DeepSeek/Qwen saturated → gpt-5.6-luna-fast, gpt-5.6-luna
-- Ambiguous production issues, critical bugs → gpt-5.6-sol or gpt-5.6-terra depending on severity
+Rules:
+- Choose the cheapest tier that plausibly handles the task. Do NOT default to deepseek-v4-flash – it is one option, not the default.
+- Simple questions without tools → mistral-small, not flash.
+- Architecture/planning → mistral-medium, not flash.
+- Math/algorithm analysis → qwen3.7-max, not flash.
+- Escalate to GPT* only when DeepSeek/Qwen/Mistral clearly cannot do the job.
+- Prefer -fast variants for simple, latency-sensitive overflow.
 
 Approximate quotas (req/5h): deepseek-v4-flash:63300, qwen3.7-plus:4300, deepseek-v4-pro:3450, qwen3.6-plus:3300, gpt-5.6-luna:2050, qwen3.7-max:340, qwen3.8-max:160.
-
-Guidelines:
-- deepseek-v4-flash is the general recommendation for most tool-based work – large quota, good quality
-- deepseek-v4-pro is stronger but has much less quota – weigh whether the extra depth is really needed
-- Rotate to qwen3.7-plus periodically for provider diversification (good quota)
-- Only escalate to GPT* when task clearly exceeds DeepSeek/Qwen/Mistral capability
-- -fast variants help with latency but are a bit less thorough
 
 Context (has_tools={has_tools}):
 {context}
@@ -1594,12 +1604,17 @@ async def chat_completions(request: Request):
 
     requested_model = MODEL_ALIASES.get(str(body.get("model", "auto")), str(body.get("model", "auto")))
     has_tools = bool(body.get("tools"))
+    is_metadata = _is_metadata_request(messages, has_tools)
 
     # If the client already picked a specific model, use it directly.
+    # Title/summary requests go to the cheap model without classification.
     # Otherwise classify the request through the configured classifier.
     if requested_model in DIRECT_MODELS:
         target_model = requested_model
         classification_reason = ""
+    elif is_metadata:
+        target_model = "mistral-small"
+        classification_reason = "Titel/Summary"
     else:
         target_model, classification_reason = await _classify(messages, has_tools)
 
@@ -1632,7 +1647,7 @@ async def chat_completions(request: Request):
     )
 
     show_notice = (
-        not _is_metadata_request(messages, has_tools)
+        not is_metadata
         and requested_model not in DIRECT_MODELS
     )
     body = _add_agent_instruction(body, has_tools)
