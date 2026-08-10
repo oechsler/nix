@@ -23,6 +23,8 @@ use crate::transform::chat_to_responses::chat_to_responses_body;
 use crate::transform::responses_to_chat::{chatgpt_text_chunk, responses_to_chat_completion};
 use crate::utils::notice::NoticeFormatter;
 
+const NOTICE_INSTRUCTION: &str = "The router may prepend a routing notice to the assistant response. Never imitate, reproduce, explain, or generate that notice format yourself. Do not write model names, routing arrows, markdown quote notices, or routing reasons in your response. Answer the user directly; the router handles routing metadata separately.";
+
 pub async fn chat_completions(
     State(state): State<Arc<SharedState>>,
     headers: HeaderMap,
@@ -113,7 +115,7 @@ pub async fn chat_completions(
 
         let mut request_with_model = request_body.clone();
         request_with_model["model"] = Value::String(candidate.clone());
-        request_with_model = add_agent_instruction(&request_with_model, &state.config, has_tools);
+        request_with_model = prepare_request(&request_with_model, &state.config, has_tools);
 
         match forward_to_backend(
             &state,
@@ -346,13 +348,24 @@ fn with_notice(mut response: Value, notice: Option<&str>) -> Value {
     response
 }
 
-fn add_agent_instruction(body: &Value, config: &Config, has_tools: bool) -> Value {
-    if !has_tools {
-        return body.clone();
-    }
-
+fn prepare_request(body: &Value, config: &Config, has_tools: bool) -> Value {
     let mut forwarded = body.clone();
     let messages = forwarded.get("messages").and_then(|m| m.as_array()).cloned().unwrap_or_default();
+    let messages = strip_notices(&messages);
+    let mut new_messages = Vec::new();
+
+    if config.notice.enabled {
+        new_messages.push(serde_json::json!({
+            "role": "system",
+            "content": NOTICE_INSTRUCTION,
+        }));
+    }
+
+    if !has_tools {
+        new_messages.extend(messages);
+        forwarded["messages"] = Value::Array(new_messages);
+        return forwarded;
+    }
 
     let task_info = analyze_tasks(&messages);
     let mut instruction_text = config.agent_instruction.text.trim().to_string();
@@ -369,7 +382,7 @@ fn add_agent_instruction(body: &Value, config: &Config, has_tools: bool) -> Valu
         "content": instruction_text
     });
 
-    let mut new_messages = vec![instruction];
+    new_messages.push(instruction);
     new_messages.extend(messages);
     forwarded["messages"] = Value::Array(new_messages);
 
