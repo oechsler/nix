@@ -225,7 +225,7 @@ in
         default = ''
           Classify for OpenCode routing. Analyze the request below and pick the model that fits best.
 
-          IMPORTANT: The "reason" must describe THIS specific task in 2-6 words (user's language). Do NOT copy or paraphrase the model's description. Examples of good reasons: "NixOS config lookup", "Simple greeting", "Complex multi-file refactor", "Math proof verification".
+          The "reason" must describe THIS specific task in 2-6 words (user's language). Do NOT copy or paraphrase the model's description. Examples: "NixOS config lookup", "Simple greeting", "Complex multi-file refactor".
 
           Return exactly one line: model_id - reason
 

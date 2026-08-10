@@ -171,14 +171,18 @@ impl Classifier {
                 context
             )
         } else {
-            config
-                .prompts
-                .classification
-                .replace("{models_section}", &models_section)
-                .replace("{guidance_section}", &guidance_section)
-                .replace("{banned_section}", &banned_section)
-                .replace("{has_tools}", &has_tools.to_string())
-                .replace("{context}", context)
+            format!(
+                "{}\n\n{}",
+                CLASSIFICATION_REASON_INSTRUCTION,
+                config
+                    .prompts
+                    .classification
+                    .replace("{models_section}", &models_section)
+                    .replace("{guidance_section}", &guidance_section)
+                    .replace("{banned_section}", &banned_section)
+                    .replace("{has_tools}", &has_tools.to_string())
+                    .replace("{context}", context)
+            )
         };
 
         format!(
