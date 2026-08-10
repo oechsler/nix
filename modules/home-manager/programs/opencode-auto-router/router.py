@@ -216,7 +216,9 @@ MODEL_DISPLAY_NAMES = {
 # Ensure every route covers all available providers. The local model is
 # filtered out when this host is configured without Ollama.
 GLOBAL_FALLBACKS = [
-    "mistral-small",
+    # Small is only an entry route for trivial requests, never a generic
+    # fallback for substantive work or for mistral-medium.
+    "mistral-medium",
     "deepseek-v4-flash",
     "gpt-5.6-luna-openai",
     "qwen3:8b",
@@ -358,7 +360,8 @@ Model tiers (cheapest → strongest):
 Rules:
 - Choose the cheapest tier that plausibly handles the task. Do NOT default to deepseek-v4-flash – it is one option, not the default.
 - LOAD BALANCING: deepseek-v4-flash and qwen3.7-plus are EQUALLY valid for routine tool-enabled coding. Alternate between them based on the task flavor (qwen for broad refactors/multi-file, deepseek for focused fixes/shell); vary your choice instead of repeating the same model.
-- Simple questions without tools → mistral-small, not flash.
+- Small is ONLY for greetings, titles, translations, and truly trivial Q&A. Never use mistral-small for coding, debugging, shell, NixOS, file edits, or any substantive request, even without tools.
+- Coding without tools → qwen3.7-plus or deepseek-v4-flash, not mistral-small.
 - Architecture/planning → mistral-medium, not flash.
 - Math/algorithm analysis → qwen3.7-max, not flash.
 - Escalate to GPT* only when DeepSeek/Qwen/Mistral clearly cannot do the job.
@@ -511,12 +514,43 @@ _TITLE_SUMMARY_MARKERS = {
     "zusammenfassung dieser konversation",
 }
 
+_CODING_MARKERS = (
+    "code",
+    "coding",
+    "implement",
+    "implementation",
+    "debug",
+    "bug",
+    "refactor",
+    "test",
+    "script",
+    "shell",
+    "nix",
+    "nixos",
+    "python",
+    "javascript",
+    "typescript",
+    "konfiguration",
+    "programmier",
+    "fehler",
+    "debuggen",
+    "implementieren",
+    "refactoren",
+)
+
 
 def _is_metadata_request(messages: list[dict[str, Any]], has_tools: bool) -> bool:
     if has_tools:
         return False
     text = routing_context(messages).lower()
     return any(marker in text for marker in _TITLE_SUMMARY_MARKERS)
+
+
+def _is_coding_request(messages: list[dict[str, Any]], has_tools: bool) -> bool:
+    if has_tools:
+        return True
+    text = routing_context(messages).lower()
+    return any(marker in text for marker in _CODING_MARKERS)
 
 
 # ---------------------------------------------------------------------------
@@ -814,32 +848,6 @@ _FALLBACK_REASONS: dict[str, str] = {
     "qwen3.7-max": "Advanced reasoning",
     "qwen3.6-plus": "Availability fallback",
 }
-
-_CAPABILITY_REFUSAL_MARKERS = (
-    "i can't help",
-    "i cannot help",
-    "i'm not able",
-    "i am not able",
-    "i can't do",
-    "i cannot do",
-    "not capable",
-    "ich kann nicht",
-    "kann ich nicht",
-    "nicht in der lage",
-)
-
-
-def _is_capability_refusal(model: str, payload: dict[str, Any]) -> bool:
-    """Detect a Small refusal so the configured Medium fallback can run."""
-    if model != "mistral-small":
-        return False
-    text = "\n".join(
-        str(choice.get("message", {}).get("content", ""))
-        for choice in payload.get("choices", [])
-        if isinstance(choice.get("message"), dict)
-    ).lower()
-    return any(marker in text for marker in _CAPABILITY_REFUSAL_MARKERS)
-
 
 def _model_notice_text(
     model: str, original_model: str | None = None, reason: str = ""
@@ -1681,11 +1689,6 @@ async def _stream_to_backend(
                 "details": str(exc),
             }
             continue
-        if _is_capability_refusal(candidate, payload):
-            logger.info(
-                "capability refusal model=%s; trying configured fallback", candidate
-            )
-            continue
         for choice in payload.get("choices", []):
             message = choice.get("message")
             if isinstance(message, dict):
@@ -1767,9 +1770,11 @@ async def chat_completions(request: Request):
 
     # Small is intentionally limited to non-agentic requests. Do not let a
     # classifier mistake a tool-enabled task for trivial Q&A.
-    if has_tools and target_model == "mistral-small":
-        target_model = "mistral-medium"
-        classification_reason = "Tool-Aufgabe braucht Medium"
+    if not is_metadata and target_model == "mistral-small" and _is_coding_request(
+        messages, has_tools
+    ):
+        target_model = "qwen3.7-plus"
+        classification_reason = "Coding-Aufgabe braucht Coding-Modell"
 
     if _model_banned(target_model):
         alternative = _banned_alternative(target_model)
