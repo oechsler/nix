@@ -45,7 +45,7 @@ class RouterTest(unittest.TestCase):
     def test_notice_is_minimal_for_initial_route(self):
         self.assertEqual(
             router._model_notice_text("mistral-small", "mistral-small"),
-            "> **Mistral Small**\n> Simple Q&A / summary",
+            "> **Mistral Small**\n> Trivial Q&A / title",
         )
 
     def test_notice_shows_fallback_path(self):
