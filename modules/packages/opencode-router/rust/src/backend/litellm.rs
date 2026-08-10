@@ -31,7 +31,7 @@ impl LiteLlmBackend {
         path: &str,
         body: Value,
     ) -> Result<reqwest::Response> {
-        let url = format!("{}{}", self.base_url.trim_end_matches('/'), path);
+        let url = endpoint_url(&self.base_url, path);
         let mut builder = self.client.post(&url).json(&body);
         if !self.api_key.is_empty() {
             builder = builder.header("Authorization", format!("Bearer {}", self.api_key));
@@ -54,7 +54,7 @@ impl LiteLlmBackend {
         body: Value,
         auth: &str,
     ) -> Result<reqwest::Response> {
-        let url = format!("{}{}", self.base_url.trim_end_matches('/'), path);
+        let url = endpoint_url(&self.base_url, path);
         let mut builder = self.client.post(&url).json(&body);
         if !auth.is_empty() {
             builder = builder.header("Authorization", auth);
@@ -72,6 +72,17 @@ impl LiteLlmBackend {
         }
         Ok(response)
     }
+}
+
+fn endpoint_url(base_url: &str, path: &str) -> String {
+    let base = base_url.trim_end_matches('/');
+    if path.is_empty() {
+        return base.to_string();
+    }
+    if base.ends_with("/v1") && path.starts_with("/v1/") {
+        return format!("{}{}", base.trim_end_matches("/v1"), path);
+    }
+    format!("{}{}", base, path)
 }
 
 pub fn stream_events_to_sse(stream: impl Stream<Item = Result<Value>>) -> impl Stream<Item = Result<String>> {
