@@ -167,6 +167,7 @@ impl Classifier {
             .replace("{has_tools}", &has_tools.to_string())
             .replace("{context}", context)
             + &task_section
+            + "\n\nDecision method: evaluate the complete task, estimate its complexity and required capability, then choose the best model by weighing the model matrix above. Use tiers as relative capability levels, not as rigid rules. Consider tools, ambiguity, reasoning depth, expected work size, latency, quota, and the cost of failure."
     }
 
     async fn classify_cloud(

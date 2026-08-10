@@ -104,7 +104,8 @@ pub async fn chat_completions(
 
         debug!(model = candidate, "trying model");
 
-        let notice = if state.config.notice.enabled {
+        let show_notice = state.config.notice.enabled && !is_metadata;
+        let notice = if show_notice {
             Some(
                 NoticeFormatter::new(&state.config, &registry)
                     .model_notice_text(candidate, &registry, None, &reason),
@@ -115,7 +116,7 @@ pub async fn chat_completions(
 
         let mut request_with_model = request_body.clone();
         request_with_model["model"] = Value::String(candidate.clone());
-        request_with_model = prepare_request(&request_with_model, &state.config, has_tools);
+        request_with_model = prepare_request(&request_with_model, &state.config, has_tools, show_notice);
 
         match forward_to_backend(
             &state,
@@ -348,13 +349,13 @@ fn with_notice(mut response: Value, notice: Option<&str>) -> Value {
     response
 }
 
-fn prepare_request(body: &Value, config: &Config, has_tools: bool) -> Value {
+fn prepare_request(body: &Value, config: &Config, has_tools: bool, inject_notice_instruction: bool) -> Value {
     let mut forwarded = body.clone();
     let messages = forwarded.get("messages").and_then(|m| m.as_array()).cloned().unwrap_or_default();
     let messages = strip_notices(&messages);
     let mut new_messages = Vec::new();
 
-    if config.notice.enabled {
+    if inject_notice_instruction {
         new_messages.push(serde_json::json!({
             "role": "system",
             "content": NOTICE_INSTRUCTION,

@@ -138,7 +138,10 @@ pub fn build_models_section(registry: &ModelRegistry) -> String {
         if registry.is_classifier_model(name) {
             continue;
         }
-        let mut line = format!("- {}: {}", name, model.description);
+        let mut line = format!(
+            "- {} [tier {}, family {}, provider {}]: {}",
+            name, model.tier, model.family, model.provider, model.description
+        );
         if model.provider == "chatgpt" && name.contains("fast") {
             line.push_str(" (fast variant)");
         }
