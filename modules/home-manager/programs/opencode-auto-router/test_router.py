@@ -8,6 +8,7 @@ class RouterTest(unittest.TestCase):
     def setUp(self):
         router._model_cooldown_until.clear()
         router._model_ban_until.clear()
+        router._model_ban_reason.clear()
         router._consecutive_routes.clear()
         router._consecutive_failures.clear()
         router._classification_cache.clear()
@@ -57,12 +58,49 @@ class RouterTest(unittest.TestCase):
         router._mark_provider_success("deepseek-v4-flash")
         self.assertTrue(router._provider_available("deepseek-v4-flash"))
 
-    def test_repeated_model_failures_create_a_temporary_ban(self):
-        router._mark_provider_failure("deepseek-v4-flash", "first outage")
-        router._mark_provider_failure("deepseek-v4-flash", "second outage")
+    def test_repeated_model_failures_use_exponential_backoff(self):
+        with patch.object(router, "_PROVIDER_COOLDOWN_BASE", 30):
+            router._mark_provider_failure("deepseek-v4-flash", "first outage")
+            self.assertFalse(router._provider_available("deepseek-v4-flash"))
+            self.assertFalse(router._model_banned("deepseek-v4-flash"))
 
+            router._mark_provider_failure("deepseek-v4-flash", "second outage")
+            self.assertFalse(router._provider_available("deepseek-v4-flash"))
+            self.assertFalse(router._model_banned("deepseek-v4-flash"))
+
+    def test_provider_wide_failure_cooldowns_all_provider_models(self):
+        router._mark_provider_failure(
+            "deepseek-v4-flash", "network error", provider_wide=True
+        )
+        self.assertFalse(router._provider_available("deepseek-v4-flash"))
+        self.assertFalse(router._provider_available("deepseek-v4-pro"))
+        self.assertFalse(router._provider_available("qwen3.7-plus"))
+        self.assertTrue(router._provider_available("mistral-small"))
+
+    def test_auth_failure_creates_hard_ban(self):
+        router._mark_provider_http_failure("deepseek-v4-flash", 401)
         self.assertTrue(router._model_banned("deepseek-v4-flash"))
-        self.assertEqual(router._banned_alternative("deepseek-v4-flash"), "qwen3.7-plus")
+        self.assertFalse(router._provider_available("qwen3.7-plus"))
+
+    def test_rate_limit_failure_is_model_specific(self):
+        router._mark_provider_http_failure("deepseek-v4-flash", 429)
+        self.assertFalse(router._provider_available("deepseek-v4-flash"))
+        self.assertTrue(router._provider_available("deepseek-v4-pro"))
+        self.assertTrue(router._provider_available("qwen3.7-plus"))
+
+    def test_server_error_is_provider_wide(self):
+        router._mark_provider_http_failure("deepseek-v4-flash", 503)
+        self.assertFalse(router._provider_available("deepseek-v4-flash"))
+        self.assertFalse(router._provider_available("qwen3.7-plus"))
+        self.assertTrue(router._provider_available("mistral-small"))
+
+    def test_rotation_ban_skipped_without_alternative(self):
+        with patch.object(router, "MODEL_MAX_CONSECUTIVE", 2):
+            router._ban_model("qwen3.7-plus", 60, "pre-existing")
+            router._record_route("deepseek-v4-flash")
+            router._record_route("deepseek-v4-flash")
+
+        self.assertFalse(router._model_banned("deepseek-v4-flash"))
 
     def test_route_rotation_bans_repeated_model(self):
         with patch.object(router, "MODEL_MAX_CONSECUTIVE", 2):
@@ -339,6 +377,7 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         router._model_cooldown_until.clear()
         router._model_ban_until.clear()
+        router._model_ban_reason.clear()
         router._consecutive_routes.clear()
         router._consecutive_failures.clear()
         router._classification_cache.clear()
@@ -619,6 +658,41 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
     async def test_model_outage_tries_sibling_model_then_fails_over(self):
         class Response:
             is_success = False
+            status_code = 429
+
+            @staticmethod
+            def json():
+                return {"error": "rate limit exceeded"}
+
+            text = "rate limit exceeded"
+
+        class Client:
+            post = AsyncMock(return_value=Response())
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *_args):
+                return None
+
+        chatgpt = AsyncMock(return_value="chatgpt fallback")
+        with (
+            patch.object(router.httpx, "AsyncClient", return_value=Client()),
+            patch.object(router, "_stream_chatgpt", chatgpt),
+        ):
+            result = await router._stream_to_backend(
+                body={"stream": False},
+                candidates=["mistral-small", "mistral-medium", "gpt-5.6-luna-openai"],
+                original_model="mistral-small",
+            )
+
+        self.assertEqual(result, "chatgpt fallback")
+        self.assertEqual(Client.post.await_count, 2)
+        chatgpt.assert_awaited_once()
+
+    async def test_server_error_skips_whole_provider_before_failing_over(self):
+        class Response:
+            is_success = False
             status_code = 503
 
             @staticmethod
@@ -648,7 +722,7 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertEqual(result, "chatgpt fallback")
-        self.assertEqual(Client.post.await_count, 2)
+        self.assertEqual(Client.post.await_count, 1)
         chatgpt.assert_awaited_once()
 
 
