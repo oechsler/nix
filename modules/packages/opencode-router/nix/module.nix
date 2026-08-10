@@ -39,31 +39,51 @@ let
         description = "Ordered fallback chain";
       };
 
-      litellmModel = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "LiteLLM model identifier";
-      };
-      litellmApiBase = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "LiteLLM API base URL";
-      };
-      apiKeyEnv = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Environment variable name for the API key (e.g., MISTRAL_API_KEY)";
-      };
-
-      chatgptModel = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "ChatGPT model identifier";
-      };
-      serviceTier = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-        description = "Service tier for priority routing";
+      backend = lib.mkOption {
+        type = lib.types.submodule {
+          options = {
+            litellm = lib.mkOption {
+              type = lib.types.submodule {
+                options = {
+                  model = lib.mkOption {
+                    type = lib.types.nullOr lib.types.str;
+                    default = null;
+                    description = "LiteLLM model identifier";
+                  };
+                  apiBase = lib.mkOption {
+                    type = lib.types.nullOr lib.types.str;
+                    default = null;
+                    description = "LiteLLM API base URL";
+                  };
+                  apiKeyEnv = lib.mkOption {
+                    type = lib.types.nullOr lib.types.str;
+                    default = null;
+                    description = "Environment variable for API key";
+                  };
+                };
+              };
+              default = { };
+            };
+            chatgpt = lib.mkOption {
+              type = lib.types.submodule {
+                options = {
+                  model = lib.mkOption {
+                    type = lib.types.nullOr lib.types.str;
+                    default = null;
+                    description = "ChatGPT model identifier";
+                  };
+                  serviceTier = lib.mkOption {
+                    type = lib.types.nullOr lib.types.str;
+                    default = null;
+                    description = "Service tier for priority routing";
+                  };
+                };
+              };
+              default = { };
+            };
+          };
+        };
+        default = { };
       };
 
       hidden = lib.mkOption {
@@ -75,6 +95,29 @@ let
         type = lib.types.nullOr lib.types.str;
         default = null;
         description = "Human-readable display name";
+      };
+
+      direct = lib.mkOption {
+        type = lib.types.submodule {
+          options = {
+            enable = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = "Expose as direct provider (bypasses router)";
+            };
+            base = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Base URL for direct access";
+            };
+            provider = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "Provider name in OpenCode config";
+            };
+          };
+        };
+        default = { };
       };
     };
   };

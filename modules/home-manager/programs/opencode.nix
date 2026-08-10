@@ -76,8 +76,10 @@ let
       provider = "litellm";
       tier = 1;
       fallbacks = [ "mistral-medium" ];
-      litellmModel = "mistral/mistral-small-latest";
-      apiKeyEnv = "MISTRAL_API_KEY";
+      backend.litellm = {
+        model = "mistral/mistral-small-latest";
+        apiKeyEnv = "MISTRAL_API_KEY";
+      };
       displayName = "Mistral Small";
     };
 
@@ -90,8 +92,10 @@ let
         "qwen3.7-plus"
         "deepseek-v4-flash"
       ];
-      litellmModel = "mistral/mistral-medium-latest";
-      apiKeyEnv = "MISTRAL_API_KEY";
+      backend.litellm = {
+        model = "mistral/mistral-medium-latest";
+        apiKeyEnv = "MISTRAL_API_KEY";
+      };
       displayName = "Mistral Medium";
     };
 
@@ -104,9 +108,11 @@ let
         "deepseek-v4-pro"
         "qwen3.7-plus"
       ];
-      litellmModel = "openai/deepseek-v4-flash";
-      litellmApiBase = "https://opencode.ai/zen/go/v1";
-      apiKeyEnv = "OPENCODE_GO_API_KEY";
+      backend.litellm = {
+        model = "openai/deepseek-v4-flash";
+        apiBase = "https://opencode.ai/zen/go/v1";
+        apiKeyEnv = "OPENCODE_GO_API_KEY";
+      };
       displayName = "DeepSeek V4 Flash";
     };
 
@@ -119,9 +125,11 @@ let
         "qwen3.7-max"
         "gpt-5.6-terra"
       ];
-      litellmModel = "openai/deepseek-v4-pro";
-      litellmApiBase = "https://opencode.ai/zen/go/v1";
-      apiKeyEnv = "OPENCODE_GO_API_KEY";
+      backend.litellm = {
+        model = "openai/deepseek-v4-pro";
+        apiBase = "https://opencode.ai/zen/go/v1";
+        apiKeyEnv = "OPENCODE_GO_API_KEY";
+      };
       displayName = "DeepSeek V4 Pro";
     };
 
@@ -131,7 +139,7 @@ let
       provider = "chatgpt";
       tier = 3;
       fallbacks = [ "gpt-5.6-sol" ];
-      chatgptModel = "gpt-5.6-terra";
+      backend.chatgpt.model = "gpt-5.6-terra";
       displayName = "GPT-5.6 Terra";
     };
 
@@ -141,9 +149,11 @@ let
       provider = "litellm";
       tier = 2;
       fallbacks = [ "gpt-5.6-luna-openai" ];
-      litellmModel = "openai/gpt-5.6-luna";
-      litellmApiBase = "https://opencode.ai/zen/go/v1";
-      apiKeyEnv = "OPENCODE_GO_API_KEY";
+      backend.litellm = {
+        model = "openai/gpt-5.6-luna";
+        apiBase = "https://opencode.ai/zen/go/v1";
+        apiKeyEnv = "OPENCODE_GO_API_KEY";
+      };
       displayName = "GPT-5.6 Luna";
     };
 
@@ -153,7 +163,7 @@ let
       provider = "chatgpt";
       tier = 5;
       fallbacks = [ "qwen3.8-max" ];
-      chatgptModel = "gpt-5.6-sol";
+      backend.chatgpt.model = "gpt-5.6-sol";
       displayName = "GPT-5.6 Sol";
     };
 
@@ -163,8 +173,10 @@ let
       provider = "chatgpt";
       tier = 3;
       fallbacks = [ "gpt-5.6-sol-fast" ];
-      chatgptModel = "gpt-5.6-terra";
-      serviceTier = "priority";
+      backend.chatgpt = {
+        model = "gpt-5.6-terra";
+        serviceTier = "priority";
+      };
       displayName = "GPT-5.6 Terra Fast";
     };
 
@@ -174,8 +186,10 @@ let
       provider = "chatgpt";
       tier = 4;
       fallbacks = [ "gpt-5.6-terra-fast" ];
-      chatgptModel = "gpt-5.6-sol";
-      serviceTier = "priority";
+      backend.chatgpt = {
+        model = "gpt-5.6-sol";
+        serviceTier = "priority";
+      };
       displayName = "GPT-5.6 Sol Fast";
     };
 
@@ -188,20 +202,11 @@ let
         "qwen3.7-plus"
         "deepseek-v4-flash"
       ];
-      chatgptModel = "gpt-5.6-luna";
-      serviceTier = "priority";
+      backend.chatgpt = {
+        model = "gpt-5.6-luna";
+        serviceTier = "priority";
+      };
       displayName = "GPT-5.6 Luna Fast";
-    };
-
-    "gpt-5.6-luna-openai" = {
-      description = "Direct OpenAI fallback for the OpenCode Go Luna route. Never select automatically.";
-      family = "gpt";
-      provider = "chatgpt";
-      tier = 2;
-      fallbacks = [ "gpt-5.6-terra" ];
-      chatgptModel = "gpt-5.6-luna";
-      hidden = true;
-      displayName = "GPT-5.6 Luna (OpenAI)";
     };
 
     "qwen3.7-plus" = {
@@ -213,9 +218,11 @@ let
         "qwen3.7-max"
         "deepseek-v4-flash"
       ];
-      litellmModel = "openai/qwen3.7-plus";
-      litellmApiBase = "https://opencode.ai/zen/go/v1";
-      apiKeyEnv = "OPENCODE_GO_API_KEY";
+      backend.litellm = {
+        model = "openai/qwen3.7-plus";
+        apiBase = "https://opencode.ai/zen/go/v1";
+        apiKeyEnv = "OPENCODE_GO_API_KEY";
+      };
       displayName = "Qwen3.7 Plus";
     };
 
@@ -228,9 +235,11 @@ let
         "qwen3.8-max"
         "gpt-5.6-terra"
       ];
-      litellmModel = "openai/qwen3.7-max";
-      litellmApiBase = "https://opencode.ai/zen/go/v1";
-      apiKeyEnv = "OPENCODE_GO_API_KEY";
+      backend.litellm = {
+        model = "openai/qwen3.7-max";
+        apiBase = "https://opencode.ai/zen/go/v1";
+        apiKeyEnv = "OPENCODE_GO_API_KEY";
+      };
       displayName = "Qwen3.7 Max";
     };
 
@@ -243,9 +252,11 @@ let
         "gpt-5.6-sol"
         "deepseek-v4-pro"
       ];
-      litellmModel = "openai/qwen3.8-max";
-      litellmApiBase = "https://opencode.ai/zen/go/v1";
-      apiKeyEnv = "OPENCODE_GO_API_KEY";
+      backend.litellm = {
+        model = "openai/qwen3.8-max";
+        apiBase = "https://opencode.ai/zen/go/v1";
+        apiKeyEnv = "OPENCODE_GO_API_KEY";
+      };
       displayName = "Qwen3.8 Max";
     };
 

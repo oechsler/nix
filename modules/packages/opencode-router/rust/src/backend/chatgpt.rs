@@ -46,4 +46,29 @@ impl ChatGptBackend {
         }
         Ok(response)
     }
+
+    pub async fn forward_authorized(
+        &self,
+        path: &str,
+        body: Value,
+        auth: &str,
+    ) -> Result<reqwest::Response> {
+        let url = format!("{}{}", self.base_url.trim_end_matches('/'), path);
+        let mut builder = self.client.post(&url).json(&body);
+        if !auth.is_empty() {
+            builder = builder.header("Authorization", auth);
+        } else if !self.api_key.is_empty() {
+            builder = builder.header("Authorization", format!("Bearer {}", self.api_key));
+        }
+        let response = builder.send().await?;
+        let status = response.status();
+        if !status.is_success() {
+            return Err(RouterError::Upstream {
+                status: status.as_u16(),
+                body: response.text().await.unwrap_or_default(),
+                url,
+            });
+        }
+        Ok(response)
+    }
 }
