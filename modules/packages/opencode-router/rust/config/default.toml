@@ -1,0 +1,310 @@
+[server]
+host = "0.0.0.0"
+port = 4000
+log_level = "info"
+
+[classifier]
+backend = "local"
+model = "qwen3:8b"
+timeout_seconds = 8
+cache_ttl_seconds = 300
+
+[classifier.cloud]
+model = "mistral-small"
+url = "http://127.0.0.1:8000/v1"
+
+[classifier.local]
+url = "http://127.0.0.1:11434"
+
+[models.mistral-small]
+description = "Fast model for greetings, Q&A, titles, translation. Only for trivial tasks; skip for anything substantive."
+family = "mistral"
+provider = "litellm"
+litellm_model = "mistral/mistral-small-latest"
+tier = 1
+fallbacks = ["mistral-medium"]
+
+[models.mistral-medium]
+description = "Strong model for architecture, design tradeoffs, reviews, planning, analysis. Capable with and without tools."
+family = "mistral"
+provider = "litellm"
+litellm_model = "mistral/mistral-medium-latest"
+tier = 2
+fallbacks = ["qwen3.7-plus", "deepseek-v4-flash"]
+
+[models.deepseek-v4-flash]
+description = "Fast coding model: bugs, refactors, multi-step changes, file edits, shell, NixOS, containers. Very high quota (158150 req/month)."
+family = "deepseek"
+provider = "litellm"
+litellm_model = "openai/deepseek-v4-flash"
+litellm_api_base = "https://opencode.ai/zen/go/v1"
+tier = 2
+fallbacks = ["deepseek-v4-pro", "qwen3.7-plus"]
+
+[models.deepseek-v4-pro]
+description = "Stronger DeepSeek for complex work: multi-step exploration, deep analysis with tools. 17150 req/month quota."
+family = "deepseek"
+provider = "litellm"
+litellm_model = "openai/deepseek-v4-pro"
+litellm_api_base = "https://opencode.ai/zen/go/v1"
+tier = 3
+fallbacks = ["qwen3.7-max", "gpt-5.6-terra"]
+
+[models."gpt-5.6-terra"]
+description = "GPT for complex agentic coding and multi-step exploration. Strong reasoning and tool use."
+family = "gpt"
+provider = "chatgpt"
+chatgpt_model = "gpt-5.6-terra"
+tier = 3
+fallbacks = ["gpt-5.6-sol"]
+
+[models."gpt-5.6-luna"]
+description = "GPT entry tier via OpenCode Go. Good general-purpose model. 10250 req/month quota."
+family = "gpt"
+provider = "litellm"
+litellm_model = "openai/gpt-5.6-luna"
+litellm_api_base = "https://opencode.ai/zen/go/v1"
+tier = 2
+fallbacks = ["gpt-5.6-luna-openai"]
+
+[models."gpt-5.6-sol"]
+description = "Top-tier GPT for hardest agentic work: ambiguous multi-step exploration, race conditions, high-stakes system administration, critical bugs. Strongest model available."
+family = "gpt"
+provider = "chatgpt"
+chatgpt_model = "gpt-5.6-sol"
+tier = 5
+fallbacks = ["qwen3.8-max"]
+
+[models."gpt-5.6-terra-fast"]
+description = "Faster Terra variant for complex tasks at higher throughput."
+family = "gpt"
+provider = "chatgpt"
+chatgpt_model = "gpt-5.6-terra"
+service_tier = "priority"
+tier = 3
+fallbacks = ["gpt-5.6-sol-fast"]
+
+[models."gpt-5.6-sol-fast"]
+description = "Fast top-tier GPT for hardest debugging when Terra insufficient."
+family = "gpt"
+provider = "chatgpt"
+chatgpt_model = "gpt-5.6-sol"
+service_tier = "priority"
+tier = 4
+fallbacks = ["gpt-5.6-terra-fast"]
+
+[models."gpt-5.6-luna-fast"]
+description = "Fast entry-tier GPT for simple-to-medium coding. Overflow model."
+family = "gpt"
+provider = "chatgpt"
+chatgpt_model = "gpt-5.6-luna"
+service_tier = "priority"
+tier = 2
+fallbacks = ["qwen3.7-plus", "deepseek-v4-flash"]
+
+[models."gpt-5.6-luna-openai"]
+description = "Direct OpenAI fallback for the OpenCode Go Luna route. Never select automatically."
+family = "gpt"
+provider = "chatgpt"
+chatgpt_model = "gpt-5.6-luna"
+hidden = true
+tier = 2
+fallbacks = ["gpt-5.6-terra"]
+
+[models."qwen3.7-plus"]
+description = "General development and broad refactors with tools. Solid coding model. 21600 req/month quota."
+family = "qwen"
+provider = "litellm"
+litellm_model = "openai/qwen3.7-plus"
+litellm_api_base = "https://opencode.ai/zen/go/v1"
+tier = 2
+fallbacks = ["qwen3.7-max", "deepseek-v4-flash"]
+
+[models."qwen3.7-max"]
+description = "Advanced reasoning, complex algorithmic analysis, math. 1690 req/month quota."
+family = "qwen"
+provider = "litellm"
+litellm_model = "openai/qwen3.7-max"
+litellm_api_base = "https://opencode.ai/zen/go/v1"
+tier = 3
+fallbacks = ["qwen3.8-max", "gpt-5.6-terra"]
+
+[models."qwen3.8-max"]
+description = "Top Qwen reasoning model. Complex algorithmic analysis, math, deep design review. 810 req/month quota."
+family = "qwen"
+provider = "litellm"
+litellm_model = "openai/qwen3.8-max"
+litellm_api_base = "https://opencode.ai/zen/go/v1"
+tier = 4
+fallbacks = ["gpt-5.6-sol", "deepseek-v4-pro"]
+
+[models."qwen3:8b"]
+description = "Local Qwen3 8B on Ollama. Limited offline model for light tasks when privacy critical. Not for auto-routing."
+family = "qwen"
+provider = "ollama"
+tier = 1
+fallbacks = ["mistral-small"]
+
+[defaults]
+model = "qwen3.7-plus"
+global_fallbacks = ["mistral-medium", "deepseek-v4-flash", "gpt-5.6-luna-openai", "qwen3:8b"]
+metadata_fallback_chain = ["mistral-small", "mistral-medium", "deepseek-v4-flash", "gpt-5.6-luna-fast"]
+
+[aliases]
+"openai-luna-fast" = "gpt-5.6-luna-fast"
+"openai-luna" = "gpt-5.6-luna"
+"openai-sol-fast" = "gpt-5.6-sol-fast"
+"openai-sol" = "gpt-5.6-sol"
+"openai-terra-fast" = "gpt-5.6-terra-fast"
+"openai-terra" = "gpt-5.6-terra"
+
+[families.mistral]
+ladder = ["mistral-small", "mistral-medium"]
+
+[families.deepseek]
+ladder = ["deepseek-v4-flash", "deepseek-v4-pro"]
+
+[families.qwen]
+ladder = ["qwen3.7-plus", "qwen3.7-max", "qwen3.8-max"]
+
+[families.gpt]
+ladder = ["gpt-5.6-luna", "gpt-5.6-luna-fast", "gpt-5.6-terra", "gpt-5.6-terra-fast", "gpt-5.6-sol", "gpt-5.6-sol-fast"]
+
+[prompts]
+classification = """
+Classify for OpenCode routing. Match approximately based on the task – no rigid 1:1 mapping. Think about what model fits best for THIS specific request. Return: model_id - reason (2-6 words in user's language).
+
+{models_section}
+
+{guidance_section}
+{banned_section}
+
+Context (has_tools={has_tools}):
+{context}
+"""
+
+[prompts.guidance]
+text = """
+Guidance (not rules – use your judgment):
+- Consider: capability needs, tool usage, quota availability, and how hard the task really is.
+- For coding with tools, prefer DeepSeek Flash or Qwen Plus as cost-effective choices; escalate to stronger models when the task demands more reasoning or the cheaper model would fail.
+- Math, algorithmics, proofs → Qwen Max models or GPT.
+- Architecture/planning/design discussions → Mistral Medium or GPT.
+- Never use mistral-small for coding, debugging, shell, NixOS, file edits, or substantive requests, even without tools.
+- When in doubt between two models, choose the cheaper/faster one.
+- Prefer -fast variants for simple, latency-sensitive overflow.
+"""
+
+[markers]
+retry = [
+  "did not work", "didn't work", "does not work", "doesn't work",
+  "still wrong", "not fixed", "didn't fix", "not what i asked",
+  "try again", "previous answer", "other model", "cannot handle", "can't handle",
+  "hat nicht funktioniert", "funktioniert nicht", "klappt nicht",
+  "immer noch falsch", "nicht gefixt", "nicht geschafft",
+  "nicht mehr schafft", "bekommt nicht hin", "nicht hin",
+  "nicht was ich", "nochmal", "anderes modell", "andere modell",
+  "vorherige antwort", "schafft es nicht", "schafft das nicht",
+  "nicht nur die doku", "nicht nur die dokumentation",
+]
+retry_patterns = [
+  '\\bhat\\b.*\\bnicht funktioniert\\b',
+  '\\bbekommt\\b.*\\bnicht hin\\b',
+  '\\bschafft\\b.*\\bnicht(?: mehr)?\\b',
+]
+metadata = [
+  "generate a title", "generate title", "short title", "concise title",
+  "session title", "conversation title", "title for this",
+  "summarize this conversation", "conversation summary", "session summary",
+  "titel für", "titel fuer", "kurzer titel", "kurzen titel",
+  "zusammenfassung der konversation", "zusammenfassung dieser konversation",
+]
+coding = [
+  "code", "coding", "implement", "implementation", "debug", "bug",
+  "refactor", "test", "script", "shell", "nix", "nixos",
+  "python", "javascript", "typescript",
+  "konfiguration", "programmier", "fehler", "debuggen",
+  "implementieren", "refactoren",
+]
+
+[bans]
+auth_seconds = 600
+exhaustion_seconds = 900
+session_quality_seconds = 600
+
+[performance]
+success_weight = 1.0
+failure_weight = -2.0
+reward_threshold = 5.0
+decay_factor = 0.95
+decay_interval_seconds = 300
+
+[circuit_breaker]
+base_cooldown_seconds = 30
+max_cooldown_seconds = 300
+
+[cache]
+enabled = true
+ttl_seconds = 300
+
+[cache.pattern]
+enabled = true
+
+[cache.exact]
+enabled = true
+
+[cache.similarity]
+enabled = true
+threshold = 0.85
+max_entries = 1000
+
+[cache.llm]
+enabled = true
+
+[agent_instruction]
+text = """
+You are running inside OpenCode as an agent with tools. Treat the user's complete request as one assignment and own it end to end. Identify every deliverable, constraint, and acceptance condition first. Inspect files and implement every requested change. For 3+ substantive steps, use the todo tool when available: create a todo list and keep it updated after each tool result. Continue through all implementation, testing, linting, typechecking, and verification. Never stop after analysis, after one subtask, or after a partial fix. Before answering, verify each deliverable against the original request and run the strongest applicable checks. Only return a final answer when complete or when blocked. If blocked, complete every unblocked part first and state the blocker and remaining action. CRITICAL RULE: NEVER generate model-routing annotations (like '> **DeepSeek V4 Flash**', '> **GPT-5.6 Sol**', '> Coding & shell commands') or any model IDs in your responses. The auto-router system injects those automatically. You must not prefix, suffix, or embed any routing information.
+"""
+
+[notice]
+format = "> **{display_name}**\n> {reason}"
+redirect_format = "> **{original_display} → {display_name}**\n> {reason}"
+
+[display_names]
+auto = "Auto"
+mistral-small = "Mistral Small"
+mistral-medium = "Mistral Medium"
+deepseek-v4-flash = "DeepSeek V4 Flash"
+deepseek-v4-pro = "DeepSeek V4 Pro"
+"gpt-5.6-luna-fast" = "GPT-5.6 Luna Fast"
+"gpt-5.6-luna" = "GPT-5.6 Luna"
+"gpt-5.6-sol-fast" = "GPT-5.6 Sol Fast"
+"gpt-5.6-sol" = "GPT-5.6 Sol"
+"gpt-5.6-terra-fast" = "GPT-5.6 Terra Fast"
+"gpt-5.6-terra" = "GPT-5.6 Terra"
+"qwen3.8-max" = "Qwen3.8 Max"
+"qwen3.7-plus" = "Qwen3.7 Plus"
+"qwen3.7-max" = "Qwen3.7 Max"
+"qwen3:8b" = "Qwen3 8B (Local)"
+
+[chatgpt]
+token_url = "https://auth.openai.com/oauth/token"
+client_id = "app_EMoamEEZ73f0CkXaXp7hrann"
+responses_url = "https://chatgpt.com/backend-api/codex/responses"
+account_claim_url = "https://api.openai.com/auth"
+auth_file = "/var/lib/opencode/auth.json"
+
+[cross_family_escalation]
+"mistral-small" = "mistral-medium"
+"mistral-medium" = "deepseek-v4-flash"
+"deepseek-v4-flash" = "deepseek-v4-pro"
+"deepseek-v4-pro" = "qwen3.7-max"
+"qwen3.7-plus" = "qwen3.7-max"
+"qwen3.7-max" = "qwen3.8-max"
+"qwen3.8-max" = "gpt-5.6-terra"
+"gpt-5.6-luna" = "gpt-5.6-terra"
+"gpt-5.6-luna-fast" = "gpt-5.6-terra-fast"
+"gpt-5.6-terra" = "gpt-5.6-sol"
+"gpt-5.6-terra-fast" = "gpt-5.6-sol-fast"
+"gpt-5.6-sol" = "gpt-5.6-sol-fast"
+"gpt-5.6-sol-fast" = "gpt-5.6-terra-fast"

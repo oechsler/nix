@@ -42,6 +42,7 @@
         # Languages & Compilers
         go
         rustup
+        gcc # C compiler needed by cargo for native dependencies (linker)
         jdk
         nodejs
       ];

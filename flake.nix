@@ -180,6 +180,13 @@
                   inputs.sops-nix.homeManagerModules.sops
                   inputs.plasma-manager.homeModules.plasma-manager
                   inputs.spicetify-nix.homeManagerModules.spicetify
+                  {
+                    programs.opencode-router.imagePackage =
+                      (import ./modules/packages/opencode-router/nix/package.nix {
+                        inherit pkgs;
+                        flakeRoot = self.outPath;
+                      }).image;
+                  }
                 ];
               };
             }
@@ -247,8 +254,26 @@
       overlays = {
         default = final: prev: {
           hypr-dock = final.callPackage ./packages/hypr-dock.nix { };
+          opencode-router =
+            (import ./modules/packages/opencode-router/nix/package.nix {
+              pkgs = final;
+              flakeRoot = self.outPath;
+            }).package;
         };
       };
+
+      packages.${system} =
+        let
+          built = import ./modules/packages/opencode-router/nix/package.nix {
+            inherit pkgs;
+            flakeRoot = self.outPath;
+          };
+        in
+        {
+          default = built.package;
+          opencode-router = built.package;
+          opencode-router-image = built.image;
+        };
 
       #===========================
       # Formatter
