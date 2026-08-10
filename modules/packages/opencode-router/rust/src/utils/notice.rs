@@ -41,15 +41,7 @@ impl NoticeFormatter {
         let display_name = registry.display_name(model);
         let mut compact_reason = self.compact_reason(reason);
         if compact_reason.is_empty() {
-            compact_reason = registry
-                .models
-                .get(model)
-                .map(|m| {
-                    let desc = &m.description;
-                    let words: Vec<&str> = desc.split_whitespace().take(6).collect();
-                    words.join(" ")
-                })
-                .unwrap_or_else(|| "Auto-routed".to_string());
+            compact_reason = "Auto-routed".to_string();
         }
         if let Some(original) = original_model
             && original != model {

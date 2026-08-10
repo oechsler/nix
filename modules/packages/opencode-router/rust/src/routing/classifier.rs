@@ -285,6 +285,14 @@ pub fn parse_model_choice(text: &str, registry: &ModelRegistry) -> Option<(Strin
 
         let canonical = registry.resolve_alias(model);
 
+        if let Some(model_info) = registry.models.get(&canonical) {
+            let desc_words: Vec<&str> = model_info.description.split_whitespace().take(6).collect();
+            let reason_words: Vec<&str> = reason_text.split_whitespace().take(6).collect();
+            if desc_words == reason_words {
+                reason_text = String::new();
+            }
+        }
+
         if canonical.ends_with("-fast") {
             reason_text = fast_prefix_re.replace(&reason_text, "").to_string();
         } else {
