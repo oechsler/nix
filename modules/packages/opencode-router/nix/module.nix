@@ -96,29 +96,6 @@ let
         default = null;
         description = "Human-readable display name";
       };
-
-      direct = lib.mkOption {
-        type = lib.types.submodule {
-          options = {
-            enable = lib.mkOption {
-              type = lib.types.bool;
-              default = false;
-              description = "Expose as direct provider (bypasses router)";
-            };
-            base = lib.mkOption {
-              type = lib.types.nullOr lib.types.str;
-              default = null;
-              description = "Base URL for direct access";
-            };
-            provider = lib.mkOption {
-              type = lib.types.nullOr lib.types.str;
-              default = null;
-              description = "Provider name in OpenCode config";
-            };
-          };
-        };
-        default = { };
-      };
     };
   };
 in
@@ -460,6 +437,13 @@ in
         MISTRAL_API_KEY = "opencode/mistral/api-key";
         OPENCODE_GO_API_KEY = "opencode/opencode-go/api-key";
       };
+    };
+
+    directProviders = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = "Additional native OpenCode providers to enable beside local and the always-enabled OpenAI provider";
+      example = [ "mistral" ];
     };
 
     routerConfigFile = lib.mkOption {
