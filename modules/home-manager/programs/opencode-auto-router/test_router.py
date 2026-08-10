@@ -22,7 +22,6 @@ class RouterTest(unittest.TestCase):
                 "qwen3.7-plus",
                 "gpt-5.6-terra",
                 "deepseek-v4-flash",
-                "qwen3.6-plus",
                 "gpt-5.6-luna",
                 "gpt-5.6-sol",
                 "gpt-5.6-luna-fast",
@@ -80,7 +79,7 @@ class RouterTest(unittest.TestCase):
 
         self.assertIn("Banned/cooldown models", prompt)
         self.assertIn("deepseek-v4-flash", prompt)
-        self.assertIn("LOAD BALANCING", prompt)
+        self.assertIn("do NOT pick these", prompt)
 
     def test_mistral_small_has_medium_as_its_first_real_fallback(self):
         self.assertEqual(
@@ -181,7 +180,25 @@ class RouterTest(unittest.TestCase):
 
         self.assertNotIn("go-to starting point", prompt)
         self.assertNotIn("general recommendation", prompt)
-        self.assertIn("Do NOT default to deepseek-v4-flash", prompt)
+        self.assertIn("DEFAULT to deepseek-v4-flash", prompt)
+
+    def test_strip_notices_from_history_removes_leading_block(self):
+        messages = [
+            {"role": "assistant", "content": "> **Qwen3.7 Plus**\n> General development\n\nHere is the answer."},
+            {"role": "user", "content": "Thanks"},
+        ]
+        cleaned = router._strip_notices_from_history(messages)
+        self.assertEqual(cleaned[0]["content"], "Here is the answer.")
+        self.assertEqual(cleaned[1]["content"], "Thanks")
+
+    def test_strip_notices_from_history_preserves_non_assistant_messages(self):
+        messages = [
+            {"role": "user", "content": "> This is a user quote"},
+            {"role": "assistant", "content": "Normal answer"},
+        ]
+        cleaned = router._strip_notices_from_history(messages)
+        self.assertEqual(cleaned[0]["content"], "> This is a user quote")
+        self.assertEqual(cleaned[1]["content"], "Normal answer")
 
     def test_routing_context_strips_model_notices(self):
         messages = [
@@ -476,6 +493,54 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
             self.assertEqual(await router.chat_completions(Request()), "ok")
 
         self.assertEqual(stream.await_args.args[1][0], "qwen3.7-plus")
+
+    async def test_notice_suppressed_when_model_unchanged(self):
+        body = {
+            "model": "auto",
+            "messages": [
+                {"role": "assistant", "content": "Previous answer\n\n> **qwen3.7-plus**"},
+                {"role": "user", "content": "Continue"},
+            ],
+        }
+
+        class Request:
+            async def json(self):
+                return body
+
+        with (
+            patch.object(
+                router, "_classify", AsyncMock(return_value=("qwen3.7-plus", "General dev"))
+            ),
+            patch.object(router, "_stream_to_backend", AsyncMock(return_value="ok")) as stream,
+        ):
+            await router.chat_completions(Request())
+
+        _, _, _, show_notice, _ = stream.await_args.args
+        self.assertFalse(show_notice)
+
+    async def test_notice_shown_when_model_changes(self):
+        body = {
+            "model": "auto",
+            "messages": [
+                {"role": "assistant", "content": "Previous answer\n\n> **mistral-small**"},
+                {"role": "user", "content": "Now do something harder"},
+            ],
+        }
+
+        class Request:
+            async def json(self):
+                return body
+
+        with (
+            patch.object(
+                router, "_classify", AsyncMock(return_value=("qwen3.7-plus", "Coding task"))
+            ),
+            patch.object(router, "_stream_to_backend", AsyncMock(return_value="ok")) as stream,
+        ):
+            await router.chat_completions(Request())
+
+        _, _, _, show_notice, _ = stream.await_args.args
+        self.assertTrue(show_notice)
 
     async def test_manual_model_skips_only_classification(self):
         body = {

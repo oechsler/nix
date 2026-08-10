@@ -87,7 +87,7 @@ The classifier considers:
 
 ### Fallback and Escalation
 
-- **Backend fallback**: If a provider fails before the first response chunk (network error, rate limit, authentication error, timeout, or upstream error), the router walks the fallback chain defined for each model. Fallback routes through the same provider first (e.g., `qwen3.7-plus` → `qwen3.6-plus`) before crossing to other providers.
+- **Backend fallback**: If a provider fails before the first response chunk (network error, rate limit, authentication error, timeout, or upstream error), the router walks the fallback chain defined for each model. Fallback routes through the same provider first (e.g., `qwen3.7-plus` → `gpt-5.6-luna`) before crossing to other providers.
 - **Model circuit breaker**: A failing model enters a 60-second cooldown. Repeated failures create a 10-minute model ban. Other models from the same provider remain available as fallbacks.
 - **Load-balancing rotation**: After five consecutive requests, the selected model is temporarily banned for five minutes. The classifier receives the ban list and the router prefers an equivalent sibling, such as Qwen 3.7 Plus instead of DeepSeek Flash.
 - **Title fallback**: Title and summary requests use a cheap-only chain: Mistral Small, Mistral Medium, DeepSeek Flash, then GPT Luna Fast. Local-classifier hosts add local Qwen as the final safety net; expensive Terra/Sol models are not used for metadata.
@@ -95,7 +95,7 @@ The classifier considers:
 - **Capability escalation**: If a user says the previous answer did not work (e.g., "that did not work", "funktioniert nicht"), the router reads the model from the previous response and escalates to a more capable tier. Escalation prefers the same provider where possible:
   - **Mistral**: `small` → `medium` → (cross to chatgpt)
   - **DeepSeek**: `flash` → `pro` → `qwen3.8-max` (stay on Go)
-  - **Qwen 3.6**: `plus` → `7-max` → `8-max` → (cross to `gpt-5.6-sol`)
+  - **Qwen**: `7-plus` → `7-max` → `8-max` → (cross to `gpt-5.6-sol`)
   - **GPT-5.6**: `luna` → `terra` → `sol`
 
 ## Model Selection
@@ -114,7 +114,6 @@ Models are listed once below in the approximate order of work they are intended 
 - **`qwen3.7-plus`** — General development, broad refactors, provider diversification; 4300 req/5h quota
 - **`qwen3.8-max`** — Deep mathematical, theoretical, and formal reasoning; 160 req/5h quota
 - **`qwen3.7-max`** — Advanced reasoning; 340 req/5h quota
-- **`qwen3.6-plus`** — Availability fallback for qwen3.7-plus only; not directly routed
 - **`gpt-5.6-luna`** — Low-cost GPT overflow through OpenCode Go, with a hidden direct OpenAI route as its availability fallback
 
 ### GPT-5.6 via ChatGPT OAuth
@@ -132,7 +131,6 @@ OpenCode Go includes usage worth $12 per rolling five hours, $30 per week, and $
 | `deepseek-v4-flash` | 63,300 |
 | `qwen3.7-plus` | 4,300 |
 | `deepseek-v4-pro` | 3,450 |
-| `qwen3.6-plus` | 3,300 |
 | `gpt-5.6-luna` | 2,050 |
 | `qwen3.7-max` | 340 |
 | `qwen3.8-max` | 160 |
@@ -147,7 +145,6 @@ Relevant Zen prices per one million tokens are:
 | `gpt-5.6-luna` (up to 272K tokens) | $0.20 | $1.20 | $0.02 | $0.25 |
 | `gpt-5.6-luna` (over 272K tokens) | $0.40 | $1.80 | $0.04 | $0.50 |
 | `qwen3.7-plus` | $0.40 | $1.60 | $0.04 | $0.50 |
-| `qwen3.6-plus` | $0.50 | $3.00 | $0.05 | $0.625 |
 | `deepseek-v4-pro` | $1.74 | $3.48 | $0.145 | — |
 | `qwen3.7-max` | $2.50 | $7.50 | $0.50 | $3.125 |
 | `gpt-5.6-terra` (up to 272K tokens) | $2.00 | $12.00 | $0.20 | $2.50 |
@@ -181,14 +178,14 @@ The router handles two different failure modes.
 
 **Capability escalation** applies when a backend returned an answer but the user says that the attempt failed or asks it to try again. On the next turn, the router reads the model recorded on the previous response and moves to the next capability tier. This is separate from provider availability fallback and prevents a failed task from repeatedly returning to the same small model.
 
-Every automatic response starts with a compact routing notice:
+A routing notice appears at the start of an automatic response only when the routed model differs from the previous turn:
 
 ```markdown
 > **mistral-small**
 > Simple question
 ```
 
-The classifier writes a two-to-six-word reason in the language of the most recent user message.
+The classifier writes a two-to-six-word reason in the language of the most recent user message. Consecutive turns on the same model suppress the notice to avoid visual noise and model mimicry loops.
 
 If a backend fallback or capability escalation occurred, the notice shows the path:
 
@@ -197,7 +194,7 @@ If a backend fallback or capability escalation occurred, the notice shows the pa
 > Deeper analysis
 ```
 
-The blockquote and bold text clearly separate routing metadata from the model's answer. This notice is debug information and not part of the assistant's reasoning. OpenCode title and summary requests suppress it entirely.
+The blockquote and bold text clearly separate routing metadata from the model's answer. This notice is debug information and not part of the assistant's reasoning. The router strips notice blockquotes from conversation history before forwarding it to a backend, so models never see the pattern and cannot imitate it. OpenCode title and summary requests suppress the notice entirely.
 
 ## Providers and Authentication
 

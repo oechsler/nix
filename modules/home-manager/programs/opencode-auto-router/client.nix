@@ -79,7 +79,6 @@ in
             "qwen3.8-max" = model "Qwen3.8 Max";
             "qwen3.7-max" = model "Qwen3.7 Max";
             "qwen3.7-plus" = model "Qwen3.7 Plus";
-            "qwen3.6-plus" = model "Qwen3.6 Plus";
             "gpt-5.6-luna-fast" = model "GPT-5.6 Luna Fast";
             "gpt-5.6-luna" = model "GPT-5.6 Luna";
             "gpt-5.6-sol-fast" = model "GPT-5.6 Sol Fast";

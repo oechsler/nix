@@ -135,7 +135,7 @@ MODEL_ROUTING = {
             "PREFERRED for general development and broad refactors with tools. "
             "Solid coding model. 4300 req/5h quota. Use as primary alternative to DeepSeek Flash."
         ),
-        "fallbacks": ["deepseek-v4-flash", "qwen3.6-plus", "gpt-5.6-luna"],
+        "fallbacks": ["deepseek-v4-flash", "gpt-5.6-luna"],
     },
     "qwen3.8-max": {
         "description": (
@@ -150,13 +150,6 @@ MODEL_ROUTING = {
             "Complex algorithmic analysis, math. 340 req/5h quota."
         ),
         "fallbacks": ["qwen3.8-max", "gpt-5.6-terra"],
-    },
-    "qwen3.6-plus": {
-        "description": (
-            "Older Qwen coding fallback for availability only. Not for direct routing. "
-            "3300 req/5h quota."
-        ),
-        "fallbacks": ["qwen3.7-plus"],
     },
     "qwen3:8b": {
         "description": (
@@ -189,7 +182,6 @@ MODEL_PROVIDERS = {
     "qwen3.8-max": "opencode-go",
     "qwen3.7-plus": "opencode-go",
     "qwen3.7-max": "opencode-go",
-    "qwen3.6-plus": "opencode-go",
     "qwen3:8b": "ollama",
     **{model: "chatgpt" for model in CHATGPT_MODELS},
 }
@@ -209,7 +201,6 @@ MODEL_DISPLAY_NAMES = {
     "qwen3.8-max": "Qwen3.8 Max",
     "qwen3.7-plus": "Qwen3.7 Plus",
     "qwen3.7-max": "Qwen3.7 Max",
-    "qwen3.6-plus": "Qwen3.6 Plus",
     "qwen3:8b": "Qwen3 8B (Local)",
 }
 
@@ -290,6 +281,33 @@ def _strip_model_notices(text: str) -> str:
     ).strip()
 
 
+def _strip_notices_from_history(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Remove router notice blockquotes from assistant messages in history.
+
+    The router prepends a notice block ("> **Model**\\n> reason") to every
+    streamed response. Models start imitating it once it appears in the
+    conversation history, producing repeated stacked notices. Strip the
+    notices before forwarding history to a backend so the pattern never
+    appears in model context.
+    """
+    cleaned = []
+    for message in messages:
+        if message.get("role") != "assistant":
+            cleaned.append(message)
+            continue
+        content = message.get("content", "")
+        if isinstance(content, str) and content.startswith(">"):
+            lines = content.splitlines()
+            i = 0
+            while i < len(lines) and lines[i].startswith(">"):
+                i += 1
+            while i < len(lines) and not lines[i].strip():
+                i += 1
+            content = "\n".join(lines[i:])
+        cleaned.append({**message, "content": content})
+    return cleaned
+
+
 def routing_context(messages: list[dict[str, Any]]) -> str:
     """Last few conversation turns, truncated, for the classification prompt."""
     relevant = []
@@ -367,7 +385,7 @@ Rules:
 - Math/algorithm analysis → qwen3.7-max, not flash.
 - Escalate to GPT* only when DeepSeek/Qwen/Mistral clearly cannot do the job.
 - Prefer -fast variants for simple, latency-sensitive overflow.{banned_section}
-Approximate quotas (req/5h): deepseek-v4-flash:63300, qwen3.7-plus:4300, deepseek-v4-pro:3450, qwen3.6-plus:3300, gpt-5.6-luna:2050, qwen3.7-max:340, qwen3.8-max:160.
+Approximate quotas (req/5h): deepseek-v4-flash:63300, qwen3.7-plus:4300, deepseek-v4-pro:3450, gpt-5.6-luna:2050, qwen3.7-max:340, qwen3.8-max:160.
 
 Context (has_tools={has_tools}):
 {context}
@@ -566,7 +584,6 @@ CAPABILITY_ESCALATION = {
     "mistral-medium": "gpt-5.6-terra",
     "deepseek-v4-flash": "deepseek-v4-pro",
     "deepseek-v4-pro": "qwen3.8-max",
-    "qwen3.6-plus": "qwen3.7-plus",
     "qwen3.7-plus": "qwen3.7-max",
     "qwen3.7-max": "qwen3.8-max",
     "qwen3.8-max": "gpt-5.6-sol",
@@ -579,7 +596,6 @@ CAPABILITY_ESCALATION = {
 
 CAPABILITY_LEVEL = {
     "mistral-small": 1,
-    "qwen3.6-plus": 1,
     "deepseek-v4-flash": 2,
     "mistral-medium": 2,
     "gpt-5.6-luna-fast": 2,
@@ -847,7 +863,6 @@ _FALLBACK_REASONS: dict[str, str] = {
     "qwen3.7-plus": "General development",
     "qwen3.8-max": "Deepest reasoning",
     "qwen3.7-max": "Advanced reasoning",
-    "qwen3.6-plus": "Availability fallback",
 }
 
 def _model_notice_text(
@@ -1816,10 +1831,13 @@ async def chat_completions(request: Request):
         classification_reason,
     )
 
+    last_model = _last_routed_model(messages)
     show_notice = (
         not is_metadata
         and requested_model not in DIRECT_MODELS
+        and last_model != target_model
     )
+    body["messages"] = _strip_notices_from_history(body.get("messages", []))
     body = _add_agent_instruction(body, has_tools)
     _record_route(target_model)
     candidates = (
