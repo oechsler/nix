@@ -50,66 +50,74 @@ MODEL_ROUTING = {
     "mistral-small": {
         "description": (
             "Fast model for greetings, Q&A, titles, translation. "
-            "ONLY for trivial tasks; skip for anything substantive."
+            "Only for trivial tasks; skip for anything substantive."
         ),
+        "family": "mistral",
         "fallbacks": ["mistral-medium"],
     },
     "mistral-medium": {
         "description": (
             "Strong model for architecture, design tradeoffs, reviews, planning, "
-            "analysis. Capable with and without tools. PREFERRED for reasoning-heavy tasks."
+            "analysis. Capable with and without tools."
         ),
-        "fallbacks": ["qwen3.7-plus", "gpt-5.6-terra"],
+        "family": "mistral",
+        "fallbacks": ["qwen3.7-plus", "deepseek-v4-flash"],
     },
     "deepseek-v4-flash": {
         "description": (
-            "PRIMARY coding model: bugs, refactors, multi-step changes, file edits, "
-            "shell, NixOS, containers. Cheap & fast (63300 req/5h). "
-            "PREFERRED over qwen3.7-plus unless the task is broad multi-file refactoring."
+            "Fast coding model: bugs, refactors, multi-step changes, file edits, "
+            "shell, NixOS, containers. Very high quota (158150 req/month)."
         ),
-        "fallbacks": ["qwen3.7-plus", "gpt-5.6-luna-fast"],
+        "family": "deepseek",
+        "fallbacks": ["deepseek-v4-pro", "qwen3.7-plus"],
     },
     "deepseek-v4-pro": {
         "description": (
             "Stronger DeepSeek for complex work: multi-step exploration, "
-            "deep analysis with tools. More capable than Flash but limited quota (3450)."
+            "deep analysis with tools. 17150 req/month quota."
         ),
-        "fallbacks": ["qwen3.8-max", "gpt-5.6-sol"],
+        "family": "deepseek",
+        "fallbacks": ["qwen3.7-max", "gpt-5.6-terra"],
     },
     "gpt-5.6-terra": {
         "description": (
             "GPT for complex agentic coding and multi-step exploration. "
-            "Use when DeepSeek Pro or Qwen Plus insufficient."
+            "Strong reasoning and tool use."
         ),
+        "family": "gpt",
         "chatgpt_model": "gpt-5.6-terra",
         "fallbacks": ["gpt-5.6-sol"],
     },
     "gpt-5.6-luna-openai": {
-        "description": "Direct OpenAI fallback for the preferred OpenCode Go Luna route. Never select automatically.",
+        "description": "Direct OpenAI fallback for the OpenCode Go Luna route. Never select automatically.",
+        "family": "gpt",
         "chatgpt_model": "gpt-5.6-luna",
-        "fallbacks": ["gpt-5.6-sol"],
+        "fallbacks": ["gpt-5.6-terra"],
         "hidden": True,
     },
     "gpt-5.6-sol": {
         "description": (
             "Top-tier GPT for hardest agentic work: ambiguous multi-step "
             "exploration, race conditions, high-stakes system administration, critical bugs. "
-            "Strongest model – use only when Terra insufficient."
+            "Strongest model available."
         ),
+        "family": "gpt",
         "chatgpt_model": "gpt-5.6-sol",
-        "fallbacks": ["gpt-5.6-terra"],
+        "fallbacks": ["qwen3.8-max"],
     },
     "gpt-5.6-luna": {
         "description": (
-            "GPT entry tier via OpenCode Go. Use when DeepSeek/Qwen "
-            "capacity is saturated. 2050 req/5h quota."
+            "GPT entry tier via OpenCode Go. Good general-purpose model. "
+            "10250 req/month quota."
         ),
+        "family": "gpt",
         "fallbacks": ["gpt-5.6-luna-openai"],
     },
     "gpt-5.6-terra-fast": {
         "description": (
             "Faster Terra variant for complex tasks at higher throughput."
         ),
+        "family": "gpt",
         "chatgpt_model": "gpt-5.6-terra",
         "service_tier": "priority",
         "fallbacks": ["gpt-5.6-sol-fast"],
@@ -118,37 +126,42 @@ MODEL_ROUTING = {
         "description": (
             "Fast top-tier GPT for hardest debugging when Terra insufficient."
         ),
+        "family": "gpt",
         "chatgpt_model": "gpt-5.6-sol",
         "service_tier": "priority",
         "fallbacks": ["gpt-5.6-terra-fast"],
     },
     "gpt-5.6-luna-fast": {
         "description": (
-            "Fast entry-tier GPT for simple-to-medium coding. Use when DeepSeek/Qwen saturated."
+            "Fast entry-tier GPT for simple-to-medium coding. Overflow model."
         ),
+        "family": "gpt",
         "chatgpt_model": "gpt-5.6-luna",
         "service_tier": "priority",
         "fallbacks": ["qwen3.7-plus", "deepseek-v4-flash"],
     },
     "qwen3.7-plus": {
         "description": (
-            "PREFERRED for general development and broad refactors with tools. "
-            "Solid coding model. 4300 req/5h quota. Use as primary alternative to DeepSeek Flash."
+            "General development and broad refactors with tools. "
+            "Solid coding model. 21600 req/month quota."
         ),
-        "fallbacks": ["deepseek-v4-flash", "gpt-5.6-luna"],
+        "family": "qwen",
+        "fallbacks": ["qwen3.7-max", "deepseek-v4-flash"],
     },
     "qwen3.8-max": {
         "description": (
             "Top Qwen reasoning model. Complex algorithmic analysis, math, "
-            "deep design review. Very limited: 160 req/5h quota."
+            "deep design review. 810 req/month quota."
         ),
-        "fallbacks": ["qwen3.7-max", "deepseek-v4-pro"],
+        "family": "qwen",
+        "fallbacks": ["gpt-5.6-sol", "deepseek-v4-pro"],
     },
     "qwen3.7-max": {
         "description": (
-            "Advanced reasoning beyond mistral-medium. "
-            "Complex algorithmic analysis, math. 340 req/5h quota."
+            "Advanced reasoning, complex algorithmic analysis, math. "
+            "1690 req/month quota."
         ),
+        "family": "qwen",
         "fallbacks": ["qwen3.8-max", "gpt-5.6-terra"],
     },
     "qwen3:8b": {
@@ -156,6 +169,7 @@ MODEL_ROUTING = {
             "Local Qwen3 8B on Ollama. Limited offline model for "
             "light tasks when privacy critical. Not for auto-routing."
         ),
+        "family": "qwen",
         "fallbacks": ["mistral-small"],
     },
 }
@@ -179,6 +193,7 @@ MODEL_PROVIDERS = {
     "deepseek-v4-flash": "opencode-go",
     "deepseek-v4-pro": "opencode-go",
     "gpt-5.6-luna": "opencode-go",
+    "gpt-5.6-luna-openai": "openai",
     "qwen3.8-max": "opencode-go",
     "qwen3.7-plus": "opencode-go",
     "qwen3.7-max": "opencode-go",
@@ -239,7 +254,9 @@ GLOBAL_FALLBACKS = [
 
 _PROVIDER_COOLDOWN_BASE = int(os.environ.get("PROVIDER_COOLDOWN_BASE_SECONDS", "30"))
 _PROVIDER_COOLDOWN_MAX = int(os.environ.get("PROVIDER_COOLDOWN_MAX_SECONDS", "300"))
-_AUTH_BAN_SECONDS = int(os.environ.get("AUTH_BAN_SECONDS", "3600"))
+_AUTH_BAN_SECONDS = int(os.environ.get("AUTH_BAN_SECONDS", "600"))
+_EXHAUSTION_BAN_SECONDS = int(os.environ.get("EXHAUSTION_BAN_SECONDS", "900"))
+_SESSION_QUALITY_BAN_SECONDS = int(os.environ.get("SESSION_QUALITY_BAN_SECONDS", "600"))
 MODEL_ROTATION_BAN_SECONDS = int(
     os.environ.get("MODEL_ROTATION_BAN_SECONDS", "120")
 )
@@ -378,28 +395,27 @@ Banned/cooldown models (do NOT pick these; choose the best remaining option):
     return f"""
 Classify for OpenCode routing. Match approximately based on the task – no rigid 1:1 mapping. Think about what model fits best for THIS specific request. Return: model_id - reason (2-6 words in user's language).
 
-Model tiers (cheapest → strongest):
+Available models (each with strengths, quotas, and costs – you decide the best fit):
 - mistral-small: trivial – greetings, simple Q&A, titles, translations, one-line answers. No tools needed.
-- mistral-medium: analysis, architecture, design tradeoffs, planning, reviews.
-- deepseek-v4-flash: PRIMARY for coding with tools – file edits, shell, tests, small-to-medium features (63300 quota). Use this as default for most coding tasks.
-- qwen3.7-plus: broad multi-file refactors, large-scale changes where Flash struggles (4300 quota). Only use when task is clearly too broad for Flash.
-- deepseek-v4-pro: deep multi-step exploration, complex debugging with many files (3450).
-- qwen3.7-max: advanced reasoning, math, algorithmic analysis (340).
-- qwen3.8-max: deepest reasoning, proofs, formal methods (160).
-- gpt-5.6-luna-fast / gpt-5.6-luna: overflow when DeepSeek/Qwen saturated.
+- mistral-medium: analysis, architecture, design tradeoffs, planning, reviews, design discussions.
+- deepseek-v4-flash: fast coding with tools – file edits, shell, tests, small-to-medium features. High quota, cheap. Good default for most coding.
+- qwen3.7-plus: broad multi-file refactors, large-scale changes. Good balance of quality and speed.
+- deepseek-v4-pro: deep multi-step exploration, complex debugging with many files.
+- qwen3.7-max: advanced reasoning, math, algorithmic analysis.
+- qwen3.8-max: deepest reasoning, proofs, formal methods.
+- gpt-5.6-luna-fast / gpt-5.6-luna: overflow when DeepSeek/Qwen saturated; strong general purpose.
 - gpt-5.6-terra / gpt-5.6-sol: hardest problems – ambiguous production issues, critical bugs, high-stakes system work.
+- qwen3:8b (local): only for offline/privacy-critical light tasks.
 
-Rules:
-- DEFAULT to deepseek-v4-flash for coding tasks with tools. It is the most cost-effective choice.
-- ONLY escalate to qwen3.7-plus when the task involves >5 files or broad architectural refactoring.
-- ONLY escalate to deepseek-v4-pro or GPT* when task clearly requires exceptional reasoning or has failed with Flash/Pro.
-- Small is ONLY for greetings, titles, translations, and truly trivial Q&A. Never use mistral-small for coding, debugging, shell, NixOS, file edits, or any substantive request, even without tools.
-- Coding without tools → deepseek-v4-flash, not mistral-small.
-- Architecture/planning → mistral-medium, not flash.
-- Math/algorithm analysis → qwen3.7-max, not flash.
-- Escalate to GPT* only when DeepSeek/Qwen/Mistral clearly cannot do the job.
+Guidance (not rules – use your judgment):
+- Consider: capability needs, tool usage, quota availability, and how hard the task really is.
+- For coding with tools, prefer DeepSeek Flash or Qwen Plus as cost-effective choices; escalate to stronger models when the task demands more reasoning or the cheaper model would fail.
+- Math, algorithmics, proofs → Qwen Max models or GPT.
+- Architecture/planning/design discussions → Mistral Medium or GPT.
+- Never use mistral-small for coding, debugging, shell, NixOS, file edits, or substantive requests, even without tools.
+- When in doubt between two models, choose the cheaper/faster one.
 - Prefer -fast variants for simple, latency-sensitive overflow.{banned_section}
-Approximate quotas (req/5h): deepseek-v4-flash:63300, qwen3.7-plus:4300, deepseek-v4-pro:3450, gpt-5.6-luna:2050, qwen3.7-max:340, qwen3.8-max:160.
+Approximate quotas (req/month): deepseek-v4-flash:158150, deepseek-v4-pro:17150, qwen3.7-plus:21600, qwen3.7-max:1690, qwen3.8-max:810, gpt-5.6-luna:10250.
 
 Context (has_tools={has_tools}):
 {context}
@@ -593,18 +609,48 @@ def _is_coding_request(messages: list[dict[str, Any]], has_tools: bool) -> bool:
 
 # Backend fallbacks handle availability failures. Capability escalation is
 # separate: it moves a retry to a stronger model after an inadequate answer.
+FAMILY_ESCALATION_LADDERS = {
+    "mistral": ["mistral-small", "mistral-medium"],
+    "deepseek": ["deepseek-v4-flash", "deepseek-v4-pro"],
+    "qwen": ["qwen3.7-plus", "qwen3.7-max", "qwen3.8-max"],
+    "gpt": ["gpt-5.6-luna", "gpt-5.6-luna-fast", "gpt-5.6-terra", "gpt-5.6-terra-fast", "gpt-5.6-sol", "gpt-5.6-sol-fast"],
+}
+
+
+def _get_family_escalation(model: str) -> str | None:
+    """Get the next model in the family escalation ladder."""
+    model_info = MODEL_ROUTING.get(model, {})
+    family = model_info.get("family")
+    if not family:
+        return None
+    
+    ladder = FAMILY_ESCALATION_LADDERS.get(family, [])
+    if not ladder:
+        return None
+    
+    try:
+        current_index = ladder.index(model)
+        if current_index < len(ladder) - 1:
+            return ladder[current_index + 1]
+    except ValueError:
+        pass
+    
+    return None
+
+
 CAPABILITY_ESCALATION = {
     "mistral-small": "mistral-medium",
-    "mistral-medium": "gpt-5.6-terra",
+    "mistral-medium": "deepseek-v4-flash",
     "deepseek-v4-flash": "deepseek-v4-pro",
-    "deepseek-v4-pro": "qwen3.8-max",
+    "deepseek-v4-pro": "qwen3.7-max",
     "qwen3.7-plus": "qwen3.7-max",
     "qwen3.7-max": "qwen3.8-max",
-    "qwen3.8-max": "gpt-5.6-sol",
-    "gpt-5.6-luna-fast": "gpt-5.6-terra-fast",
+    "qwen3.8-max": "gpt-5.6-terra",
     "gpt-5.6-luna": "gpt-5.6-terra",
-    "gpt-5.6-terra-fast": "gpt-5.6-sol-fast",
+    "gpt-5.6-luna-fast": "gpt-5.6-terra-fast",
     "gpt-5.6-terra": "gpt-5.6-sol",
+    "gpt-5.6-terra-fast": "gpt-5.6-sol-fast",
+    "gpt-5.6-sol": "gpt-5.6-sol-fast",
     "gpt-5.6-sol-fast": "gpt-5.6-sol",
 }
 
@@ -690,7 +736,11 @@ def _last_routed_model(messages: list[dict[str, Any]]) -> str | None:
 
 
 def _capability_escalation(messages: list[dict[str, Any]]) -> str | None:
-    """Return a stronger model when the user rejects the previous result."""
+    """Return a stronger model when the user rejects the previous result.
+    
+    First tries the family ladder (next step in same family), then falls back
+    to cross-family escalation. Bans the previous model for the session.
+    """
     latest_user = next(
         (
             message_text(message).lower()
@@ -704,7 +754,22 @@ def _capability_escalation(messages: list[dict[str, Any]]) -> str | None:
     ):
         return None
     previous_model = _last_routed_model(messages)
-    return CAPABILITY_ESCALATION.get(previous_model or "")
+    if not previous_model:
+        return None
+    
+    family_next = _get_family_escalation(previous_model)
+    if family_next and not _model_banned(family_next):
+        _ban_model(previous_model, _SESSION_QUALITY_BAN_SECONDS, "user rejected result (session quality ban)")
+        logger.info("family escalation model=%s -> model=%s", previous_model, family_next)
+        return family_next
+    
+    cross_family = CAPABILITY_ESCALATION.get(previous_model)
+    if cross_family:
+        _ban_model(previous_model, _SESSION_QUALITY_BAN_SECONDS, "user rejected result (session quality ban)")
+        logger.info("cross-family escalation model=%s -> model=%s", previous_model, cross_family)
+        return cross_family
+    
+    return None
 
 
 def _more_capable_model(classified_model: str, escalation_model: str) -> str:
@@ -802,7 +867,10 @@ def _mark_provider_http_failure(model: str, status_code: int) -> None:
             _model_cooldown_until[target] = time.monotonic() + _PROVIDER_COOLDOWN_BASE
         return
     if status_code == 429:
-        _mark_provider_failure(model, f"HTTP {status_code}")
+        reason = f"HTTP {status_code} (quota exhausted)"
+        _ban_model(model, _EXHAUSTION_BAN_SECONDS, reason)
+        for target in _provider_models(model):
+            _model_cooldown_until[target] = time.monotonic() + _PROVIDER_COOLDOWN_BASE
         return
     if status_code >= 500 or status_code in _PROVIDER_FAILURE_STATUSES:
         _mark_provider_failure(model, f"HTTP {status_code}", provider_wide=True)
@@ -872,14 +940,18 @@ def _record_route(model: str) -> None:
 
 
 def _banned_alternative(model: str) -> str | None:
-    """Return an equally capable sibling for a banned model, if available."""
-    siblings = {
-        "deepseek-v4-flash": "qwen3.7-plus",
-        "qwen3.7-plus": "deepseek-v4-flash",
-    }
-    alternative = siblings.get(model)
-    if alternative and not _model_banned(alternative):
-        return alternative
+    """Return an equally capable sibling for a banned model, if available.
+    Uses family ladders to find alternatives."""
+    model_info = MODEL_ROUTING.get(model, {})
+    family = model_info.get("family")
+    
+    if family:
+        ladder = FAMILY_ESCALATION_LADDERS.get(family, [])
+        if ladder:
+            for candidate in ladder:
+                if candidate != model and not _model_banned(candidate):
+                    return candidate
+    
     return None
 
 
@@ -1570,6 +1642,7 @@ async def _chatgpt_non_streaming(
             final_response = event.get("response")
     if not final_response:
         _mark_provider_failure(routed_model, "no final response")
+        _ban_model(routed_model, _SESSION_QUALITY_BAN_SECONDS, "no final response (session quality ban)")
         if fallback_models:
             return await _stream_to_backend(
                 body=chat_body,
