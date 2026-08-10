@@ -21,11 +21,17 @@
   config,
   lib,
   features,
+  pkgs,
   ...
 }:
 
 let
-  inherit (config) sops;
+  opencodeWithSecrets = pkgs.writeShellScriptBin "opencode" ''
+    exec env \
+      MISTRAL_API_KEY="$(< ${config.sops.secrets."opencode/mistral/api-key".path})" \
+      OPENCODE_GO_API_KEY="$(< ${config.sops.secrets."opencode/opencode-go/api-key".path})" \
+      ${pkgs.opencode}/bin/opencode "$@"
+  '';
 in
 {
   config = lib.mkIf (features.development.enable && features.development.opencode.enable) {
@@ -34,19 +40,9 @@ in
       "opencode/opencode-go/api-key" = { };
     };
 
-    sops.templates.opencode-env = {
-      content = ''
-        export MISTRAL_API_KEY="${config.sops.placeholder."opencode/mistral/api-key"}"
-        export OPENCODE_GO_API_KEY="${config.sops.placeholder."opencode/opencode-go/api-key"}"
-      '';
-    };
-
-    programs.fish.shellInit = ''
-      source ${sops.templates.opencode-env.path}
-    '';
-
     programs.opencode = {
       enable = true;
+      package = opencodeWithSecrets;
 
       settings = {
         lsp = true;
