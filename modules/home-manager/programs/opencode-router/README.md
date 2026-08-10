@@ -6,12 +6,28 @@ The router is enabled whenever `features.development.opencode.enable` is enabled
 
 ## Source Layout
 
-- `default.nix` imports the complete feature.
-- `client.nix` configures OpenCode and its visible model catalog.
-- `services.nix` builds and runs the rootless Podman stack.
-- `router.py` contains classification, routing, fallback, and proxy behavior.
-- `litellm.yaml` maps LiteLLM model names to upstream providers.
-- `test_router.py` covers routing and proxy behavior.
+The router is implemented as a self-contained package at `modules/packages/opencode-router/`:
+
+```
+modules/packages/opencode-router/
+├── flake.nix              # Sub-flake exposing package, image, and module
+├── rust/                  # Rust source code
+│   ├── Cargo.toml
+│   ├── Cargo.lock
+│   ├── config/            # Default configuration
+│   ├── src/               # Router implementation
+│   └── tests/             # Integration tests and fixtures
+└── nix/                   # Nix modules
+    ├── module.nix         # Unified options interface
+    ├── router.nix         # Generates router.toml
+    ├── litellm.nix        # Generates litellm.yaml
+    ├── client.nix         # Configures OpenCode client
+    ├── services.nix       # Podman container orchestration
+    ├── secrets.nix        # SOPS secrets management
+    └── package.nix        # Rust package and Docker image
+```
+
+The home-manager module at `modules/home-manager/programs/opencode-auto-router/default.nix` is a thin interface that imports the package module and sets model configuration.
 
 Feature options remain in `modules/system/features.nix`, and individual hosts select the classifier in their host configuration. Those settings are intentionally outside this directory because they belong to global option declarations and host policy rather than the router implementation.
 
@@ -259,7 +275,5 @@ After changing the module, rebuild the Home Manager configuration and restart Op
 Run the router tests from the repository root:
 
 ```bash
-nix shell --impure --expr \
-  'with import <nixpkgs> {}; python3.withPackages (ps: with ps; [ pytest fastapi httpx ])' \
-  -c pytest modules/home-manager/programs/opencode-auto-router/test_router.py
+cd modules/packages/opencode-router/rust && cargo test
 ```

@@ -23,7 +23,7 @@
     ./lsp.nix
     ./mangohud.nix
     ./neovim.nix
-    ./opencode-auto-router
+    ./opencode-router
     ./proton-pass.nix
     ./terminal.nix
     ./tmux.nix
