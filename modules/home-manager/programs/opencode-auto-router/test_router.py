@@ -7,12 +7,28 @@ import router
 class RouterTest(unittest.TestCase):
     def setUp(self):
         router._model_cooldown_until.clear()
+        router._model_ban_until.clear()
+        router._consecutive_routes.clear()
+        router._consecutive_failures.clear()
         router._classification_cache.clear()
+        router._last_route_model = None
 
     def test_fallback_chain_follows_all_configured_backends(self):
         self.assertEqual(
             router._fallback_chain("mistral-small"),
-            ["mistral-small", "mistral-medium", "gpt-5.6-terra", "gpt-5.6-sol", "gpt-5.6-luna", "gpt-5.6-luna-openai", "deepseek-v4-flash", "qwen3:8b"],
+            [
+                "mistral-small",
+                "mistral-medium",
+                "qwen3.7-plus",
+                "gpt-5.6-terra",
+                "deepseek-v4-flash",
+                "qwen3.6-plus",
+                "gpt-5.6-luna",
+                "gpt-5.6-sol",
+                "gpt-5.6-luna-fast",
+                "gpt-5.6-luna-openai",
+                "qwen3:8b",
+            ],
         )
 
     def test_every_fallback_chain_ends_with_local_model(self):
@@ -41,6 +57,44 @@ class RouterTest(unittest.TestCase):
 
         router._mark_provider_success("deepseek-v4-flash")
         self.assertTrue(router._provider_available("deepseek-v4-flash"))
+
+    def test_repeated_model_failures_create_a_temporary_ban(self):
+        router._mark_provider_failure("deepseek-v4-flash", "first outage")
+        router._mark_provider_failure("deepseek-v4-flash", "second outage")
+
+        self.assertTrue(router._model_banned("deepseek-v4-flash"))
+        self.assertEqual(router._banned_alternative("deepseek-v4-flash"), "qwen3.7-plus")
+
+    def test_route_rotation_bans_repeated_model(self):
+        with patch.object(router, "MODEL_MAX_CONSECUTIVE", 2):
+            router._record_route("deepseek-v4-flash")
+            router._record_route("deepseek-v4-flash")
+
+        self.assertTrue(router._model_banned("deepseek-v4-flash"))
+        self.assertEqual(router._consecutive_routes["deepseek-v4-flash"], 0)
+
+    def test_banned_models_are_visible_in_classifier_prompt(self):
+        prompt = router._build_classification_prompt(
+            "user: Fix the deployment", True, ["deepseek-v4-flash"]
+        )
+
+        self.assertIn("Banned/cooldown models", prompt)
+        self.assertIn("deepseek-v4-flash", prompt)
+        self.assertIn("LOAD BALANCING", prompt)
+
+    def test_mistral_small_has_medium_as_its_first_real_fallback(self):
+        self.assertEqual(
+            router._fallback_chain("mistral-small")[:2],
+            ["mistral-small", "mistral-medium"],
+        )
+
+    def test_mistral_small_refusal_is_escalated(self):
+        payload = {
+            "choices": [{"message": {"content": "I cannot help with this task."}}]
+        }
+
+        self.assertTrue(router._is_capability_refusal("mistral-small", payload))
+        self.assertFalse(router._is_capability_refusal("mistral-medium", payload))
 
     def test_notice_is_minimal_for_initial_route(self):
         self.assertEqual(
@@ -274,7 +328,11 @@ class RouterTest(unittest.TestCase):
 class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
     def setUp(self):
         router._model_cooldown_until.clear()
+        router._model_ban_until.clear()
+        router._consecutive_routes.clear()
+        router._consecutive_failures.clear()
         router._classification_cache.clear()
+        router._last_route_model = None
 
     async def test_cloud_classifier_uses_litellm(self):
         class Response:
@@ -405,6 +463,27 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(stream.await_args.args[2], "mistral-medium")
         self.assertEqual(stream.await_args.args[4], reason)
 
+    async def test_tool_request_promotes_classifier_small_to_medium(self):
+        body = {
+            "model": "auto",
+            "messages": [{"role": "user", "content": "Edit the config"}],
+            "tools": [{"type": "function", "function": {"name": "bash"}}],
+        }
+
+        class Request:
+            async def json(self):
+                return body
+
+        with (
+            patch.object(
+                router, "_classify", AsyncMock(return_value=("mistral-small", "Trivial"))
+            ),
+            patch.object(router, "_stream_to_backend", AsyncMock(return_value="ok")) as stream,
+        ):
+            self.assertEqual(await router.chat_completions(Request()), "ok")
+
+        self.assertEqual(stream.await_args.args[1][0], "mistral-medium")
+
     async def test_manual_model_skips_only_classification(self):
         body = {
             "model": "gpt-5.6-sol",
@@ -461,6 +540,23 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(notice_model, "mistral-small")
         self.assertFalse(show_notice)
         self.assertEqual(reason, "Titel/Summary")
+
+    async def test_direct_title_request_keeps_cheap_fallback_chain(self):
+        body = {
+            "model": "mistral-small",
+            "messages": [{"role": "user", "content": "Generate a short title"}],
+        }
+
+        class Request:
+            async def json(self):
+                return body
+
+        with patch.object(
+            router, "_stream_to_backend", AsyncMock(return_value="ok")
+        ) as stream:
+            self.assertEqual(await router.chat_completions(Request()), "ok")
+
+        self.assertEqual(stream.await_args.args[1], router._metadata_fallback_chain())
 
     async def test_model_outage_tries_sibling_model_then_fails_over(self):
         class Response:

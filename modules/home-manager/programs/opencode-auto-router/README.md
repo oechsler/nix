@@ -27,7 +27,7 @@ The router therefore follows three design choices:
 
 ### Routing policy update
 
-The automatic policy now treats DeepSeek and Qwen as the default cost/performance middle ground for tool-enabled work. DeepSeek Flash handles routine coding, DeepSeek Pro handles genuinely complex tasks, and Qwen 3.7 Plus handles general development, broad refactors, and provider diversification. GPT models are reserved for work that is genuinely complex, ambiguous, high-stakes, or beyond the DeepSeek/Qwen capability, and for overflow when those providers are unavailable or saturated. This is a classifier preference, not a hard quota scheduler: provider availability fallback and capability escalation can still select another backend.
+The automatic policy now treats DeepSeek and Qwen as the default cost/performance middle ground for tool-enabled work. DeepSeek Flash handles focused fixes, DeepSeek Pro handles genuinely complex tasks, and Qwen 3.7 Plus handles general development, broad refactors, and provider diversification. The cloud classifier itself runs on Mistral Small rather than Flash to avoid self-selection bias. GPT models are reserved for work that is genuinely complex, ambiguous, high-stakes, or beyond the DeepSeek/Qwen capability, and for overflow when those providers are unavailable or saturated. This is a classifier preference, not a hard quota scheduler: provider availability fallback, temporary rotation bans, and capability escalation can still select another backend.
 
 You can still select any model manually when you need predictable behavior.
 
@@ -49,7 +49,7 @@ flowchart LR
 For an automatic request:
 
 1. OpenCode sends the conversation and available tools to the router.
-2. The configured classifier selects a backend. Local mode tries `qwen3:8b`; cloud mode calls `deepseek-v4-flash` through LiteLLM.
+2. The configured classifier selects a backend. Local mode tries `qwen3:8b`; cloud mode calls the neutral `mistral-small` classifier through LiteLLM.
 3. The router selects a backend based on task complexity, tool use, model capability, and subscription limits.
 4. LiteLLM normalizes Mistral and OpenCode Go behind one local OpenAI-compatible API. ChatGPT subscription models are called directly because they use a different OAuth API.
 5. The router streams the answer back to OpenCode.
@@ -62,7 +62,7 @@ The router classifies each request before sending it to a backend. This section 
 
 1. **Context extraction**: The router takes the last 6 messages from the conversation (truncated to 1200 characters each) to understand the request.
 2. **Tool detection**: It checks whether the request includes tool definitions (file edits, shell commands, search, etc.).
-3. **Classification**: The router sends the same routing prompt either to Ollama or to `deepseek-v4-flash` through LiteLLM. The classifier returns exactly one model ID.
+3. **Classification**: The router sends the same routing prompt either to Ollama or to `mistral-small` through LiteLLM. The classifier returns exactly one model ID and receives currently banned models so it can avoid them.
 4. **Caching**: Identical prompts are cached for 5 minutes to avoid redundant classification calls.
 
 ### Complexity Levels
@@ -88,7 +88,10 @@ The classifier considers:
 ### Fallback and Escalation
 
 - **Backend fallback**: If a provider fails before the first response chunk (network error, rate limit, authentication error, timeout, or upstream error), the router walks the fallback chain defined for each model. Fallback routes through the same provider first (e.g., `qwen3.7-plus` → `qwen3.6-plus`) before crossing to other providers.
-- **Model circuit breaker**: A failing model enters a 60-second cooldown. Other models from the same provider remain available as fallbacks.
+- **Mistral Small capability fallback**: `mistral-small` always tries `mistral-medium` first when its backend fails. In non-streaming responses, common capability refusals from Small also trigger that Medium fallback instead of being returned as the final answer.
+- **Model circuit breaker**: A failing model enters a 60-second cooldown. Repeated failures create a 10-minute model ban. Other models from the same provider remain available as fallbacks.
+- **Load-balancing rotation**: After five consecutive requests, the selected model is temporarily banned for five minutes. The classifier receives the ban list and the router prefers an equivalent sibling, such as Qwen 3.7 Plus instead of DeepSeek Flash.
+- **Title fallback**: Title and summary requests use a cheap-only chain: Mistral Small, Mistral Medium, DeepSeek Flash, then GPT Luna Fast. Local-classifier hosts add local Qwen as the final safety net; expensive Terra/Sol models are not used for metadata.
 - **Offline safety net**: Local-classifier hosts end every fallback chain at `qwen3:8b`. Cloud-classifier hosts omit Ollama from their model list and fallback chains.
 - **Capability escalation**: If a user says the previous answer did not work (e.g., "that did not work", "funktioniert nicht"), the router reads the model from the previous response and escalates to a more capable tier. Escalation prefers the same provider where possible:
   - **Mistral**: `small` → `medium` → (cross to chatgpt)
