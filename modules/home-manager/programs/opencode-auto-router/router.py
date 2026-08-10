@@ -26,14 +26,16 @@ OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 ROUTER_MODELS = os.environ.get(
     "ROUTER_MODELS", "qwen3:8b"
 ).split(",")
-DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "deepseek-v4-flash")
+DEFAULT_MODEL = os.environ.get("DEFAULT_MODEL", "qwen3.7-plus")
 OPENCODE_AUTH_FILE = os.environ.get(
     "OPENCODE_AUTH_FILE", "/var/lib/opencode/auth.json"
 )
 CLASSIFIER_BACKEND = os.environ.get("CLASSIFIER_BACKEND", "local")
 USE_LOCAL_CLASSIFIER = CLASSIFIER_BACKEND == "local"
+# A neutral, cheap classifier model. Never let the classifier run on a model
+# that is also a routing candidate: it would systematically pick itself.
 CLOUD_CLASSIFIER_MODEL = os.environ.get(
-    "CLOUD_CLASSIFIER_MODEL", "deepseek-v4-flash"
+    "CLOUD_CLASSIFIER_MODEL", "mistral-small"
 )
 
 # ---------------------------------------------------------------------------
@@ -57,22 +59,22 @@ MODEL_ROUTING = {
             "Strong model for architecture, design tradeoffs, reviews, planning, "
             "analysis. Capable with and without tools. PREFERRED for reasoning-heavy tasks."
         ),
-        "fallbacks": ["gpt-5.6-terra"],
+        "fallbacks": ["qwen3.7-plus", "gpt-5.6-terra"],
     },
     "deepseek-v4-flash": {
         "description": (
-            "PRIMARY coding model: handles most coding tasks including "
-            "hard bugs, refactors, multi-step changes, file edits, shell, "
-            "NixOS, containers. 63300 req/5h – TEMPORARILY 2X quota."
+            "Coding model: handles coding tasks including bugs, refactors, "
+            "multi-step changes, file edits, shell, NixOS, containers. "
+            "63300 req/5h. Use qwen3.7-plus for general dev to balance load."
         ),
-        "fallbacks": ["gpt-5.6-luna-fast"],
+        "fallbacks": ["qwen3.7-plus", "gpt-5.6-luna-fast"],
     },
     "deepseek-v4-pro": {
         "description": (
             "Stronger DeepSeek for complex work: multi-step exploration, "
             "deep analysis with tools. More capable than Flash but limited quota (3450)."
         ),
-        "fallbacks": ["gpt-5.6-sol"],
+        "fallbacks": ["qwen3.8-max", "gpt-5.6-sol"],
     },
     "gpt-5.6-terra": {
         "description": (
@@ -95,7 +97,7 @@ MODEL_ROUTING = {
             "Strongest model – use only when Terra insufficient."
         ),
         "chatgpt_model": "gpt-5.6-sol",
-        "fallbacks": ["gpt-5.6-luna"],
+        "fallbacks": ["gpt-5.6-terra"],
     },
     "gpt-5.6-luna": {
         "description": (
@@ -126,28 +128,28 @@ MODEL_ROUTING = {
         ),
         "chatgpt_model": "gpt-5.6-luna",
         "service_tier": "priority",
-        "fallbacks": ["deepseek-v4-flash"],
+        "fallbacks": ["qwen3.7-plus", "deepseek-v4-flash"],
     },
     "qwen3.7-plus": {
         "description": (
-            "PREFERRED alternative for general development and broad refactors "
-            "with tools. Solid coding model alongside DeepSeek Flash. 4300 req/5h quota."
+            "PREFERRED for general development and broad refactors with tools. "
+            "Solid coding model. 4300 req/5h quota. Use as primary alternative to DeepSeek Flash."
         ),
-        "fallbacks": ["qwen3.6-plus", "gpt-5.6-luna"],
+        "fallbacks": ["deepseek-v4-flash", "qwen3.6-plus", "gpt-5.6-luna"],
     },
     "qwen3.8-max": {
         "description": (
             "Top Qwen reasoning model. Complex algorithmic analysis, math, "
             "deep design review. Very limited: 160 req/5h quota."
         ),
-        "fallbacks": ["qwen3.7-max"],
+        "fallbacks": ["qwen3.7-max", "deepseek-v4-pro"],
     },
     "qwen3.7-max": {
         "description": (
             "Advanced reasoning beyond mistral-medium. "
             "Complex algorithmic analysis, math. 340 req/5h quota."
         ),
-        "fallbacks": ["gpt-5.6-terra"],
+        "fallbacks": ["qwen3.8-max", "gpt-5.6-terra"],
     },
     "qwen3.6-plus": {
         "description": (
@@ -223,6 +225,25 @@ GLOBAL_FALLBACKS = [
 _PROVIDER_COOLDOWN = int(os.environ.get("PROVIDER_COOLDOWN_SECONDS", "60"))
 _model_cooldown_until: dict[str, float] = {}
 _PROVIDER_FAILURE_STATUSES = {401, 403, 408, 425, 429}
+
+# ---------------------------------------------------------------------------
+# Temporary model bans (load balancing)
+#
+# Two ban types keep traffic from piling onto one model:
+# - Rotation ban: a model that served MODEL_MAX_CONSECUTIVE requests in a row
+#   is banned for MODEL_ROTATION_BAN_SECONDS, forcing the classifier to pick
+#   an equally capable alternative.
+# - Failure ban: a model that fails repeatedly (already on cooldown when it
+#   fails again) is banned for MODEL_BAN_SECONDS so the router stops trying it.
+# ---------------------------------------------------------------------------
+
+MODEL_BAN_SECONDS = int(os.environ.get("MODEL_BAN_SECONDS", "600"))
+MODEL_ROTATION_BAN_SECONDS = int(os.environ.get("MODEL_ROTATION_BAN_SECONDS", "300"))
+MODEL_MAX_CONSECUTIVE = int(os.environ.get("MODEL_MAX_CONSECUTIVE", "5"))
+_model_ban_until: dict[str, float] = {}
+_consecutive_routes: dict[str, int] = {}
+_consecutive_failures: dict[str, int] = {}
+_last_route_model: str | None = None
 
 # ---------------------------------------------------------------------------
 # ChatGPT / OpenAI OAuth
@@ -311,7 +332,15 @@ def _cache_classify(context: str, has_tools: bool, model: str, reason: str = "")
     _classification_cache[key] = (time.time() + _CACHE_TTL, model, reason)
 
 
-def _build_classification_prompt(context: str, has_tools: bool) -> str:
+def _build_classification_prompt(
+    context: str, has_tools: bool, banned_models: list[str] | None = None
+) -> str:
+    banned_section = ""
+    if banned_models:
+        banned_section = f"""
+Banned/cooldown models (do NOT pick these; choose the best remaining option):
+- {", ".join(sorted(banned_models))}
+"""
     return f"""
 Classify for OpenCode routing. Match approximately based on the task – no rigid 1:1 mapping. Think about what model fits best for THIS specific request. Return: model_id - reason (2-6 words in user's language).
 
@@ -328,12 +357,12 @@ Model tiers (cheapest → strongest):
 
 Rules:
 - Choose the cheapest tier that plausibly handles the task. Do NOT default to deepseek-v4-flash – it is one option, not the default.
+- LOAD BALANCING: deepseek-v4-flash and qwen3.7-plus are EQUALLY valid for routine tool-enabled coding. Alternate between them based on the task flavor (qwen for broad refactors/multi-file, deepseek for focused fixes/shell); vary your choice instead of repeating the same model.
 - Simple questions without tools → mistral-small, not flash.
 - Architecture/planning → mistral-medium, not flash.
 - Math/algorithm analysis → qwen3.7-max, not flash.
 - Escalate to GPT* only when DeepSeek/Qwen/Mistral clearly cannot do the job.
-- Prefer -fast variants for simple, latency-sensitive overflow.
-
+- Prefer -fast variants for simple, latency-sensitive overflow.{banned_section}
 Approximate quotas (req/5h): deepseek-v4-flash:63300, qwen3.7-plus:4300, deepseek-v4-pro:3450, qwen3.6-plus:3300, gpt-5.6-luna:2050, qwen3.7-max:340, qwen3.8-max:160.
 
 Context (has_tools={has_tools}):
@@ -394,7 +423,7 @@ async def _classify(messages: list[dict[str, Any]], has_tools: bool) -> tuple[st
         logger.info("classification cache hit model=%s reason=%s", cached[0], cached[1])
         return cached
 
-    prompt = _build_classification_prompt(context, has_tools)
+    prompt = _build_classification_prompt(context, has_tools, list(_banned_models()))
 
     if not USE_LOCAL_CLASSIFIER:
         try:
@@ -425,6 +454,9 @@ async def _classify(messages: list[dict[str, Any]], has_tools: bool) -> tuple[st
         return (DEFAULT_MODEL, "")
 
     for model in ROUTER_MODELS:
+        if _model_banned(model):
+            logger.info("skipping banned classifier model=%s", model)
+            continue
         try:
             async with httpx.AsyncClient(timeout=_CLASSIFICATION_TIMEOUT) as client:
                 response = await client.post(
@@ -620,18 +652,37 @@ def _more_capable_model(classified_model: str, escalation_model: str) -> str:
 
 
 def _fallback_chain(model: str) -> list[str]:
-    result = []
-    candidate = model
-    while candidate in DIRECT_MODELS and candidate not in result:
+    """Breadth-first walk of all configured fallbacks (not just the first)."""
+    result: list[str] = []
+    queue: list[str] = [model]
+    while queue:
+        candidate = queue.pop(0)
+        if candidate not in DIRECT_MODELS or candidate in result:
+            continue
         result.append(candidate)
-        fallbacks = MODEL_ROUTING.get(candidate, {}).get("fallbacks", [])
-        candidate = fallbacks[0] if fallbacks else ""
+        queue.extend(MODEL_ROUTING.get(candidate, {}).get("fallbacks", []))
     for fallback in GLOBAL_FALLBACKS:
         if fallback not in result:
             result.append(fallback)
     if not USE_LOCAL_CLASSIFIER:
         result = [candidate for candidate in result if _provider(candidate) != "ollama"]
     return result or [model]
+
+
+METADATA_FALLBACK_CHAIN = [
+    "mistral-small",
+    "mistral-medium",
+    "deepseek-v4-flash",
+    "gpt-5.6-luna-fast",
+]
+
+
+def _metadata_fallback_chain() -> list[str]:
+    """Cheap-only fallback chain for title/summary requests."""
+    result = list(METADATA_FALLBACK_CHAIN)
+    if USE_LOCAL_CLASSIFIER and "qwen3:8b" not in result:
+        result.append("qwen3:8b")
+    return result
 
 
 def _provider(model: str) -> str:
@@ -648,12 +699,18 @@ def _provider_available(model: str) -> bool:
 
 def _mark_provider_failure(model: str, reason: str) -> None:
     _model_cooldown_until[model] = time.monotonic() + _PROVIDER_COOLDOWN
+    failures = _consecutive_failures.get(model, 0) + 1
+    _consecutive_failures[model] = failures
     logger.warning(
-        "model cooldown model=%s seconds=%s reason=%s",
+        "model cooldown model=%s seconds=%s failures=%s reason=%s",
         model,
         _PROVIDER_COOLDOWN,
+        failures,
         reason,
     )
+    if failures >= 2:
+        _ban_model(model, MODEL_BAN_SECONDS, f"repeated failures ({failures})")
+        _consecutive_failures[model] = 0
 
 
 def _mark_provider_http_failure(model: str, status_code: int) -> None:
@@ -663,6 +720,65 @@ def _mark_provider_http_failure(model: str, status_code: int) -> None:
 
 def _mark_provider_success(model: str) -> None:
     _model_cooldown_until.pop(model, None)
+    _consecutive_failures[model] = 0
+
+
+def _ban_model(model: str, seconds: int, reason: str) -> None:
+    _model_ban_until[model] = time.monotonic() + seconds
+    logger.warning(
+        "model ban model=%s seconds=%s reason=%s", model, seconds, reason
+    )
+
+
+def _model_banned(model: str) -> bool:
+    ban_until = _model_ban_until.get(model, 0)
+    if ban_until <= time.monotonic():
+        _model_ban_until.pop(model, None)
+        return False
+    return True
+
+
+def _banned_models() -> dict[str, int]:
+    """Currently banned models with remaining seconds (expired ones dropped)."""
+    now = time.monotonic()
+    banned = {}
+    for model, ban_until in list(_model_ban_until.items()):
+        remaining = int(ban_until - now)
+        if remaining > 0:
+            banned[model] = remaining
+        else:
+            _model_ban_until.pop(model, None)
+    return banned
+
+
+def _record_route(model: str) -> None:
+    """Track consecutive routing and ban a model when it dominates the load."""
+    global _last_route_model
+    if _last_route_model != model:
+        for other in list(_consecutive_routes):
+            _consecutive_routes[other] = 0
+        _last_route_model = model
+    _consecutive_routes.setdefault(model, 0)
+    _consecutive_routes[model] += 1
+    if _consecutive_routes[model] >= MODEL_MAX_CONSECUTIVE:
+        _ban_model(
+            model,
+            MODEL_ROTATION_BAN_SECONDS,
+            f"served {_consecutive_routes[model]} consecutive requests (load balancing)",
+        )
+        _consecutive_routes[model] = 0
+
+
+def _banned_alternative(model: str) -> str | None:
+    """Return an equally capable sibling for a banned model, if available."""
+    siblings = {
+        "deepseek-v4-flash": "qwen3.7-plus",
+        "qwen3.7-plus": "deepseek-v4-flash",
+    }
+    alternative = siblings.get(model)
+    if alternative and not _model_banned(alternative):
+        return alternative
+    return None
 
 
 def _degraded_providers() -> dict[str, int]:
@@ -698,6 +814,31 @@ _FALLBACK_REASONS: dict[str, str] = {
     "qwen3.7-max": "Advanced reasoning",
     "qwen3.6-plus": "Availability fallback",
 }
+
+_CAPABILITY_REFUSAL_MARKERS = (
+    "i can't help",
+    "i cannot help",
+    "i'm not able",
+    "i am not able",
+    "i can't do",
+    "i cannot do",
+    "not capable",
+    "ich kann nicht",
+    "kann ich nicht",
+    "nicht in der lage",
+)
+
+
+def _is_capability_refusal(model: str, payload: dict[str, Any]) -> bool:
+    """Detect a Small refusal so the configured Medium fallback can run."""
+    if model != "mistral-small":
+        return False
+    text = "\n".join(
+        str(choice.get("message", {}).get("content", ""))
+        for choice in payload.get("choices", [])
+        if isinstance(choice.get("message"), dict)
+    ).lower()
+    return any(marker in text for marker in _CAPABILITY_REFUSAL_MARKERS)
 
 
 def _model_notice_text(
@@ -1411,9 +1552,9 @@ async def _stream_to_backend(
 
     for index, candidate in enumerate(candidates):
         remaining = candidates[index + 1 :]
-        if not _provider_available(candidate):
+        if not _provider_available(candidate) or _model_banned(candidate):
             logger.info(
-                "skipping unavailable provider=%s model=%s",
+                "skipping unavailable or banned provider=%s model=%s",
                 _provider(candidate),
                 candidate,
             )
@@ -1540,6 +1681,11 @@ async def _stream_to_backend(
                 "details": str(exc),
             }
             continue
+        if _is_capability_refusal(candidate, payload):
+            logger.info(
+                "capability refusal model=%s; trying configured fallback", candidate
+            )
+            continue
         for choice in payload.get("choices", []):
             message = choice.get("message")
             if isinstance(message, dict):
@@ -1563,9 +1709,10 @@ async def _stream_to_backend(
 async def health() -> dict[str, Any]:
     degraded = _degraded_providers()
     return {
-        "status": "degraded" if degraded else "ok",
+        "status": "degraded" if degraded or _banned_models() else "ok",
         "classifier_backend": CLASSIFIER_BACKEND,
         "model_cooldowns": degraded,
+        "model_bans": _banned_models(),
     }
 
 
@@ -1618,6 +1765,23 @@ async def chat_completions(request: Request):
     else:
         target_model, classification_reason = await _classify(messages, has_tools)
 
+    # Small is intentionally limited to non-agentic requests. Do not let a
+    # classifier mistake a tool-enabled task for trivial Q&A.
+    if has_tools and target_model == "mistral-small":
+        target_model = "mistral-medium"
+        classification_reason = "Tool-Aufgabe braucht Medium"
+
+    if _model_banned(target_model):
+        alternative = _banned_alternative(target_model)
+        if alternative:
+            logger.info(
+                "replacing banned classified model=%s with alternative=%s",
+                target_model,
+                alternative,
+            )
+            target_model = alternative
+            classification_reason = "Load balancing"
+
     escalation_model = (
         None
         if requested_model in DIRECT_MODELS
@@ -1651,7 +1815,12 @@ async def chat_completions(request: Request):
         and requested_model not in DIRECT_MODELS
     )
     body = _add_agent_instruction(body, has_tools)
-    candidates = _fallback_chain(target_model)
+    _record_route(target_model)
+    candidates = (
+        _metadata_fallback_chain()
+        if is_metadata
+        else _fallback_chain(target_model)
+    )
 
     logger.info(
         "fallback chain target_model=%s candidates=%s",
