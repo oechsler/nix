@@ -88,7 +88,7 @@ The classifier considers:
 ### Fallback and Escalation
 
 - **Backend fallback**: If a provider fails before the first response chunk (network error, rate limit, authentication error, timeout, or upstream error), the router walks the fallback chain defined for each model. Fallback routes through the same provider first (e.g., `qwen3.7-plus` → `qwen3.6-plus`) before crossing to other providers.
-- **Mistral Small capability fallback**: `mistral-small` always tries `mistral-medium` first when its backend fails. In non-streaming responses, common capability refusals from Small also trigger that Medium fallback instead of being returned as the final answer.
+- **Mistral fallback boundary**: `mistral-medium` never falls back to `mistral-small`. Small is reserved for greetings, titles, translations, and truly trivial Q&A; coding, debugging, shell, NixOS, and file-edit requests use a coding model instead.
 - **Model circuit breaker**: A failing model enters a 60-second cooldown. Repeated failures create a 10-minute model ban. Other models from the same provider remain available as fallbacks.
 - **Load-balancing rotation**: After five consecutive requests, the selected model is temporarily banned for five minutes. The classifier receives the ban list and the router prefers an equivalent sibling, such as Qwen 3.7 Plus instead of DeepSeek Flash.
 - **Title fallback**: Title and summary requests use a cheap-only chain: Mistral Small, Mistral Medium, DeepSeek Flash, then GPT Luna Fast. Local-classifier hosts add local Qwen as the final safety net; expensive Terra/Sol models are not used for metadata.
@@ -105,7 +105,7 @@ Models are listed once below in the approximate order of work they are intended 
 
 ### Mistral
 
-- **`mistral-small`** — Trivial chat, translation, titles, and Q&A without tools; minimal fallback on the Mistral chain
+- **`mistral-small`** — Entry route for trivial chat, translation, titles, and Q&A without tools; never a generic fallback for substantive work
 - **`mistral-medium`** — Architecture, planning, reviews, analysis, and mixed analysis/coding; capable with and without tools
 
 ### OpenCode Go

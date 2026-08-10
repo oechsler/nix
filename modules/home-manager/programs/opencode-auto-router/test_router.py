@@ -87,14 +87,7 @@ class RouterTest(unittest.TestCase):
             router._fallback_chain("mistral-small")[:2],
             ["mistral-small", "mistral-medium"],
         )
-
-    def test_mistral_small_refusal_is_escalated(self):
-        payload = {
-            "choices": [{"message": {"content": "I cannot help with this task."}}]
-        }
-
-        self.assertTrue(router._is_capability_refusal("mistral-small", payload))
-        self.assertFalse(router._is_capability_refusal("mistral-medium", payload))
+        self.assertNotIn("mistral-small", router._fallback_chain("mistral-medium"))
 
     def test_notice_is_minimal_for_initial_route(self):
         self.assertEqual(
@@ -463,7 +456,7 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(stream.await_args.args[2], "mistral-medium")
         self.assertEqual(stream.await_args.args[4], reason)
 
-    async def test_tool_request_promotes_classifier_small_to_medium(self):
+    async def test_coding_request_never_uses_mistral_small(self):
         body = {
             "model": "auto",
             "messages": [{"role": "user", "content": "Edit the config"}],
@@ -482,7 +475,7 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
         ):
             self.assertEqual(await router.chat_completions(Request()), "ok")
 
-        self.assertEqual(stream.await_args.args[1][0], "mistral-medium")
+        self.assertEqual(stream.await_args.args[1][0], "qwen3.7-plus")
 
     async def test_manual_model_skips_only_classification(self):
         body = {
