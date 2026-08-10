@@ -27,7 +27,14 @@ The router therefore follows three design choices:
 
 ### Routing policy update
 
-The automatic policy now treats DeepSeek and Qwen as the default cost/performance middle ground for tool-enabled work. DeepSeek Flash handles focused fixes, DeepSeek Pro handles genuinely complex tasks, and Qwen 3.7 Plus handles general development, broad refactors, and provider diversification. The cloud classifier itself runs on Mistral Small rather than Flash to avoid self-selection bias. GPT models are reserved for work that is genuinely complex, ambiguous, high-stakes, or beyond the DeepSeek/Qwen capability, and for overflow when those providers are unavailable or saturated. This is a classifier preference, not a hard quota scheduler: provider availability fallback, temporary rotation bans, and capability escalation can still select another backend.
+The router uses a guidance-based classifier that selects the best model for each task based on capability needs, tool usage, quota availability, and task difficulty. Models are organized into provider families with escalation ladders:
+
+- **Qwen family**: `qwen3.7-plus` → `qwen3.7-max` → `qwen3.8-max`
+- **DeepSeek family**: `deepseek-v4-flash` → `deepseek-v4-pro`
+- **GPT family**: `gpt-5.6-luna` → `gpt-5.6-luna-fast` → `gpt-5.6-terra` → `gpt-5.6-terra-fast` → `gpt-5.6-sol` → `gpt-5.6-sol-fast`
+- **Mistral family**: `mistral-small` → `mistral-medium`
+
+The classifier provides guidance (not rigid rules) to the local LLM, which then chooses the best fit. When a model fails to produce a solution within a session, it is temporarily banned for 10 minutes and the router escalates to the next model in the family ladder. Provider exhaustion (429) creates a 15-minute ban; authentication failures (401/403) create a 10-minute ban. This is a classifier preference, not a hard quota scheduler: provider availability fallback, temporary rotation bans, and capability escalation can still select another backend.
 
 You can still select any model manually when you need predictable behavior.
 
@@ -87,16 +94,17 @@ The classifier considers:
 
 ### Fallback and Escalation
 
-- **Backend fallback**: If a provider fails before the first response chunk (network error, rate limit, authentication error, timeout, or upstream error), the router walks the fallback chain defined for each model. Fallback routes through the same provider first (e.g., `qwen3.7-plus` → `gpt-5.6-luna`) before crossing to other providers.
-- **Model circuit breaker**: Failures trigger an exponential-backoff cooldown starting at 30 seconds and doubling up to a 5-minute maximum (30s → 60s → 120s → 240s → 300s). Network errors and 5xx responses cool down every model on the affected provider at once, while rate limits (429) cool down only the model that hit its quota. Auth failures (401/403) create a hard 1-hour ban until credentials are fixed. A successful request resets the backoff.
-- **Load-balancing rotation**: After fifteen consecutive requests, the selected model is temporarily banned for two minutes — but only while an equally capable alternative (e.g., Qwen 3.7 Plus instead of DeepSeek Flash) is available, so the router never bans every good model at once. The classifier receives the ban list.
+- **Backend fallback**: If a provider fails before the first response chunk (network error, rate limit, authentication error, timeout, or upstream error), the router walks the fallback chain defined for each model. Fallback routes through the same family first (e.g., `deepseek-v4-flash` → `deepseek-v4-pro`) before crossing to other providers.
+- **Model circuit breaker**: Failures trigger an exponential-backoff cooldown starting at 30 seconds and doubling up to a 5-minute maximum (30s → 60s → 120s → 240s → 300s). Network errors and 5xx responses cool down every model on the affected provider at once, while rate limits (429) create a 15-minute ban on the model that hit its quota. Auth failures (401/403) create a 10-minute ban. A successful request resets the backoff.
+- **Session-quality banning**: When a model fails to produce a solution within a session (user says "that did not work", or the model produces no final response), it is temporarily banned for 10 minutes and the router escalates to the next model in the family ladder.
+- **Load-balancing rotation**: After fifteen consecutive requests, the selected model is temporarily banned for two minutes — but only while an equally capable alternative within the same family is available, so the router never bans every good model at once. The classifier receives the ban list.
 - **Title fallback**: Title and summary requests use a cheap-only chain: Mistral Small, Mistral Medium, DeepSeek Flash, then GPT Luna Fast. Local-classifier hosts add local Qwen as the final safety net; expensive Terra/Sol models are not used for metadata.
 - **Offline safety net**: Local-classifier hosts end every fallback chain at `qwen3:8b`. Cloud-classifier hosts omit Ollama from their model list and fallback chains.
-- **Capability escalation**: If a user says the previous answer did not work (e.g., "that did not work", "funktioniert nicht"), the router reads the model from the previous response and escalates to a more capable tier. Escalation prefers the same provider where possible:
-  - **Mistral**: `small` → `medium` → (cross to chatgpt)
-  - **DeepSeek**: `flash` → `pro` → `qwen3.8-max` (stay on Go)
-  - **Qwen**: `7-plus` → `7-max` → `8-max` → (cross to `gpt-5.6-sol`)
-  - **GPT-5.6**: `luna` → `terra` → `sol`
+- **Capability escalation**: If a user says the previous answer did not work (e.g., "that did not work", "funktioniert nicht"), the router reads the model from the previous response and escalates to the next model in the family ladder first, then crosses to other families if needed:
+  - **Mistral**: `small` → `medium` → (cross to `deepseek-v4-flash`)
+  - **DeepSeek**: `flash` → `pro` → (cross to `qwen3.7-max`)
+  - **Qwen**: `7-plus` → `7-max` → `8-max` → (cross to `gpt-5.6-terra`)
+  - **GPT-5.6**: `luna` → `luna-fast` → `terra` → `terra-fast` → `sol` → `sol-fast`
 
 ## Model Selection
 
@@ -109,12 +117,12 @@ Models are listed once below in the approximate order of work they are intended 
 
 ### OpenCode Go
 
-- **`deepseek-v4-flash`** — Routine coding, debugging, shell work, tests, and file edits; 2× quota (63K req/5h)
-- **`deepseek-v4-pro`** — Difficult focused engineering and debugging; escalates from Flash
-- **`qwen3.7-plus`** — General development, broad refactors, provider diversification; 4300 req/5h quota
-- **`qwen3.8-max`** — Deep mathematical, theoretical, and formal reasoning; 160 req/5h quota
-- **`qwen3.7-max`** — Advanced reasoning; 340 req/5h quota
-- **`gpt-5.6-luna`** — Low-cost GPT overflow through OpenCode Go, with a hidden direct OpenAI route as its availability fallback
+- **`deepseek-v4-flash`** — Fast coding model for bugs, refactors, multi-step changes, file edits, shell, NixOS, containers; high quota (158K req/month)
+- **`deepseek-v4-pro`** — Stronger DeepSeek for complex work: multi-step exploration, deep analysis with tools; 17K req/month quota
+- **`qwen3.7-plus`** — General development and broad refactors with tools; solid coding model; 22K req/month quota
+- **`qwen3.8-max`** — Top Qwen reasoning model for complex algorithmic analysis, math, deep design review; 810 req/month quota
+- **`qwen3.7-max`** — Advanced reasoning, complex algorithmic analysis, math; 1.7K req/month quota
+- **`gpt-5.6-luna`** — GPT entry tier via OpenCode Go; good general-purpose model; 10K req/month quota
 
 ### GPT-5.6 via ChatGPT OAuth
 
@@ -126,14 +134,14 @@ Models are listed once below in the approximate order of work they are intended 
 
 OpenCode Go includes usage worth $12 per rolling five hours, $30 per week, and $60 per month. The approximate request allowances published for the Go models used here are:
 
-| Model | Requests per 5 hours |
+| Model | Requests per month |
 | --- | ---: |
-| `deepseek-v4-flash` | 63,300 |
-| `qwen3.7-plus` | 4,300 |
-| `deepseek-v4-pro` | 3,450 |
-| `gpt-5.6-luna` | 2,050 |
-| `qwen3.7-max` | 340 |
-| `qwen3.8-max` | 160 |
+| `deepseek-v4-flash` | 158,150 |
+| `qwen3.7-plus` | 21,600 |
+| `deepseek-v4-pro` | 17,150 |
+| `qwen3.7-max` | 1,690 |
+| `qwen3.8-max` | 810 |
+| `gpt-5.6-luna` | 10,250 |
 
 Reaching a Go limit is not necessarily observable as a rate-limit failure: subsequent Go traffic can consume the account's OpenCode Zen balance at pay-as-you-go rates. If Zen auto-reload is enabled, a balance at $5 automatically purchases $20 of credit and adds a $1.23 processing fee. Consequently, the router cannot reliably detect exhausted Go allowance from HTTP errors and switch providers before Zen is charged. Its DeepSeek/Qwen-first policy and quota hints reduce likely cost but do not enforce a spending cap; account billing settings remain the hard control.
 
@@ -174,9 +182,11 @@ The router exposes OpenCode-compatible reasoning content for every model entry. 
 
 The router handles two different failure modes.
 
-**Backend fallback** applies when a model fails before the first response chunk, for example because of a network failure, timeout, rate limit, missing authentication, context limit, or upstream server error. The router follows the configured fallback chain until a backend accepts the request. A provider-level circuit breaker cools down every model on the affected provider after network or server errors, while rate limits (429) cool down only the model that hit its quota. The cooldown grows exponentially (30s → 60s → 120s → … → 300s) and resets on success. The cooldown state is visible in `/health`. Once streaming has started, the router cannot replace that response, but an interrupted stream puts that model on cooldown for the next request.
+**Backend fallback** applies when a model fails before the first response chunk, for example because of a network failure, timeout, rate limit, missing authentication, context limit, or upstream server error. The router follows the configured fallback chain until a backend accepts the request. A provider-level circuit breaker cools down every model on the affected provider after network or server errors, while rate limits (429) create a 15-minute ban on the model that hit its quota. The cooldown grows exponentially (30s → 60s → 120s → … → 300s) and resets on success. The cooldown state is visible in `/health`. Once streaming has started, the router cannot replace that response, but an interrupted stream puts that model on cooldown for the next request.
 
-**Capability escalation** applies when a backend returned an answer but the user says that the attempt failed or asks it to try again. On the next turn, the router reads the model recorded on the previous response and moves to the next capability tier. This is separate from provider availability fallback and prevents a failed task from repeatedly returning to the same small model.
+**Session-quality banning** applies when a model fails to produce a solution within a session (user says "that did not work", or the model produces no final response). The model is temporarily banned for 10 minutes and the router escalates to the next model in the family ladder.
+
+**Capability escalation** applies when a backend returned an answer but the user says that the attempt failed or asks it to try again. On the next turn, the router reads the model recorded on the previous response and moves to the next capability tier within the same family first, then crosses to other families if needed. This is separate from provider availability fallback and prevents a failed task from repeatedly returning to the same small model.
 
 A routing notice appears at the start of an automatic response only when the routed model differs from the previous turn:
 

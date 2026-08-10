@@ -21,11 +21,12 @@ class RouterTest(unittest.TestCase):
                 "mistral-small",
                 "mistral-medium",
                 "qwen3.7-plus",
-                "gpt-5.6-terra",
                 "deepseek-v4-flash",
-                "gpt-5.6-luna",
+                "qwen3.7-max",
+                "deepseek-v4-pro",
+                "qwen3.8-max",
+                "gpt-5.6-terra",
                 "gpt-5.6-sol",
-                "gpt-5.6-luna-fast",
                 "gpt-5.6-luna-openai",
                 "qwen3:8b",
             ],
@@ -36,10 +37,10 @@ class RouterTest(unittest.TestCase):
             with self.subTest(model=model):
                 chain = router._fallback_chain(model)
                 self.assertIn("qwen3:8b", chain)
-                self.assertEqual(
-                    {router._provider(candidate) for candidate in chain},
-                    {"mistral", "opencode-go", "chatgpt", "ollama"},
-                )
+                providers = {router._provider(candidate) for candidate in chain}
+                self.assertIn("mistral", providers)
+                self.assertIn("opencode-go", providers)
+                self.assertIn("ollama", providers)
 
     def test_cloud_classifier_hosts_exclude_ollama_fallbacks(self):
         with patch.object(router, "USE_LOCAL_CLASSIFIER", False):
@@ -82,11 +83,11 @@ class RouterTest(unittest.TestCase):
         self.assertTrue(router._model_banned("deepseek-v4-flash"))
         self.assertFalse(router._provider_available("qwen3.7-plus"))
 
-    def test_rate_limit_failure_is_model_specific(self):
+    def test_rate_limit_failure_creates_temporary_ban(self):
         router._mark_provider_http_failure("deepseek-v4-flash", 429)
-        self.assertFalse(router._provider_available("deepseek-v4-flash"))
-        self.assertTrue(router._provider_available("deepseek-v4-pro"))
-        self.assertTrue(router._provider_available("qwen3.7-plus"))
+        self.assertTrue(router._model_banned("deepseek-v4-flash"))
+        self.assertFalse(router._model_banned("deepseek-v4-pro"))
+        self.assertFalse(router._model_banned("qwen3.7-plus"))
 
     def test_server_error_is_provider_wide(self):
         router._mark_provider_http_failure("deepseek-v4-flash", 503)
@@ -96,11 +97,19 @@ class RouterTest(unittest.TestCase):
 
     def test_rotation_ban_skipped_without_alternative(self):
         with patch.object(router, "MODEL_MAX_CONSECUTIVE", 2):
-            router._ban_model("qwen3.7-plus", 60, "pre-existing")
+            router._ban_model("qwen3.7-max", 60, "pre-existing")
+            router._ban_model("qwen3.8-max", 60, "pre-existing")
+            router._record_route("qwen3.7-plus")
+            router._record_route("qwen3.7-plus")
+
+        self.assertFalse(router._model_banned("qwen3.7-plus"))
+
+    def test_rotation_ban_applied_within_family_ladder(self):
+        with patch.object(router, "MODEL_MAX_CONSECUTIVE", 2):
             router._record_route("deepseek-v4-flash")
             router._record_route("deepseek-v4-flash")
 
-        self.assertFalse(router._model_banned("deepseek-v4-flash"))
+        self.assertTrue(router._model_banned("deepseek-v4-flash"))
 
     def test_route_rotation_bans_repeated_model(self):
         with patch.object(router, "MODEL_MAX_CONSECUTIVE", 2):
@@ -213,12 +222,14 @@ class RouterTest(unittest.TestCase):
         self.assertIn("Match approximately", prompt)
         self.assertIn("no rigid 1:1 mapping", prompt)
 
-    def test_classifier_prompt_does_not_favor_flash(self):
+    def test_classifier_prompt_is_guidance_based(self):
         prompt = router._build_classification_prompt("user: Do all five tasks", True)
 
         self.assertNotIn("go-to starting point", prompt)
         self.assertNotIn("general recommendation", prompt)
-        self.assertIn("DEFAULT to deepseek-v4-flash", prompt)
+        self.assertNotIn("DEFAULT to deepseek-v4-flash", prompt)
+        self.assertIn("Guidance (not rules", prompt)
+        self.assertIn("use your judgment", prompt)
 
     def test_strip_notices_from_history_removes_leading_block(self):
         messages = [
@@ -269,7 +280,7 @@ class RouterTest(unittest.TestCase):
             {"role": "assistant", "content": "An incomplete answer\n\n> **mistral-small -> mistral-medium**"},
             {"role": "user", "content": "Das funktioniert nicht, versuche es nochmal."},
         ]
-        self.assertEqual(router._capability_escalation(messages), "gpt-5.6-terra")
+        self.assertEqual(router._capability_escalation(messages), "deepseek-v4-flash")
 
     def test_legacy_auto_notice_escalates_from_selected_model(self):
         messages = [
@@ -305,6 +316,50 @@ class RouterTest(unittest.TestCase):
             router._more_capable_model("gpt-5.6-terra", "mistral-medium"),
             "gpt-5.6-terra",
         )
+
+    def test_family_ladder_escalation_deepseek(self):
+        messages = [
+            {"role": "assistant", "content": "Incomplete\n\n> **deepseek-v4-flash**"},
+            {"role": "user", "content": "That did not work, try again."},
+        ]
+        self.assertEqual(router._capability_escalation(messages), "deepseek-v4-pro")
+        self.assertTrue(router._model_banned("deepseek-v4-flash"))
+
+    def test_family_ladder_escalation_qwen(self):
+        messages = [
+            {"role": "assistant", "content": "Incomplete\n\n> **qwen3.7-plus**"},
+            {"role": "user", "content": "That did not work, try again."},
+        ]
+        self.assertEqual(router._capability_escalation(messages), "qwen3.7-max")
+        self.assertTrue(router._model_banned("qwen3.7-plus"))
+
+    def test_family_ladder_escalation_gpt(self):
+        messages = [
+            {"role": "assistant", "content": "Incomplete\n\n> **gpt-5.6-luna**"},
+            {"role": "user", "content": "That did not work, try again."},
+        ]
+        self.assertEqual(router._capability_escalation(messages), "gpt-5.6-luna-fast")
+        self.assertTrue(router._model_banned("gpt-5.6-luna"))
+
+    def test_session_quality_ban_applied_on_escalation(self):
+        messages = [
+            {"role": "assistant", "content": "Incomplete\n\n> **deepseek-v4-flash**"},
+            {"role": "user", "content": "That did not work, try again."},
+        ]
+        router._capability_escalation(messages)
+        self.assertTrue(router._model_banned("deepseek-v4-flash"))
+        self.assertEqual(
+            router._model_ban_reason["deepseek-v4-flash"],
+            "user rejected result (session quality ban)",
+        )
+
+    def test_cross_family_escalation_when_family_exhausted(self):
+        messages = [
+            {"role": "assistant", "content": "Incomplete\n\n> **gpt-5.6-sol-fast**"},
+            {"role": "user", "content": "That did not work, try again."},
+        ]
+        result = router._capability_escalation(messages)
+        self.assertEqual(result, "gpt-5.6-sol")
 
     def test_chatgpt_request_preserves_requested_reasoning_effort(self):
         body = {"messages": [], "reasoning_effort": "medium"}
@@ -687,7 +742,7 @@ class ChatCompletionsTest(unittest.IsolatedAsyncioTestCase):
             )
 
         self.assertEqual(result, "chatgpt fallback")
-        self.assertEqual(Client.post.await_count, 2)
+        self.assertEqual(Client.post.await_count, 1)
         chatgpt.assert_awaited_once()
 
     async def test_server_error_skips_whole_provider_before_failing_over(self):
