@@ -215,25 +215,39 @@ GLOBAL_FALLBACKS = [
     "qwen3:8b",
 ]
 
-_PROVIDER_COOLDOWN = int(os.environ.get("PROVIDER_COOLDOWN_SECONDS", "60"))
-_model_cooldown_until: dict[str, float] = {}
-_PROVIDER_FAILURE_STATUSES = {401, 403, 408, 425, 429}
-
 # ---------------------------------------------------------------------------
-# Temporary model bans (load balancing)
+# Availability circuit breaker
 #
-# Two ban types keep traffic from piling onto one model:
-# - Rotation ban: a model that served MODEL_MAX_CONSECUTIVE requests in a row
-#   is banned for MODEL_ROTATION_BAN_SECONDS, forcing the classifier to pick
-#   an equally capable alternative.
-# - Failure ban: a model that fails repeatedly (already on cooldown when it
-#   fails again) is banned for MODEL_BAN_SECONDS so the router stops trying it.
+# Failures are handled with exponential backoff instead of hard bans so the
+# router heals itself: a transient outage (LiteLLM restart, one bad request)
+# cools down for a short time, and the cooldown grows only while the provider
+# keeps failing. Successful requests reset the backoff.
+#
+# Failure classes:
+# - Infra failures (network errors, 5xx): applied provider-wide, since every
+#   model on that provider shares the outage.
+# - Rate limits (429) and transient statuses (408, 425): model-specific, the
+#   quota belongs to the individual model.
+# - Auth failures (401, 403): hard bans until the credentials are fixed, since
+#   they do not clear on their own.
+#
+# Load-balancing rotation: a model that served MODEL_MAX_CONSECUTIVE requests
+# in a row is banned for MODEL_ROTATION_BAN_SECONDS, but only while an equally
+# capable alternative is available, so the router never dead-ends into a
+# configuration where every good model is banned at once.
 # ---------------------------------------------------------------------------
 
-MODEL_BAN_SECONDS = int(os.environ.get("MODEL_BAN_SECONDS", "600"))
-MODEL_ROTATION_BAN_SECONDS = int(os.environ.get("MODEL_ROTATION_BAN_SECONDS", "300"))
-MODEL_MAX_CONSECUTIVE = int(os.environ.get("MODEL_MAX_CONSECUTIVE", "5"))
+_PROVIDER_COOLDOWN_BASE = int(os.environ.get("PROVIDER_COOLDOWN_BASE_SECONDS", "30"))
+_PROVIDER_COOLDOWN_MAX = int(os.environ.get("PROVIDER_COOLDOWN_MAX_SECONDS", "300"))
+_AUTH_BAN_SECONDS = int(os.environ.get("AUTH_BAN_SECONDS", "3600"))
+MODEL_ROTATION_BAN_SECONDS = int(
+    os.environ.get("MODEL_ROTATION_BAN_SECONDS", "120")
+)
+MODEL_MAX_CONSECUTIVE = int(os.environ.get("MODEL_MAX_CONSECUTIVE", "15"))
+_PROVIDER_FAILURE_STATUSES = {408, 425, 429}
+_model_cooldown_until: dict[str, float] = {}
 _model_ban_until: dict[str, float] = {}
+_model_ban_reason: dict[str, str] = {}
 _consecutive_routes: dict[str, int] = {}
 _consecutive_failures: dict[str, int] = {}
 _last_route_model: str | None = None
@@ -740,6 +754,18 @@ def _provider(model: str) -> str:
     return MODEL_PROVIDERS.get(model, model)
 
 
+def _provider_models(model: str) -> list[str]:
+    provider = _provider(model)
+    return [m for m, p in MODEL_PROVIDERS.items() if p == provider]
+
+
+def _cooldown_duration(failures: int) -> int:
+    return min(
+        _PROVIDER_COOLDOWN_BASE * (2 ** (failures - 1)),
+        _PROVIDER_COOLDOWN_MAX,
+    )
+
+
 def _provider_available(model: str) -> bool:
     unavailable_until = _model_cooldown_until.get(model, 0)
     if unavailable_until <= time.monotonic():
@@ -748,34 +774,51 @@ def _provider_available(model: str) -> bool:
     return False
 
 
-def _mark_provider_failure(model: str, reason: str) -> None:
-    _model_cooldown_until[model] = time.monotonic() + _PROVIDER_COOLDOWN
-    failures = _consecutive_failures.get(model, 0) + 1
-    _consecutive_failures[model] = failures
+def _mark_provider_failure(
+    model: str, reason: str, provider_wide: bool = False
+) -> None:
+    key = f"provider:{_provider(model)}" if provider_wide else model
+    failures = _consecutive_failures.get(key, 0) + 1
+    _consecutive_failures[key] = failures
+    duration = _cooldown_duration(failures)
+    targets = _provider_models(model) if provider_wide else [model]
+    for target in targets:
+        _model_cooldown_until[target] = time.monotonic() + duration
     logger.warning(
-        "model cooldown model=%s seconds=%s failures=%s reason=%s",
+        "model cooldown model=%s seconds=%s failures=%s reason=%s provider_wide=%s",
         model,
-        _PROVIDER_COOLDOWN,
+        duration,
         failures,
         reason,
+        provider_wide,
     )
-    if failures >= 2:
-        _ban_model(model, MODEL_BAN_SECONDS, f"repeated failures ({failures})")
-        _consecutive_failures[model] = 0
 
 
 def _mark_provider_http_failure(model: str, status_code: int) -> None:
-    if status_code >= 500 or status_code in _PROVIDER_FAILURE_STATUSES:
+    if status_code in (401, 403):
+        reason = f"HTTP {status_code} (auth)"
+        _ban_model(model, _AUTH_BAN_SECONDS, reason)
+        for target in _provider_models(model):
+            _model_cooldown_until[target] = time.monotonic() + _PROVIDER_COOLDOWN_BASE
+        return
+    if status_code == 429:
         _mark_provider_failure(model, f"HTTP {status_code}")
+        return
+    if status_code >= 500 or status_code in _PROVIDER_FAILURE_STATUSES:
+        _mark_provider_failure(model, f"HTTP {status_code}", provider_wide=True)
 
 
 def _mark_provider_success(model: str) -> None:
     _model_cooldown_until.pop(model, None)
-    _consecutive_failures[model] = 0
+    _model_ban_until.pop(model, None)
+    _model_ban_reason.pop(model, None)
+    _consecutive_failures.pop(model, None)
+    _consecutive_failures.pop(f"provider:{_provider(model)}", None)
 
 
 def _ban_model(model: str, seconds: int, reason: str) -> None:
     _model_ban_until[model] = time.monotonic() + seconds
+    _model_ban_reason[model] = reason
     logger.warning(
         "model ban model=%s seconds=%s reason=%s", model, seconds, reason
     )
@@ -785,6 +828,7 @@ def _model_banned(model: str) -> bool:
     ban_until = _model_ban_until.get(model, 0)
     if ban_until <= time.monotonic():
         _model_ban_until.pop(model, None)
+        _model_ban_reason.pop(model, None)
         return False
     return True
 
@@ -799,6 +843,7 @@ def _banned_models() -> dict[str, int]:
             banned[model] = remaining
         else:
             _model_ban_until.pop(model, None)
+            _model_ban_reason.pop(model, None)
     return banned
 
 
@@ -812,11 +857,17 @@ def _record_route(model: str) -> None:
     _consecutive_routes.setdefault(model, 0)
     _consecutive_routes[model] += 1
     if _consecutive_routes[model] >= MODEL_MAX_CONSECUTIVE:
-        _ban_model(
-            model,
-            MODEL_ROTATION_BAN_SECONDS,
-            f"served {_consecutive_routes[model]} consecutive requests (load balancing)",
-        )
+        if _banned_alternative(model):
+            _ban_model(
+                model,
+                MODEL_ROTATION_BAN_SECONDS,
+                f"served {_consecutive_routes[model]} consecutive requests (load balancing)",
+            )
+        else:
+            logger.info(
+                "rotation threshold reached but no alternative for model=%s",
+                model,
+            )
         _consecutive_routes[model] = 0
 
 
@@ -1236,7 +1287,7 @@ async def _stream_chatgpt(
     try:
         auth_info = await _get_openai_auth()
     except Exception as exc:
-        _mark_provider_failure(routed_model, f"auth refresh failed: {exc}")
+        _mark_provider_http_failure(routed_model, 401)
         if fallback_models:
             return await _stream_to_backend(
                 body,
@@ -1250,7 +1301,7 @@ async def _stream_chatgpt(
             status_code=502,
         )
     if not auth_info:
-        _mark_provider_failure(routed_model, "OAuth credentials unavailable")
+        _mark_provider_http_failure(routed_model, 401)
         if fallback_models:
             return await _stream_to_backend(
                 body,
@@ -1300,7 +1351,7 @@ async def _stream_chatgpt(
         response = await upstream.__aenter__()
     except httpx.HTTPError as exc:
         await client.aclose()
-        _mark_provider_failure(routed_model, f"network error: {exc}")
+        _mark_provider_failure(routed_model, f"network error: {exc}", provider_wide=True)
         if fallback_models:
             return await _stream_to_backend(
                 body,
@@ -1442,7 +1493,7 @@ async def _chatgpt_non_streaming(
                 CHATGPT_RESPONSES_URL, json=request_body, headers=headers
             )
     except httpx.HTTPError as exc:
-        _mark_provider_failure(routed_model, f"network error: {exc}")
+        _mark_provider_failure(routed_model, f"network error: {exc}", provider_wide=True)
         if fallback_models:
             return await _stream_to_backend(
                 body=chat_body,
@@ -1608,7 +1659,7 @@ async def _stream_to_backend(
                 response = await upstream.__aenter__()
             except httpx.HTTPError as exc:
                 await client.aclose()
-                _mark_provider_failure(candidate, f"network error: {exc}")
+                _mark_provider_failure(candidate, f"network error: {exc}", provider_wide=True)
                 last_error = {
                     "error": "Backend unavailable",
                     "model": candidate,
@@ -1669,7 +1720,7 @@ async def _stream_to_backend(
                     headers=headers,
                 )
         except httpx.HTTPError as exc:
-            _mark_provider_failure(candidate, f"network error: {exc}")
+            _mark_provider_failure(candidate, f"network error: {exc}", provider_wide=True)
             last_error = {
                 "error": "Backend unavailable",
                 "model": candidate,
@@ -1727,11 +1778,20 @@ async def _stream_to_backend(
 @app.get("/health")
 async def health() -> dict[str, Any]:
     degraded = _degraded_providers()
+    banned = _banned_models()
     return {
-        "status": "degraded" if degraded or _banned_models() else "ok",
+        "status": "degraded" if degraded or banned else "ok",
         "classifier_backend": CLASSIFIER_BACKEND,
         "model_cooldowns": degraded,
-        "model_bans": _banned_models(),
+        "model_bans": {
+            model: {
+                "seconds": remaining,
+                "reason": _model_ban_reason.get(model, ""),
+            }
+            for model, remaining in banned.items()
+        },
+        "consecutive_routes": dict(_consecutive_routes),
+        "consecutive_failures": dict(_consecutive_failures),
     }
 
 
