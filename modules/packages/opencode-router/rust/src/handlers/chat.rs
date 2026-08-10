@@ -25,6 +25,8 @@ use crate::utils::notice::NoticeFormatter;
 
 const NOTICE_INSTRUCTION: &str = "The router may prepend a routing notice to the assistant response. Never imitate, reproduce, explain, or generate that notice format yourself. Do not write model names, routing arrows, markdown quote notices, or routing reasons in your response. Answer the user directly; the router handles routing metadata separately.";
 
+const ROUTING_ANNOTATION_RULE: &str = "CRITICAL RULE: NEVER generate model-routing annotations (like '> **DeepSeek V4 Flash**', '> **GPT-5.6 Sol**', '> Coding & shell commands') or any model IDs in your responses. The auto-router system injects those automatically. You must not prefix, suffix, or embed any routing information.";
+
 pub async fn chat_completions(
     State(state): State<Arc<SharedState>>,
     headers: HeaderMap,
@@ -362,28 +364,32 @@ fn prepare_request(body: &Value, config: &Config, has_tools: bool, inject_notice
         }));
     }
 
-    if !has_tools {
-        new_messages.extend(messages);
-        forwarded["messages"] = Value::Array(new_messages);
-        return forwarded;
-    }
-
     let task_info = analyze_tasks(&messages);
     let mut instruction_text = config.agent_instruction.text.trim().to_string();
 
-    if task_info.has_open_tasks {
+    if inject_notice_instruction {
+        if !instruction_text.is_empty() {
+            instruction_text.push(' ');
+        }
+        instruction_text.push_str(ROUTING_ANNOTATION_RULE);
+    }
+
+    if has_tools && task_info.has_open_tasks {
+        if !instruction_text.is_empty() {
+            instruction_text.push(' ');
+        }
         instruction_text.push_str(&format!(
-            " You have {} open task(s) and {} completed task(s). Continue working on your open tasks before starting new ones.",
+            "You have {} open task(s) and {} completed task(s). Continue working on your open tasks before starting new ones.",
             task_info.open_count, task_info.completed_count
         ));
     }
 
-    let instruction = serde_json::json!({
-        "role": "system",
-        "content": instruction_text
-    });
-
-    new_messages.push(instruction);
+    if !instruction_text.is_empty() {
+        new_messages.push(serde_json::json!({
+            "role": "system",
+            "content": instruction_text
+        }));
+    }
     new_messages.extend(messages);
     forwarded["messages"] = Value::Array(new_messages);
 
