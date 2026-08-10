@@ -9,21 +9,32 @@
 let
   cfg = config.programs.opencode-router;
 
-  toModelEntry = name: model: {
-    inherit (model)
-      description
-      family
-      provider
-      tier
-      fallbacks
-      hidden
-      ;
-    litellm_model = model.backend.litellm.model;
-    litellm_api_base = model.backend.litellm.apiBase;
-    chatgpt_model = model.backend.chatgpt.model;
-    service_tier = model.backend.chatgpt.serviceTier;
-    display_name = model.displayName;
-  };
+  toModelEntry = name: model:
+    {
+      inherit (model)
+        description
+        family
+        provider
+        tier
+        fallbacks
+        hidden
+        ;
+    }
+    // lib.optionalAttrs (model.backend.litellm.model != null) {
+      litellm_model = model.backend.litellm.model;
+    }
+    // lib.optionalAttrs (model.backend.litellm.apiBase != null) {
+      litellm_api_base = model.backend.litellm.apiBase;
+    }
+    // lib.optionalAttrs (model.backend.chatgpt.model != null) {
+      chatgpt_model = model.backend.chatgpt.model;
+    }
+    // lib.optionalAttrs (model.backend.chatgpt.serviceTier != null) {
+      service_tier = model.backend.chatgpt.serviceTier;
+    }
+    // lib.optionalAttrs (model.displayName != null) {
+      display_name = model.displayName;
+    };
 
   modelsToml = lib.mapAttrs toModelEntry cfg.models;
 
