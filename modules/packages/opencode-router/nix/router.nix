@@ -38,6 +38,10 @@ let
 
   modelsToml = lib.mapAttrs toModelEntry cfg.models;
 
+  aliases = lib.optionalAttrs (cfg.defaults.model != "") {
+    auto = cfg.defaults.model;
+  } // cfg.aliases;
+
   guidanceText = cfg.prompts.guidance;
   modelGuidance = lib.mapAttrs (model: line: {
     prompt_line = line;
@@ -64,7 +68,8 @@ let
       metadata_fallback_chain = cfg.defaults.metadataFallbackChain;
     };
 
-    inherit (cfg) aliases families;
+    inherit aliases;
+    inherit (cfg) families;
 
     cross_family_escalation = cfg.crossFamilyEscalation;
 
