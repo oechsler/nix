@@ -377,6 +377,11 @@ in
     };
 
     notice = {
+      enabled = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Show the router decision as a markdown notice in responses";
+      };
       format = lib.mkOption {
         type = lib.types.str;
         default = "> **{display_name}**\n> {reason}";

@@ -21,6 +21,7 @@ use crate::utils::notice::strip_notices;
 use crate::utils::tasks::analyze_tasks;
 use crate::transform::chat_to_responses::chat_to_responses_body;
 use crate::transform::responses_to_chat::{chatgpt_text_chunk, responses_to_chat_completion};
+use crate::utils::notice::NoticeFormatter;
 
 pub async fn chat_completions(
     State(state): State<Arc<SharedState>>,
@@ -101,11 +102,30 @@ pub async fn chat_completions(
 
         debug!(model = candidate, "trying model");
 
+        let notice = if state.config.notice.enabled {
+            Some(
+                NoticeFormatter::new(&state.config, &registry)
+                    .model_notice_text(candidate, &registry, None, &reason),
+            )
+        } else {
+            None
+        };
+
         let mut request_with_model = request_body.clone();
         request_with_model["model"] = Value::String(candidate.clone());
         request_with_model = add_agent_instruction(&request_with_model, &state.config, has_tools);
 
-        match forward_to_backend(&state, candidate, &request_with_model, is_stream, &auth, &registry).await {
+        match forward_to_backend(
+            &state,
+            candidate,
+            &request_with_model,
+            is_stream,
+            &auth,
+            notice.as_deref(),
+            &registry,
+        )
+        .await
+        {
             Ok(response) => {
                 state.record_success(candidate).await;
                 return Ok(response);
@@ -130,6 +150,7 @@ async fn forward_to_backend(
     body: &Value,
     is_stream: bool,
     auth: &str,
+    notice: Option<&str>,
     registry: &ModelRegistry,
 ) -> Result<Response> {
     let provider = registry.provider(model);
@@ -142,9 +163,9 @@ async fn forward_to_backend(
                 .await?;
 
             if is_stream {
-                forward_streaming(response).await
+                forward_streaming(response, notice, model).await
             } else {
-                let json: Value = response.json().await?;
+                let json = with_notice(response.json().await?, notice);
                 Ok(axum::Json(json).into_response())
             }
         }
@@ -169,10 +190,17 @@ async fn forward_to_backend(
                 .await?;
 
             if is_stream {
-                forward_chatgpt_streaming(response, model).await
+                forward_chatgpt_streaming(response, model, notice).await
             } else {
                 let json: Value = response.json().await?;
-                let chat_completion = responses_to_chat_completion(&json, model, None, false, "", "");
+                let chat_completion = responses_to_chat_completion(
+                    &json,
+                    model,
+                    None,
+                    notice.is_some(),
+                    "",
+                    notice.unwrap_or(""),
+                );
                 Ok(axum::Json(chat_completion).into_response())
             }
         }
@@ -183,9 +211,9 @@ async fn forward_to_backend(
                 .await?;
 
             if is_stream {
-                forward_streaming(response).await
+                forward_streaming(response, notice, model).await
             } else {
-                let json: Value = response.json().await?;
+                let json = with_notice(response.json().await?, notice);
                 Ok(axum::Json(json).into_response())
             }
         }
@@ -193,15 +221,32 @@ async fn forward_to_backend(
     }
 }
 
-async fn forward_streaming(response: reqwest::Response) -> Result<Response> {
+async fn forward_streaming(
+    response: reqwest::Response,
+    notice: Option<&str>,
+    model: &str,
+) -> Result<Response> {
     let mut stream = response.bytes_stream();
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+    let model = model.to_string();
+    let notice = notice.map(str::to_owned);
 
     tokio::spawn(async move {
+        if let Some(notice) = notice.as_deref() {
+            let chunk = serde_json::json!({
+                "id": "opencode-router-notice",
+                "object": "chat.completion.chunk",
+                "model": model,
+                "choices": [{"index": 0, "delta": {"content": format!("{}\n\n", notice)}, "finish_reason": null}],
+            });
+            if tx.send(Ok(format!("data: {}\n\n", chunk).into_bytes())).is_err() {
+                return;
+            }
+        }
         while let Some(chunk) = stream.next().await {
             match chunk {
                 Ok(bytes) => {
-                    if tx.send(Ok(bytes)).is_err() {
+                    if tx.send(Ok(bytes.to_vec())).is_err() {
                         break;
                     }
                 }
@@ -220,12 +265,28 @@ async fn forward_streaming(response: reqwest::Response) -> Result<Response> {
         .unwrap())
 }
 
-async fn forward_chatgpt_streaming(response: reqwest::Response, model: &str) -> Result<Response> {
+async fn forward_chatgpt_streaming(
+    response: reqwest::Response,
+    model: &str,
+    notice: Option<&str>,
+) -> Result<Response> {
     let mut stream = response.bytes_stream();
     let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
     let model = model.to_string();
+    let notice = notice.map(str::to_owned);
 
     tokio::spawn(async move {
+        if let Some(notice) = notice.as_deref() {
+            let chunk = serde_json::json!({
+                "id": "opencode-router-notice",
+                "object": "chat.completion.chunk",
+                "model": model,
+                "choices": [{"index": 0, "delta": {"content": format!("{}\n\n", notice)}, "finish_reason": null}],
+            });
+            if tx.send(Ok(format!("data: {}\n\n", chunk).into_bytes())).is_err() {
+                return;
+            }
+        }
         let mut buffer = String::new();
         while let Some(chunk) = stream.next().await {
             match chunk {
@@ -263,6 +324,26 @@ async fn forward_chatgpt_streaming(response: reqwest::Response, model: &str) -> 
         .header("content-type", "text/event-stream")
         .body(Body::from_stream(body_stream))
         .unwrap())
+}
+
+fn with_notice(mut response: Value, notice: Option<&str>) -> Value {
+    let Some(notice) = notice else {
+        return response;
+    };
+    let Some(message) = response
+        .get_mut("choices")
+        .and_then(Value::as_array_mut)
+        .and_then(|choices| choices.first_mut())
+        .and_then(|choice| choice.get_mut("message"))
+    else {
+        return response;
+    };
+    let content = message
+        .get("content")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    message["content"] = Value::String(format!("{}\n\n{}", notice, content));
+    response
 }
 
 fn add_agent_instruction(body: &Value, config: &Config, has_tools: bool) -> Value {

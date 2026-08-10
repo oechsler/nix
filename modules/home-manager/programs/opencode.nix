@@ -348,20 +348,13 @@ let
     guidance = ''
       Guidance (not rules – use your judgment):
       - Consider: capability needs, tool usage, quota availability, and how hard the task really is.
-      - For coding with tools, prefer DeepSeek Flash or Qwen Plus as cost-effective choices; escalate to stronger models when the task demands more reasoning or the cheaper model would fail.
-      - Math, algorithmics, proofs → Qwen Max models or GPT.
-      - Architecture/planning/design discussions → Mistral Medium or GPT.
-      - Never use mistral-small for coding, debugging, shell, NixOS, file edits, or substantive requests, even without tools.
+      - Prefer cost-effective choices when they can reliably complete the task; escalate when the task demands more reasoning or the cheaper model would fail.
+      - Never choose a trivial model for substantive coding, debugging, shell, system administration, or file-editing requests.
       - When in doubt between two models, choose the cheaper/faster one.
       - Prefer -fast variants for simple, latency-sensitive overflow.
     '';
 
-    modelGuidance = {
-      "mistral-small" =
-        "- mistral-small: trivial – greetings, simple Q&A, titles, translations, one-line answers. No tools needed.";
-      "deepseek-v4-flash" =
-        "- deepseek-v4-flash: fast coding with tools – file edits, shell, tests, small-to-medium features. High quota, cheap. Good default for most coding.";
-    };
+    modelGuidance = { };
   };
 
   markers = {
