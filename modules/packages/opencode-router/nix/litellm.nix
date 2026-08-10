@@ -9,17 +9,6 @@
 let
   cfg = config.programs.opencode-router;
 
-  apiKeyEnvForModel =
-    litellmModel:
-    let
-      prefix = lib.head (lib.splitString "/" litellmModel);
-    in
-    {
-      mistral = "MISTRAL_API_KEY";
-      openai = "OPENCODE_GO_API_KEY";
-    }
-    .${prefix} or "LITELLM_API_KEY";
-
   litellmModels = lib.filterAttrs (
     n: m: m.provider == "litellm" && m.litellmModel != null
   ) cfg.models;
@@ -28,7 +17,7 @@ let
     model_name = name;
     litellm_params = {
       model = model.litellmModel;
-      api_key = "os.environ/${apiKeyEnvForModel model.litellmModel}";
+      api_key = "os.environ/${model.apiKeyEnv}";
     }
     // lib.optionalAttrs (model.litellmApiBase != null) {
       api_base = model.litellmApiBase;

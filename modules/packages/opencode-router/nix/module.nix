@@ -49,6 +49,11 @@ let
         default = null;
         description = "LiteLLM API base URL";
       };
+      apiKeyEnv = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        description = "Environment variable name for the API key (e.g., MISTRAL_API_KEY)";
+      };
 
       chatgptModel = lib.mkOption {
         type = lib.types.nullOr lib.types.str;
@@ -402,6 +407,16 @@ in
       type = lib.types.listOf lib.types.str;
       default = [ ];
       description = "Models to pull into Ollama";
+    };
+
+    litellmApiKeys = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = { };
+      description = "API keys for LiteLLM providers (env-var-name → sops-secret-path)";
+      example = {
+        MISTRAL_API_KEY = "opencode/mistral/api-key";
+        OPENCODE_GO_API_KEY = "opencode/opencode-go/api-key";
+      };
     };
 
     routerConfigFile = lib.mkOption {

@@ -1,3 +1,63 @@
+# OpenCode Auto Router Configuration
+#
+# The OpenCode Auto Router gives OpenCode a single default model, `local/auto`.
+# You use OpenCode normally; the router chooses a suitable backend for each request
+# and reports the model at the end of the response.
+#
+# ## Request Flow
+#
+# User → OpenCode (local/auto) → Auto Router (127.0.0.1:4000) → Classifier (Ollama or LiteLLM)
+#                                                                      ↓
+# User ← OpenCode ← Auto Router ← LiteLLM (127.0.0.1:8000) or ChatGPT OAuth
+#
+# ## Providers
+#
+# - **Mistral API** — SOPS secret `opencode/mistral/api-key`, exposed as `MISTRAL_API_KEY`
+# - **OpenCode Go** — SOPS secret `opencode/opencode-go/api-key`, exposed as `OPENCODE_GO_API_KEY`
+# - **ChatGPT subscription** — OpenCode OAuth entry in `~/.local/share/opencode/auth.json`
+# - **Local Ollama** — No external credential
+#
+# ## Model Families (escalation ladders)
+#
+# - Mistral: small → medium
+# - DeepSeek: flash → pro
+# - Qwen: 3.7-plus → 3.7-max → 3.8-max
+# - GPT: luna → luna-fast → terra → terra-fast → sol → sol-fast
+#
+# ## Routing Policy
+#
+# - Trivial tasks → mistral-small (sparingly) or mistral-medium
+# - Analysis/planning without tools → mistral-medium
+# - Coding with tools → deepseek-v4-flash or qwen3.7-plus
+# - Complex multi-step → deepseek-v4-pro or gpt-5.6-terra
+# - Hardest problems → gpt-5.6-sol
+#
+# ## Fallback and Escalation
+#
+# - Backend fallback: network errors, rate limits, auth errors → walk fallback chain
+# - Circuit breaker: exponential backoff (30s → 60s → 120s → 240s → 300s)
+# - Session-quality banning: model fails to solve → 10min ban + escalate in family
+# - Capability escalation: user says "didn't work" → next model in family ladder
+#
+# ## Operations
+#
+# systemctl --user status podman-opencode-router.service
+# systemctl --user status podman-opencode-litellm.service
+# systemctl --user status podman-opencode-ollama.service (local-classifier only)
+# systemctl --user status opencode-router-sync-models.service (local-classifier only)
+#
+# curl http://127.0.0.1:4000/health
+# curl http://127.0.0.1:8000/health
+# curl http://127.0.0.1:11434/api/tags
+#
+# ## Source Layout
+#
+# Package implementation: modules/packages/opencode-router/
+# - rust/ — Rust router implementation
+# - nix/ — Nix modules (module.nix, router.nix, litellm.nix, services.nix, secrets.nix)
+#
+# This file: modules/home-manager/programs/opencode.nix
+# - Imports the package module and sets model configuration
 {
   config,
   lib,
@@ -17,6 +77,7 @@ let
       tier = 1;
       fallbacks = [ "mistral-medium" ];
       litellmModel = "mistral/mistral-small-latest";
+      apiKeyEnv = "MISTRAL_API_KEY";
       displayName = "Mistral Small";
     };
 
@@ -30,6 +91,7 @@ let
         "deepseek-v4-flash"
       ];
       litellmModel = "mistral/mistral-medium-latest";
+      apiKeyEnv = "MISTRAL_API_KEY";
       displayName = "Mistral Medium";
     };
 
@@ -44,6 +106,7 @@ let
       ];
       litellmModel = "openai/deepseek-v4-flash";
       litellmApiBase = "https://opencode.ai/zen/go/v1";
+      apiKeyEnv = "OPENCODE_GO_API_KEY";
       displayName = "DeepSeek V4 Flash";
     };
 
@@ -58,6 +121,7 @@ let
       ];
       litellmModel = "openai/deepseek-v4-pro";
       litellmApiBase = "https://opencode.ai/zen/go/v1";
+      apiKeyEnv = "OPENCODE_GO_API_KEY";
       displayName = "DeepSeek V4 Pro";
     };
 
@@ -79,6 +143,7 @@ let
       fallbacks = [ "gpt-5.6-luna-openai" ];
       litellmModel = "openai/gpt-5.6-luna";
       litellmApiBase = "https://opencode.ai/zen/go/v1";
+      apiKeyEnv = "OPENCODE_GO_API_KEY";
       displayName = "GPT-5.6 Luna";
     };
 
@@ -150,6 +215,7 @@ let
       ];
       litellmModel = "openai/qwen3.7-plus";
       litellmApiBase = "https://opencode.ai/zen/go/v1";
+      apiKeyEnv = "OPENCODE_GO_API_KEY";
       displayName = "Qwen3.7 Plus";
     };
 
@@ -164,6 +230,7 @@ let
       ];
       litellmModel = "openai/qwen3.7-max";
       litellmApiBase = "https://opencode.ai/zen/go/v1";
+      apiKeyEnv = "OPENCODE_GO_API_KEY";
       displayName = "Qwen3.7 Max";
     };
 
@@ -178,6 +245,7 @@ let
       ];
       litellmModel = "openai/qwen3.8-max";
       litellmApiBase = "https://opencode.ai/zen/go/v1";
+      apiKeyEnv = "OPENCODE_GO_API_KEY";
       displayName = "Qwen3.8 Max";
     };
 
@@ -450,10 +518,15 @@ let
     format = "> **{display_name}**\n> {reason}";
     redirectFormat = "> **{original_display} → {display_name}**\n> {reason}";
   };
+
+  litellmApiKeys = {
+    MISTRAL_API_KEY = "opencode/mistral/api-key";
+    OPENCODE_GO_API_KEY = "opencode/opencode-go/api-key";
+  };
 in
 {
   imports = [
-    ../../../packages/opencode-router/nix/module.nix
+    ../../packages/opencode-router/nix/module.nix
   ];
 
   config = lib.mkIf (features.development.enable && features.development.opencode.enable) {
@@ -477,6 +550,7 @@ in
         circuitBreaker
         cache
         notice
+        litellmApiKeys
         ;
     };
   };
