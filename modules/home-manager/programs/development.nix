@@ -75,7 +75,6 @@
        home.packages = with pkgs; [
          ansible # Infrastructure automation
          opentofu # Terraform alternative (open-source)
-         pvetui # Proxmox VE Terminal UI
        ];
      })
 
