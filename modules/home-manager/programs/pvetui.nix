@@ -26,16 +26,16 @@ let
   # Generate profiles section for pvetui config (with placeholders for secrets)
   profilesSection = lib.concatStringsSep "\n" (
     map (profile: ''
-      ${profile.name}:
-        addr: "${profile.addr}"
-        user: "${profile.user}"
-        realm: "${profile.realm}"
-        token_id: "${profile.tokenId}"
-        token_secret: "__TOKEN_SECRET_${lib.toUpper (lib.replaceStrings [ "-" ] [ "_" ] profile.name)}__"
-        insecure: ${lib.boolToString profile.insecure}
-        ssh_user: "${profile.sshUser}"
-        vm_ssh_user: "${profile.vmSshUser}"
-        ssh_keyfile: "${profile.sshKeyfile}"
+  ${profile.name}:
+    addr: "${profile.addr}"
+    user: "${profile.user}"
+    realm: "${profile.realm}"
+    token_id: "${profile.tokenId}"
+    token_secret: "__TOKEN_SECRET_${lib.toUpper (lib.replaceStrings [ "-" ] [ "_" ] profile.name)}__"
+    insecure: ${lib.boolToString profile.insecure}
+    ssh_user: "${profile.sshUser}"
+    vm_ssh_user: "${profile.vmSshUser}"
+    ssh_keyfile: "${profile.sshKeyfile}"
     '') cfg.profiles
   );
 
@@ -50,7 +50,7 @@ let
   # Base config file (without secrets, stored in nix-store)
   pvetuiBaseConfig = pkgs.writeText "pvetui-config-base.yml" ''
     profiles:
-      ${profilesSection}
+${profilesSection}
 
     default_profile: "${cfg.defaultProfile}"
     debug: false
