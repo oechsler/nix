@@ -56,7 +56,7 @@ let
       - get-token
       - --oidc-issuer-url=${cluster.oidc.issuerUrl}
       - --oidc-client-id=${cluster.oidc.clientId}
-      ${lib.concatMapStringsSep "\n" (scope: "- --oidc-extra-scope=${scope}") cluster.oidc.extraScopes}
+${lib.concatMapStringsSep "\n" (scope: "      - --oidc-extra-scope=${scope}") cluster.oidc.extraScopes}
       command: kubectl
       env: null
       interactiveMode: IfAvailable

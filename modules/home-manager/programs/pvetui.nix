@@ -36,7 +36,7 @@ let
     ssh_user: "${profile.sshUser}"
     vm_ssh_user: "${profile.vmSshUser}"
     ssh_keyfile: "${profile.sshKeyfile}"
-    '') cfg.profiles
+'') cfg.profiles
   );
 
   # Generate sops secrets for each profile
@@ -49,20 +49,19 @@ let
 
   # Base config file (without secrets, stored in nix-store)
   pvetuiBaseConfig = pkgs.writeText "pvetui-config-base.yml" ''
-    profiles:
+profiles:
 ${profilesSection}
 
-    default_profile: "${cfg.defaultProfile}"
-    debug: false
-    show_icons: true
-    mouse: true
+default_profile: "${cfg.defaultProfile}"
+debug: false
+show_icons: true
+mouse: true
 
-    key_bindings:
-      # View switching (avoid Alt+<n> to prevent tmux conflicts)
-      view_nodes: "ctrl+1"
-      view_guests: "ctrl+2"
-      view_tasks: "ctrl+3"
-      view_storage: "ctrl+4"
+key_bindings:
+  view_nodes: "ctrl+1"
+  view_guests: "ctrl+2"
+  view_tasks: "ctrl+3"
+  view_storage: "ctrl+4"
   '';
 
   # Wrapper script that generates config with secrets at runtime
