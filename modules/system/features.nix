@@ -71,10 +71,11 @@
 #   features.desktop.fileManager = "default" | "terminal";          # Primary file manager
 #   features.auth.yubikey.enable = true;        # YubiKey PAM (default: on when unlockMethod = "yubikey")
 #   features.auth.totp.enable = true;           # TOTP 2FA (default: true)
-#   features.development.enable = true;         # Dev tools (default: true)
-#   features.development.opencode.enable = true; # OpenCode AI agent (default: development.enable)
-#   features.development.pvetui.enable = true;  # Proxmox VE Terminal UI (default: development.enable)
-#   features.development.kubernetes.enable = true; # Kubernetes tools & k9s (default: development.enable)
+#   features.dev.enable = true;                 # Dev tools - languages, IDEs (default: true)
+#   features.dev.opencode.enable = true;        # OpenCode AI agent (default: dev.enable)
+#   features.ops.enable = true;                 # Ops tools - infra management (default: true)
+#   features.ops.pvetui.enable = true;          # Proxmox VE Terminal UI (default: ops.enable)
+#   features.ops.kubernetes.enable = true;      # Kubernetes tools & k9s (default: ops.enable)
 #   features.apps.enable = true;                # Desktop apps (default: true)
 #
 
@@ -97,7 +98,8 @@ let
     # Desktop & GUI
     desktop.enable = false; # No Hyprland/KDE, SDDM, Firefox, hypr-dock
     apps.enable = false; # No Discord, Spotify, etc.
-    development.enable = false; # No dev tools (languages, kubectl, IDEs, etc.)
+    dev.enable = false; # No dev tools (languages, IDEs, etc.)
+    ops.enable = false; # No ops tools (pvetui, kubernetes, etc.)
 
     # Hardware
     audio.enable = false; # No sound
@@ -248,18 +250,34 @@ in
       };
     };
 
-    development = {
+    dev = {
       enable = (lib.mkEnableOption "development tools") // {
         default = true;
       };
       opencode = {
         enable = (lib.mkEnableOption "OpenCode AI coding agent") // {
-          default = config.features.development.enable;
+          default = config.features.dev.enable;
         };
+      };
+      jetbrains = {
+        enable = (lib.mkEnableOption "JetBrains IDEs (GoLand, RustRover)") // {
+          default = config.features.dev.enable;
+        };
+      };
+      dbeaver = {
+        enable = (lib.mkEnableOption "DBeaver database GUI") // {
+          default = config.features.dev.enable;
+        };
+      };
+    };
+
+    ops = {
+      enable = (lib.mkEnableOption "operations tools") // {
+        default = true;
       };
       pvetui = {
         enable = (lib.mkEnableOption "pvetui (Proxmox VE Terminal UI)") // {
-          default = config.features.development.enable;
+          default = config.features.ops.enable;
         };
         profiles = lib.mkOption {
           type = lib.types.listOf (
@@ -322,7 +340,7 @@ in
       };
       kubernetes = {
         enable = (lib.mkEnableOption "Kubernetes tools and k9s") // {
-          default = config.features.development.enable;
+          default = config.features.ops.enable;
         };
         clusters = lib.mkOption {
           type = lib.types.listOf (

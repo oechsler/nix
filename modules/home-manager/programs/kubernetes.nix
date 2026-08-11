@@ -4,7 +4,7 @@
 # Supports OIDC authentication via kubectl oidc-login plugin.
 #
 # Configuration:
-#   features.development.kubernetes.clusters = [
+#   features.ops.kubernetes.clusters = [
 #     {
 #       name = "k3s.oechsler.it";
 #       server = "https://k3s.oechsler.it:6443";
@@ -15,7 +15,7 @@
 #       };
 #     }
 #   ];
-#   features.development.kubernetes.defaultContext = "k3s.oechsler.it";
+#   features.ops.kubernetes.defaultContext = "k3s.oechsler.it";
 
 {
   config,
@@ -26,7 +26,7 @@
 }:
 
 let
-  cfg = features.development.kubernetes;
+  cfg = features.ops.kubernetes;
 
   # Generate cluster entries for kubeconfig
   clusterEntries = lib.concatMapStringsSep "\n" (cluster: ''
@@ -77,7 +77,7 @@ let
   '';
 in
 {
-  config = lib.mkIf (features.development.enable && cfg.enable && cfg.clusters != [ ]) {
+  config = lib.mkIf (features.ops.enable && cfg.enable && cfg.clusters != [ ]) {
     catppuccin.k9s.transparent = true;
 
     programs.k9s = {

@@ -97,7 +97,7 @@ in
     ++ [
       "kitty"
     ]
-    ++ lib.optionals features.development.enable [
+    ++ lib.optionals features.dev.enable [
       "nvim"
     ]
     ++ lib.optionals features.apps.enable [

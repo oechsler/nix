@@ -40,14 +40,17 @@ features.ssh.enable = true;
 | `features.wifi.enable` | `true` | WiFi profiles via SOPS secrets |
 | `features.wifi.networks` | `[]` | WPA2-PSK networks — list of `{ name, ssid }`. Only `wifi/<name>/psk` needs a SOPS secret. |
 | `features.wifi.enterpriseNetworks` | `[]` | WPA2 Enterprise (EAP-PEAP) networks — list of `{ name, ssid, identity }`. Only `wifi/<name>/password` needs a SOPS secret. |
-| `features.development.enable` | `true` | Languages, CLI dev tools, Kubernetes tools, desktop IDEs on desktop hosts |
-| `features.development.opencode.enable` | `development.enable` | OpenCode AI coding agent with Mistral/OpenAI/opencode-go providers |
-| `features.development.pvetui.enable` | `development.enable` | Proxmox VE Terminal UI with pre-configured profiles and API token auth via SOPS |
-| `features.development.pvetui.profiles` | `[]` | Proxmox server profiles — list of `{ name, addr, user?, realm?, tokenId?, insecure?, sshUser?, vmSshUser?, sshKeyfile? }`. Defaults use `config.user.name`. Only `pvetui/<name>/token-secret` needs a SOPS secret. |
-| `features.development.pvetui.defaultProfile` | `""` | Default profile name (empty = first profile) |
-| `features.development.kubernetes.enable` | `development.enable` | Kubernetes tools (kubectl, helm, k9s) with OIDC authentication |
-| `features.development.kubernetes.clusters` | `[]` | Kubernetes clusters — list of `{ name, server, caData, namespace?, user?, oidc = { issuerUrl, clientId, extraScopes? } }`. Kubeconfig is generated automatically. |
-| `features.development.kubernetes.defaultContext` | `""` | Default Kubernetes context (empty = first cluster) |
+| `features.dev.enable` | `true` | Languages, CLI dev tools, desktop IDEs on desktop hosts |
+| `features.dev.opencode.enable` | `dev.enable` | OpenCode AI coding agent with Mistral/OpenAI/opencode-go providers |
+| `features.dev.jetbrains.enable` | `dev.enable` | JetBrains IDEs (GoLand, RustRover) |
+| `features.dev.dbeaver.enable` | `dev.enable` | DBeaver database GUI |
+| `features.ops.enable` | `true` | Operations tools - infrastructure management |
+| `features.ops.pvetui.enable` | `ops.enable` | Proxmox VE Terminal UI with pre-configured profiles and API token auth via SOPS |
+| `features.ops.pvetui.profiles` | `[]` | Proxmox server profiles — list of `{ name, addr, user?, realm?, tokenId?, insecure?, sshUser?, vmSshUser?, sshKeyfile? }`. Defaults use `config.user.name`. Only `pvetui/<name>/token-secret` needs a SOPS secret. |
+| `features.ops.pvetui.defaultProfile` | `""` | Default profile name (empty = first profile) |
+| `features.ops.kubernetes.enable` | `ops.enable` | Kubernetes tools (kubectl, helm, k9s) with OIDC authentication |
+| `features.ops.kubernetes.clusters` | `[]` | Kubernetes clusters — list of `{ name, server, caData, namespace?, user?, oidc = { issuerUrl, clientId, extraScopes? } }`. Kubeconfig is generated automatically. |
+| `features.ops.kubernetes.defaultContext` | `""` | Default Kubernetes context (empty = first cluster) |
 | `features.apps.enable` | `true` | Desktop apps (Discord, Spotify, Obsidian, LibreOffice, ...) |
 | `features.apps.winboat.enable` | `false` | WinBoat Windows VM (seamless integration) |
 | `features.auth.totp.enable` | `true` | TOTP for sudo, SSH (see [AUTH.md](AUTH.md)) |
@@ -293,7 +296,7 @@ Set in `home.nix`:
 | `desktop.pinnedApps` | Firefox, Kitty, Dolphin/Nautilus or Yazi (+ conditional) | Pinned dock/taskbar apps (works on Hyprland + KDE). Yazi replaces Dolphin/Nautilus when `features.desktop.fileManager = "terminal"`. |
 
 Default pinned apps are extended based on feature toggles:
-- `features.development.enable` adds Neovim
+- `features.dev.enable` adds Neovim
 - `features.apps.enable` adds Obsidian, Vesktop, Spotify
 - `features.gaming.enable` adds Steam
 
