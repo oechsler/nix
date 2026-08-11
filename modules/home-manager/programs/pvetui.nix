@@ -26,17 +26,17 @@ let
   # Generate profiles section for pvetui config (with placeholders for secrets)
   profilesSection = lib.concatStringsSep "\n" (
     map (profile: ''
-  ${profile.name}:
-    addr: "${profile.addr}"
-    user: "${profile.user}"
-    realm: "${profile.realm}"
-    token_id: "${profile.tokenId}"
-    token_secret: "__TOKEN_SECRET_${lib.toUpper (lib.replaceStrings [ "-" ] [ "_" ] profile.name)}__"
-    insecure: ${lib.boolToString profile.insecure}
-    ssh_user: "${profile.sshUser}"
-    vm_ssh_user: "${profile.vmSshUser}"
-    ssh_keyfile: "${profile.sshKeyfile}"
-'') cfg.profiles
+      ${profile.name}:
+        addr: "${profile.addr}"
+        user: "${profile.user}"
+        realm: "${profile.realm}"
+        token_id: "${profile.tokenId}"
+        token_secret: "__TOKEN_SECRET_${lib.toUpper (lib.replaceStrings [ "-" ] [ "_" ] profile.name)}__"
+        insecure: ${lib.boolToString profile.insecure}
+        ssh_user: "${profile.sshUser}"
+        vm_ssh_user: "${profile.vmSshUser}"
+        ssh_keyfile: "${profile.sshKeyfile}"
+    '') cfg.profiles
   );
 
   # Generate sops secrets for each profile
@@ -49,19 +49,19 @@ let
 
   # Base config file (without secrets, stored in nix-store)
   pvetuiBaseConfig = pkgs.writeText "pvetui-config-base.yml" ''
-profiles:
-${profilesSection}
+    profiles:
+    ${profilesSection}
 
-default_profile: "${cfg.defaultProfile}"
-debug: false
-show_icons: true
-mouse: true
+    default_profile: "${cfg.defaultProfile}"
+    debug: false
+    show_icons: true
+    mouse: true
 
-key_bindings:
-  view_nodes: "ctrl+1"
-  view_guests: "ctrl+2"
-  view_tasks: "ctrl+3"
-  view_storage: "ctrl+4"
+    key_bindings:
+      view_nodes: "ctrl+1"
+      view_guests: "ctrl+2"
+      view_tasks: "ctrl+3"
+      view_storage: "ctrl+4"
   '';
 
   # Wrapper script that generates config with secrets at runtime
