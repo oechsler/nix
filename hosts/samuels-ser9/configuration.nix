@@ -138,7 +138,7 @@
           }
           {
             name = "server-2";
-            addr = "https://proxmox-2.lan.oechsler.it:8006/";
+            addr = "https://proxmox-2.lan.oechsler.it";
             sshAddr = "server-2.srv.oechsler.it";
             groups = [ "all-servers" ];
           }
