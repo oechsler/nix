@@ -75,7 +75,7 @@ ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: settings:
     mkdir -p "$CONFIG_DIR"
 
     # Generate config with secrets
-    cat > "$CONFIG_FILE" << 'EOF'
+    cat > "$CONFIG_FILE" << EOF
 profiles:
 ${lib.concatMapStringsSep "\n" (profile:
   let
