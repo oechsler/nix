@@ -29,6 +29,16 @@
 let
   cfg = features.ops.pvetui;
 
+  # pvetui currently does not expose mouse activation in its YAML config.
+  # Enable it in tview while keeping the rest of the package from nixpkgs.
+  pvetui = pkgs.pvetui.overrideAttrs (old: {
+    postPatch = (old.postPatch or "") + ''
+      substituteInPlace internal/ui/components/app.go \
+        --replace-fail 'Application:        tview.NewApplication(),' \
+        'Application:        tview.NewApplication().EnableMouse(true),'
+    '';
+  });
+
   # Catppuccin palette loaded from source (same as desktop/common/theme.nix)
   palette = (lib.importJSON "${config.catppuccin.sources.palette}/palette.json").${theme.catppuccin.flavor}.colors;
 
@@ -99,7 +109,6 @@ default_profile: "${cfg.defaultProfile}"
 ${groupsSection}
 debug: false
 show_icons: true
-mouse: true
 
 theme:
   colors:
@@ -131,13 +140,13 @@ theme:
     usagecritical: "${palette.red.hex}"
 
 key_bindings:
-  view_nodes: "ctrl+1"
-  view_guests: "ctrl+2"
-  view_tasks: "ctrl+3"
-  view_storage: "ctrl+4"
+  nodes_page: "F1"
+  guests_page: "F2"
+  tasks_page: "F3"
+  storage_page: "F4"
 EOF
 
-    exec ${pkgs.pvetui}/bin/pvetui "$@"
+    exec ${pvetui}/bin/pvetui "$@"
   '';
 in
 {
