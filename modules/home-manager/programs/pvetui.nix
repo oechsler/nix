@@ -29,6 +29,15 @@
 let
   cfg = features.ops.pvetui;
 
+  # Extract hostname from URL (removes protocol and port)
+  extractHost = url:
+    let
+      withoutProtocol = lib.removePrefix "https://" (lib.removePrefix "http://" url);
+      withoutPath = lib.head (lib.splitString "/" withoutProtocol);
+      withoutPort = lib.head (lib.splitString ":" withoutPath);
+    in
+    withoutPort;
+
   # Generate sops secrets for each profile
   pvetuiSecrets = lib.listToAttrs (
     map (profile: {
@@ -79,6 +88,7 @@ ${lib.concatMapStringsSep "\n" (profile:
     ssh_user: "${profile.sshUser}"
     vm_ssh_user: "${profile.vmSshUser}"
     ssh_keyfile: "${profile.sshKeyfile}"
+    ssh_addr: "${if profile.sshAddr != null then profile.sshAddr else extractHost profile.addr}"
 ${profileGroups profile}''
 ) cfg.profiles}
 
