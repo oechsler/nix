@@ -81,17 +81,27 @@
   ];
 
   features = {
+    # --- Hardware & Kernel ---
     kernel = "cachyos-v4"; # Ryzen AI 9 HX 370 (Zen 5/Zen 5c) — x86_64-v4 optimized build
     hardware = {
       formFactor = "desktop";
       cpu = "amd"; # AMD Ryzen AI 9 HX 370
       gpu = "amd"; # Integrated Radeon 890M
     };
+
+    # --- Boot & Security ---
     secureBoot.enable = true;
     encryption.unlockMethod = "yubikey";
-    gaming.steamMachine.enable = true;
-    desktop.login = "greeter";
-    desktop.fileManager = "terminal";
+
+    # --- Networking ---
+    wifi.networks = [
+      {
+        name = "home";
+        ssid = "Oechsler!Box";
+      }
+    ];
+
+    # --- System Services ---
     smb.shares = [
       {
         name = "personal-drive";
@@ -104,13 +114,15 @@
         path = "//unas.srv.oechsler.it/Pika";
       }
     ];
-    wifi.networks = [
-      {
-        name = "home";
-        ssid = "Oechsler!Box";
-      }
-    ];
 
+    # --- Desktop & UI ---
+    desktop = {
+      login = "greeter";
+      fileManager = "terminal";
+    };
+    gaming.steamMachine.enable = true;
+
+    # --- Operations Tools ---
     ops = {
       pvetui = {
         defaultProfile = "server-1";
