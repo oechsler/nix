@@ -48,7 +48,7 @@ features.ssh.enable = true;
 | `features.ops.pvetui.enable` | `ops.enable` | Proxmox VE Terminal UI with pre-configured profiles and API token auth via SOPS |
 | `features.ops.pvetui.profiles` | `[]` | Proxmox server profiles — list of `{ name, addr, user?, realm?, tokenId?, insecure?, sshUser?, vmSshUser?, sshKeyfile?, groups? }`. Defaults use `config.user.name`. Only `pvetui/<name>/token-secret` needs a SOPS secret. |
 | `features.ops.pvetui.defaultProfile` | `""` | Default profile or group name (can be a profile name or a group name for Group Mode) |
-| `features.ops.pvetui.groupSettings` | `{}` | Group settings for Group Mode — attrs of `{ mode }` where mode is `"aggregate"` (combines resources) or `"cluster"` (active/passive failover) |
+| `features.ops.pvetui.groups` | `{}` | Group settings for Group Mode — attrs of `{ mode }` where mode is `"aggregate"` (combines resources) or `"cluster"` (active/passive failover) |
 | `features.ops.kubernetes.enable` | `ops.enable` | Kubernetes tools (kubectl, helm, k9s) with OIDC authentication |
 | `features.ops.kubernetes.clusters` | `[]` | Kubernetes clusters — list of `{ name, server, caData, namespace?, user?, oidc = { issuerUrl, clientId, extraScopes? } }`. Kubeconfig is generated automatically. |
 | `features.ops.kubernetes.defaultContext` | `""` | Default Kubernetes context (empty = first cluster) |

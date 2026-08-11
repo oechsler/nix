@@ -126,7 +126,7 @@
     ops = {
       pvetui = {
         defaultProfile = "all-servers";
-        groupSettings = {
+        groups = {
           "all-servers" = { mode = "aggregate"; };
         };
         profiles = [
