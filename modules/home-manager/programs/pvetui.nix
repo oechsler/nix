@@ -10,7 +10,7 @@
 #     { name = "server-2"; addr = "https://proxmox-2.lan:8006"; groups = ["all-servers"]; }
 #   ];
 #   features.ops.pvetui.defaultProfile = "all-servers";
-#   features.ops.pvetui.groupSettings = {
+#   features.ops.pvetui.groups = {
 #     "all-servers" = { mode = "aggregate"; };
 #   };
 #
@@ -22,6 +22,7 @@
   lib,
   features,
   pkgs,
+  theme,
   ...
 }:
 
@@ -45,13 +46,13 @@ ${lib.concatMapStringsSep "\n" (g: "      - ${g}") profile.groups}''
       "";
 
   # Generate group_settings section
-  groupSettingsSection =
-    if cfg.groupSettings != { } then
+  groupsSection =
+    if cfg.groups != { } then
       ''group_settings:
 ${lib.concatStringsSep "\n" (lib.mapAttrsToList (name: settings:
   ''  ${name}:
     mode: ${settings.mode}''
-) cfg.groupSettings)}''
+) cfg.groups)}''
     else
       "";
 
@@ -82,10 +83,13 @@ ${profileGroups profile}''
 ) cfg.profiles}
 
 default_profile: "${cfg.defaultProfile}"
-${groupSettingsSection}
+${groupsSection}
 debug: false
 show_icons: true
 mouse: true
+
+theme:
+  name: "catppuccin-${theme.catppuccin.flavor}"
 
 key_bindings:
   view_nodes: "ctrl+1"

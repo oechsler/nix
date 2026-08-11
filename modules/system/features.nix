@@ -342,7 +342,7 @@ in
           default = "";
           description = "Default profile or group name (can be a profile name or a group name)";
         };
-        groupSettings = lib.mkOption {
+        groups = lib.mkOption {
           type = lib.types.attrsOf (
             lib.types.submodule {
               options = {
