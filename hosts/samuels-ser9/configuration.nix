@@ -125,15 +125,20 @@
     # --- Operations Tools ---
     ops = {
       pvetui = {
-        defaultProfile = "server-1";
+        defaultProfile = "all-servers";
+        groupSettings = {
+          "all-servers" = { mode = "aggregate"; };
+        };
         profiles = [
           {
             name = "server-1";
             addr = "https://proxmox-1.lan.oechsler.it:8006";
+            groups = [ "all-servers" ];
           }
           {
             name = "server-2";
             addr = "https://proxmox-2.lan.oechsler.it:8006";
+            groups = [ "all-servers" ];
           }
         ];
       };

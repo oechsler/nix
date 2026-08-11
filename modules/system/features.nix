@@ -326,6 +326,11 @@ in
                   default = "~/.ssh/id_ed25519";
                   description = "SSH private key path";
                 };
+                groups = lib.mkOption {
+                  type = lib.types.listOf lib.types.str;
+                  default = [ ];
+                  description = "List of groups this profile belongs to (for Group Mode)";
+                };
               };
             }
           );
@@ -335,7 +340,25 @@ in
         defaultProfile = lib.mkOption {
           type = lib.types.str;
           default = "";
-          description = "Default profile name (empty = first profile)";
+          description = "Default profile or group name (can be a profile name or a group name)";
+        };
+        groupSettings = lib.mkOption {
+          type = lib.types.attrsOf (
+            lib.types.submodule {
+              options = {
+                mode = lib.mkOption {
+                  type = lib.types.enum [
+                    "aggregate"
+                    "cluster"
+                  ];
+                  default = "aggregate";
+                  description = "Group mode: 'aggregate' combines resources, 'cluster' is active/passive failover";
+                };
+              };
+            }
+          );
+          default = { };
+          description = "Settings for each group (mode: aggregate or cluster)";
         };
       };
       kubernetes = {
