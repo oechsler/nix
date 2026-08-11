@@ -55,22 +55,29 @@
   };
 
   features = {
+    # --- Hardware & Kernel ---
     kernel = "cachyos-v3"; # Intel Core i7-8550U (Kaby Lake-R) — x86_64-v3 optimized build
     hardware = {
       formFactor = "laptop";
       cpu = "intel"; # Intel Core i7-8550U (Kaby Lake-R)
       gpu = "intel"; # Intel UHD Graphics 620
     };
+
+    # --- Boot & Security ---
     # secureBoot.enable is NOT set — Razer BIOS does not reliably support custom key enrollment.
     # TPM-backed LUKS provides the primary boot-time security on this machine.
     encryption.unlockMethod = "yubikey";
-    desktop = {
-      wm = "kde";
-      login = "greeter";
-      fileManager = "terminal";
-    };
-    gaming.enable = false;
     auth.yubikey.enable = true;
+
+    # --- Networking ---
+    wifi.networks = [
+      {
+        name = "home";
+        ssid = "Oechsler!Box";
+      }
+    ];
+
+    # --- System Services ---
     smb.shares = [
       {
         name = "personal-drive";
@@ -83,13 +90,16 @@
         path = "//unas.srv.oechsler.it/Pika";
       }
     ];
-    wifi.networks = [
-      {
-        name = "home";
-        ssid = "Oechsler!Box";
-      }
-    ];
 
+    # --- Desktop & UI ---
+    desktop = {
+      wm = "kde";
+      login = "greeter";
+      fileManager = "terminal";
+    };
+    gaming.enable = false;
+
+    # --- Operations Tools ---
     ops = {
       pvetui = {
         defaultProfile = "server-1";

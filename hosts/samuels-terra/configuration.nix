@@ -89,18 +89,32 @@
   ];
 
   features = {
+    # --- Hardware & Kernel ---
     kernel = "cachyos-v4"; # Ryzen 9 9950X3D2 (Zen 5) — x86_64-v4 optimized build
     hardware = {
       formFactor = "desktop";
       cpu = "amd"; # Ryzen 9 9950X3D2 (Zen 5)
       gpu = "amd"; # RX 9070 XT (RDNA4)
     };
+
+    # --- Boot & Security ---
     secureBoot.enable = true;
     encryption.unlockMethod = "yubikey";
-    desktop = {
-      login = "greeter";
-      fileManager = "terminal";
+
+    # --- Networking ---
+    # MT7927 (Filogic 380) WiFi/BT non-functional until kernel 7.2+ — disable for now
+    wifi = {
+      enable = false;
+      networks = [
+        {
+          name = "home";
+          ssid = "Oechsler!Box";
+        }
+      ];
     };
+    bluetooth.enable = false;
+
+    # --- System Services ---
     smb.shares = [
       {
         name = "personal-drive";
@@ -114,20 +128,14 @@
       }
     ];
 
+    # --- Desktop & UI ---
+    desktop = {
+      login = "greeter";
+      fileManager = "terminal";
+    };
     gaming.steamMachine.enable = true;
 
-    # MT7927 (Filogic 380) WiFi/BT non-functional until kernel 7.2+ — disable for now
-    wifi = {
-      enable = false;
-      networks = [
-        {
-          name = "home";
-          ssid = "Oechsler!Box";
-        }
-      ];
-    };
-    bluetooth.enable = false;
-
+    # --- Operations Tools ---
     ops = {
       pvetui = {
         defaultProfile = "server-1";
