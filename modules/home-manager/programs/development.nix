@@ -31,41 +31,43 @@
   #===========================
 
   config = lib.mkMerge [
-     # CLI Development Tools (always useful, even on servers)
-     (lib.mkIf features.dev.enable {
-        home.packages = with pkgs; [
-          # Development utilities
-          cloc # Count lines of code
-          distrobox # Container environments
+    # CLI Development Tools (always useful, even on servers)
+    (lib.mkIf features.dev.enable {
+      home.packages = with pkgs; [
+        # Development utilities
+        cloc # Count lines of code
+        distrobox # Container environments
 
-          # Languages & Compilers
-          go
-          rustup
-          gcc # C compiler needed by cargo for native dependencies (linker)
-          jdk
-          nodejs
-        ];
-     })
+        # Languages & Compilers
+        go
+        rustup
+        gcc # C compiler needed by cargo for native dependencies (linker)
+        jdk
+        nodejs
+      ];
+    })
 
-     # Homelab/Infrastructure Tools
-     (lib.mkIf features.dev.enable {
-       home.packages = with pkgs; [
-         ansible # Infrastructure automation
-         opentofu # Terraform alternative (open-source)
-       ];
-     })
+    # Homelab/Infrastructure Tools
+    (lib.mkIf features.dev.enable {
+      home.packages = with pkgs; [
+        ansible # Infrastructure automation
+        opentofu # Terraform alternative (open-source)
+      ];
+    })
 
-     # GUI Development Tools (only for desktop)
-     (lib.mkIf (features.dev.enable && features.desktop.enable) {
-       home.packages = with pkgs; (
-         lib.optionals features.dev.dbeaver.enable [
-           dbeaver-bin # Database GUI
-         ]
-         ++ lib.optionals features.dev.jetbrains.enable [
-           jetbrains.goland # Go IDE
-           jetbrains.rust-rover # Rust IDE
-         ]
-       );
-     })
+    # GUI Development Tools (only for desktop)
+    (lib.mkIf (features.dev.enable && features.desktop.enable) {
+      home.packages =
+        with pkgs;
+        (
+          lib.optionals features.dev.dbeaver.enable [
+            dbeaver-bin # Database GUI
+          ]
+          ++ lib.optionals features.dev.jetbrains.enable [
+            jetbrains.goland # Go IDE
+            jetbrains.rust-rover # Rust IDE
+          ]
+        );
+    })
   ];
 }
