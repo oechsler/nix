@@ -7,14 +7,15 @@
 #    - Utilities: cloc, distrobox
 #    - Useful on development machines
 #
-# 2. Kubernetes Tools (features.development.enable = true)
-#    - kubectl, helm, k9s
+# 2. Homelab/Infrastructure Tools (features.development.enable = true)
+#    - ansible, opentofu
 #
 # 3. GUI Tools (features.development.enable && features.desktop.enable)
 #    - JetBrains GoLand
 #    - DBeaver (Database GUI)
 #    - Only useful on desktops
 #
+# Note: Kubernetes tools (kubectl, helm, k9s) are configured in kubernetes.nix
 # Server mode disables development tools.
 
 {
@@ -44,30 +45,6 @@
           jdk
           nodejs
         ];
-     })
-
-     # Kubernetes Tools
-     (lib.mkIf features.development.enable {
-       catppuccin.k9s.transparent = true;
-
-       programs.k9s = {
-         enable = true;
-         settings.k9s.ui = {
-           enableMouse = true;
-           logoless = true;
-           splashless = true;
-           reactive = true;
-         };
-       };
-
-       home.packages = with pkgs; [
-         # Kubernetes tools
-         kubectl
-         kubernetes-helm
-         kubectx
-         kubeseal # Sealed Secrets CLI
-         kubelogin-oidc # kubectl OIDC login plugin (int128/kubelogin)
-       ];
      })
 
      # Homelab/Infrastructure Tools

@@ -47,11 +47,6 @@ in
 
         users.users.${config.user.name}.extraGroups = [ "podman" ];
       }
-
-      # Proxmox VE Terminal UI
-      {
-        environment.systemPackages = [ pkgs.pvetui ];
-      }
     ]
   );
 }

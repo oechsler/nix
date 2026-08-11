@@ -42,6 +42,12 @@ features.ssh.enable = true;
 | `features.wifi.enterpriseNetworks` | `[]` | WPA2 Enterprise (EAP-PEAP) networks — list of `{ name, ssid, identity }`. Only `wifi/<name>/password` needs a SOPS secret. |
 | `features.development.enable` | `true` | Languages, CLI dev tools, Kubernetes tools, desktop IDEs on desktop hosts |
 | `features.development.opencode.enable` | `development.enable` | OpenCode AI coding agent with Mistral/OpenAI/opencode-go providers |
+| `features.development.pvetui.enable` | `development.enable` | Proxmox VE Terminal UI with pre-configured profiles and API token auth via SOPS |
+| `features.development.pvetui.profiles` | `[]` | Proxmox server profiles — list of `{ name, addr, user?, realm?, tokenId?, insecure?, sshUser?, vmSshUser?, sshKeyfile? }`. Defaults use `config.user.name`. Only `pvetui/<name>/token-secret` needs a SOPS secret. |
+| `features.development.pvetui.defaultProfile` | `""` | Default profile name (empty = first profile) |
+| `features.development.kubernetes.enable` | `development.enable` | Kubernetes tools (kubectl, helm, k9s) with OIDC authentication |
+| `features.development.kubernetes.clusters` | `[]` | Kubernetes clusters — list of `{ name, server, caData, namespace?, user?, oidc = { issuerUrl, clientId, extraScopes? } }`. Kubeconfig is generated automatically. |
+| `features.development.kubernetes.defaultContext` | `""` | Default Kubernetes context (empty = first cluster) |
 | `features.apps.enable` | `true` | Desktop apps (Discord, Spotify, Obsidian, LibreOffice, ...) |
 | `features.apps.winboat.enable` | `false` | WinBoat Windows VM (seamless integration) |
 | `features.auth.totp.enable` | `true` | TOTP for sudo, SSH (see [AUTH.md](AUTH.md)) |
