@@ -127,7 +127,9 @@
       pvetui = {
         defaultProfile = "all-servers";
         groups = {
-          "all-servers" = { mode = "aggregate"; };
+          "all-servers" = {
+            mode = "aggregate";
+          };
         };
         profiles = [
           {

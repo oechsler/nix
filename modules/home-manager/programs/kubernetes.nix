@@ -30,37 +30,39 @@ let
 
   # Generate cluster entries for kubeconfig
   clusterEntries = lib.concatMapStringsSep "\n" (cluster: ''
-- cluster:
-    certificate-authority-data: ${cluster.caData}
-    server: ${cluster.server}
-  name: ${cluster.name}
+    - cluster:
+        certificate-authority-data: ${cluster.caData}
+        server: ${cluster.server}
+      name: ${cluster.name}
   '') cfg.clusters;
 
   # Generate context entries for kubeconfig
   contextEntries = lib.concatMapStringsSep "\n" (cluster: ''
-- context:
-    cluster: ${cluster.name}
-    namespace: ${cluster.namespace}
-    user: ${cluster.user}
-  name: ${cluster.name}
+    - context:
+        cluster: ${cluster.name}
+        namespace: ${cluster.namespace}
+        user: ${cluster.user}
+      name: ${cluster.name}
   '') cfg.clusters;
 
   # Generate user entries for kubeconfig (OIDC)
   userEntries = lib.concatMapStringsSep "\n" (cluster: ''
-- name: ${cluster.user}
-  user:
-    exec:
-      apiVersion: client.authentication.k8s.io/v1beta1
-      args:
-      - oidc-login
-      - get-token
-      - --oidc-issuer-url=${cluster.oidc.issuerUrl}
-      - --oidc-client-id=${cluster.oidc.clientId}
-${lib.concatMapStringsSep "\n" (scope: "      - --oidc-extra-scope=${scope}") cluster.oidc.extraScopes}
-      command: kubectl
-      env: null
-      interactiveMode: IfAvailable
-      provideClusterInfo: false
+    - name: ${cluster.user}
+      user:
+        exec:
+          apiVersion: client.authentication.k8s.io/v1beta1
+          args:
+          - oidc-login
+          - get-token
+          - --oidc-issuer-url=${cluster.oidc.issuerUrl}
+          - --oidc-client-id=${cluster.oidc.clientId}
+    ${lib.concatMapStringsSep "\n" (
+      scope: "      - --oidc-extra-scope=${scope}"
+    ) cluster.oidc.extraScopes}
+          command: kubectl
+          env: null
+          interactiveMode: IfAvailable
+          provideClusterInfo: false
   '') (lib.filter (c: c.user != null) cfg.clusters);
 
   # Generate complete kubeconfig
