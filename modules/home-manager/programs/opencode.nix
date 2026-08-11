@@ -34,7 +34,7 @@ let
   '';
 in
 {
-  config = lib.mkIf (features.development.enable && features.development.opencode.enable) {
+  config = lib.mkIf (features.dev.enable && features.dev.opencode.enable) {
     sops.secrets = {
       "opencode/mistral/api-key" = { };
       "opencode/opencode-go/api-key" = { };

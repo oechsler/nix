@@ -4,10 +4,10 @@
 # Pre-configured with Proxmox servers and API token authentication.
 #
 # Configuration:
-#   features.development.pvetui.profiles = [
+#   features.ops.pvetui.profiles = [
 #     { name = "server-1"; addr = "https://proxmox-1.lan:8006"; }
 #   ];
-#   features.development.pvetui.defaultProfile = "server-1";
+#   features.ops.pvetui.defaultProfile = "server-1";
 #
 # SOPS secrets (only token secrets needed):
 #   pvetui/<name>/token-secret
@@ -21,7 +21,7 @@
 }:
 
 let
-  cfg = features.development.pvetui;
+  cfg = features.ops.pvetui;
 
   # Generate profiles section for pvetui config (with placeholders for secrets)
   profilesSection = lib.concatStringsSep "\n" (
@@ -86,7 +86,7 @@ let
   '';
 in
 {
-  config = lib.mkIf (features.development.enable && cfg.enable && cfg.profiles != [ ]) {
+  config = lib.mkIf (features.ops.enable && cfg.enable && cfg.profiles != [ ]) {
     home.packages = [ pvetuiWithSecrets ];
 
     sops.secrets = pvetuiSecrets;

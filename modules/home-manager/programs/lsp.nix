@@ -22,7 +22,7 @@
 }:
 
 {
-  config = lib.mkIf features.development.enable {
+  config = lib.mkIf features.dev.enable {
     home.packages = with pkgs; [
       # Nix
       nixd

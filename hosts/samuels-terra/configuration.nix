@@ -128,34 +128,36 @@
     };
     bluetooth.enable = false;
 
-    development.pvetui = {
-      defaultProfile = "server-1";
-      profiles = [
-        {
-          name = "server-1";
-          addr = "https://proxmox-1.lan.oechsler.it:8006";
-        }
-        {
-          name = "server-2";
-          addr = "https://proxmox-2.lan.oechsler.it:8006";
-        }
-      ];
-    };
+    ops = {
+      pvetui = {
+        defaultProfile = "server-1";
+        profiles = [
+          {
+            name = "server-1";
+            addr = "https://proxmox-1.lan.oechsler.it:8006";
+          }
+          {
+            name = "server-2";
+            addr = "https://proxmox-2.lan.oechsler.it:8006";
+          }
+        ];
+      };
 
-    development.kubernetes = {
-      defaultContext = "k3s.oechsler.it";
-      clusters = [
-        {
-          name = "k3s.oechsler.it";
-          server = "https://k3s.oechsler.it:6443";
-          caData = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJkakNDQVIyZ0F3SUJBZ0lCQURBS0JnZ3Foa2pPUFFRREFqQWpNU0V3SHdZRFZRUUREQmhyTTNNdGMyVnkKZG1WeUxXTmhRREUzT0RJd05qazVNekl3SGhjTk1qWXdOakl4TVRneU5UTXlXaGNOTXpZd05qRTRNVGd5TlRNeQpXakFqTVNFd0h3WURWUVFEREJock0zTXRjMlZ5ZG1WeUxXTmhRREUzT0RJd05qazVNekl3V1RBVEJnY3Foa2pPClBRSUJCZ2dxaGtqT1BRTUJCd05DQUFRZFdSMTlKS1BxM29VYjRJR2tYWWFBN3NlY2JQQkVPNWhjNFF1YzFrVW0KcytVeDlicG9haElCWFkzNTNYUXM3Y2NCcGVUSjA3NHd1VUFLM0ZxdTR4NGFvMEl3UURBT0JnTlZIUThCQWY4RQpCQU1DQXFRd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBZEJnTlZIUTRFRmdRVVk1N3p3TERONC9wZVhaYlZlejU5CmtERWVvZW93Q2dZSUtvWkl6ajBFQXdJRFJ3QXdSQUlnUFJnUFhiTUtSZm5SMzNOV2F1R1FGbUV6SnA3djlRdDEKYkhUN0lGU3V1cmtDSUVjRENxSGV5S2NsWENYaGxXR0lxQ2hIQUpOZWt6c2hOVnZQZldhaFBUM04KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=";
-          namespace = "default";
-          oidc = {
-            issuerUrl = "https://id.at.oechsler.it";
-            clientId = "f18b9f65-0a3c-4fea-ace3-73954937bcd1";
-          };
-        }
-      ];
+      kubernetes = {
+        defaultContext = "k3s.oechsler.it";
+        clusters = [
+          {
+            name = "k3s.oechsler.it";
+            server = "https://k3s.oechsler.it:6443";
+            caData = "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJkakNDQVIyZ0F3SUJBZ0lCQURBS0JnZ3Foa2pPUFFRREFqQWpNU0V3SHdZRFZRUUREQmhyTTNNdGMyVnkKZG1WeUxXTmhRREUzT0RJd05qazVNekl3SGhjTk1qWXdOakl4TVRneU5UTXlXaGNOTXpZd05qRTRNVGd5TlRNeQpXakFqTVNFd0h3WURWUVFEREJock0zTXRjMlZ5ZG1WeUxXTmhRREUzT0RJd05qazVNekl3V1RBVEJnY3Foa2pPClBRSUJCZ2dxaGtqT1BRTUJCd05DQUFRZFdSMTlKS1BxM29VYjRJR2tYWWFBN3NlY2JQQkVPNWhjNFF1YzFrVW0KcytVeDlicG9haElCWFkzNTNYUXM3Y2NCcGVUSjA3NHd1VUFLM0ZxdTR4NGFvMEl3UURBT0JnTlZIUThCQWY4RQpCQU1DQXFRd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBZEJnTlZIUTRFRmdRVVk1N3p3TERONC9wZVhaYlZlejU5CmtERWVvZW93Q2dZSUtvWkl6ajBFQXdJRFJ3QXdSQUlnUFJnUFhiTUtSZm5SMzNOV2F1R1FGbUV6SnA3djlRdDEKYkhUN0lGU3V1cmtDSUVjRENxSGV5S2NsWENYaGxXR0lxQ2hIQUpOZWt6c2hOVnZQZldhaFBUM04KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=";
+            namespace = "default";
+            oidc = {
+              issuerUrl = "https://id.at.oechsler.it";
+              clientId = "f18b9f65-0a3c-4fea-ace3-73954937bcd1";
+            };
+          }
+        ];
+      };
     };
   };
 

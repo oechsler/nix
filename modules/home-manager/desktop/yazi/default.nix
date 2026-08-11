@@ -15,7 +15,7 @@
 
 let
   enableAppPreviews = features.apps.enable;
-  enableRichPreviews = features.development.enable;
+  enableRichPreviews = features.dev.enable;
 
   yaziBookmarks =
     config.fileManager.bookmarks

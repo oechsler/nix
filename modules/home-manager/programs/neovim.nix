@@ -38,7 +38,7 @@
   # (avoids the viml/lua type warning since we use pure Lua setup)
   catppuccin.nvim.enable = false;
 
-  programs.neovim = lib.mkIf features.development.enable {
+  programs.neovim = lib.mkIf features.dev.enable {
     enable = true;
     defaultEditor = true; # Set as $EDITOR
     viAlias = true; # vi → nvim
