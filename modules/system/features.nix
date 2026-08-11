@@ -326,6 +326,11 @@ in
                   default = "~/.ssh/id_ed25519";
                   description = "SSH private key path";
                 };
+                sshAddr = lib.mkOption {
+                  type = lib.types.nullOr lib.types.str;
+                  default = null;
+                  description = "SSH hostname (if different from API addr hostname)";
+                };
                 groups = lib.mkOption {
                   type = lib.types.listOf lib.types.str;
                   default = [ ];

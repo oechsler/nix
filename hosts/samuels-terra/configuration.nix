@@ -145,12 +145,14 @@
         profiles = [
           {
             name = "server-1";
-            addr = "https://proxmox-1.lan.oechsler.it:8006";
+            addr = "https://proxmox-1.lan.oechsler.it";
+            sshAddr = "server-1.srv.oechsler.it";
             groups = [ "all-servers" ];
           }
           {
             name = "server-2";
-            addr = "https://proxmox-2.lan.oechsler.it:8006";
+            addr = "https://proxmox-2.lan.oechsler.it:8006/";
+            sshAddr = "server-2.srv.oechsler.it";
             groups = [ "all-servers" ];
           }
         ];
