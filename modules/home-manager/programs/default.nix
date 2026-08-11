@@ -21,11 +21,13 @@
     ./development.nix
     ./fish.nix
     ./git.nix
+    ./kubernetes.nix
     ./lsp.nix
     ./mangohud.nix
     ./neovim.nix
     ./opencode.nix
     ./proton-pass.nix
+    ./pvetui.nix
     ./terminal.nix
     ./tmux.nix
     ./tools.nix
