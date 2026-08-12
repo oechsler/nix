@@ -43,7 +43,6 @@
   pkgs,
   lib,
   theme,
-  fonts,
   locale,
   displays,
   input,

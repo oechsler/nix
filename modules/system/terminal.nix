@@ -12,7 +12,7 @@
 #
 # Note: This only enables Fish system-wide, it doesn't configure it.
 
-{ config, pkgs, ... }:
+_:
 
 {
   # Fish at system level (used as login shell)

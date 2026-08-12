@@ -60,7 +60,7 @@
 # Full conventions: NIX_CODE_STYLE.md, NIX_DOCS_STYLE.md
 # ============================================================================
 
-{ pkgs, lib, ... }:
+{ pkgs, ... }:
 
 pkgs.runCommand "nixos-config-lint" { } ''
   export LC_ALL=C.UTF-8

@@ -17,7 +17,7 @@
 # - AppImages (if not using appimage.enable)
 # - Pre-built tools that aren't in nixpkgs
 
-{ config, pkgs, ... }:
+{ pkgs, ... }:
 
 {
   programs.nix-ld = {

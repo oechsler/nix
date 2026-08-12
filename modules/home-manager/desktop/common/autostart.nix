@@ -31,7 +31,6 @@
 }:
 
 let
-  cfg = config.autostart;
   isKde = features.desktop.wm == "kde";
 
   desktopSteamCondition = pkgs.writeShellScript "steam-desktop-condition" ''

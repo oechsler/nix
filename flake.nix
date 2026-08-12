@@ -117,7 +117,7 @@
   };
 
   outputs =
-    { self, nixpkgs, ... }@inputs:
+    { nixpkgs, ... }@inputs:
     let
       # All hosts in this flake are x86_64-linux.
       # Adding an aarch64 host would require parameterizing mkHostBase.
@@ -151,7 +151,7 @@
             {
               nixpkgs.overlays = [
                 inputs.cachyos-kernel.overlays.pinned
-                (final: prev: {
+                (_final: prev: {
                   coreutils-full = prev.uutils-coreutils-noprefix;
                 })
               ];
@@ -161,7 +161,7 @@
             # Local-only overlay (only for this repo's hosts)
             {
               nixpkgs.overlays = [
-                (final: prev: {
+                (final: _prev: {
                   hypr-dock = final.callPackage ./modules/packages/hypr-dock.nix { };
                 })
               ];
@@ -245,7 +245,7 @@
       };
 
       overlays = {
-        default = final: prev: {
+        default = final: _prev: {
           hypr-dock = final.callPackage ./packages/hypr-dock.nix { };
         };
       };

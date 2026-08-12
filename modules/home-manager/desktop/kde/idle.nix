@@ -15,7 +15,7 @@
 # Hyprland uses these same timeouts:
 # - See hyprland/hypridle.nix
 
-{ config, lib, ... }:
+{ config, ... }:
 
 let
   cfg = config.idle;
