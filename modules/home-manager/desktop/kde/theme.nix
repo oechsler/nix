@@ -35,7 +35,6 @@ let
 
   # KDE theme names (Plasma-specific)
   # Examples: "Catppuccin Mocha Mauve", "CatppuccinMochaMauve"
-  colorSchemeName = "Catppuccin ${capitalize flavor} ${capitalize accent}";
   colorSchemeId = "Catppuccin${capitalize flavor}${capitalize accent}";
   lookAndFeelId = "Catppuccin-${capitalize flavor}-${capitalize accent}";
   auroraeThemeId = "Catppuccin${capitalize flavor}-Modern";

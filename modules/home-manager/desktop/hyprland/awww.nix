@@ -10,7 +10,6 @@
 # - Daemon-based (wallpaper persists across Hyprland restarts)
 
 {
-  config,
   pkgs,
   lib,
   theme,

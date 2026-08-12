@@ -9,25 +9,11 @@
 {
   lib,
   config,
-  pkgs,
   ...
 }:
 
 let
   cfg = config.features.virtualisation;
-  disableDockerInterfaceIPv6 = pkgs.writeShellScript "disable-docker-interface-ipv6" ''
-    iface=''${1:-}
-
-    case "$iface" in
-      docker0|br-*|veth*) ;;
-      *) exit 0 ;;
-    esac
-
-    sysctl_path="/proc/sys/net/ipv6/conf/$iface/disable_ipv6"
-    if [ -w "$sysctl_path" ]; then
-      printf '1' > "$sysctl_path"
-    fi
-  '';
 in
 {
   options.features.virtualisation = {

@@ -18,7 +18,6 @@
 #   features.ops.kubernetes.defaultContext = "k3s.oechsler.it";
 
 {
-  config,
   lib,
   features,
   pkgs,
