@@ -100,7 +100,12 @@
     # --- Boot & Security ---
     secureBoot.enable = true;
     encryption.unlockMethod = "yubikey";
-    auth.ldap.enable = true;
+    auth.ldap = {
+      enable = true;
+      uri = "ldaps://lldap.k3s.oechsler.it:6360";
+      baseDn = "dc=oechsler,dc=it";
+      bindDn = "uid=admin,ou=people,dc=oechsler,dc=it";
+    };
 
     # --- Networking ---
     # MT7927 (Filogic 380) WiFi/BT non-functional until kernel 7.2+ — disable for now
