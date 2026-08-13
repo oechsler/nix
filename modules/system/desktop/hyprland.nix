@@ -70,6 +70,7 @@
       withUWSM = true;
     };
 
+    # Pass the SDDM login password (local or LDAP) to GNOME Keyring.
     security.pam.services.sddm.enableGnomeKeyring = true;
 
     # SDDM autologin uses a separate PAM service and does not run the normal

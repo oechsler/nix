@@ -12,10 +12,12 @@ let
 in
 {
   config = lib.mkIf cfg.enable {
-    sops.secrets."user/ldap/bind-password" = { };
-    sops.secrets."user/ldap/bind-dn" = { };
-    sops.secrets."user/ldap/base-dn" = { };
-    sops.secrets."user/ldap/host" = { };
+    sops.secrets = {
+      "user/ldap/bind-password" = { };
+      "user/ldap/bind-dn" = { };
+      "user/ldap/base-dn" = { };
+      "user/ldap/host" = { };
+    };
 
     sops.templates."sssd-environment".content = ''
       SSSD_LDAP_DEFAULT_AUTHTOK=${config.sops.placeholder."user/ldap/bind-password"}
