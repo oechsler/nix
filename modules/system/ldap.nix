@@ -8,24 +8,20 @@
 
 let
   userName = config.user.name;
-  cfg = config.features.ldap;
+  cfg = config.features.auth.ldap;
 in
 {
-  options.features.ldap.enable = lib.mkEnableOption "LLDAP authentication" // {
-    default = false;
-  };
-
   config = lib.mkIf cfg.enable {
-    sops.secrets."ldap/bind-password" = { };
-    sops.secrets."ldap/bind-dn" = { };
-    sops.secrets."ldap/base-dn" = { };
-    sops.secrets."ldap/host" = { };
+    sops.secrets."user/ldap/bind-password" = { };
+    sops.secrets."user/ldap/bind-dn" = { };
+    sops.secrets."user/ldap/base-dn" = { };
+    sops.secrets."user/ldap/host" = { };
 
     sops.templates."sssd-environment".content = ''
-      SSSD_LDAP_DEFAULT_AUTHTOK=${config.sops.placeholder."ldap/bind-password"}
-      SSSD_LDAP_DEFAULT_BIND_DN=${config.sops.placeholder."ldap/bind-dn"}
-      SSSD_LDAP_SEARCH_BASE=${config.sops.placeholder."ldap/base-dn"}
-      SSSD_LDAP_HOST=${config.sops.placeholder."ldap/host"}
+      SSSD_LDAP_DEFAULT_AUTHTOK=${config.sops.placeholder."user/ldap/bind-password"}
+      SSSD_LDAP_DEFAULT_BIND_DN=${config.sops.placeholder."user/ldap/bind-dn"}
+      SSSD_LDAP_SEARCH_BASE=${config.sops.placeholder."user/ldap/base-dn"}
+      SSSD_LDAP_HOST=${config.sops.placeholder."user/ldap/host"}
     '';
 
     services.sssd = {

@@ -18,7 +18,7 @@ Both PAM methods work independently or combined. Password serves as a local fall
 LLDAP authentication is disabled by default and can be enabled per host:
 
 ```nix
-features.ldap.enable = true;
+features.auth.ldap.enable = true;
 ```
 
 When enabled, SSSD authenticates the locally declared `user.name` against LLDAP and caches successful credentials for offline login. Other LLDAP users are not allowed to log in. The LDAP host, base DN, bind DN, and bind password are stored in SOPS. When disabled, the local SOPS password is used again.
