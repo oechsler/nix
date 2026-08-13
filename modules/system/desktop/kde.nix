@@ -32,6 +32,9 @@
       udisks2.enable = true;
     };
 
+    # Pass the SDDM login password (local or LDAP) to KDE Wallet.
+    security.pam.services.sddm.kwallet.enable = true;
+
     xdg.portal = {
       enable = true;
       extraPortals = [
