@@ -153,9 +153,9 @@ in
     user.directories = lib.optionals (config.features.hardware.formFactor != "server") [ "repos" ];
 
     # When LDAP is disabled, restore the local SOPS-managed password.
-    sops.secrets."user/password" = lib.mkIf (!config.features.ldap.enable) { };
+    sops.secrets."user/password" = lib.mkIf (!config.features.auth.ldap.enable) { };
 
-    system.activationScripts.user-passwd = lib.mkIf (!config.features.ldap.enable) {
+    system.activationScripts.user-passwd = lib.mkIf (!config.features.auth.ldap.enable) {
       deps = [ "users" ];
       text = ''
         if [ -f ${config.sops.secrets."user/password".path} ]; then
@@ -165,7 +165,7 @@ in
       '';
     };
 
-    systemd.services.user-passwd = lib.mkIf (!config.features.ldap.enable) {
+    systemd.services.user-passwd = lib.mkIf (!config.features.auth.ldap.enable) {
       description = "Set user password from sops secret";
       wantedBy = [ "multi-user.target" ];
       after = [ "sops-install-secrets.service" ];

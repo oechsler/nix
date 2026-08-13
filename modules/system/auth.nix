@@ -484,6 +484,9 @@ in
         description = "Enable YubiKey authentication tools and PAM integration.";
       };
     };
+    ldap.enable = (lib.mkEnableOption "LLDAP authentication") // {
+      default = false;
+    };
   };
 
   config = lib.mkMerge [
