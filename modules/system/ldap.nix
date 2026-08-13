@@ -11,21 +11,43 @@
 let
   userName = config.user.name;
   cfg = config.features.auth.ldap;
+  ldapUri = if cfg.uri == null then "" else cfg.uri;
+  baseDn = if cfg.baseDn == null then "" else cfg.baseDn;
+  bindDn = if cfg.bindDn == null then "" else cfg.bindDn;
 in
 {
+  options.features.auth.ldap = {
+    uri = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "LDAP URI for this host, for example ldaps://ldap.example.org:6360.";
+    };
+    baseDn = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "LDAP search base for this host.";
+    };
+    bindDn = lib.mkOption {
+      type = lib.types.nullOr lib.types.str;
+      default = null;
+      description = "LDAP bind DN for this host.";
+    };
+  };
+
   config = lib.mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = cfg.uri != null && cfg.baseDn != null && cfg.bindDn != null;
+        message = "features.auth.ldap.uri, baseDn, and bindDn must be set when LDAP is enabled.";
+      }
+    ];
+
     sops.secrets = {
       "user/ldap/bind-password" = { };
-      "user/ldap/bind-dn" = { };
-      "user/ldap/base-dn" = { };
-      "user/ldap/uri" = { };
     };
 
     sops.templates."sssd-environment".content = ''
       SSSD_LDAP_DEFAULT_AUTHTOK=${config.sops.placeholder."user/ldap/bind-password"}
-      SSSD_LDAP_DEFAULT_BIND_DN=${config.sops.placeholder."user/ldap/bind-dn"}
-      SSSD_LDAP_SEARCH_BASE=${config.sops.placeholder."user/ldap/base-dn"}
-      SSSD_LDAP_URI=${config.sops.placeholder."user/ldap/uri"}
     '';
 
     services.sssd = {
@@ -51,16 +73,16 @@ in
           auth_provider = "ldap";
           access_provider = "simple";
 
-          ldap_uri = "$SSSD_LDAP_URI";
+          ldap_uri = ldapUri;
           ldap_id_use_start_tls = false;
           ldap_tls_reqcert = "demand";
-          ldap_search_base = "$SSSD_LDAP_SEARCH_BASE";
-          ldap_user_search_base = "$SSSD_LDAP_SEARCH_BASE";
-          ldap_group_search_base = "$SSSD_LDAP_SEARCH_BASE";
+          ldap_search_base = baseDn;
+          ldap_user_search_base = baseDn;
+          ldap_group_search_base = baseDn;
           ldap_schema = "rfc2307bis";
           ldap_user_object_class = "person";
           ldap_user_name = "uid";
-          ldap_default_bind_dn = "$SSSD_LDAP_DEFAULT_BIND_DN";
+          ldap_default_bind_dn = bindDn;
           ldap_default_authtok_type = "password";
           ldap_default_authtok = "$SSSD_LDAP_DEFAULT_AUTHTOK";
 
