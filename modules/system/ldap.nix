@@ -1,5 +1,6 @@
 # LLDAP password authentication for the locally declared primary user.
-# SSSD uses local files for identity and LDAP only for authentication/cache.
+# SSSD provides LDAP authentication and credential caching. Local users remain
+# authoritative for the actual system account and its permissions.
 
 {
   config,
@@ -32,10 +33,12 @@ in
       environmentFile = config.sops.templates."sssd-environment".path;
       settings = {
         sssd = {
-          services = "pam";
+          services = "nss, pam";
           domains = "lldap";
           config_file_version = 2;
         };
+
+        nss.enumerate = false;
 
         pam = {
           offline_credentials_expiration = 0;
@@ -44,8 +47,7 @@ in
         };
 
         "domain/lldap" = {
-          id_provider = "proxy";
-          proxy_lib_name = "files";
+          id_provider = "ldap";
           auth_provider = "ldap";
           access_provider = "simple";
 
@@ -54,6 +56,9 @@ in
           ldap_tls_reqcert = "demand";
           ldap_search_base = "$SSSD_LDAP_SEARCH_BASE";
           ldap_user_search_base = "$SSSD_LDAP_SEARCH_BASE";
+          ldap_group_search_base = "$SSSD_LDAP_SEARCH_BASE";
+          ldap_schema = "rfc2307bis";
+          ldap_user_object_class = "person";
           ldap_user_name = "uid";
           ldap_default_bind_dn = "$SSSD_LDAP_DEFAULT_BIND_DN";
           ldap_default_authtok_type = "password";
