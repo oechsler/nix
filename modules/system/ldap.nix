@@ -63,16 +63,7 @@ in
     };
 
     security.pam.services = lib.genAttrs [ "sddm" "sudo" "sshd" ] (_: {
-      unixAuth = true;
       sssdStrictAccess = true;
     });
-
-    # LDAP is the SSH password provider. Keep the existing public-key gate,
-    # but replace the YubiKey/TOTP keyboard-interactive requirement.
-    services.openssh.settings = {
-      PasswordAuthentication = lib.mkForce true;
-      KbdInteractiveAuthentication = lib.mkForce false;
-      AuthenticationMethods = lib.mkForce "publickey,password";
-    };
   };
 }

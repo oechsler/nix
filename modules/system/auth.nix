@@ -522,7 +522,8 @@ in
 
       # sudo + SSH: 3 OTP attempts before fallback
       # [success=done default=ignore] = if correct → done, if wrong → try next
-      # After 3 failures: sudo → password prompt (pam_unix), SSH → denied (pam_deny)
+      # After 3 failures: sudo → password prompt (SSSD/LDAP or local Unix),
+      # SSH → denied (pam_deny)
       # login/sddm excluded: TOTP prompts break SDDM's greeter.
       security.pam.services = lib.genAttrs [ "sudo" "sshd" ] (_: {
         oathAuth = true;
