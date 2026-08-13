@@ -36,6 +36,13 @@ let
       substituteInPlace internal/ui/components/app.go \
         --replace-fail 'Application:        tview.NewApplication(),' \
         'Application:        tview.NewApplication().EnableMouse(true),'
+
+      # Proxmox returns agent settings as "enabled=1,...". pvetui previously
+      # treated that value as disabled and consequently never queried the agent.
+      substituteInPlace pkg/api/vm.go \
+        --replace-fail \
+          'vm.AgentEnabled = v == "1" || v == StringTrue' \
+          'vm.AgentEnabled = v == "1" || v == StringTrue || strings.HasPrefix(v, "enabled=1")'
     '';
   });
 
