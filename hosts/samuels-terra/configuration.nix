@@ -100,6 +100,7 @@
     # --- Boot & Security ---
     secureBoot.enable = true;
     encryption.unlockMethod = "yubikey";
+    ldap.enable = true;
 
     # --- Networking ---
     # MT7927 (Filogic 380) WiFi/BT non-functional until kernel 7.2+ — disable for now

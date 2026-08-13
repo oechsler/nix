@@ -17,11 +17,10 @@
 # Authentication:
 #   - TOTP is the primary auth method (see auth.nix)
 #   - Password is a fallback for local services (login, sudo, SDDM)
-#   - Plain password in sops (user/password), hashed to yescrypt at boot
-#     by user-passwd.service via chpasswd (after sops-install-secrets)
-#   - Fallback: "!" (locked) if sops key is missing (e.g. fresh install)
+#   - Password authentication is provided by SSSD/LLDAP (see ldap.nix)
 #   - Root account is locked (only sudo access via user account)
-#   - Hosts do NOT need to set user.hashedPassword
+#   - The local shadow password remains locked; the account is still declared
+#     locally for its home directory, UID/GID, and desktop session.
 #
 # Security:
 #   - Root login disabled (hashedPassword = "!")
@@ -88,7 +87,7 @@ in
     hashedPassword = lib.mkOption {
       type = lib.types.str;
       default = "!"; # Locked by default — user-passwd.service sets real password at boot
-      description = "Hashed password fallback. Usually left at '!' (locked); runtime service overrides it.";
+      description = "Local shadow password fallback; LDAP provides authentication.";
     };
   };
 
@@ -153,30 +152,10 @@ in
     # Default: Create ~/repos directory (desktop only)
     user.directories = lib.optionals (config.features.hardware.formFactor != "server") [ "repos" ];
 
-    # Create directories via tmpfiles (runs on boot)
-    systemd.tmpfiles.rules = map (
-      dir: "d ${user.home}/${dir} 0755 ${user.name} ${user.group} -"
-    ) cfg.directories;
+    # When LDAP is disabled, restore the local SOPS-managed password.
+    sops.secrets."user/password" = lib.mkIf (!config.features.ldap.enable) { };
 
-    #---------------------------
-    # 5b. Runtime Password via sops
-    #---------------------------
-    # Why: Plain password stored encrypted in sops, hashed dynamically at boot.
-    # Avoids storing any hash in the Nix store or git repo.
-    # Falls back to "!" (locked) if sops key is missing (e.g. fresh install).
-    #
-    # Two mechanisms:
-    # 1. Activation script (nixos-rebuild switch): mutableUsers=false regenerates
-    #    /etc/shadow with "!" on every switch. The activation script re-applies the
-    #    password immediately (sops secrets already available on a live system).
-    # 2. Systemd service (fresh boot): sops secrets not yet available during
-    #    activation, so the service sets the password after sops-install-secrets.
-    sops.secrets."user/password" = { };
-
-    # 1. Activation script — re-applies password after every nixos-rebuild switch.
-    # Runs after "users" (which regenerates /etc/shadow with "!").
-    # Guard: skipped on fresh boot where sops secret isn't available yet.
-    system.activationScripts.user-passwd = {
+    system.activationScripts.user-passwd = lib.mkIf (!config.features.ldap.enable) {
       deps = [ "users" ];
       text = ''
         if [ -f ${config.sops.secrets."user/password".path} ]; then
@@ -186,8 +165,7 @@ in
       '';
     };
 
-    # 2. Systemd service — sets password on fresh boot (after sops secrets are ready).
-    systemd.services.user-passwd = {
+    systemd.services.user-passwd = lib.mkIf (!config.features.ldap.enable) {
       description = "Set user password from sops secret";
       wantedBy = [ "multi-user.target" ];
       after = [ "sops-install-secrets.service" ];
@@ -201,6 +179,11 @@ in
           | ${pkgs.shadow}/bin/chpasswd
       '';
     };
+
+    # Create directories via tmpfiles (runs on boot)
+    systemd.tmpfiles.rules = map (
+      dir: "d ${user.home}/${dir} 0755 ${user.name} ${user.group} -"
+    ) cfg.directories;
 
     #---------------------------
     # 6. Sudo Configuration

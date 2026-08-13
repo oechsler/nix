@@ -24,6 +24,7 @@
     ./networking/tailscale.nix
     ./locale.nix
     ./users.nix
+    ./ldap.nix
     ./audio.nix
     ./bluetooth.nix
     ./fonts.nix

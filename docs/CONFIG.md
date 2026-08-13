@@ -56,6 +56,7 @@ features.ssh.enable = true;
 | `features.apps.winboat.enable` | `false` | WinBoat Windows VM (seamless integration) |
 | `features.auth.totp.enable` | `true` | TOTP for sudo, SSH (see [AUTH.md](AUTH.md)) |
 | `features.auth.yubikey.enable` | `unlockMethod == "yubikey"` | YubiKey for sudo, SSH (see [AUTH.md](AUTH.md)). Auto-enabled when `encryption.unlockMethod = "yubikey"`. |
+| `features.ldap.enable` | `false` | LLDAP/SSSD password authentication with offline credential caching. When enabled, only the locally declared `user.name` may log in; when disabled, the local SOPS password is restored. |
 | `features.secureBoot.enable` | `false` | UEFI Secure Boot via lanzaboote |
 | `features.ssh.enable` | `false` | OpenSSH server + GitHub key sync (every 15 min) |
 | `features.snapshots.enable` | `true` | Automatic btrfs snapshots (hourly, see [SNAPSHOTS.md](SNAPSHOTS.md)) |
