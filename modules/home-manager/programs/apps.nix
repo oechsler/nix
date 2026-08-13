@@ -27,11 +27,13 @@
 #
 # KDE apps:
 # - Filelight - Disk usage analyzer
+# - KWalletManager - KDE Wallet management
 #
 # Hyprland apps:
 # - Baobab - Disk usage analyzer (GNOME)
 # - Loupe - Image viewer (GNOME)
 # - GNOME Keyring - Secret storage for browsers, desktop apps, etc.
+# - Seahorse - GNOME Keyring management
 #   (Proton Pass uses kernel keyring via keyutils instead)
 # - libsecret - Tools for accessing gnome-keyring (used by Chrome, Vesktop, etc.)
 
@@ -163,6 +165,7 @@ in
       (lib.mkIf isKde {
         home.packages = with pkgs; [
           kdePackages.filelight
+          kdePackages.kwalletmanager
         ];
       })
 
@@ -179,6 +182,7 @@ in
           baobab
           loupe
           libsecret
+          seahorse
         ];
       })
     ]
