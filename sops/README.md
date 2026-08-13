@@ -56,7 +56,10 @@ git commit -m "Update secrets"
 
 | Secret | Purpose | Used By |
 |--------|---------|---------|
-| `user/password` | Login hashed password for Samuel | `modules/system/users.nix`, `modules/system/hardware.nix` |
+| `ldap/base-dn` | LLDAP search base | `modules/system/ldap.nix` |
+| `ldap/bind-dn` | LLDAP bind identity | `modules/system/ldap.nix` |
+| `ldap/bind-password` | LLDAP bind password for SSSD user lookup | `modules/system/ldap.nix` |
+| `ldap/host` | LLDAP LDAPS host and port | `modules/system/ldap.nix` |
 | `wifi/<name>/psk` | WiFi WPA2 pre-shared key | `modules/system/networking/wifi.nix` (NetworkManager) |
 | `smb/<name>/password` | SMB/CIFS mount credentials | `modules/system/smb.nix` (systemd mount units) |
 | `backgrounds/password` | Wallhaven API password for wallpaper sync | `modules/system/backgrounds.nix` |
