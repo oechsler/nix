@@ -37,12 +37,12 @@ let
         --replace-fail 'Application:        tview.NewApplication(),' \
         'Application:        tview.NewApplication().EnableMouse(true),'
 
-      # Proxmox returns agent settings as "enabled=1,...". pvetui previously
-      # treated that value as disabled and consequently never queried the agent.
+      # Reuse pvetui's parser for compound Proxmox agent settings such as
+      # "enabled=1,fstrim_cloned_disks=0,type=virtio".
       substituteInPlace pkg/api/vm.go \
         --replace-fail \
           'vm.AgentEnabled = v == "1" || v == StringTrue' \
-          'vm.AgentEnabled = v == "1" || v == StringTrue || strings.HasPrefix(v, "enabled=1")'
+          'vm.AgentEnabled = parseQEMUAgentEnabled(v)'
     '';
   });
 
