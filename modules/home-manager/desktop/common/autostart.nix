@@ -15,7 +15,7 @@
 # - Vesktop - Discord client (minimized)
 # - Nextcloud - Cloud sync (Hyprland only, KDE uses XDG autostart)
 # - Pika Backup Monitor (if features.apps.enable)
-# - Nheko - Matrix client (tray, if features.apps.enable)
+# - Cinny - Matrix client (if features.apps.enable)
 # - Trayscale - Tailscale tray (if features.tailscale.enable)
 # - Steam (if features.gaming.enable)
 #
@@ -87,8 +87,8 @@ in
             exec = "vesktop --start-minimized";
           }
           {
-            name = "Nheko";
-            exec = "nheko";
+            name = "Cinny";
+            exec = "cinny";
           }
           {
             name = "Mumble";

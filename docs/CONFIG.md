@@ -134,7 +134,6 @@ Default mappings are feature-gated and automatically applied:
 | `features.gaming.enable` | Steam | `steam` | `steam_tray_mono` |
 | `features.apps.enable` | Nextcloud | `Nextcloud` | `state-ok` |
 | `features.apps.enable` | Mumble | `Mumble` | `mumble-indicator` |
-| `features.apps.enable` | Nheko | `nheko` | `applications-chat-panel` |
 | `features.apps.enable` | Proton Pass | `Proton Pass_status_icon_1` | `dialog-password-panel` |
 | `features.apps.enable` | Vesktop | `vesktop_status_icon_1` | `discord-tray` |
 | `features.tailscale.enable` | Trayscale | `dev.deedles.Trayscale` | `network-vpn` |
@@ -260,7 +259,7 @@ Set in `home.nix`:
 
 Default autostart apps are extended based on feature toggles:
 - Nextcloud is always added (via XDG autostart `.desktop` — works on both Hyprland and KDE)
-- `features.apps.enable` adds Proton Pass, Vesktop, Nheko, Mumble
+- `features.apps.enable` adds Proton Pass, Vesktop, Cinny, Mumble
 - `features.gaming.enable` adds Steam
 - `features.tailscale.enable` adds Trayscale
 
