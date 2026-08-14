@@ -40,19 +40,45 @@ in
 
     systemd.tmpfiles.rules = [ "d /var/lib/pam-lldap 0700 root root -" ];
 
-    security.pam.services = lib.genAttrs [ "login" "sddm" "sudo" "polkit-1" "hyprlock" ] (_: {
-      unixAuth = false;
-      rules.auth.pam_lldap = {
-        order = 12000;
-        control = "sufficient";
-        modulePath = "${pkgs.pam-lldap}/lib/security/pam_lldap.so";
-        args = [
-          "uri=${uri}"
-          "user_dn=${userDn}"
-          "user=${userName}"
-          "cache=${cachePath}"
-        ];
-      };
-    });
+    security.pam.services = lib.mkMerge [
+      (lib.genAttrs [ "login" "sddm" "sudo" "polkit-1" "hyprlock" ] (_: {
+        unixAuth = false;
+        rules.auth.pam_lldap = {
+          order = 12000;
+          control = "sufficient";
+          modulePath = "${pkgs.pam-lldap}/lib/security/pam_lldap.so";
+          args = [
+            "uri=${uri}"
+            "user_dn=${userDn}"
+            "user=${userName}"
+            "cache=${cachePath}"
+          ];
+        };
+      }))
+      {
+        # pam_lldap obtains PAM_AUTHTOK, then the desktop keyring modules reuse
+        # it to unlock GNOME Keyring or KWallet without prompting again.
+        login.rules.auth.gnome_keyring = {
+          order = 12100;
+          control = "optional";
+          modulePath = "${pkgs.gnome-keyring}/lib/security/pam_gnome_keyring.so";
+          settings.use_authtok = true;
+        };
+        sddm.rules.auth.gnome_keyring = {
+          enable = !config.services.desktopManager.plasma6.enable;
+          order = 12100;
+          control = "optional";
+          modulePath = "${pkgs.gnome-keyring}/lib/security/pam_gnome_keyring.so";
+          settings.use_authtok = true;
+        };
+        sddm.rules.auth.kwallet = {
+          enable = config.services.desktopManager.plasma6.enable;
+          order = 12100;
+          control = "optional";
+          modulePath = "${config.security.pam.services.sddm.kwallet.package}/lib/security/pam_kwallet5.so";
+          settings.use_authtok = true;
+        };
+      }
+    ];
   };
 }
