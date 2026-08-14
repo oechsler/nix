@@ -15,6 +15,7 @@ let
   baseDn = if cfg.baseDn == null then "" else cfg.baseDn;
   userDn = "uid=${userName},ou=people,${baseDn}";
   cachePath = "/var/lib/pam-lldap/${userName}.hash";
+  isKde = config.features.desktop.wm == "kde";
 in
 {
   options.features.auth.ldap = {
@@ -62,20 +63,28 @@ in
         # pam_lldap obtains PAM_AUTHTOK, then the desktop keyring modules reuse
         # it to unlock GNOME Keyring or KWallet without prompting again.
         login.rules.auth.gnome_keyring = {
+          enable = !isKde;
           order = 12100;
           control = "optional";
           modulePath = "${pkgs.gnome-keyring}/lib/security/pam_gnome_keyring.so";
           settings.use_authtok = true;
         };
+        login.rules.auth.kwallet = {
+          enable = isKde;
+          order = 12100;
+          control = "optional";
+          modulePath = "${config.security.pam.services.login.kwallet.package}/lib/security/pam_kwallet5.so";
+          settings.use_authtok = true;
+        };
         sddm.rules.auth.gnome_keyring = {
-          enable = !config.services.desktopManager.plasma6.enable;
+          enable = !isKde;
           order = 12100;
           control = "optional";
           modulePath = "${pkgs.gnome-keyring}/lib/security/pam_gnome_keyring.so";
           settings.use_authtok = true;
         };
         sddm.rules.auth.kwallet = {
-          enable = config.services.desktopManager.plasma6.enable;
+          enable = isKde;
           order = 12100;
           control = "optional";
           modulePath = "${config.security.pam.services.sddm.kwallet.package}/lib/security/pam_kwallet5.so";
