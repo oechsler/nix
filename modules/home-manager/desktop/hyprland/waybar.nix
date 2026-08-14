@@ -16,7 +16,7 @@
 # - Papirus tray icons with customizable mappings (Hyprland only, ignored on KDE)
 #
 # Tray Icons:
-# - Default mappings use Papirus-Dark icons for Steam, Nextcloud, Mumble, Nheko, Vesktop, Trayscale
+# - Default mappings use Papirus-Dark icons for Steam, Nextcloud, Mumble, Vesktop, Trayscale
 # - Mappings are feature-gated (only active apps get their icons)
 # - Customize or add mappings via: waybar.tray.icons = { "AppId" = "icon-name"; };
 # - This option has no effect on KDE (Plasma manages its own tray icons)
@@ -76,7 +76,6 @@ let
     }
     // lib.optionalAttrs features.apps.enable {
       Mumble = "mumble-indicator";
-      nheko = "applications-chat-panel";
       "Proton Pass_status_icon_1" = "dialog-password-panel";
       vesktop_status_icon_1 = "discord-tray";
     }
