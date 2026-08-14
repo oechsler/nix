@@ -259,7 +259,7 @@ Set in `home.nix`:
 
 Default autostart apps are extended based on feature toggles:
 - Nextcloud is always added (via XDG autostart `.desktop` — works on both Hyprland and KDE)
-- `features.apps.enable` adds Proton Pass, Vesktop, Cinny, Mumble
+- `features.apps.enable` adds Proton Pass, Vesktop, Mumble
 - `features.gaming.enable` adds Steam
 - `features.tailscale.enable` adds Trayscale
 
