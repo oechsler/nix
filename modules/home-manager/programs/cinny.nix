@@ -34,11 +34,54 @@ let
     sed -i '1i @accentColor: ${theme.catppuccin.accent};' style.less
     ${pkgs.lessc}/bin/lessc style.less $out
   '';
+  cinnyNotificationBridge = pkgs.writeText "cinny-notifications.js" ''
+    (() => {
+      const api = window.__TAURI__?.notification;
+      if (!api) return;
+
+      class CinnyNotification {
+        static permission = "default";
+
+        static requestPermission() {
+          return api.isPermissionGranted().then((granted) => {
+            if (granted) {
+              CinnyNotification.permission = "granted";
+              return "granted";
+            }
+            return api.requestPermission().then((permission) => {
+              CinnyNotification.permission = permission;
+              return permission;
+            });
+          });
+        }
+
+        constructor(title, options = {}) {
+          this.title = title;
+          this.body = options.body || "";
+          this.onclick = null;
+          this.onclose = null;
+          this.onerror = null;
+          this.onshow = null;
+
+          CinnyNotification.requestPermission().then((permission) => {
+            if (permission === "granted") {
+              return api.sendNotification({ title: this.title, body: this.body });
+            }
+          });
+        }
+
+        close() {}
+      }
+
+      window.Notification = CinnyNotification;
+    })();
+  '';
   cinnyUnwrapped = pkgs.cinny.overrideAttrs (old: {
     postInstall = (old.postInstall or "") + ''
       cp ${cinnyStyle} $out/catppuccin.css
+      cp ${cinnyNotificationBridge} $out/cinny-notifications.js
       ${pkgs.gnused}/bin/sed -i \
-        's#</head>#<link rel="stylesheet" href="./catppuccin.css"></head>#' \
+        's#</head>#<script src="./cinny-notifications.js"></script><link rel="stylesheet" href="./catppuccin.css"></head>#' \
       $out/index.html
     '';
   });
@@ -46,8 +89,11 @@ let
     postPatch = (old.postPatch or "") + ''
       ${pkgs.jq}/bin/jq \
         --arg frontendDist "${cinnyUnwrapped}" \
-        '.build.frontendDist = $frontendDist' \
+        '.build.frontendDist = $frontendDist | .app.withGlobalTauri = true' \
         tauri.conf.json | ${pkgs.moreutils}/bin/sponge tauri.conf.json
+      substituteInPlace src/lib.rs \
+        --replace-fail '.plugin(tauri_plugin_dialog::init())' '.plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())'
     '';
   });
 in
