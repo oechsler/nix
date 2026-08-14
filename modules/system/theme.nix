@@ -74,9 +74,17 @@
       };
       package = lib.mkOption {
         type = lib.types.package;
-        default = pkgs.catppuccin-papirus-folders.override {
-          inherit (config.theme.catppuccin) flavor accent;
-        };
+        default =
+          (pkgs.catppuccin-papirus-folders.override {
+            inherit (config.theme.catppuccin) flavor accent;
+          }).overrideAttrs
+            (old: {
+              postInstall = (old.postInstall or "") + ''
+                for size in 16 22 24 32 48 64; do
+                  ln -s rustrover.svg "$out/share/icons/Papirus/$size"/apps/rust-rover.svg
+                done
+              '';
+            });
         description = "Icon theme package (Catppuccin Papirus)";
       };
     };
