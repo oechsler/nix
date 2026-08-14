@@ -45,7 +45,9 @@ in
         unixAuth = false;
         rules.auth.pam_lldap = {
           order = 12000;
-          control = "sufficient";
+          # Do not short-circuit here: the following keyring module must see
+          # the password in PAM_AUTHTOK after LDAP authentication succeeds.
+          control = "required";
           modulePath = "${pkgs.pam-lldap}/lib/security/pam_lldap.so";
           args = [
             "uri=${uri}"
@@ -54,6 +56,7 @@ in
             "cache=${cachePath}"
           ];
         };
+        rules.auth.deny.enable = false;
       }))
       {
         # pam_lldap obtains PAM_AUTHTOK, then the desktop keyring modules reuse
