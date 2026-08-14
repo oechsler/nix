@@ -104,7 +104,6 @@
       enable = true;
       uri = "ldaps://lldap.k3s.oechsler.it:6360";
       baseDn = "dc=oechsler,dc=it";
-      bindDn = "uid=admin,ou=people,dc=oechsler,dc=it";
     };
 
     # --- Networking ---
