@@ -21,7 +21,7 @@ LLDAP authentication is disabled by default and can be enabled per host:
 features.auth.ldap.enable = true;
 ```
 
-When enabled, SSSD uses LLDAP only as the password provider for the locally declared `user.name` and caches successful credentials for offline login. SSSD uses the local passwd/group databases for identity, so users, groups, UID/GID values, and system access remain local and declarative; no accounts or groups are provisioned from LLDAP. Access is restricted to the configured local username, so other LLDAP users cannot log in. The LDAP host, base DN, bind DN, and bind password are stored in SOPS. When disabled, the local SOPS password is used again.
+When enabled, a dedicated PAM module uses LLDAP only as the password provider for the locally declared `user.name`. It binds directly as that user, so no LLDAP bind account, UID/GID attributes, groups, or NSS lookups are needed. Successful LDAP passwords are cached locally as an Argon2id verifier and used only when LDAP is unreachable; an online LDAP password failure never falls back to the cache. When disabled, the local SOPS password is used again.
 
 > **Note:** SDDM, polkit, and hyprlock always use **password only**, regardless of which 2FA method is enabled. This is required so that `pam_gnome_keyring` can capture the login password at SDDM and auto-unlock the GNOME Keyring. YubiKey login skips `pam_gnome_keyring`'s auth phase, leaving the keyring locked.
 

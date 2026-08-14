@@ -153,6 +153,7 @@
                 inputs.cachyos-kernel.overlays.pinned
                 (_final: prev: {
                   coreutils-full = prev.uutils-coreutils-noprefix;
+                  pam-lldap = prev.callPackage ./modules/packages/pam-lldap.nix { };
                 })
               ];
             }
@@ -163,6 +164,7 @@
               nixpkgs.overlays = [
                 (final: _prev: {
                   hypr-dock = final.callPackage ./modules/packages/hypr-dock.nix { };
+                  pam-lldap = final.callPackage ./modules/packages/pam-lldap.nix { };
                 })
               ];
             }
@@ -247,8 +249,11 @@
       overlays = {
         default = final: _prev: {
           hypr-dock = final.callPackage ./packages/hypr-dock.nix { };
+          pam-lldap = final.callPackage ./modules/packages/pam-lldap.nix { };
         };
       };
+
+      packages.${system}.pam-lldap = pkgs.callPackage ./modules/packages/pam-lldap.nix { };
 
       #===========================
       # Formatter
