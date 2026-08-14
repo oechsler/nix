@@ -173,11 +173,6 @@ in
       # Hyprland Apps
       #---------------------------
       (lib.mkIf (!isKde) {
-        services.gnome-keyring = {
-          enable = true;
-          components = [ "secrets" ];
-        };
-
         home.packages = with pkgs; [
           baobab
           loupe
