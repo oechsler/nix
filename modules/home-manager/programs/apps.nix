@@ -8,7 +8,6 @@
 # - Hyprland: GNOME/GTK utilities
 #
 # Common apps:
-# - Cinny - Matrix client (desktop app)
 # - Mumble - Voice chat (low-latency)
 # - Vesktop - Discord client
 # - Spotify - Music streaming

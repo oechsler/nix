@@ -116,6 +116,9 @@ let
         const source = style.sourceCode.replace(
           '@import "https://userstyles.catppuccin.com/lib/lib.less";',
           library,
+        ).replace(
+          'domain("cinny.in")',
+          'domain("cinny.in"), domain("matrix.at.oechsler.it")',
         );
         style.sections = await compile(source, style.usercssData.preprocessor, vars, id);
         if (!style.sections.length) throw new Error(`''${style.name} compiled without sections`);
