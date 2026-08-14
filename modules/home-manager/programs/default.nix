@@ -2,6 +2,7 @@
 #
 # This module imports all user-level program configurations:
 # - apps.nix - Desktop applications (Discord, Spotify, etc.)
+# - cinny.nix - Cinny Matrix client with Catppuccin userstyle
 # - browsers.nix - Firefox configuration
 # - development.nix - Development tools and languages
 # - fish.nix - Fish shell configuration
@@ -17,6 +18,7 @@
 {
   imports = [
     ./apps.nix
+    ./cinny.nix
     ./browsers.nix
     ./development.nix
     ./fish.nix
