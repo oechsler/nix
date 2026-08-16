@@ -1,7 +1,6 @@
 # Desktop Theme Configuration (Common)
 #
 # This module configures core theming shared across all window managers:
-# - Pinned dock/taskbar applications
 # - GTK theme (Catppuccin)
 # - Icon and cursor themes
 # - Catppuccin flavor/accent
@@ -17,7 +16,6 @@
   lib,
   fonts,
   theme,
-  features,
   ...
 }:
 
@@ -41,25 +39,13 @@ let
   };
   themeName = "catppuccin-${flavor}-${accent}-standard";
 
-  # WM detection
-  isKde = features.desktop.wm == "kde";
-  usesTerminalFileManager = features.desktop.fileManager == "terminal";
 in
 {
   #===========================
   # Options
   #===========================
 
-  # NOTE: Kickoff menu favorites (pinnedFavorites) cannot be set declaratively.
-  # Plasma 6 manages them via kactivitymanagerd's internal stats database.
-  # See: https://github.com/nix-community/plasma-manager/issues/376
   options = {
-    desktop.pinnedApps = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      description = "Pinned dock/taskbar apps as desktop file names (without .desktop suffix)";
-    };
-
     theme.catppuccinPalette = lib.mkOption {
       type = lib.types.attrs;
       readOnly = true;
@@ -84,54 +70,11 @@ in
 
   config = {
     #---------------------------
-    # Default Pinned Apps
-    #---------------------------
-    # Apps shown in KDE taskbar / Hyprland dock
-    desktop.pinnedApps = [
-      "firefox"
-    ]
-    ++ lib.optional usesTerminalFileManager "yazi"
-    ++ lib.optional (!usesTerminalFileManager) (
-      if isKde then "org.kde.dolphin" else "org.gnome.Nautilus"
-    )
-    ++ [
-      "kitty"
-    ]
-    ++ lib.optionals features.dev.enable [
-      "nvim"
-    ]
-    ++ lib.optionals features.apps.enable [
-      "obsidian"
-    ]
-    ++ lib.optionals features.gaming.enable [
-      "steam"
-    ]
-    ++ lib.optionals features.apps.enable [
-      "vesktop"
-      "spotify"
-    ];
-
-    #---------------------------
     # Generic Theme
     #---------------------------
     # GTK, cursor, catppuccin, session variables
 
     xdg = {
-      # Override vesktop desktop entry to show Discord branding
-      # (Vesktop is a Discord client, but we want to call it "Discord")
-      desktopEntries.vesktop = lib.mkIf features.apps.enable {
-        name = "Discord";
-        exec = "vesktop %U";
-        icon = "discord";
-        categories = [
-          "Network"
-          "InstantMessaging"
-          "Chat"
-        ];
-        genericName = "Internet Messenger";
-        settings.StartupWMClass = "Vesktop";
-      };
-
       # GTK4 ignores the theme package — it loads CSS from ~/.config/gtk-4.0/ directly.
       # These files are generated theme artifacts. The Flatpak activation below
       # turns them into real files, so Home Manager must reclaim them on updates.
@@ -153,21 +96,7 @@ in
       accent = lib.mkDefault accent;
     };
 
-    home.enableNixpkgsReleaseCheck = false;
-
     home = {
-      # Clean up stale .bak files before home-manager checks for conflicts
-      # (copied-from-Nix files are read-only; chmod first)
-      activation.cleanupBackups = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-        rm -f ~/.gtkrc-2.0.bak
-        rm -f ~/.config/gtk-4.0/gtk.css.bak ~/.config/gtk-4.0/gtk-dark.css.bak
-        for f in ~/.local/share/themes/*.bak; do
-          [ -e "$f" ] || continue
-          chmod -R u+w "$f" 2>/dev/null || true
-          rm -rf "$f"
-        done
-      '';
-
       pointerCursor = {
         enable = true;
         name = cursorName;

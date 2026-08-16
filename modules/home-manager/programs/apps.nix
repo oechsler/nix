@@ -129,6 +129,19 @@ in
           };
         };
 
+        xdg.desktopEntries.vesktop = {
+          name = "Discord";
+          exec = "vesktop %U";
+          icon = "discord";
+          categories = [
+            "Network"
+            "InstantMessaging"
+            "Chat"
+          ];
+          genericName = "Internet Messenger";
+          settings.StartupWMClass = "Vesktop";
+        };
+
         programs.spicetify =
           let
             spicePkgs = inputs.spicetify-nix.legacyPackages.${pkgs.stdenv.hostPlatform.system};

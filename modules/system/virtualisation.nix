@@ -10,6 +10,7 @@
 {
   lib,
   config,
+  pkgs,
   ...
 }:
 
@@ -52,6 +53,23 @@ in
 
         programs.virt-manager.enable = true;
         users.users.${config.user.name}.extraGroups = [ "libvirtd" ];
+
+        # virt-manager is launched through a Nix wrapper. Keep its wrapper
+        # class for window matching, but use the packaged icon directly.
+        home-manager.users.${config.user.name}.xdg.desktopEntries.virt-manager = {
+          name = "Virtual Machine Manager";
+          genericName = "Virtual machine viewer/manager";
+          comment = "Manage virtual machines";
+          exec = "virt-manager";
+          icon = "${pkgs.virt-manager}/share/icons/hicolor/256x256/apps/virt-manager.png";
+          terminal = false;
+          categories = [
+            "System"
+            "Emulator"
+            "GTK"
+          ];
+          settings.StartupWMClass = ".virt-manager-wrapped";
+        };
       })
     ]
   );
