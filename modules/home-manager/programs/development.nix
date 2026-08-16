@@ -69,6 +69,7 @@ in
         # complete Nix toolchain installed above.
         sessionPath = [
           "${config.home.homeDirectory}/.bun/bin"
+          "${config.home.homeDirectory}/.local/bin"
         ];
         sessionVariables = {
           BUN_INSTALL = "${config.home.homeDirectory}/.bun";
@@ -76,6 +77,10 @@ in
           RUST_SRC_PATH = "${pkgs.rustPlatform.rustcSrc}";
         };
       };
+
+      # RustRover uses the rustup executable to discover linked toolchains.
+      # Expose only rustup, not the package's conflicting cargo binary.
+      home.file.".local/bin/rustup".source = "${pkgs.rustup}/bin/rustup";
 
       # Register the Nix toolchain where RustRover's rustup auto-discovery
       # looks for it. The link target is regenerated with each Nix update.
