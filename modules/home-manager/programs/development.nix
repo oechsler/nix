@@ -87,11 +87,12 @@ in
       home.activation.linkNixRustToolchain = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         toolchain="$HOME/.rustup/toolchains/nix"
         if [ -e "$toolchain" ] && [ ! -L "$toolchain" ]; then
-          echo "Refusing to replace existing rustup toolchain: $toolchain" >&2
-          exit 1
+          echo "Skipping rustup toolchain link; path already exists: $toolchain" >&2
+        else
+          rm -f "$toolchain"
+          ${pkgs.rustup}/bin/rustup toolchain link nix ${rustToolchain} || \
+            echo "Warning: could not register the Nix toolchain with rustup" >&2
         fi
-        rm -f "$toolchain"
-        ${pkgs.rustup}/bin/rustup toolchain link nix ${rustToolchain}
       '';
     })
 
