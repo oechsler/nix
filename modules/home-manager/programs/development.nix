@@ -59,7 +59,6 @@ in
           clippy
           rustfmt
           rustPlatform.rustcSrc # Sources used by rust-analyzer and rustc
-          rustup # Registers the Nix toolchain for RustRover discovery
           gcc # C compiler needed by cargo for native dependencies (linker)
           jdk
           bun # Runtime, package manager, and bunx (npx replacement)
