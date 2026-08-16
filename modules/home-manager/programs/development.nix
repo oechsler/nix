@@ -93,6 +93,8 @@ in
           ${pkgs.rustup}/bin/rustup toolchain link nix ${rustToolchain} || \
             echo "Warning: could not register the Nix toolchain with rustup" >&2
         fi
+        ${pkgs.rustup}/bin/rustup default nix || \
+          echo "Warning: could not set nix as the rustup default toolchain" >&2
       '';
     })
 
