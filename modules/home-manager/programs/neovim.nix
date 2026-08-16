@@ -105,14 +105,9 @@
     #---------------------------
     # Extra Packages
     #---------------------------
-    # LSP servers, formatters, and other tools used by plugins
+    # Formatters and other Neovim-specific tools. LSP servers are managed
+    # centrally in lsp.nix and available on PATH to all clients.
     extraPackages = with pkgs; [
-      # LSP servers
-      nil
-      gopls
-      rust-analyzer
-      typescript-language-server
-      jdt-language-server
       # Formatters
       nixfmt
       prettierd
