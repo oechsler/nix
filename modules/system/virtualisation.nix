@@ -77,7 +77,10 @@ in
           description = "Ensure the libvirt default network is available";
           wantedBy = [ "multi-user.target" ];
           wants = [ "network-online.target" ];
-          after = [ "libvirtd.service" "network-online.target" ];
+          after = [
+            "libvirtd.service"
+            "network-online.target"
+          ];
           requires = [ "libvirtd.service" ];
           serviceConfig = {
             Type = "oneshot";
