@@ -41,10 +41,14 @@ pub unsafe extern "C" fn pam_sm_authenticate(
     let password = unsafe { CStr::from_ptr(token) }.to_bytes();
     match ldap::check_password(&options, password) {
         ffi::LDAP_SUCCESS => {
-            if cache::update(Path::new(&options.cache), password) {
-                ffi::log_info(b"pam_lldap: offline cache updated\0");
-            } else {
-                ffi::log_error(b"pam_lldap: failed to update offline cache\0");
+            // LDAP remains authoritative. Only refresh the offline verifier when
+            // the password changed or the cache is missing/corrupt.
+            if !cache::matches(Path::new(&options.cache), password) {
+                if cache::update(Path::new(&options.cache), password) {
+                    ffi::log_info(b"pam_lldap: offline cache updated\0");
+                } else {
+                    ffi::log_error(b"pam_lldap: failed to update offline cache\0");
+                }
             }
             PAM_SUCCESS
         }
