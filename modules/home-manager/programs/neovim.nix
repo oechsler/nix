@@ -105,15 +105,7 @@
     #---------------------------
     # Extra Packages
     #---------------------------
-    # Formatters and other Neovim-specific tools. LSP servers are managed
-    # centrally in lsp.nix and available on PATH to all clients.
-    extraPackages = with pkgs; [
-      # Formatters
-      nixfmt
-      prettierd
-      gofumpt
-      google-java-format
-    ];
+    # Shared language servers and formatters are managed centrally in lsp.nix.
 
     #---------------------------
     # Lua Configuration

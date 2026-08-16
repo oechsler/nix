@@ -1,8 +1,8 @@
-# Shared Language Server Protocols (LSP)
+# Shared Language Tooling
 #
-# Installs LSP servers system-wide so OpenCode, Neovim, and other LSP clients
-# can start them directly. Servers are only needed when development tools are
-# enabled.
+# Installs language servers and formatters system-wide so OpenCode, Neovim, and
+# other clients can start them directly. These tools are only needed when
+# development tools are enabled.
 #
 # Matching opencode built-ins (https://opencode.ai/docs/lsp/):
 #   nixd                   -> .nix (Nix)
@@ -46,6 +46,12 @@
 
       # Java
       jdt-language-server
+
+      # Formatters
+      nixfmt
+      prettierd
+      gofumpt
+      google-java-format
     ];
   };
 }
