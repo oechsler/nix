@@ -10,7 +10,7 @@
 #   yaml-language-server   -> .yaml, .yml (yaml-ls)
 #   pyright                -> .py (pyright)
 #   gopls                  -> .go (gopls)
-#   rust-analyzer          -> .rs (provided by rustup)
+#   rust-analyzer          -> .rs (provided by the Nix Rust toolchain)
 #   typescript-language-server -> .ts, .js (typescript)
 #   jdt-language-server    -> .java (jdtls)
 
@@ -36,6 +36,9 @@
 
       # Go
       gopls
+
+      # Rust
+      rust-analyzer
 
       # TypeScript / JavaScript
       typescript-language-server

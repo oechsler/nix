@@ -127,8 +127,8 @@ in
         extraGroups = [
           "networkmanager" # Manage network connections
           "wheel" # Sudo access
-        ]
-        ++ lib.optionals (config.features.hardware.formFactor != "server") [ "i2c" ];
+          "i2c" # Access I2C devices
+        ];
 
         shell = pkgs.fish;
         inherit (cfg) hashedPassword;
@@ -140,8 +140,8 @@ in
     #---------------------------
     # AccountsService provides user icons to SDDM, system settings, etc.
     # Icons must be in /var/lib/AccountsService/icons/<username>
-    # Only needed for desktop systems (SDDM, system settings)
-    system.activationScripts.userIcon = lib.mkIf (config.features.hardware.formFactor != "server") ''
+    # Used by desktop account settings (SDDM, system settings)
+    system.activationScripts.userIcon = ''
       mkdir -p /var/lib/AccountsService/icons
       cp ${cfg.icon} /var/lib/AccountsService/icons/${cfg.name}
     '';
@@ -149,8 +149,8 @@ in
     #---------------------------
     # 5. Home Directory Structure
     #---------------------------
-    # Default: Create ~/repos directory (desktop only)
-    user.directories = lib.optionals (config.features.hardware.formFactor != "server") [ "repos" ];
+    # Create the default ~/repos directory.
+    user.directories = [ "repos" ];
 
     # When LDAP is disabled, restore the local SOPS-managed password.
     sops.secrets."user/password" = lib.mkIf (!config.features.auth.ldap.enable) { };

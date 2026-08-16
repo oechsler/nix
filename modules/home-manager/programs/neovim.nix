@@ -496,12 +496,18 @@
 
       -- Open Code
       vim.keymap.set({ "n", "t" }, "<leader>ot", function() require("opencode").toggle() end,                                        { desc = "Toggle" })
-      vim.keymap.set({ "n", "x" }, "<leader>os", function() require("opencode").ask("@this: ") end,                                  { desc = "Ask @this" })
+      vim.keymap.set({ "n", "x" }, "<leader>oa", function() require("opencode").ask("@this: ") end,                                  { desc = "Ask @this" })
+      vim.keymap.set({ "n", "x" }, "<leader>os", function() require("opencode").select() end,                                        { desc = "Select OpenCode" })
       vim.keymap.set({ "n", "x" }, "<leader>of", function() require("opencode").prompt("Fix @diagnostics") end,                      { desc = "Fix diagnostics" })
       vim.keymap.set({ "n", "x" }, "<leader>or", function() require("opencode").prompt("Review @this for correctness") end,          { desc = "Review" })
+      vim.keymap.set({ "n", "x" }, "<leader>oi", function() require("opencode").prompt("Implement @this") end,                         { desc = "Implement" })
       vim.keymap.set({ "n", "x" }, "<leader>op", function() require("opencode").select() end,                                        { desc = "Select prompt" })
       vim.keymap.set("n",          "<leader>on", function() require("opencode").command("session.new") end,                           { desc = "New session" })
       vim.keymap.set("n",          "<leader>ou", function() require("opencode").command("session.undo") end,                          { desc = "Undo last" })
+      vim.keymap.set({ "n", "x" }, "go", function() return require("opencode").operator("@this ") end,                                { desc = "Append to OpenCode", expr = true })
+      vim.keymap.set("n", "goo", function() return require("opencode").operator("@this ") .. "_" end,                                  { desc = "Append line to OpenCode", expr = true })
+      vim.keymap.set("n", "<S-C-u>", function() require("opencode").command("session.half.page.up") end,                             { desc = "Scroll OpenCode up" })
+      vim.keymap.set("n", "<S-C-d>", function() require("opencode").command("session.half.page.down") end,                           { desc = "Scroll OpenCode down" })
 
       -- LSP (attached per buffer)
       vim.api.nvim_create_autocmd("LspAttach", {
