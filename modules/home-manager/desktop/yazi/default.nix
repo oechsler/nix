@@ -183,8 +183,10 @@ in
         file
         ouch
         trash-cli
+        unzip
         wl-clipboard
         xclip
+        zip
       ]
       ++ lib.optionals enableAppPreviews [
         ffmpeg
@@ -366,13 +368,14 @@ in
           desc = "Restore deleted files interactively";
         }
         {
-          on = [
-            " "
-            "a"
-            "z"
-          ];
-          run = "plugin ouch zip";
-          desc = "Archive selected files as zip";
+          on = "Z";
+          run = "shell --block 'zip -r archiv.zip %s'";
+          desc = "Markierte Dateien zippen";
+        }
+        {
+          on = "U";
+          run = "shell --block 'unzip -q %h'";
+          desc = "ZIP-Datei entpacken";
         }
       ]
       ++ lib.optionals enableAppPreviews mediaKeymaps;
