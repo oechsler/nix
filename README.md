@@ -36,10 +36,10 @@ Common per-host overrides:
 
 ```nix
 features.hardware.formFactor = "desktop";        # Or "laptop"
-features.impermanence.enable = false;           # Disable root wipe on boot
-features.gaming.enable = false;                 # No Steam/gaming
-features.gaming.steamMachine.enable = true;     # Steam Gamescope session / Steam Machine mode
-features.desktop.wm = "kde";                    # Hyprland or KDE
+features.impermanence.enable = false;            # Disable root wipe on boot
+features.gaming.enable = false;                  # No Steam/gaming
+features.gaming.steamMachine.enable = true;      # Steam Gamescope session / Steam Machine mode
+features.desktop.wm = "kde";                     # Hyprland or KDE
 features.desktop.fileManager = "terminal";       # Yazi instead of GUI file manager
 displays.defaults.hdr = 1;                       # Unknown display HDR: 0=off, 1=Steam, 2=full desktop
 displays.defaults.vrr = 2;                       # Default VRR for unknown hotplug displays where supported
