@@ -21,9 +21,6 @@
 #
 # Note: Proton Pass is configured in proton-pass.nix
 #
-# Optional apps (with feature toggles):
-# - WinBoat - Windows VM with seamless integration (features.apps.winboat.enable)
-#
 # KDE apps:
 # - Filelight - Disk usage analyzer
 # - KWalletManager - KDE Wallet management
@@ -108,8 +105,7 @@ in
               (wrapChromiumApp obsidian "obsidian")
               pika-backup
               prusa-slicer
-            ]
-            ++ lib.optional features.apps.winboat.enable (wrapChromiumApp winboat "winboat");
+            ];
 
           activation.mumbleDefaults = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
             mumble_config="$HOME/.config/Mumble/Mumble/mumble_settings.json"

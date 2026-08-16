@@ -395,7 +395,6 @@ in
       enable = (lib.mkEnableOption "desktop applications (Discord, Spotify, etc.)") // {
         default = true;
       };
-      winboat.enable = lib.mkEnableOption "WinBoat (Windows VM with seamless integration)";
     };
   };
 
