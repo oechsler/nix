@@ -57,7 +57,11 @@
           "${config.home.homeDirectory}/.cargo/bin"
           "${config.home.homeDirectory}/.bun/bin"
         ];
-        sessionVariables.BUN_INSTALL = "${config.home.homeDirectory}/.bun";
+        sessionVariables = {
+          BUN_INSTALL = "${config.home.homeDirectory}/.bun";
+          # rust-src is provided separately by Nix and is not inside rustc's sysroot.
+          RUST_SRC_PATH = "${pkgs.rustPlatform.rustcSrc}";
+        };
       };
     })
 
