@@ -1,8 +1,8 @@
-# Language Server Protocols (LSP) for OpenCode
+# Shared Language Server Protocols (LSP)
 #
-# Installs LSP servers system-wide so opencode (and other LSP clients)
-# can start them directly. Servers are only needed when development tools
-# are enabled.
+# Installs LSP servers system-wide so OpenCode, Neovim, and other LSP clients
+# can start them directly. Servers are only needed when development tools are
+# enabled.
 #
 # Matching opencode built-ins (https://opencode.ai/docs/lsp/):
 #   nixd                   -> .nix (Nix)
@@ -26,6 +26,7 @@
     home.packages = with pkgs; [
       # Nix
       nixd
+      nil
 
       # Shell & Config
       bash-language-server
