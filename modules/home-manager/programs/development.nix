@@ -52,9 +52,10 @@
           bun # Runtime, package manager, and bunx (npx replacement)
         ];
 
-        # Keep user-installed Cargo and Bun CLIs and caches in the home directory.
+        # Keep user-installed Bun CLIs and caches in the home directory.
+        # Do not prepend ~/.cargo/bin: its rustup shims can shadow the
+        # complete Nix toolchain installed above.
         sessionPath = [
-          "${config.home.homeDirectory}/.cargo/bin"
           "${config.home.homeDirectory}/.bun/bin"
         ];
         sessionVariables = {
