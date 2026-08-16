@@ -71,9 +71,7 @@ in
         "/var/lib/nixos" # NixOS state (users, groups, etc.)
         "/var/lib/sops" # SOPS secrets
         "/var/lib/power-profiles-daemon" # Active power profile
-        "/var/lib/systemd/rfkill" # Radio kill switch state
-        "/var/lib/systemd/timers" # Systemd timer state
-        "/var/lib/systemd/coredump" # Core dumps
+        "/var/lib/systemd" # Systemd state, including the credentials host key
       ]
       ++ lib.optionals config.features.wifi.enable [
         "/var/lib/iwd" # WiFi credentials
