@@ -84,10 +84,18 @@ in
       ++ lib.optionals config.features.tailscale.enable [
         "/var/lib/tailscale" # Tailscale VPN identity
       ]
-      ++ lib.optionals config.features.virtualisation.enable [
-        "/var/lib/docker" # Docker containers/images
-        "/var/lib/containers" # Podman containers/images
-      ]
+      ++
+        lib.optionals
+          (config.features.virtualisation.enable && config.features.virtualisation.container.enable)
+          [
+            "/var/lib/docker" # Docker containers/images
+            "/var/lib/containers" # Podman containers/images
+          ]
+      ++
+        lib.optionals (config.features.virtualisation.enable && config.features.virtualisation.vm.enable)
+          [
+            "/var/lib/libvirt" # VM definitions, disks, and libvirt state
+          ]
       ++ lib.optionals config.features.flatpak.enable [
         "/var/lib/flatpak" # Flatpak apps
       ]

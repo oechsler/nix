@@ -10,9 +10,8 @@
 # - KDE desktop: Inhibits logind through PowerDevil and uses KDE power settings
 #
 # Machine-type behavior (derived from features.hardware.formFactor):
-# - Desktop:   Lid switch ignore, AMD GPU runpm disabled
-# - Laptop:    Lid switch suspend on battery, GPU runpm enabled
-# - Server:    Lid switch ignore, AMD GPU runpm disabled, no power-profiles-daemon
+# - Desktop: Lid switch ignore, AMD GPU runpm disabled
+# - Laptop:  Lid switch suspend on battery, GPU runpm enabled
 
 {
   config,
@@ -24,14 +23,13 @@
 let
   cfg = config.features.hardware;
   isLaptop = cfg.formFactor == "laptop";
-  isServer = cfg.formFactor == "server";
   hasAmdGpu = cfg.gpu == "amd";
 in
 {
-  services.power-profiles-daemon.enable = !isServer;
+  services.power-profiles-daemon.enable = true;
 
   services.logind.settings.Login = {
-    HandlePowerKey = if isServer then "ignore" else "suspend";
+    HandlePowerKey = "suspend";
     HandlePowerKeyLongPress = "poweroff";
     HandleSuspendKey = "suspend";
     HandleHibernateKey = "suspend";

@@ -4,7 +4,7 @@
 #
 # --- FORM FACTOR ---
 #
-#   features.hardware.formFactor = "desktop" | "laptop" | "server";
+#   features.hardware.formFactor = "desktop" | "laptop";
 #
 # Determines machine-type-specific behavior:
 #
@@ -19,12 +19,6 @@
 #     - AMD GPU → NOT disabled (runtime PM keeps battery alive)
 #     - Power key → suspend
 #     - Lower idle timeouts (battery-conscious)
-#
-#   "server"
-#     - Lid switch → ignore
-#     - AMD GPU → runpm=0 (disable GPU runtime PM)
-#     - Power key → ignore (accidental shutdown prevention)
-#     - power-profiles-daemon disabled (servers don't need dynamic profiles)
 #
 # --- ENCRYPTION ---
 #
@@ -51,7 +45,7 @@
 #   desktop.login = "greeter";
 #   → LUKS unlocked via YubiKey, SDDM shows login, password unlocks keyring.
 #
-# TPM2 + Greeter (server, laptop without user intervention):
+# TPM2 + Greeter (laptop without user intervention):
 #   encryption.unlockMethod = "tpm2";
 #   desktop.login = "greeter";
 #   → LUKS auto-unlocks, SDDM shows login, password unlocks keyring.
@@ -62,21 +56,38 @@
 #   → LUKS password cached by systemd, reused for autologin and keyring.
 #   → REQUIRES: LUKS passphrase = user password = keyring password (manual).
 #
-# --- OTHER OPTIONS ---
+# --- FEATURE REFERENCE ---
 #
-#   features.hardware.formFactor = "desktop" | "laptop" | "server"  (default: "desktop")
-#   features.hardware.cpu = "amd" | "intel" | null                  (CPU vendor, required for microcode)
-#   features.hardware.gpu = "amd" | "intel" | null                  (GPU vendor, required for graphics)
-#   features.desktop.wm = "hyprland" | "kde";                       # Window manager (default: hyprland)
-#   features.desktop.fileManager = "default" | "terminal";          # Primary file manager
-#   features.auth.yubikey.enable = true;        # YubiKey PAM (default: on when unlockMethod = "yubikey")
-#   features.auth.totp.enable = true;           # TOTP 2FA (default: true)
-#   features.dev.enable = true;                 # Dev tools - languages, IDEs (default: true)
-#   features.dev.opencode.enable = true;        # OpenCode AI agent (default: dev.enable)
-#   features.ops.enable = true;                 # Ops tools - infra management (default: true)
-#   features.ops.pvetui.enable = true;          # Proxmox VE Terminal UI (default: ops.enable)
-#   features.ops.kubernetes.enable = true;      # Kubernetes tools & k9s (default: ops.enable)
-#   features.apps.enable = true;                # Desktop apps (default: true)
+# Hardware and desktop:
+#   features.hardware.formFactor = "desktop" | "laptop" (default: "desktop")
+#   features.hardware.cpu = "amd" | "intel" | null (required for microcode)
+#   features.hardware.gpu = "amd" | "intel" | null (required for graphics)
+#   features.desktop.wm = "hyprland" | "kde" (default: "hyprland")
+#   features.desktop.fileManager = "default" | "terminal" (default: "default")
+#
+# Security and authentication:
+#   features.encryption.enable = true (default: true)
+#   features.encryption.unlockMethod = "tpm2" | "yubikey" | "password"
+#   features.auth.yubikey.enable = true (default: unlockMethod == "yubikey")
+#   features.auth.totp.enable = true (default: true)
+#
+# Development and operations:
+#   features.dev.enable = true (default: true)
+#   features.dev.opencode.enable = true (default: dev.enable)
+#   features.ops.enable = true (default: true)
+#   features.ops.pvetui.enable = true (default: ops.enable)
+#   features.ops.kubernetes.enable = true (default: ops.enable)
+#
+# Virtualisation:
+#   features.virtualisation.enable = true (master switch, default: true)
+#   features.virtualisation.container.enable = true (Podman, default: true)
+#   features.virtualisation.vm.enable = true (QEMU/KVM, default: true)
+#
+# Setting features.virtualisation.enable = false disables both child features.
+# The child features can otherwise be disabled independently.
+#
+# Desktop applications:
+#   features.apps.enable = true (default: true)
 #
 
 { config, lib, ... }:
@@ -86,48 +97,6 @@ let
   hasYubiKey = config.features.auth.yubikey.enable;
   hasTotp = config.features.auth.totp.enable;
 
-  # ============================================================================
-  # SERVER FORM FACTOR CONFIGURATION
-  # ============================================================================
-  # What gets disabled when hardware.formFactor = "server"
-  #
-  # Easy to customize: Just comment out lines you want to keep active,
-  # or add new features to disable.
-  #
-  serverModeConfig = {
-    # Desktop & GUI
-    desktop.enable = false; # No Hyprland/KDE, SDDM, Firefox, hypr-dock
-    apps.enable = false; # No Discord, Spotify, etc.
-    dev.enable = false; # No dev tools (languages, IDEs, etc.)
-    ops.enable = false; # No ops tools (pvetui, kubernetes, etc.)
-
-    # Hardware
-    audio.enable = false; # No sound
-    bluetooth.enable = false; # No Bluetooth
-    wifi.enable = false; # No WiFi (Ethernet only)
-
-    # Software distribution
-    flatpak.enable = false; # No Flatpak
-    appimage.enable = false; # No AppImage
-    gaming.enable = false; # No Steam, etc.
-    virtualisation.enable = false; # No Docker/containers
-
-    # Kernel
-    kernel = "cachyos-server"; # Server-optimized kernel
-
-    # What STAYS active in server mode:
-    # - Networking (Ethernet, DNS, mDNS)
-    # - Tailscale VPN
-    # - Basic CLI tools (git, htop, etc.)
-    # - SSH
-    # - CachyOS server kernel
-  };
-
-  # Convert the config map to NixOS options
-  # This uses lib.mkDefault so you can override individual settings
-  serverModeOptions = lib.mapAttrs (_: value: lib.mkDefault value) serverModeConfig;
-
-  isServer = config.features.hardware.formFactor == "server";
 in
 {
   # Feature toggles consumed by multiple modules.
@@ -174,7 +143,6 @@ in
         type = lib.types.enum [
           "desktop"
           "laptop"
-          "server"
         ];
         default = "desktop";
         description = ''
@@ -190,11 +158,6 @@ in
             - AMD GPU → runtime PM enabled (keeps battery alive)
             - Power key → suspend
 
-          "server"
-            - Lid switch → ignore
-            - AMD GPU → runpm=0 (disable GPU runtime PM)
-            - Power key → ignore (accidental shutdown prevention)
-            - power-profiles-daemon disabled (servers don't need dynamic profiles)
         '';
       };
 
@@ -437,9 +400,6 @@ in
   };
 
   config = lib.mkMerge [
-    # Apply server mode configuration
-    (lib.mkIf isServer (lib.setAttrByPath [ "features" ] serverModeOptions))
-
     {
       warnings =
         lib.optional (isAutologin && config.features.encryption.unlockMethod != "password")

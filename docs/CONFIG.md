@@ -5,7 +5,7 @@
 Most desktop-oriented features default to enabled. Some toggles inherit their parent feature, and opt-in features default to disabled. Override per host in `configuration.nix`:
 
 ```nix
-features.hardware.formFactor = "server";   # Server mode — disables desktop, audio, bluetooth, gaming, dev, apps
+features.hardware.formFactor = "desktop";  # Or "laptop"
 features.gaming.enable = false;
 features.gaming.steamMachine.enable = true;
 features.desktop.wm = "kde";
@@ -15,7 +15,7 @@ features.ssh.enable = true;
 
 | Toggle | Default | Description |
 |--------|---------|-------------|
-| `features.hardware.formFactor` | `"desktop"` | Machine form factor — `"desktop"`, `"laptop"`, or `"server"`. Server disables desktop, apps, audio, bluetooth, gaming, flatpak, appimage, wifi, development, virtualisation; enables cachyos-server kernel. Laptop enables lid switch suspend and keeps GPU runtime PM active. Desktop disables lid switch and GPU runtime PM (safest for AMD). |
+| `features.hardware.formFactor` | `"desktop"` | Machine form factor — `"desktop"` or `"laptop"`. Laptop enables lid switch suspend and keeps GPU runtime PM active. Desktop disables lid switch and GPU runtime PM (safest for AMD). |
 | `features.impermanence.enable` | `true` | Impermanent root with btrfs rollback on boot — see [System Requirements](#system-requirements) |
 | `features.impermanence.extraPaths` | `[]` | Additional paths to persist (beyond feature-based defaults) |
 | `features.encryption.enable` | `true` | LUKS full disk encryption |
@@ -30,8 +30,10 @@ features.ssh.enable = true;
 | `features.gaming.steamMachine.enable` | `false` | Adds a Steam Gamescope session to SDDM for hybrid desktop/Steam Machine use. |
 | `features.hardware.cpu` | `null` | CPU vendor (`"amd"` / `"intel"`) — enables the correct microcode update package loaded at early boot (security patches from AMD/Intel). |
 | `features.hardware.gpu` | `null` | GPU vendor (`"amd"` / `"intel"`) — enables graphics support and VA-API hardware decoding for all contexts (browser, video players). AMD also gets 32-bit libs when `gaming.enable = true`. **NVIDIA is not supported** — the enum only accepts `"amd"` and `"intel"`. |
-| `features.ipv6PrivacyExtensions.enable` | `formFactor != "server"` | IPv6 privacy extensions for NetworkManager profiles |
-| `features.virtualisation.enable` | `true` | Docker daemon + user group |
+| `features.ipv6PrivacyExtensions.enable` | `true` | IPv6 privacy extensions for NetworkManager profiles |
+| `features.virtualisation.enable` | `true` | Master switch for container and VM support |
+| `features.virtualisation.container.enable` | `true` | Podman with Docker-compatible CLI + user group |
+| `features.virtualisation.vm.enable` | `true` | QEMU/KVM, libvirt, virt-manager, and `libvirtd` user group |
 | `features.smb.enable` | `true` | SMB network share mounts (auto-mount with retry) |
 | `features.smb.shares` | `[]` | SMB shares to mount — list of `{ name, label, path, username? }`. `username` defaults to `config.user.name`. Only `smb/<name>/password` needs a SOPS secret. |
 | `features.flatpak.enable` | `true` | Flatpak + Flathub (Flatseal, Flatsweep) |
@@ -60,7 +62,22 @@ features.ssh.enable = true;
 | `features.secureBoot.enable` | `false` | UEFI Secure Boot via lanzaboote |
 | `features.ssh.enable` | `false` | OpenSSH server + GitHub key sync (every 15 min) |
 | `features.snapshots.enable` | `true` | Automatic btrfs snapshots (hourly, see [SNAPSHOTS.md](SNAPSHOTS.md)) |
-| `features.kernel` | `"cachyos"` | Kernel variant: `"cachyos"` (x86_64-v3, latest) / `"cachyos-v3"` (explicit x86_64-v3) / `"cachyos-v4"` (x86_64-v4, Zen 4+) / `"cachyos-lts"` / `"cachyos-server"` / `"default"` (NixOS stock) |
+| `features.kernel` | `"cachyos"` | Kernel variant: `"cachyos"` (x86_64-v3, latest) / `"cachyos-v3"` (explicit x86_64-v3) / `"cachyos-v4"` (x86_64-v4, Zen 4+) / `"cachyos-lts"` / `"default"` (NixOS stock) |
+
+### Virtualisation
+
+The master switch controls both virtualisation features. The container and VM
+switches can be disabled independently:
+
+```nix
+features.virtualisation.enable = true;
+features.virtualisation.container.enable = true;
+features.virtualisation.vm.enable = true;
+```
+
+Set `features.virtualisation.enable = false` to disable both. For only VMs,
+set `features.virtualisation.container.enable = false`; for only containers,
+set `features.virtualisation.vm.enable = false`.
 
 ## SOPS Options
 
@@ -75,10 +92,9 @@ Set in `configuration.nix`:
 - NetworkManager owns IP configuration and routing.
 - `iwd` handles WiFi authentication only.
 - Docker/Tailscale interfaces are unmanaged in NetworkManager: `docker0`, `br-*`, `veth*`, `tailscale0`.
-- Desktop hosts disable IPv6 only on Docker bridge/veth interfaces to reduce local development link churn; server hosts leave Docker untouched.
+- Desktop hosts disable IPv6 only on Docker bridge/veth interfaces to reduce local development link churn.
 - LLMNR is disabled in `systemd-resolved` to avoid resolver scopes on Docker/veth links.
 - Desktop Ethernet disables WiFi autoconnect while active.
-- IPv6 privacy extensions default to enabled, except when formFactor = "server".
 
 ## User Options
 

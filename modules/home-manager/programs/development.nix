@@ -3,7 +3,8 @@
 # This module is split into three parts:
 #
 # 1. CLI Tools (features.dev.enable = true)
-#    - Languages: Go, Rust, Java, Node.js
+#    - Languages: Go, Rust, Java, Bun (JavaScript/TypeScript)
+#    - Rust toolchain: compiler, Cargo, rust-src, Clippy, Rustfmt
 #    - Utilities: cloc, distrobox
 #    - Useful on development machines
 #
@@ -19,6 +20,7 @@
 # Server mode disables development tools.
 
 {
+  config,
   pkgs,
   features,
   lib,
@@ -33,18 +35,35 @@
   config = lib.mkMerge [
     # CLI Development Tools (always useful, even on servers)
     (lib.mkIf features.dev.enable {
-      home.packages = with pkgs; [
-        # Development utilities
-        cloc # Count lines of code
-        distrobox # Container environments
+      home = {
+        packages = with pkgs; [
+          # Development utilities
+          cloc # Count lines of code
 
-        # Languages & Compilers
-        go
-        rustup
-        gcc # C compiler needed by cargo for native dependencies (linker)
-        jdk
-        nodejs
-      ];
+          # Languages & Compilers
+          go
+          rustc
+          cargo
+          clippy
+          rustfmt
+          rustPlatform.rustcSrc # Sources used by rust-analyzer and rustc
+          gcc # C compiler needed by cargo for native dependencies (linker)
+          jdk
+          bun # Runtime, package manager, and bunx (npx replacement)
+        ];
+
+        # Keep user-installed Cargo and Bun CLIs and caches in the home directory.
+        sessionPath = [
+          "${config.home.homeDirectory}/.cargo/bin"
+          "${config.home.homeDirectory}/.bun/bin"
+        ];
+        sessionVariables.BUN_INSTALL = "${config.home.homeDirectory}/.bun";
+      };
+    })
+
+    # Distrobox requires a container runtime and follows its feature toggle.
+    (lib.mkIf (features.dev.enable && features.virtualisation.container.enable) {
+      home.packages = [ pkgs.distrobox ];
     })
 
     # Homelab/Infrastructure Tools

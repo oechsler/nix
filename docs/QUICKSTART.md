@@ -16,7 +16,6 @@ Use this flake as a base NixOS configuration.
       # features.hardware.formFactor determines machine type:
       #   "desktop" — default, lid switch ignore, no GPU runtime PM on AMD
       #   "laptop"  — lid switch suspend, GPU runtime PM enabled
-      #   "server"  — minimal server (no desktop), lid switch ignore
       # Set in the host's configuration.nix, not here:
       extraModules = [ ];   # optional: additional NixOS modules
     };
@@ -61,8 +60,8 @@ nix build .#nixosConfigurations.my-host.config.system.build.toplevel
 
 ## Modes
 
-- Server: Fish, Git, Neovim, optional SSH/Tailscale.
-- Desktop: server base plus Hyprland/KDE, Firefox, audio, development tools, Docker.
+- Desktop: Hyprland/KDE, Firefox, audio, development tools, Podman, and QEMU/KVM VMs.
+- Laptop: Desktop features with laptop-specific lid and power behavior.
 
 ## SOPS Secrets
 
