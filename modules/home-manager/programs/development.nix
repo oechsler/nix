@@ -26,19 +26,6 @@
   lib,
   ...
 }:
-let
-  # RustRover discovers toolchains through rustup. Nix keeps rustc and
-  # rust-src in separate store paths, so provide the conventional layout
-  # for rustup's linked-toolchain support.
-  rustToolchain = pkgs.runCommand "rust-toolchain" { } ''
-    mkdir -p $out/bin $out/lib/rustlib/src
-    ln -s ${pkgs.rustc}/bin/rustc $out/bin/rustc
-    ln -s ${pkgs.cargo}/bin/cargo $out/bin/cargo
-    ln -s ${pkgs.rustfmt}/bin/rustfmt $out/bin/rustfmt
-    ln -s ${pkgs.rustPlatform.rustcSrc} $out/lib/rustlib/src/rust
-  '';
-in
-
 {
   #===========================
   # Configuration
@@ -58,44 +45,22 @@ in
           cargo
           clippy
           rustfmt
-          rustPlatform.rustcSrc # Sources used by rust-analyzer and rustc
+          rustPlatform.rustcSrc # Rust standard library sources
           gcc # C compiler needed by cargo for native dependencies (linker)
           jdk
           bun # Runtime, package manager, and bunx (npx replacement)
         ];
 
         # Keep user-installed Bun CLIs and caches in the home directory.
-        # Do not prepend ~/.cargo/bin: its rustup shims can shadow the
-        # complete Nix toolchain installed above.
         sessionPath = [
           "${config.home.homeDirectory}/.bun/bin"
           "${config.home.homeDirectory}/.local/bin"
         ];
         sessionVariables = {
           BUN_INSTALL = "${config.home.homeDirectory}/.bun";
-          # rust-src is provided separately by Nix and is not inside rustc's sysroot.
           RUST_SRC_PATH = "${pkgs.rustPlatform.rustcSrc}";
         };
       };
-
-      # RustRover uses the rustup executable to discover linked toolchains.
-      # Expose only rustup, not the package's conflicting cargo binary.
-      home.file.".local/bin/rustup".source = "${pkgs.rustup}/bin/rustup";
-
-      # Register the Nix toolchain where RustRover's rustup auto-discovery
-      # looks for it. The link target is regenerated with each Nix update.
-      home.activation.linkNixRustToolchain = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        toolchain="$HOME/.rustup/toolchains/nix"
-        if [ -e "$toolchain" ] && [ ! -L "$toolchain" ]; then
-          echo "Skipping rustup toolchain link; path already exists: $toolchain" >&2
-        else
-          rm -f "$toolchain"
-          ${pkgs.rustup}/bin/rustup toolchain link nix ${rustToolchain} || \
-            echo "Warning: could not register the Nix toolchain with rustup" >&2
-        fi
-        ${pkgs.rustup}/bin/rustup default nix || \
-          echo "Warning: could not set nix as the rustup default toolchain" >&2
-      '';
     })
 
     # Distrobox requires a container runtime and follows its feature toggle.
