@@ -38,7 +38,6 @@
   features,
   displays,
   lib,
-  fonts,
   inputs,
   theme,
   ...
@@ -93,19 +92,17 @@ in
       #---------------------------
       {
         home = {
-          packages =
-            with pkgs;
-            [
-              alsa-scarlett-gui
-              mumble
-              (wrapChromiumApp vesktop "vesktop")
-              freecad
-              libreoffice
-              nextcloud-client
-              (wrapChromiumApp obsidian "obsidian")
-              pika-backup
-              prusa-slicer
-            ];
+          packages = with pkgs; [
+            alsa-scarlett-gui
+            mumble
+            (wrapChromiumApp vesktop "vesktop")
+            freecad
+            libreoffice
+            nextcloud-client
+            (wrapChromiumApp obsidian "obsidian")
+            pika-backup
+            prusa-slicer
+          ];
 
           activation.mumbleDefaults = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
             mumble_config="$HOME/.config/Mumble/Mumble/mumble_settings.json"
