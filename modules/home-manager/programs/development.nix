@@ -26,6 +26,18 @@
   lib,
   ...
 }:
+let
+  # RustRover expects the standard library below the toolchain directory.
+  # Nix keeps rustc and rust-src in separate store paths, so provide the
+  # conventional layout through stable Home-Manager-managed symlinks.
+  rustToolchain = pkgs.runCommand "rust-toolchain" { } ''
+    mkdir -p $out/bin $out/lib/rustlib/src
+    ln -s ${pkgs.rustc}/bin/rustc $out/bin/rustc
+    ln -s ${pkgs.cargo}/bin/cargo $out/bin/cargo
+    ln -s ${pkgs.rustfmt}/bin/rustfmt $out/bin/rustfmt
+    ln -s ${pkgs.rustPlatform.rustcSrc} $out/lib/rustlib/src/rust
+  '';
+in
 
 {
   #===========================
@@ -64,6 +76,8 @@
           RUST_SRC_PATH = "${pkgs.rustPlatform.rustcSrc}";
         };
       };
+
+      home.file.".local/share/rust-toolchain".source = rustToolchain;
     })
 
     # Distrobox requires a container runtime and follows its feature toggle.
