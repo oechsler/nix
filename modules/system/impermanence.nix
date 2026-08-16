@@ -95,6 +95,7 @@ in
         lib.optionals (config.features.virtualisation.enable && config.features.virtualisation.vm.enable)
           [
             "/var/lib/libvirt" # VM definitions, disks, and libvirt state
+            "/etc/libvirt" # Persistent VM and network definitions
           ]
       ++ lib.optionals config.features.flatpak.enable [
         "/var/lib/flatpak" # Flatpak apps
