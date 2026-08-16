@@ -10,7 +10,6 @@
 {
   lib,
   config,
-  pkgs,
   ...
 }:
 
@@ -61,7 +60,7 @@ in
           genericName = "Virtual machine viewer/manager";
           comment = "Manage virtual machines";
           exec = "virt-manager";
-          icon = "${pkgs.virt-manager}/share/icons/hicolor/256x256/apps/virt-manager.png";
+          icon = "virt-manager";
           terminal = false;
           categories = [
             "System"
