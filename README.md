@@ -15,12 +15,12 @@ My personal NixOS configurations using Flakes and Home-Manager.
 ## Structure
 
 ```
-hosts/          # Per-host configs
+hosts/              # Per-host configs
 modules/
-  system/       # Boot, networking, impermanence, snapshots
-  desktop/      # Hyprland, KDE, SDDM
-  home-manager/ # User programs, dotfiles, theming
-sops/           # Encrypted secrets
+  system/           # Boot, networking, impermanence, snapshots
+  desktop/          # Hyprland, KDE, SDDM
+  home-manager/     # User programs, dotfiles, theming
+sops/               # Encrypted secrets
 ```
 
 ## Quick Start
