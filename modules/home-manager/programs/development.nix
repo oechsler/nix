@@ -27,9 +27,9 @@
   ...
 }:
 let
-  # RustRover expects the standard library below the toolchain directory.
-  # Nix keeps rustc and rust-src in separate store paths, so provide the
-  # conventional layout through stable Home-Manager-managed symlinks.
+  # RustRover discovers toolchains through rustup. Nix keeps rustc and
+  # rust-src in separate store paths, so provide the conventional layout
+  # for rustup's linked-toolchain support.
   rustToolchain = pkgs.runCommand "rust-toolchain" { } ''
     mkdir -p $out/bin $out/lib/rustlib/src
     ln -s ${pkgs.rustc}/bin/rustc $out/bin/rustc
@@ -59,6 +59,7 @@ in
           clippy
           rustfmt
           rustPlatform.rustcSrc # Sources used by rust-analyzer and rustc
+          rustup # Registers the Nix toolchain for RustRover discovery
           gcc # C compiler needed by cargo for native dependencies (linker)
           jdk
           bun # Runtime, package manager, and bunx (npx replacement)
@@ -77,7 +78,17 @@ in
         };
       };
 
-      home.file.".local/share/rust-toolchain".source = rustToolchain;
+      # Register the Nix toolchain where RustRover's rustup auto-discovery
+      # looks for it. The link target is regenerated with each Nix update.
+      home.activation.linkNixRustToolchain = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        toolchain="$HOME/.rustup/toolchains/nix"
+        if [ -e "$toolchain" ] && [ ! -L "$toolchain" ]; then
+          echo "Refusing to replace existing rustup toolchain: $toolchain" >&2
+          exit 1
+        fi
+        rm -f "$toolchain"
+        ${pkgs.rustup}/bin/rustup toolchain link nix ${rustToolchain}
+      '';
     })
 
     # Distrobox requires a container runtime and follows its feature toggle.
