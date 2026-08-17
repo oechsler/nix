@@ -185,6 +185,18 @@ in
           ExecStop = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-umount.sh".path}";
         };
       };
+
+      # A stuck CIFS request can prevent the kernel from freezing its
+      # workqueues during suspend. Unmount shares before sleep and remount
+      # them after resume.
+      services.sleep-actions.serviceConfig = {
+        ExecStart = lib.mkAfter [
+          "${pkgs.systemd}/bin/systemctl stop smb-mount.service"
+        ];
+        ExecStop = lib.mkAfter [
+          "${pkgs.systemd}/bin/systemctl start smb-mount.service"
+        ];
+      };
     };
 
     sops = {
