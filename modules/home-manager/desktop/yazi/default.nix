@@ -369,7 +369,7 @@ in
         }
         {
           on = "Z";
-          run = "shell --block 'zip -r archiv.zip %s'";
+          run = "shell --block 'zip -r --junk-paths archiv.zip %s'";
           desc = "Markierte Dateien zippen";
         }
         {
