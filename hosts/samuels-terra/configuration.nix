@@ -180,6 +180,13 @@
     };
   };
 
+  hardware.mediatek-mt7927 = {
+    enable = true;
+    enableWifi = false;
+    enableBluetooth = true;
+    disableAspm = true;
+  };
+
   # ASUS ROG STRIX X870-I GAMING WIFI has a phantom USB port 3-7 on the
   # AMD 800 Series Chipset xHCI controller (PCI 0000:71:00.0). The firmware
   # reports the port as "not used" but the controller keeps trying to enumerate

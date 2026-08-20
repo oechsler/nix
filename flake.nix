@@ -107,6 +107,9 @@
       inputs.nixpkgs.follows = "nixpkgs-kernel";
     };
 
+    # MT7927/MT6639 WiFi 7 Bluetooth support (driver patches + firmware).
+    mt7927.url = "github:cmspam/mt7927-nixos";
+
     firefox-addons = {
       url = "gitlab:rycee/nur-expressions?dir=pkgs/firefox-addons";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -145,6 +148,7 @@
             inputs.sops-nix.nixosModules.sops
             inputs.disko.nixosModules.disko
             inputs.impermanence.nixosModules.impermanence
+            inputs.mt7927.nixosModules.default
 
             # Shared overlays (always included)
             inputs.nix-flatpak.nixosModules.nix-flatpak
