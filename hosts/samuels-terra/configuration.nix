@@ -107,9 +107,7 @@
     };
 
     # --- Networking ---
-    # MT7927 (Filogic 380) WiFi/BT non-functional until kernel 7.2+ — disable for now
     wifi = {
-      enable = false;
       networks = [
         {
           name = "home";
@@ -117,7 +115,6 @@
         }
       ];
     };
-    bluetooth.enable = false;
 
     # --- System Services ---
     smb.shares = [
