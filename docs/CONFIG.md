@@ -43,7 +43,7 @@ features.ssh.enable = true;
 | `features.wifi.networks` | `[]` | WPA2-PSK networks — list of `{ name, ssid }`. Only `wifi/<name>/psk` needs a SOPS secret. |
 | `features.wifi.enterpriseNetworks` | `[]` | WPA2 Enterprise (EAP-PEAP) networks — list of `{ name, ssid, identity }`. Only `wifi/<name>/password` needs a SOPS secret. |
 | `features.dev.enable` | `true` | Languages, CLI dev tools, desktop IDEs on desktop hosts |
-| `features.dev.opencode.enable` | `dev.enable` | OpenCode AI coding agent with Mistral/OpenAI/opencode-go providers |
+| `features.dev.opencode.enable` | `dev.enable` | OpenCode AI coding agent with OpenAI/opencode-go providers |
 | `features.dev.jetbrains.enable` | `dev.enable` | JetBrains IDEs (GoLand, RustRover) |
 | `features.dev.dbeaver.enable` | `dev.enable` | DBeaver database GUI |
 | `features.ops.enable` | `true` | Operations tools - infrastructure management |

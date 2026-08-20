@@ -3,13 +3,12 @@
 # This module configures OpenCode, an AI coding agent.
 #
 # Configuration:
-# - Default model: mistral/mistral-medium-latest
-# - Providers: Mistral, OpenAI (browser login), OpenCode Go
+# - Default model: openai/gpt-5.6-luna
+# - Providers: OpenAI (browser login), OpenCode Go
 # - API keys managed via SOPS secrets
 # - Environment variables sourced in Fish shell
 #
 # Providers:
-# - mistral: Mistral AI models (API key from sops)
 # - openai: OpenAI models (browser login, no API key needed)
 # - opencode-go: OpenCode Go proxy models (API key from sops)
 #   - DeepSeek V4 Flash/Pro
@@ -28,7 +27,6 @@
 let
   opencodeWithSecrets = pkgs.writeShellScriptBin "opencode" ''
     exec env \
-      MISTRAL_API_KEY="$(< ${config.sops.secrets."opencode/mistral/api-key".path})" \
       OPENCODE_GO_API_KEY="$(< ${config.sops.secrets."opencode/opencode-go/api-key".path})" \
       ${pkgs.opencode}/bin/opencode "$@"
   '';
@@ -36,7 +34,6 @@ in
 {
   config = lib.mkIf (features.dev.enable && features.dev.opencode.enable) {
     sops.secrets = {
-      "opencode/mistral/api-key" = { };
       "opencode/opencode-go/api-key" = { };
     };
 
@@ -46,7 +43,7 @@ in
 
       settings = {
         lsp = true;
-        model = "mistral/mistral-medium-latest";
+        model = "openai/gpt-5.6-luna";
 
         compaction = {
           auto = true;
@@ -55,9 +52,13 @@ in
         };
 
         provider = {
-          mistral = { };
-
-          openai = { };
+          openai = {
+            models = {
+              "gpt-5.6-luna" = {
+                name = "GPT-5.6 Luna";
+              };
+            };
+          };
 
           "opencode-go" = {
             npm = "@ai-sdk/openai-compatible";
@@ -71,9 +72,6 @@ in
               };
               "deepseek-v4-pro" = {
                 name = "DeepSeek V4 Pro";
-              };
-              "gpt-5.6-luna" = {
-                name = "GPT-5.6 Luna";
               };
               "qwen3.7-plus" = {
                 name = "Qwen3.7 Plus";
