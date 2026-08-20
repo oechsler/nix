@@ -149,17 +149,21 @@
             inputs.disko.nixosModules.disko
             inputs.impermanence.nixosModules.impermanence
             inputs.mt7927.nixosModules.default
-            ({ pkgs, ... }:
+            (
+              { pkgs, ... }:
               {
                 # The patched driver requests the MT6639 blob under mt7927/.
                 hardware.firmware = [
                   (pkgs.runCommand "mt7927-firmware-path" { } ''
                     install -d $out/lib/firmware/mediatek/mt7927
-                    cp ${inputs.mt7927.packages.${pkgs.system}.firmware}/lib/firmware/mediatek/mt6639/BT_RAM_CODE_MT6639_2_1_hdr.bin \
+                    cp ${
+                      inputs.mt7927.packages.${pkgs.system}.firmware
+                    }/lib/firmware/mediatek/mt6639/BT_RAM_CODE_MT6639_2_1_hdr.bin \
                       $out/lib/firmware/mediatek/mt7927/
                   '')
                 ];
-              })
+              }
+            )
 
             # Shared overlays (always included)
             inputs.nix-flatpak.nixosModules.nix-flatpak
