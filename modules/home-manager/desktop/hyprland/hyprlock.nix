@@ -52,6 +52,7 @@ in
       #---------------------------
       general = {
         hide_cursor = true; # Hide mouse cursor on lock screen
+        immediate_render = true; # Rebuild the background immediately after resume
       };
 
       #---------------------------
@@ -62,12 +63,15 @@ in
       background = [
         {
           path = "${theme.wallpaperPath}";
-          # Avoid stale GPU blur buffers after resume from suspend.
+          blur_passes = 3;
+          blur_size = 8;
         }
       ]
       ++ map (m: {
         monitor = m.name;
         path = "${displayHelpers.monitorWallpaper theme m}";
+        blur_passes = 3;
+        blur_size = 8;
       }) displays.monitors;
 
       #---------------------------
