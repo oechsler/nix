@@ -373,7 +373,7 @@ in
             "a"
           ];
           run = "shell --block 'zip -r --junk-paths archiv.zip %s'";
-          desc = "Markierte Dateien zippen";
+          desc = "Zip selected files";
         }
         {
           on = [
@@ -381,7 +381,7 @@ in
             "x"
           ];
           run = "shell --block 'unzip -q %h'";
-          desc = "ZIP-Datei entpacken";
+          desc = "Extract ZIP file";
         }
       ]
       ++ lib.optionals enableAppPreviews mediaKeymaps;
