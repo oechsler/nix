@@ -69,14 +69,38 @@ let
   # Lock + suspend on battery
   suspendBattery = toString (
     pkgs.writeShellScript "suspend-battery" ''
-      ${onBattery} && loginctl lock-session && systemctl suspend
+      if ${onBattery}; then
+        loginctl lock-session
+        # Let hyprlock appear and finish its lock animation before suspending.
+        for _ in $(seq 1 100); do
+          if pidof hyprlock > /dev/null; then
+            sleep 1
+            systemctl suspend
+            exit 0
+          fi
+          sleep 0.05
+        done
+        exit 1
+      fi
     ''
   );
 
   # Lock + suspend on AC
   suspendAc = toString (
     pkgs.writeShellScript "suspend-ac" ''
-      ${onAC} && loginctl lock-session && systemctl suspend
+      if ${onAC}; then
+        loginctl lock-session
+        # Let hyprlock appear and finish its lock animation before suspending.
+        for _ in $(seq 1 100); do
+          if pidof hyprlock > /dev/null; then
+            sleep 1
+            systemctl suspend
+            exit 0
+          fi
+          sleep 0.05
+        done
+        exit 1
+      fi
     ''
   );
 
