@@ -163,8 +163,10 @@ in
         source = pkgs.writeShellScript "99-resolved-refresh" ''
           #!${pkgs.bash}/bin/bash
           if [ "$2" = "resume" ] || [ "$2" = "connectivity-change" ]; then
-            ${pkgs.systemd}/bin/resolvectl flush-caches
-            ${pkgs.systemd}/bin/systemctl restart systemd-resolved.service
+            # NetworkManager owns the resolver lifecycle. Restarting resolved
+            # here races with its link updates during resume and can trigger
+            # systemd's start-limit protection.
+            ${pkgs.systemd}/bin/resolvectl flush-caches || true
           fi
         '';
         type = "basic";

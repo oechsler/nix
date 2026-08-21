@@ -52,7 +52,6 @@ in
       #---------------------------
       general = {
         hide_cursor = true; # Hide mouse cursor on lock screen
-        grace = 3; # Grace period (seconds) before locking
       };
 
       #---------------------------
@@ -114,7 +113,6 @@ in
           color = "$text";
           font_size = 120;
           font_family = "${fonts.ui}";
-          font_style = "Bold";
           position = "0, 40";
           halign = "center";
           valign = "center";

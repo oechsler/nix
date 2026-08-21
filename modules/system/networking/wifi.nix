@@ -18,6 +18,12 @@
 let
   cfg = config.features.wifi;
   ip6Privacy = if config.features.ipv6PrivacyExtensions.enable then 2 else 0;
+  stableUuid =
+    profileName:
+    let
+      hash = builtins.hashString "sha256" "nixos-networkmanager-${profileName}";
+    in
+    "${lib.substring 0 8 hash}-${lib.substring 8 4 hash}-${lib.substring 12 4 hash}-${lib.substring 16 4 hash}-${lib.substring 20 12 hash}";
 
   # WPA2-PSK profiles — SSID comes directly from config, PSK from sops placeholder
   wifiProfiles = lib.listToAttrs (
@@ -27,6 +33,7 @@ let
         connection = {
           id = net.ssid;
           type = "wifi";
+          uuid = stableUuid "wifi-${net.name}";
           autoconnect = true;
         };
         wifi = {
@@ -63,6 +70,7 @@ let
         connection = {
           id = net.ssid;
           type = "wifi";
+          uuid = stableUuid "wifi-${net.name}";
           autoconnect = true;
         };
         wifi = {
@@ -94,6 +102,14 @@ let
       };
     }) cfg.enterpriseNetworks
   );
+
+  managedWifiNetworks = cfg.networks ++ cfg.enterpriseNetworks;
+  managedWifiCases = lib.concatMapStringsSep "\n" (
+    net: "${lib.escapeShellArg net.ssid})"
+  ) managedWifiNetworks;
+  managedWifiUuids = lib.concatMapStringsSep "|" (
+    net: stableUuid "wifi-${net.name}"
+  ) managedWifiNetworks;
 
   # Environment file for NetworkManager ensureProfiles — only secrets as vars
   wifiEnvContent =
@@ -137,7 +153,9 @@ let
       exit 0
     fi
 
-    WIFI_CONNECTIONS=$(${pkgs.networkmanager}/bin/nmcli -t -f NAME,TYPE connection show | ${pkgs.gnugrep}/bin/grep ':802-11-wireless$' | ${pkgs.uutils-coreutils-noprefix}/bin/cut -d: -f1)
+    # Use UUIDs instead of connection names: NetworkManager permits duplicate
+    # SSIDs/names and name-based operations can then target the wrong profile.
+    WIFI_CONNECTIONS=$(${pkgs.networkmanager}/bin/nmcli -t -f UUID,TYPE connection show | ${pkgs.gnugrep}/bin/grep ':802-11-wireless$' | ${pkgs.uutils-coreutils-noprefix}/bin/cut -d: -f1)
 
     if [ -z "$WIFI_CONNECTIONS" ]; then
       exit 0
@@ -235,49 +253,79 @@ in
         profiles = wifiProfiles // enterpriseWifiProfiles;
       };
 
-      systemd.services.NetworkManager-ensure-profiles = {
-        after = [ "sops-install-secrets.service" ];
-        unitConfig.ConditionPathExists = config.sops.age.keyFile;
-      };
-
-      systemd.services.iwd-profiles = {
-        wantedBy = [ "network-pre.target" ];
-        after = [ "sops-install-secrets.service" ];
-        before = [ "iwd.service" ];
-        unitConfig.ConditionPathExists = config.sops.age.keyFile;
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
+      # ensureProfiles writes declarative profiles but deliberately does not
+      # garbage-collect old profiles from /etc or profiles created manually.
+      # Reconcile only managed SSIDs and preserve their stable UUIDs.
+      systemd.services = {
+        NetworkManager-reconcile-wifi-profiles = {
+          description = "Reconcile declarative NetworkManager WiFi profiles";
+          wantedBy = [ "multi-user.target" ];
+          after = [ "NetworkManager.service" ];
+          before = [ "NetworkManager-ensure-profiles.service" ];
+          serviceConfig.Type = "oneshot";
+          script = ''
+            set -u
+            while IFS= read -r uuid; do
+              [ -n "$uuid" ] || continue
+              id=$(${pkgs.networkmanager}/bin/nmcli -g connection.id connection show uuid "$uuid" 2>/dev/null || true)
+              type=$(${pkgs.networkmanager}/bin/nmcli -g connection.type connection show uuid "$uuid" 2>/dev/null || true)
+              [ "$type" = "802-11-wireless" ] || continue
+              case "$id" in
+                ${managedWifiCases}
+                  case "$uuid" in
+                    ${managedWifiUuids}) ;;
+                    *) ${pkgs.networkmanager}/bin/nmcli connection delete uuid "$uuid" || true ;;
+                  esac
+                  ;;
+              esac
+            done < <(${pkgs.networkmanager}/bin/nmcli -g connection.uuid connection show)
+          '';
         };
-        script =
-          lib.concatMapStringsSep "\n" (
-            net:
-            let
-              pskPath = config.sops.secrets."wifi/${net.name}/psk".path;
-            in
-            ''
-              ssid_hex=$(printf '%s' "${net.ssid}" | od -An -tx1 | tr -d ' \n')
-              mkdir -p /var/lib/iwd
-              rm -f "/var/lib/iwd/${net.ssid}.psk"
-              printf '[Security]\nPassphrase=%s\n' "$(cat ${pskPath})" \
-                > "/var/lib/iwd/=$ssid_hex.psk"
-              chmod 0600 "/var/lib/iwd/=$ssid_hex.psk"
-            ''
-          ) cfg.networks
-          + lib.concatMapStringsSep "\n" (
-            net:
-            let
-              passwordPath = config.sops.secrets."wifi/${net.name}/password".path;
-            in
-            ''
-              ssid_hex=$(printf '%s' "${net.ssid}" | od -An -tx1 | tr -d ' \n')
-              mkdir -p /var/lib/iwd
-              printf '[Security]\nEAP-Method=PEAP\nEAP-Identity=%s\nEAP-PEAP-Phase2-Method=MSCHAPV2\nEAP-PEAP-Phase2-Password=%s\n' \
-                "${net.identity}" "$(cat ${passwordPath})" \
-                > "/var/lib/iwd/=$ssid_hex.8021x"
-              chmod 0600 "/var/lib/iwd/=$ssid_hex.8021x"
-            ''
-          ) cfg.enterpriseNetworks;
+
+        NetworkManager-ensure-profiles = {
+          after = [ "sops-install-secrets.service" ];
+          unitConfig.ConditionPathExists = config.sops.age.keyFile;
+        };
+
+        iwd-profiles = {
+          wantedBy = [ "network-pre.target" ];
+          after = [ "sops-install-secrets.service" ];
+          before = [ "iwd.service" ];
+          unitConfig.ConditionPathExists = config.sops.age.keyFile;
+          serviceConfig = {
+            Type = "oneshot";
+            RemainAfterExit = true;
+          };
+          script =
+            lib.concatMapStringsSep "\n" (
+              net:
+              let
+                pskPath = config.sops.secrets."wifi/${net.name}/psk".path;
+              in
+              ''
+                ssid_hex=$(printf '%s' "${net.ssid}" | od -An -tx1 | tr -d ' \n')
+                mkdir -p /var/lib/iwd
+                rm -f "/var/lib/iwd/${net.ssid}.psk"
+                printf '[Security]\nPassphrase=%s\n' "$(cat ${pskPath})" \
+                  > "/var/lib/iwd/=$ssid_hex.psk"
+                chmod 0600 "/var/lib/iwd/=$ssid_hex.psk"
+              ''
+            ) cfg.networks
+            + lib.concatMapStringsSep "\n" (
+              net:
+              let
+                passwordPath = config.sops.secrets."wifi/${net.name}/password".path;
+              in
+              ''
+                ssid_hex=$(printf '%s' "${net.ssid}" | od -An -tx1 | tr -d ' \n')
+                mkdir -p /var/lib/iwd
+                printf '[Security]\nEAP-Method=PEAP\nEAP-Identity=%s\nEAP-PEAP-Phase2-Method=MSCHAPV2\nEAP-PEAP-Phase2-Password=%s\n' \
+                  "${net.identity}" "$(cat ${passwordPath})" \
+                  > "/var/lib/iwd/=$ssid_hex.8021x"
+                chmod 0600 "/var/lib/iwd/=$ssid_hex.8021x"
+              ''
+            ) cfg.enterpriseNetworks;
+        };
       };
 
       sops = {
