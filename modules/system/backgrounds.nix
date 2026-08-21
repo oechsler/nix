@@ -362,8 +362,11 @@ in
     # 1. Wallpaper Paths (Always Set)
     #---------------------------
     {
-      theme.wallpaperPath = "${outputDir}/${currentFile}";
-      theme.blurredWallpaperPath = "${outputDir}/${blurredFile}";
+      theme = {
+        wallpaperPath = "${outputDir}/${currentFile}";
+        blurredWallpaperPath = "${outputDir}/${blurredFile}";
+        wallpaperLut = wallpaperThemeJSON;
+      };
     }
 
     #---------------------------
