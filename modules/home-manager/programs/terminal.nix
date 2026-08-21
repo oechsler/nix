@@ -66,7 +66,10 @@ let
   ++ sessionModules
   ++ [ "break" ]
   ++ hardwareModules
-  ++ [ "break" ];
+  ++ [
+    "break"
+    "colors"
+  ];
   logoHeight = builtins.length infoModules + 3;
   logoOffsetY = 0;
 in
