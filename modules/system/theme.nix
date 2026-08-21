@@ -25,6 +25,29 @@
   ...
 }:
 
+let
+  snowflakeCatppuccinized =
+    pkgs.runCommand "snowflake-catppuccinized-${config.catppuccin.flavor}-${config.catppuccin.accent}"
+      {
+        nativeBuildInputs = [
+          pkgs.gowall
+          pkgs.imagemagick
+        ];
+      }
+      ''
+        export HOME="$TMPDIR/home"
+        export XDG_CONFIG_HOME="$HOME/.config"
+        mkdir -p "$XDG_CONFIG_HOME"
+        input="$TMPDIR/nixos-logo.png"
+        trimmed="$TMPDIR/nixos-logo-trimmed.png"
+        output="$TMPDIR/nixos-logo-themed.png"
+        cp ${pkgs.nixos-icons}/share/icons/hicolor/1024x1024/apps/nix-snowflake.png "$input"
+        magick "$input" -trim +repage "$trimmed"
+        gowall convert "$trimmed" --theme ${config.theme.wallpaperLut} --output "$output" --yes
+        cp "$output" "$out"
+      '';
+  snowflake = "${pkgs.nixos-icons}/share/icons/hicolor/1024x1024/apps/nix-snowflake.png";
+in
 {
   #===========================
   # Options
@@ -159,6 +182,26 @@
     blurredWallpaperPath = lib.mkOption {
       type = lib.types.str;
       description = "Runtime path to blurred wallpaper for SDDM login screen (set by backgrounds module)";
+    };
+
+    wallpaperLut = lib.mkOption {
+      type = lib.types.path;
+      readOnly = true;
+      description = "Generated Catppuccin LUT theme used for wallpaper color grading";
+    };
+
+    snowflakeCatppuccinized = lib.mkOption {
+      type = lib.types.path;
+      readOnly = true;
+      default = snowflakeCatppuccinized;
+      description = "Catppuccin-themed NixOS logo for terminal integrations";
+    };
+
+    snowflake = lib.mkOption {
+      type = lib.types.path;
+      readOnly = true;
+      default = snowflake;
+      description = "Original NixOS logo for terminal integrations";
     };
 
     qtConfig = lib.mkOption {

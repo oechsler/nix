@@ -70,7 +70,6 @@
     '';
     shellAliases = lib.mkForce {
       eza = "${pkgs.eza}/bin/eza --icons auto --group-directories-first";
-      ff = "${pkgs.fastfetch}/bin/fastfetch";
       la = "${pkgs.eza}/bin/eza --icons auto --group-directories-first -a";
       ll = "${pkgs.eza}/bin/eza --icons auto --group-directories-first --long";
       lla = "${pkgs.eza}/bin/eza --icons auto --group-directories-first -la";
@@ -81,6 +80,12 @@
       unrm = "${pkgs.trash-cli}/bin/trash-restore";
     };
     functions = {
+      fastfetch = {
+        body = "~/.local/bin/fastfetch-image $argv";
+      };
+      ff = {
+        body = "fastfetch $argv";
+      };
       cd = {
         wraps = "z";
         body = ''
