@@ -53,7 +53,7 @@ in
       #---------------------------
       general = {
         hide_cursor = true; # Hide mouse cursor on lock screen
-        immediate_render = true; # Rebuild the background immediately after resume
+        screencopy_mode = 1; # Use SHM instead of DMA-BUF for stable resume rendering
       };
 
       #---------------------------
