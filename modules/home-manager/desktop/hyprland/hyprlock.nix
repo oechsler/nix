@@ -24,6 +24,7 @@
 # - Text: Text color
 
 {
+  config,
   lib,
   pkgs,
   theme,
@@ -34,6 +35,7 @@
 
 let
   displayHelpers = import ../../../lib/displays.nix { inherit lib; };
+  baseHex = lib.removePrefix "#" config.theme.catppuccinPalette.base.hex;
 in
 {
   #===========================
@@ -96,7 +98,7 @@ in
           dots_center = true;
           fade_on_empty = true;
           fade_timeout = 1000;
-          inner_color = "$base";
+          inner_color = "rgba(${baseHex}eb)";
           outer_color = "$accent";
           font_color = "$text";
           check_color = "$accent";
