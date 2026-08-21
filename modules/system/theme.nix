@@ -26,6 +26,17 @@
 }:
 
 let
+  catppuccinAccentColor =
+    (lib.importJSON "${config.catppuccin.sources.palette}/palette.json")
+    .${config.catppuccin.flavor}.colors.${config.catppuccin.accent}.hex;
+  snowflakeTheme =
+    pkgs.writeText "gowall-snowflake-${config.catppuccin.flavor}-${config.catppuccin.accent}.json"
+      (
+        builtins.toJSON {
+          name = "catppuccin-snowflake-${config.catppuccin.flavor}-${config.catppuccin.accent}";
+          colors = builtins.genList (_: catppuccinAccentColor) 26;
+        }
+      );
   snowflakeCatppuccinized =
     pkgs.runCommand "snowflake-catppuccinized-${config.catppuccin.flavor}-${config.catppuccin.accent}"
       {
@@ -43,7 +54,7 @@ let
         output="$TMPDIR/nixos-logo-themed.png"
         cp ${pkgs.nixos-icons}/share/icons/hicolor/1024x1024/apps/nix-snowflake.png "$input"
         magick "$input" -trim +repage "$trimmed"
-        gowall convert "$trimmed" --theme ${config.theme.wallpaperLut} --output "$output" --yes
+        gowall convert "$trimmed" --theme ${snowflakeTheme} --output "$output" --yes
         cp "$output" "$out"
       '';
   snowflake = "${pkgs.nixos-icons}/share/icons/hicolor/1024x1024/apps/nix-snowflake.png";
