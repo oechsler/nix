@@ -25,6 +25,7 @@
 
 {
   lib,
+  pkgs,
   theme,
   fonts,
   displays,
@@ -62,14 +63,18 @@ in
       # overridden per-monitor for explicitly configured displays.
       background = [
         {
-          path = "${theme.wallpaperPath}";
+          path = "";
+          reload_cmd = "${pkgs.coreutils}/bin/cp -- ${theme.wallpaperPath} \"$XDG_RUNTIME_DIR/hyprlock-background-default\" && printf '%s' \"$XDG_RUNTIME_DIR/hyprlock-background-default\"";
+          reload_time = 0;
           blur_passes = 3;
           blur_size = 8;
         }
       ]
       ++ map (m: {
         monitor = m.name;
-        path = "${displayHelpers.monitorWallpaper theme m}";
+        path = "";
+        reload_cmd = "${pkgs.coreutils}/bin/cp -- ${displayHelpers.monitorWallpaper theme m} \"$XDG_RUNTIME_DIR/hyprlock-background-${m.name}\" && printf '%s' \"$XDG_RUNTIME_DIR/hyprlock-background-${m.name}\"";
+        reload_time = 0;
         blur_passes = 3;
         blur_size = 8;
       }) displays.monitors;

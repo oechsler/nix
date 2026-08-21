@@ -172,7 +172,7 @@ in
         general = {
           lock_cmd = "pidof hyprlock || hyprlock";
           before_sleep_cmd = "loginctl lock-session";
-          after_sleep_cmd = "${pkgs.runtimeShell} -c 'hyprctl reload 2>/dev/null || true; systemctl --user try-restart awww.service xdg-desktop-portal.service xdg-desktop-portal-hyprland.service xdg-desktop-portal-gtk.service 2>/dev/null || true; for i in 1 2 3; do hyprctl dispatch dpms on 2>/dev/null && break; sleep 0.5; done'";
+          after_sleep_cmd = "${pkgs.runtimeShell} -c 'hyprctl reload 2>/dev/null || true; systemctl --user try-restart awww.service xdg-desktop-portal.service xdg-desktop-portal-hyprland.service xdg-desktop-portal-gtk.service 2>/dev/null || true; pkill -USR2 hyprlock 2>/dev/null || true; for i in 1 2 3; do hyprctl dispatch dpms on 2>/dev/null && break; sleep 0.5; done'";
         };
 
         listener = sharedListeners ++ lib.optionals isLaptop laptopListeners;
