@@ -39,7 +39,13 @@ in
       }
     ];
 
-    systemd.tmpfiles.rules = [ "d /var/lib/pam-lldap 0700 root root -" ];
+    # hyprlock authenticates as the desktop user rather than as root. The
+    # verifier therefore needs to be private to that user, while still being
+    # readable by privileged PAM consumers such as login and SDDM.
+    systemd.tmpfiles.rules = [
+      "d /var/lib/pam-lldap 0700 ${userName} ${config.users.users.${userName}.group} -"
+      "f ${cachePath} 0600 ${userName} ${config.users.users.${userName}.group} -"
+    ];
 
     security.pam.services = lib.mkMerge [
       (lib.genAttrs [ "login" "sddm" "sudo" "polkit-1" "hyprlock" ] (_: {

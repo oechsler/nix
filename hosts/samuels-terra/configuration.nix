@@ -206,7 +206,7 @@
 
   # Re-disable after resume (sleep-actions ExecStop runs post-resume).
   systemd.services.sleep-actions.serviceConfig.ExecStop = lib.mkAfter [
-    "${pkgs.bash}/bin/bash -c 'port=/sys/bus/usb/devices/usb3/3-0:1.0/usb3-port7/disable; [ -e \"$port\" ] && echo 1 > \"$port\"'"
+    "${pkgs.bash}/bin/bash -c 'port=/sys/bus/usb/devices/usb3/3-0:1.0/usb3-port7/disable; [ ! -e \"$port\" ] || echo 1 > \"$port\"'"
   ];
 
   system.stateVersion = "26.11";

@@ -16,7 +16,6 @@
 {
   config,
   lib,
-  pkgs,
   ...
 }:
 
@@ -44,14 +43,6 @@ in
     AllowHibernation = false;
     AllowSuspendThenHibernate = false;
   };
-
-  # Resume can leave NetworkManager with a stale link and resolved with stale
-  # DNS scopes. Recover both before applications start making requests again.
-  powerManagement.resumeCommands = ''
-    ${pkgs.systemd}/bin/systemctl try-restart NetworkManager.service
-    ${pkgs.systemd}/bin/resolvectl flush-caches
-    ${pkgs.systemd}/bin/systemctl try-restart systemd-resolved.service
-  '';
 
   # amdgpu.runpm=0 disables GPU runtime PM.
   # On desktop/server: prevents BACO transition issues during suspend (prevents resume hangs).
