@@ -92,7 +92,7 @@ let
         # Let hyprlock appear and finish its lock animation before suspending.
         for _ in $(seq 1 100); do
           if pidof hyprlock > /dev/null; then
-            sleep 1
+            sleep 3
             systemctl suspend
             exit 0
           fi
