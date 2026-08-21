@@ -39,7 +39,7 @@ let
     lib.imap1
       (i: key: {
         on = [
-          " "
+          "<Space>"
           key
         ];
         run = "tab_switch ${toString (i - 1)}";
@@ -154,7 +154,7 @@ let
   mediaKeymaps = [
     {
       on = [
-        " "
+        "<Space>"
         "p"
         "m"
       ];
@@ -163,7 +163,7 @@ let
     }
     {
       on = [
-        " "
+        "<Space>"
         "p"
         "i"
       ];
@@ -270,7 +270,7 @@ in
       ++ [
         {
           on = [
-            " "
+            "<Space>"
             "i"
           ];
           run = "help";
@@ -291,7 +291,7 @@ in
         }
         {
           on = [
-            " "
+            "<Space>"
             "h"
           ];
           run = "tab_switch -1 --relative";
@@ -299,7 +299,7 @@ in
         }
         {
           on = [
-            " "
+            "<Space>"
             "l"
           ];
           run = "tab_switch 1 --relative";
@@ -307,7 +307,7 @@ in
         }
         {
           on = [
-            " "
+            "<Space>"
             "H"
           ];
           run = "tab_swap -1";
@@ -315,7 +315,7 @@ in
         }
         {
           on = [
-            " "
+            "<Space>"
             "L"
           ];
           run = "tab_swap 1";
@@ -323,7 +323,7 @@ in
         }
         {
           on = [
-            " "
+            "<Space>"
             "t"
           ];
           run = "tab_create --current";
@@ -331,7 +331,7 @@ in
         }
         {
           on = [
-            " "
+            "<Space>"
             "q"
           ];
           run = "close";
@@ -342,7 +342,7 @@ in
       ++ [
         {
           on = [
-            " "
+            "<Space>"
             "d"
             "m"
           ];
@@ -351,7 +351,7 @@ in
         }
         {
           on = [
-            " "
+            "<Space>"
             "d"
             "u"
           ];
@@ -360,7 +360,7 @@ in
         }
         {
           on = [
-            " "
+            "<Space>"
             "d"
             "U"
           ];
@@ -369,7 +369,7 @@ in
         }
         {
           on = [
-            " "
+            "<Space>"
             "a"
           ];
           run = "shell --block 'zip -r --junk-paths archiv.zip %s'";
@@ -377,7 +377,7 @@ in
         }
         {
           on = [
-            " "
+            "<Space>"
             "x"
           ];
           run = "shell --block 'unzip -q %h'";
