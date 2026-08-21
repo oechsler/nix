@@ -285,7 +285,7 @@ in
           desc = "Yank and copy to system clipboard";
         }
         {
-          on = "<C-p>";
+          on = "p";
           run = "plugin clipboard -- --action=paste";
           desc = "Paste files from system clipboard";
         }
@@ -332,7 +332,7 @@ in
         {
           on = [
             " "
-            "w"
+            "q"
           ];
           run = "close";
           desc = "Close tab or quit";
@@ -368,12 +368,18 @@ in
           desc = "Restore deleted files interactively";
         }
         {
-          on = "Z";
+          on = [
+            " "
+            "a"
+          ];
           run = "shell --block 'zip -r --junk-paths archiv.zip %s'";
           desc = "Markierte Dateien zippen";
         }
         {
-          on = "U";
+          on = [
+            " "
+            "x"
+          ];
           run = "shell --block 'unzip -q %h'";
           desc = "ZIP-Datei entpacken";
         }
