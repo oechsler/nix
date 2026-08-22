@@ -64,6 +64,16 @@
 #   features.hardware.gpu = "amd" | "intel" | null (required for graphics)
 #   features.desktop.wm = "hyprland" | "kde" (default: "hyprland")
 #   features.desktop.fileManager = "default" | "terminal" (default: "default")
+#   features.desktop.browser.enable = true (default: true)
+#   features.desktop.browser.type = "librewolf" | "firefox" (default: "librewolf")
+#   features.desktop.browser.homepage = "https://dash.at.oechsler.it"
+#     (default: "https://dash.at.oechsler.it")
+#   features.desktop.browser.searchEngine = "ddg" (default: DuckDuckGo)
+#   features.desktop.browser.cookieAllowlist = [ "https://example.com" ]
+#     (default: oechsler.it and oech.it, including subdomains)
+#   features.desktop.browser.cookieAllowlistExtra = [ "https://example.com" ]
+#     (appended to the default allowlist)
+#     Used as both the browser startup homepage and the new-tab page.
 #
 # Security and authentication:
 #   features.encryption.enable = true (default: true)
@@ -184,7 +194,7 @@ in
     };
 
     desktop = {
-      enable = (lib.mkEnableOption "desktop environment (Hyprland, SDDM, Firefox)") // {
+      enable = (lib.mkEnableOption "desktop environment (Hyprland, SDDM, LibreWolf)") // {
         default = true;
       };
       wm = lib.mkOption {
@@ -210,6 +220,34 @@ in
         ];
         default = "default";
         description = "Primary file manager for the desktop environment";
+      };
+      browser = {
+        enable = (lib.mkEnableOption "default web browser") // {
+          default = true;
+        };
+        type = lib.mkOption {
+          type = lib.types.enum [
+            "librewolf"
+            "firefox"
+          ];
+          default = "librewolf";
+          description = "Default web browser";
+        };
+        homepage = lib.mkOption {
+          type = lib.types.str;
+          default = "https://dash.at.oechsler.it";
+          description = "Default browser homepage and new-tab URL";
+        };
+        searchEngine = lib.mkOption {
+          type = lib.types.str;
+          default = "ddg";
+          description = "Default browser search engine identifier";
+        };
+        cookieAllowlist = lib.mkOption {
+          type = lib.types.listOf lib.types.str;
+          default = [ ];
+          description = "Additional sites allowed to keep first-party cookies and sessions";
+        };
       };
     };
 

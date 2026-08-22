@@ -1,0 +1,27 @@
+# Large mutable data outside the @home snapshot.
+#
+# These mounts keep application paths unchanged while preventing large mutable
+# data from being copied into hourly @home snapshots.
+
+{ config, lib, ... }:
+
+let
+  rootDevice = config.fileSystems."/".device;
+  userHome = "/home/${config.user.name}";
+  subvolume = name: {
+    device = rootDevice;
+    fsType = "btrfs";
+    options = [
+      "subvol=${name}"
+      "compress=zstd"
+      "noatime"
+    ];
+  };
+in
+{
+  config = lib.mkIf config.features.snapshots.enable {
+    fileSystems."${userHome}/.local/share/Steam" = subvolume "@steam";
+    fileSystems."${userHome}/Nextcloud" = subvolume "@nextcloud";
+    fileSystems."${userHome}/smb" = subvolume "@smb";
+  };
+}

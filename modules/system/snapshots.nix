@@ -12,6 +12,7 @@
 #   - Runs: Every hour
 #   - Subvolumes: @home, @persist
 #   - Subvolumes (conditional): @ (only if impermanence is disabled)
+#   - Nested data subvolumes excluded from @home: @steam, @nextcloud, @smb
 #   - Storage: /mnt/btrfs-root/@snapshots/
 #
 # Retention policy:

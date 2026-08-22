@@ -41,6 +41,7 @@
     ./auth.nix
     ./tpm.nix
     ./snapshots.nix
+    ./data-subvolumes.nix
     ./features.nix
     ./displays.nix
     ./input.nix

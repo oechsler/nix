@@ -23,7 +23,17 @@
 # - Root (/) is ephemeral, rolled back to blank snapshot on reboot
 # - Only /home, /nix, /persist survive reboots
 
-_:
+args@{ ... }:
+
+let
+  username =
+    if args ? username then
+      args.username
+    else if args ? config && args.config ? user then
+      args.config.user.name
+    else
+      throw "samuels-razer/disko.nix requires the global user.name option";
+in
 
 {
   disko.devices = {
@@ -97,6 +107,15 @@ _:
                         "compress=zstd"
                         "noatime"
                       ];
+                    };
+                    "@steam" = {
+                      mountpoint = "/home/${username}/.local/share/Steam";
+                    };
+                    "@nextcloud" = {
+                      mountpoint = "/home/${username}/Nextcloud";
+                    };
+                    "@smb" = {
+                      mountpoint = "/home/${username}/smb";
                     };
                   };
                 };

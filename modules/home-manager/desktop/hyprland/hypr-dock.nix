@@ -208,6 +208,7 @@ in
       _pinned_file="${config.xdg.dataHome}/hypr-dock/pinned"
       mkdir -p "$(dirname "$_pinned_file")"
       printf '%s\n' ${lib.escapeShellArgs config.desktop.pinnedApps} > "$_pinned_file"
+      systemctl --user try-restart hypr-dock.service >/dev/null 2>&1 || true
     '';
   };
 }

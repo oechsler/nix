@@ -2,7 +2,7 @@
 #
 # This module imports all user-level program configurations:
 # - apps.nix - Desktop applications (Discord, Spotify, etc.)
-# - browsers.nix - Firefox configuration
+# - browsers.nix - LibreWolf configuration
 # - development.nix - Development tools and languages
 # - fish.nix - Fish shell configuration
 # - git.nix - Git and SSH configuration

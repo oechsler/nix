@@ -22,7 +22,17 @@
 # - Replace the placeholder disk device with the real stable by-id path from:
 #   ls -l /dev/disk/by-id/ | grep nvme
 
-_:
+args@{ ... }:
+
+let
+  username =
+    if args ? username then
+      args.username
+    else if args ? config && args.config ? user then
+      args.config.user.name
+    else
+      throw "samuels-ser9/disko.nix requires the global user.name option";
+in
 
 {
   disko.devices = {
@@ -96,6 +106,15 @@ _:
                         "compress=zstd"
                         "noatime"
                       ];
+                    };
+                    "@steam" = {
+                      mountpoint = "/home/${username}/.local/share/Steam";
+                    };
+                    "@nextcloud" = {
+                      mountpoint = "/home/${username}/Nextcloud";
+                    };
+                    "@smb" = {
+                      mountpoint = "/home/${username}/smb";
                     };
                   };
                 };
