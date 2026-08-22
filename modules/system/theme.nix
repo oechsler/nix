@@ -26,16 +26,31 @@
 }:
 
 let
-  catppuccinAccentColor =
+  catppuccinFlavorColors =
     (lib.importJSON "${config.catppuccin.sources.palette}/palette.json")
-    .${config.catppuccin.flavor}.colors.${config.catppuccin.accent}.hex;
-  wallpaperSurfaceColors = lib.drop 14 (lib.importJSON config.theme.wallpaperLut).colors;
+    .${config.catppuccin.flavor}.colors;
+  snowflakeSurfaceColors = map (name: catppuccinFlavorColors.${name}.hex) [
+    "text"
+    "subtext1"
+    "subtext0"
+    "overlay2"
+    "overlay1"
+    "overlay0"
+    "surface2"
+    "surface1"
+    "surface0"
+    "base"
+    "mantle"
+    "crust"
+  ];
   snowflakeTheme =
     pkgs.writeText "gowall-snowflake-${config.catppuccin.flavor}-${config.catppuccin.accent}.json"
       (
         builtins.toJSON {
           name = "catppuccin-snowflake-${config.catppuccin.flavor}-${config.catppuccin.accent}";
-          colors = (builtins.genList (_: catppuccinAccentColor) 14) ++ wallpaperSurfaceColors;
+          colors =
+            (builtins.genList (_: catppuccinFlavorColors.${config.catppuccin.accent}.hex) 14)
+            ++ snowflakeSurfaceColors;
         }
       );
   snowflakeCatppuccinized =
