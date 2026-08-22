@@ -32,49 +32,43 @@ sops/               # Encrypted secrets
 
 ## Host Overrides
 
-Common per-host overrides. Uncomment only the settings that differ from the
-defaults:
+Example host overrides. Keep the values that apply to the host and remove the rest:
 
 ```nix
-# Hardware identity and form factor
-# features.hardware.formFactor = "laptop";        # "desktop" (default) or "laptop"
-# features.hardware.cpu = "amd";                  # "amd" or "intel", enables CPU microcode
-# features.hardware.gpu = "amd";                  # "amd" or "intel", enables graphics/VA-API
+features = {
+  hardware = {
+    formFactor = "laptop";                         # "desktop" or "laptop"
+    cpu = "amd";                                   # "amd" or "intel"
+    gpu = "amd";                                   # "amd" or "intel"
+  };
 
-# Desktop session
-# features.desktop.wm = "kde";                     # "hyprland" (default) or "kde"
-# features.desktop.login = "autologin";           # "greeter" (default) or "autologin"
-# features.desktop.fileManager = "terminal";      # "default" (default) or Yazi via "terminal"
-# features.desktop.browser.enable = false;         # Disable the managed browser completely
-# features.desktop.browser.type = "firefox";       # "librewolf" (default) or "firefox"
-# features.desktop.browser.homepage = "https://dash.example.com";
-# features.desktop.browser.searchEngine = "ddg";    # DuckDuckGo (default)
-# features.desktop.browser.cookieAllowlist = [     # Append first-party sessions
-#   "https://example.com"
-#   "https://*.example.com"                        # Subdomains
-# ];
+  desktop = {
+    wm = "kde";                                    # "hyprland" or "kde"
+    login = "greeter";                             # "greeter" or "autologin"
+    fileManager = "default";                      # "default" or "terminal"
+    browser = {
+      type = "librewolf";                          # "librewolf" or "firefox"
+      homepage = "https://dash.example.com";
+    };
+  };
 
-# System behavior
-# features.impermanence.enable = false;            # Keep the root filesystem instead of rolling back
-# features.encryption.unlockMethod = "yubikey";    # "tpm2" (default), "yubikey", or "password"
-
-# Optional workloads
-# features.gaming.enable = false;                  # Disable Steam and gaming tools
-# features.gaming.steamMachine.enable = true;      # Add a Steam Gamescope session
-# features.dev.enable = false;                     # Disable development tools and IDEs
-# features.apps.enable = false;                    # Disable optional desktop applications
-# features.virtualisation.enable = false;          # Disable Podman and QEMU/KVM support
-
-# Runtime GNU reduction
-# features.compat.enable = false;                  # Disable nix-ld/glibc compatibility
-#                                                  # Fish, uutils and LLVM are already used
+  impermanence.enable = true;                       # Root rollback on boot
+  encryption.unlockMethod = "tpm2";                # "tpm2", "yubikey", or "password"
+  gaming.enable = true;                             # Steam and gaming tools
+  dev.enable = true;                                # Development tools
+  virtualisation.enable = true;                    # Containers and VMs
+  compat.enable = true;                             # nix-ld/glibc compatibility
+};
 ```
 
-Display defaults are configured separately when needed:
+Less common options, including browser cookie exceptions and display defaults,
+are documented in `docs/CONFIG.md`.
 
 ```nix
-# displays.defaults.hdr = 1;                       # 0=off, 1=Steam, 2=full desktop
-# displays.defaults.vrr = 2;                       # VRR mode for unknown displays
+displays.defaults = {
+  hdr = 1;  # 0=off, 1=Steam, 2=full desktop
+  vrr = 2;  # VRR mode for unknown displays
+};
 ```
 
 ## Using as Flake Input

@@ -13,6 +13,9 @@
 #   - @nix subvolume: /nix (persistent)
 #   - @persist subvolume: /persist (persistent)
 #   - @snapshots subvolume: /.snapshots (persistent)
+#   - @steam subvolume: Steam library, persistent but excluded from @home snapshots
+#   - @nextcloud subvolume: sync client data, persistent and resyncable
+#   - @smb subvolume: persistent mount root for network shares
 #
 # Encryption:
 # - LUKS with YubiKey FIDO2 unlock (via luks.nix)
@@ -22,13 +25,15 @@
 # - Replace the placeholder disk device with the real stable by-id path from:
 #   ls -l /dev/disk/by-id/ | grep nvme
 
-args:
+# NixOS supplies config.user.name; standalone Disko evaluation supplies
+# username explicitly through flake.nix because it has no NixOS config.
+moduleArgs:
 
 let
   username =
-    args.username or (
-      if args ? config && args.config ? user then
-        args.config.user.name
+    moduleArgs.username or (
+      if moduleArgs ? config && moduleArgs.config ? user then
+        moduleArgs.config.user.name
       else
         throw "samuels-ser9/disko.nix requires the global user.name option"
     );
