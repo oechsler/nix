@@ -26,15 +26,12 @@
 }:
 
 let
-  catppuccinAccentColor =
-    (lib.importJSON "${config.catppuccin.sources.palette}/palette.json")
-    .${config.catppuccin.flavor}.colors.${config.catppuccin.accent}.hex;
   snowflakeTheme =
     pkgs.writeText "gowall-snowflake-${config.catppuccin.flavor}-${config.catppuccin.accent}.json"
       (
         builtins.toJSON {
           name = "catppuccin-snowflake-${config.catppuccin.flavor}-${config.catppuccin.accent}";
-          colors = builtins.genList (_: catppuccinAccentColor) 26;
+          colors = (lib.importJSON config.theme.wallpaperLut).colors;
         }
       );
   snowflakeCatppuccinized =
