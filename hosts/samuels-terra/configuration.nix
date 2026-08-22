@@ -18,6 +18,11 @@
 # Monitor layout:
 # - DP-2 (right): Workspaces 1-4
 # - DP-3 (left): Workspaces 5-8
+#
+# Shared configuration:
+# - Primary username comes from flake.primaryUser; do not duplicate it here.
+# - Common feature overrides are documented in the repository README.
+# - Disko keeps Steam, Nextcloud, and SMB data in persistent subvolumes.
 
 {
   lib,

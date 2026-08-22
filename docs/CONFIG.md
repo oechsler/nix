@@ -108,7 +108,7 @@ Set in `configuration.nix`:
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `user.name` | `"samuel"` | Primary username |
+| `user.name` | `flake.primaryUser` | Primary username; the flake value is shared with Disko and home paths. |
 | `user.fullName` | `"Samuel Oechsler"` | Full name |
 | `user.email` | `"samuel@oechsler.it"` | Email address |
 | `user.github` | `"oechsler"` | GitHub username (for SSH key import) |

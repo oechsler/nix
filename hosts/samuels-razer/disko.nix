@@ -10,6 +10,9 @@
 #   - @nix subvolume: /nix (persistent)
 #   - @persist subvolume: /persist (persistent)
 #   - @snapshots subvolume: /.snapshots (persistent)
+#   - @steam subvolume: Steam library, persistent but excluded from @home snapshots
+#   - @nextcloud subvolume: sync client data, persistent and resyncable
+#   - @smb subvolume: persistent mount root for network shares
 #
 # Differences from samuels-terra:
 # - Laptop form factor, single 1TB NVMe drive
@@ -23,13 +26,15 @@
 # - Root (/) is ephemeral, rolled back to blank snapshot on reboot
 # - Only /home, /nix, /persist survive reboots
 
-args:
+# NixOS supplies config.user.name; standalone Disko evaluation supplies
+# username explicitly through flake.nix because it has no NixOS config.
+moduleArgs:
 
 let
   username =
-    args.username or (
-      if args ? config && args.config ? user then
-        args.config.user.name
+    moduleArgs.username or (
+      if moduleArgs ? config && moduleArgs.config ? user then
+        moduleArgs.config.user.name
       else
         throw "samuels-razer/disko.nix requires the global user.name option"
     );

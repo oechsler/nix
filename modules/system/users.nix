@@ -8,7 +8,7 @@
 # 5. Sudo configuration
 #
 # Configuration options:
-#   user.name = "samuel";                  # Username (default: "samuel")
+#   user.name = "samuel";                  # Username (default: flake.primaryUser)
 #   user.fullName = "Samuel Oechsler";     # Full name (default: "Samuel Oechsler")
 #   user.email = "samuel@oechsler.it";     # Email (default: "samuel@oechsler.it")
 #   user.github = "oechsler";              # GitHub username (default: "oechsler")
@@ -29,6 +29,7 @@
 
 {
   config,
+  primaryUser,
   pkgs,
   lib,
   ...
@@ -47,7 +48,7 @@ in
     # User Identity
     name = lib.mkOption {
       type = lib.types.str;
-      default = "samuel";
+      default = primaryUser;
       description = "Primary username (login name)";
     };
 

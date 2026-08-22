@@ -20,6 +20,11 @@
 # - DP-1 (right): Workspaces 1-4
 # - DP-2 (left): Workspaces 5-8
 # - One connector is expected to be USB-C DisplayPort Alt Mode, the other native DP
+#
+# Shared configuration:
+# - Primary username comes from flake.primaryUser; do not duplicate it here.
+# - Common feature overrides are documented in the repository README.
+# - Disko keeps Steam, Nextcloud, and SMB data in persistent subvolumes.
 
 { ... }:
 
