@@ -30,7 +30,7 @@ features.ssh.enable = true;
 | `features.desktop.browser.homepage` | `https://dash.at.oechsler.it` | Homepage for the selected browser and the declarative new-tab page. |
 | `features.desktop.browser.searchEngine` | `"ddg"` | Default search engine identifier. DuckDuckGo remains the default. |
 | `features.desktop.browser.cookieAllowlist` | `oechsler.it`, `oech.it` and subdomains | Browser cookie/session exceptions applied to Firefox and LibreWolf. Include both the root domain and `https://*.domain` for subdomains. |
-| `features.desktop.browser.cookieAllowlistExtra` | `[]` | Additional cookie/session exceptions appended to the default allowlist. |
+| `features.compat.enable` | `true` | Enables `nix-ld` and glibc compatibility libraries for downloaded/vendor binaries. Disable for a more GNU-reduced runtime. |
 | `features.audio.enable` | `true` | PipeWire audio (ALSA, PulseAudio compat) |
 | `features.bluetooth.enable` | `true` | Bluetooth support (power on boot) |
 | `features.gaming.enable` | `true` | Steam + Proton-GE, GameMode, Gamescope, MangoHud, ProtonUp-Qt |

@@ -46,7 +46,8 @@
           clippy
           rustfmt
           rustPlatform.rustcSrc # Rust standard library sources
-          gcc # C compiler needed by cargo for native dependencies (linker)
+          clang # C compiler for native dependencies
+          lld # LLVM linker for native dependencies
           jdk
           bun # Runtime, package manager, and bunx (npx replacement)
         ];
@@ -59,6 +60,13 @@
         sessionVariables = {
           BUN_INSTALL = "${config.home.homeDirectory}/.bun";
           RUST_SRC_PATH = "${pkgs.rustPlatform.rustcSrc}";
+          CC = "clang";
+          CXX = "clang++";
+          AR = "llvm-ar";
+          RANLIB = "llvm-ranlib";
+          CARGO_TARGET_X86_64_UNKNOWN_LINUX_GNU_LINKER = "clang";
+          RUSTFLAGS = "-C link-arg=-fuse-ld=lld";
+          LDFLAGS = "-fuse-ld=lld";
         };
       };
     })

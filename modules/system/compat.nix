@@ -17,21 +17,34 @@
 # - AppImages (if not using appimage.enable)
 # - Pre-built tools that aren't in nixpkgs
 
-{ pkgs, ... }:
+{
+  config,
+  pkgs,
+  lib,
+  ...
+}:
 
 {
-  programs.nix-ld = {
-    enable = true;
-    libraries = with pkgs; [
-      stdenv.cc.cc.lib
-      glibc
-      zlib
-      openssl
-      curl
-      libGL
-      libx11
-      fontconfig
-      freetype
-    ];
+  options.features.compat.enable =
+    (lib.mkEnableOption "nix-ld compatibility for foreign binaries")
+    // {
+      default = true;
+    };
+
+  config = lib.mkIf config.features.compat.enable {
+    programs.nix-ld = {
+      enable = true;
+      libraries = with pkgs; [
+        stdenv.cc.cc.lib
+        glibc
+        zlib
+        openssl
+        curl
+        libGL
+        libx11
+        fontconfig
+        freetype
+      ];
+    };
   };
 }
