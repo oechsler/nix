@@ -62,7 +62,7 @@ features = {
 ```
 
 Less common options, including browser cookie exceptions and display defaults,
-are documented in `docs/CONFIG.md`.
+are documented in [docs/CONFIG.md](docs/CONFIG.md).
 
 ```nix
 displays.defaults = {
