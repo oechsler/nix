@@ -20,16 +20,16 @@
 # - Only /home, /nix, /persist survive reboots
 # - See modules/system/impermanence.nix for persistence config
 
-args@{ ... }:
+args:
 
 let
   username =
-    if args ? username then
-      args.username
-    else if args ? config && args.config ? user then
-      args.config.user.name
-    else
-      throw "samuels-terra/disko.nix requires the global user.name option";
+    args.username or (
+      if args ? config && args.config ? user then
+        args.config.user.name
+      else
+        throw "samuels-terra/disko.nix requires the global user.name option"
+    );
 in
 
 {
