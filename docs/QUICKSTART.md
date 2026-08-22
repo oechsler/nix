@@ -60,7 +60,7 @@ nix build .#nixosConfigurations.my-host.config.system.build.toplevel
 
 ## Modes
 
-- Desktop: Hyprland/KDE, Firefox, audio, development tools, Podman, and QEMU/KVM VMs.
+- Desktop: Hyprland/KDE, LibreWolf, audio, development tools, Podman, and QEMU/KVM VMs.
 - Laptop: Desktop features with laptop-specific lid and power behavior.
 
 ## SOPS Secrets

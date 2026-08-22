@@ -10,6 +10,7 @@ features.gaming.enable = false;
 features.gaming.steamMachine.enable = true;
 features.desktop.wm = "kde";
 features.desktop.fileManager = "terminal";
+features.desktop.browser.homepage = "https://dash.example.com";
 features.ssh.enable = true;
 ```
 
@@ -24,6 +25,12 @@ features.ssh.enable = true;
 | `features.desktop.wm` | `"hyprland"` | Window manager (`"hyprland"` / `"kde"`) |
 | `features.desktop.login` | `"greeter"` | How the desktop session is entered: `"greeter"` (SDDM login) or `"autologin"`. Autologin only auto-unlocks the keyring with `unlockMethod = "password"`. |
 | `features.desktop.fileManager` | `"default"` | Primary file manager: `"default"` uses Nautilus (Hyprland) or Dolphin (KDE); `"terminal"` uses Yazi in Kitty and removes the GUI file manager from pinned apps. |
+| `features.desktop.browser.enable` | `true` | Install and configure the managed browser. Disable to use another browser configuration. |
+| `features.desktop.browser.type` | `"librewolf"` | Selects the declaratively configured browser: `"librewolf"` or `"firefox"`. No profile migration is performed when switching. |
+| `features.desktop.browser.homepage` | `https://dash.at.oechsler.it` | Homepage for the selected browser and the declarative new-tab page. |
+| `features.desktop.browser.searchEngine` | `"ddg"` | Default search engine identifier. DuckDuckGo remains the default. |
+| `features.desktop.browser.cookieAllowlist` | `oechsler.it`, `oech.it` and subdomains | Browser cookie/session exceptions applied to Firefox and LibreWolf. Include both the root domain and `https://*.domain` for subdomains. |
+| `features.desktop.browser.cookieAllowlistExtra` | `[]` | Additional cookie/session exceptions appended to the default allowlist. |
 | `features.audio.enable` | `true` | PipeWire audio (ALSA, PulseAudio compat) |
 | `features.bluetooth.enable` | `true` | Bluetooth support (power on boot) |
 | `features.gaming.enable` | `true` | Steam + Proton-GE, GameMode, Gamescope, MangoHud, ProtonUp-Qt |
@@ -309,7 +316,7 @@ Set in `home.nix`:
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `desktop.pinnedApps` | Firefox, Kitty, Dolphin/Nautilus or Yazi (+ conditional) | Pinned dock/taskbar apps (works on Hyprland + KDE). Yazi replaces Dolphin/Nautilus when `features.desktop.fileManager = "terminal"`. |
+| `desktop.pinnedApps` | Selected browser, Kitty, Dolphin/Nautilus or Yazi (+ conditional) | Pinned dock/taskbar apps (works on Hyprland + KDE). Yazi replaces Dolphin/Nautilus when `features.desktop.fileManager = "terminal"`. |
 
 Default pinned apps are extended based on feature toggles:
 - `features.dev.enable` adds Neovim

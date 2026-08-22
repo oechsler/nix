@@ -167,6 +167,7 @@ in
         wantedBy = [ "graphical.target" ];
 
         unitConfig.ConditionPathExists = config.sops.age.keyFile;
+        unitConfig.RequiresMountsFor = [ "${user.home}/smb" ];
 
         path = [
           pkgs.cifs-utils

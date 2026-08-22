@@ -125,6 +125,7 @@
       # All hosts in this flake are x86_64-linux.
       # Adding an aarch64 host would require parameterizing mkHostBase.
       system = "x86_64-linux";
+      defaultUser = "samuel";
       inherit (nixpkgs) lib;
 
       # Base host builder with shared configuration
@@ -234,7 +235,7 @@
         };
 
       # Internal mkDisko for this repo's hosts
-      mkDisko = hostName: import ./hosts/${hostName}/disko.nix;
+      mkDisko = hostName: import ./hosts/${hostName}/disko.nix { username = defaultUser; };
 
       # Exported mkDisko for external use
       mkDiskoExternal = hostPath: import (hostPath + "/disko.nix");

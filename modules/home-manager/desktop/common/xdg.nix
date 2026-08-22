@@ -10,11 +10,14 @@
 {
   config,
   features,
+  lib,
   ...
 }:
 
 let
   isKde = features.desktop.wm == "kde";
+  browserEnabled = features.desktop.browser.enable;
+  browser = features.desktop.browser.type;
 in
 
 {
@@ -63,8 +66,8 @@ in
 
     mimeApps = {
       enable = true;
-      defaultApplications = {
-        "application/pdf" = [ "firefox.desktop" ];
+      defaultApplications = lib.optionalAttrs browserEnabled {
+        "application/pdf" = [ "${browser}.desktop" ];
         "text/plain" = [ "nvim.desktop" ];
         "text/markdown" = [ "nvim.desktop" ];
         "text/x-script.python" = [ "nvim.desktop" ];

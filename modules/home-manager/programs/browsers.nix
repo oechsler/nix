@@ -1,14 +1,14 @@
-# Browser Configuration (Firefox)
+# Browser Configuration (Firefox-compatible browsers)
 #
-# This module configures Firefox as the default web browser.
+# This module configures the selected Firefox-compatible browser.
 #
 # Features:
-# - Catppuccin color scheme (via firefox-color extension)
+# - Catppuccin color scheme (Firefox integration where supported)
 # - Privacy-focused extensions (uBlock Origin, Bitwarden)
 # - KDE Plasma integration (media controls, downloads, tabs)
 # - Custom toolbar layout
 # - DuckDuckGo as default search engine
-# - German language preference
+# - System-language preference for web content
 # - New tab override
 #
 # Extensions:
@@ -30,20 +30,44 @@
   inputs,
   features,
   fonts,
+  locale,
   lib,
   config,
   ...
 }:
 
 let
+  localeParts = lib.splitString "_" (lib.removeSuffix ".UTF-8" locale.language);
+  language = builtins.head localeParts;
+  region = if lib.length localeParts > 1 then lib.elemAt localeParts 1 else language;
+  primaryLocale = "${language}-${region}";
+  acceptedLanguages = lib.concatStringsSep "," (
+    lib.unique [
+      primaryLocale
+      language
+      "en-US"
+      "en"
+    ]
+  );
+  browser = features.desktop.browser.type;
+  isFirefox = browser == "firefox";
   firefoxAddons = inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system};
+  catppuccinFirefoxThemes = lib.importJSON "${config.catppuccin.sources.firefox}/themes.json";
+  catppuccinFirefoxTheme =
+    catppuccinFirefoxThemes.${config.catppuccin.flavor}.${config.catppuccin.accent};
+  defaultCookieAllowlist = [
+    "https://oechsler.it"
+    "https://*.oechsler.it"
+    "https://oech.it"
+    "https://*.oech.it"
+  ];
   stylusId = firefoxAddons.stylus.addonId;
   catppuccinUserstylesExport = pkgs.fetchurl {
     url = "https://github.com/catppuccin/userstyles/releases/download/all-userstyles-export/import.json";
-    hash = "sha256-+eqOt92dkNcnFK7L1jMrsMyOocxZXdbz1UdAOjZGsvw=";
+    hash = "sha256-kPWI8G5P0CsT6rI/MB6GzpoPTw9rTOAgmj1ASLcjhd4=";
   };
   catppuccinUserstylesLibrary = pkgs.fetchurl {
-    url = "https://userstyles.catppuccin.com/lib/lib.less";
+    url = "https://userstyles.catppuccin.com/lib/std/v1.less";
     hash = "sha256-XK9Oqan7Kz81DNyE3+ryl5sPi/OpvV+EkgL7WuLoGfM=";
   };
   # Inlined from compile-catppuccin-userstyles.js — compiles all Catppuccin
@@ -114,7 +138,7 @@ let
         if (vars.darkFlavor) vars.darkFlavor.value = flavor;
         if (vars.accentColor) vars.accentColor.value = accent;
         const source = style.sourceCode.replace(
-          '@import "https://userstyles.catppuccin.com/lib/lib.less";',
+          /@import "https:\/\/userstyles\.catppuccin\.com\/lib\/(?:lib|std\/v1)\.less";/g,
           library,
         ).replace(
           'domain("cinny.in")',
@@ -159,14 +183,28 @@ in
   # Configuration
   #===========================
 
-  config = lib.mkIf features.desktop.enable {
+  config = lib.mkIf (features.desktop.enable && features.desktop.browser.enable) {
     #---------------------------
-    # Firefox Configuration
+    # Selected Browser Configuration
     #---------------------------
 
-    programs.firefox = {
+    programs.${browser} = {
       enable = true;
-      configPath = "${config.xdg.configHome}/mozilla/firefox";
+      configPath = lib.mkIf isFirefox "${config.xdg.configHome}/mozilla/firefox";
+      languagePacks = lib.optional isFirefox language;
+
+      # Force New Tab Override to use the dashboard, including on fresh
+      # profiles. The extension's managed policy takes precedence over local
+      # extension storage.
+      policies = {
+        # Keep first-party authentication data for our own services while
+        # retaining strict tracking protection everywhere else.
+        Cookies.Allow = defaultCookieAllowlist ++ features.desktop.browser.cookieAllowlist;
+        "3rdparty".Extensions."newtaboverride@agenedia.com" = {
+          type = "custom_url";
+          url = features.desktop.browser.homepage;
+        };
+      };
 
       # KDE Plasma integration (media controls, downloads, tabs)
       nativeMessagingHosts = lib.optionals (features.desktop.wm == "kde") [
@@ -180,7 +218,14 @@ in
         isDefault = true;
 
         # Extensions
-        extensions.force = true; # Prevent Firefox from disabling extensions
+        extensions.force = true; # Prevent the browser from disabling extensions
+        extensions.settings."FirefoxColor@mozilla.com" = {
+          force = lib.mkForce true;
+          settings = {
+            firstRunDone = true;
+            theme = catppuccinFirefoxTheme;
+          };
+        };
         extensions.packages =
           with inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system};
           [
@@ -197,15 +242,18 @@ in
 
         # Search configuration
         search = {
-          default = "ddg"; # DuckDuckGo
-          force = true; # Prevent Firefox from changing search engine
+          default = features.desktop.browser.searchEngine;
+          force = true; # Prevent the browser from changing search engine
           engines = {
             "google".metaData.hidden = true;
             "bing".metaData.hidden = true;
+            "mojeek".metaData.hidden = true;
+            "startpage".metaData.hidden = true;
             "amazondotcom-de".metaData.hidden = true;
             "ebay".metaData.hidden = true;
             "ebay-de".metaData.hidden = true;
             "wikipedia".metaData.hidden = true;
+            "wikipedia (en)".metaData.hidden = true;
             "wikipedia_de".metaData.hidden = true;
             "wikipedia-de".metaData.hidden = true;
             "leo_ende_de".metaData.hidden = true;
@@ -215,8 +263,9 @@ in
         };
 
         settings = {
-          "intl.accept_languages" = "de-DE,de,en-US,en";
-          "intl.locale.requested" = "de";
+          # Prefer system-language content. Firefox additionally gets a
+          # localized UI below; LibreWolf keeps its English UI.
+          "intl.accept_languages" = acceptedLanguages;
 
           "browser.toolbars.bookmarks.visibility" = "never";
 
@@ -269,8 +318,22 @@ in
           # Home Manager sets this automatically when extension settings exist.
           "extensions.autoDisableScopes" = 0;
 
-          "browser.startup.homepage" = "https://dash.at.oechsler.it";
+          "browser.startup.homepage" = features.desktop.browser.homepage;
           "browser.startup.page" = 3; # 3 = Restore previous session
+          "browser.sessionstore.resume_from_crash" = true;
+
+          # Keep cookies and active web sessions across restarts. Password
+          # storage remains disabled below.
+          "network.cookie.lifetimePolicy" = 0;
+          "privacy.sanitize.sanitizeOnShutdown" = false;
+          "privacy.clearOnShutdown.cache" = false;
+          "privacy.clearOnShutdown.cookies" = false;
+          "privacy.clearOnShutdown.downloads" = false;
+          "privacy.clearOnShutdown.formdata" = false;
+          "privacy.clearOnShutdown.history" = false;
+          "privacy.clearOnShutdown.offlineApps" = false;
+          "privacy.clearOnShutdown.sessions" = false;
+          "privacy.clearOnShutdown.siteSettings" = false;
 
           # Vertical tabs — collapsed, no extra tools
           "sidebar.verticalTabs" = true;
@@ -283,12 +346,18 @@ in
           "media.eme.enabled" = true;
           "media.gmp-widevinecdm.enabled" = true;
 
+          # Use strict tracking protection globally. The own-service cookie
+          # exceptions above keep authentication usable where needed.
           "browser.contentblocking.category" = "strict";
           "privacy.trackingprotection.enabled" = true;
           "privacy.trackingprotection.socialtracking.enabled" = true;
           "privacy.annotate_channels.strict_list.enabled" = true;
+          # Allow websites to follow the system dark/light theme.
+          "privacy.resistFingerprinting" = false;
           "privacy.fingerprintingProtection" = true;
-          "privacy.antitracking.enableWebcompat" = false;
+          # Allow only LibreWolf's targeted compatibility shims for major site
+          # issues; strict tracking protection remains enabled.
+          "privacy.antitracking.enableWebcompat" = true;
           "privacy.globalprivacycontrol.enabled" = true;
           "network.http.referer.XOriginTrimmingPolicy" = 2;
 
@@ -371,6 +440,11 @@ in
           "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
 
           "extensions.webextensions.ExtensionStorageIDB.enabled" = false;
+        }
+        // lib.optionalAttrs isFirefox {
+          # Firefox has localized language packs; LibreWolf intentionally does
+          # not request one because the package only ships its English UI.
+          "intl.locale.requested" = language;
         };
 
         # Override system-ui / inherited fonts so web content stays sans-serif
@@ -388,15 +462,19 @@ in
       };
     };
 
-    catppuccin.firefox = {
-      enable = true;
-      force = true;
+    # Stylus extension data — pre-compiled Catppuccin userstyles
+    home.file = lib.mkIf (!isFirefox) {
+      ".librewolf/default/browser-extension-data/${stylusId}/storage.js" = {
+        source = catppuccinUserstylesStorage;
+        force = true;
+      };
+    };
+    xdg.configFile = lib.mkIf isFirefox {
+      "mozilla/firefox/default/browser-extension-data/${stylusId}/storage.js" = {
+        source = catppuccinUserstylesStorage;
+        force = true;
+      };
     };
 
-    # Stylus extension data — pre-compiled Catppuccin userstyles
-    xdg.configFile."mozilla/firefox/default/browser-extension-data/${stylusId}/storage.js" = {
-      source = catppuccinUserstylesStorage;
-      force = true;
-    };
   };
 }

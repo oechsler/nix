@@ -32,17 +32,45 @@ sops/               # Encrypted secrets
 
 ## Host Overrides
 
-Common per-host overrides:
+Common per-host overrides. Uncomment only the settings that differ from the
+defaults:
 
 ```nix
-features.hardware.formFactor = "desktop";        # Or "laptop"
-features.impermanence.enable = false;            # Disable root wipe on boot
-features.gaming.enable = false;                  # No Steam/gaming
-features.gaming.steamMachine.enable = true;      # Steam Gamescope session / Steam Machine mode
-features.desktop.wm = "kde";                     # Hyprland or KDE
-features.desktop.fileManager = "terminal";       # Yazi instead of GUI file manager
-displays.defaults.hdr = 1;                       # Unknown display HDR: 0=off, 1=Steam, 2=full desktop
-displays.defaults.vrr = 2;                       # Default VRR for unknown hotplug displays where supported
+# Hardware identity and form factor
+# features.hardware.formFactor = "laptop";        # "desktop" (default) or "laptop"
+# features.hardware.cpu = "amd";                  # "amd" or "intel", enables CPU microcode
+# features.hardware.gpu = "amd";                  # "amd" or "intel", enables graphics/VA-API
+
+# Desktop session
+# features.desktop.wm = "kde";                     # "hyprland" (default) or "kde"
+# features.desktop.login = "autologin";           # "greeter" (default) or "autologin"
+# features.desktop.fileManager = "terminal";      # "default" (default) or Yazi via "terminal"
+# features.desktop.browser.enable = false;         # Disable the managed browser completely
+# features.desktop.browser.type = "firefox";       # "librewolf" (default) or "firefox"
+# features.desktop.browser.homepage = "https://dash.example.com";
+# features.desktop.browser.searchEngine = "ddg";    # DuckDuckGo (default)
+# features.desktop.browser.cookieAllowlist = [     # Append first-party sessions
+#   "https://example.com"
+#   "https://*.example.com"                        # Subdomains
+# ];
+
+# System behavior
+# features.impermanence.enable = false;            # Keep the root filesystem instead of rolling back
+# features.encryption.unlockMethod = "yubikey";    # "tpm2" (default), "yubikey", or "password"
+
+# Optional workloads
+# features.gaming.enable = false;                  # Disable Steam and gaming tools
+# features.gaming.steamMachine.enable = true;      # Add a Steam Gamescope session
+# features.dev.enable = false;                     # Disable development tools and IDEs
+# features.apps.enable = false;                    # Disable optional desktop applications
+# features.virtualisation.enable = false;          # Disable Podman and QEMU/KVM support
+```
+
+Display defaults are configured separately when needed:
+
+```nix
+# displays.defaults.hdr = 1;                       # 0=off, 1=Steam, 2=full desktop
+# displays.defaults.vrr = 2;                       # VRR mode for unknown displays
 ```
 
 ## Using as Flake Input
