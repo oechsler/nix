@@ -68,12 +68,12 @@
 #   features.desktop.browser.type = "librewolf" | "firefox" (default: "librewolf")
 #   features.desktop.browser.homepage = "https://dash.at.oechsler.it"
 #     (default: "https://dash.at.oechsler.it")
+#     Used as both the browser startup homepage and the new-tab page.
 #   features.desktop.browser.searchEngine = "ddg" (default: DuckDuckGo)
 #   features.desktop.browser.cookieAllowlist = [ "https://example.com" ]
-#     (default: oechsler.it and oech.it, including subdomains)
-#   features.desktop.browser.cookieAllowlistExtra = [ "https://example.com" ]
-#     (appended to the default allowlist)
-#     Used as both the browser startup homepage and the new-tab page.
+#     (appended to the built-in oechsler.it and oech.it allowlist)
+#   features.compat.enable = false (default: true)
+#     Disable nix-ld and its glibc compatibility libraries.
 #
 # Security and authentication:
 #   features.encryption.enable = true (default: true)

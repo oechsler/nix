@@ -64,6 +64,10 @@ defaults:
 # features.dev.enable = false;                     # Disable development tools and IDEs
 # features.apps.enable = false;                    # Disable optional desktop applications
 # features.virtualisation.enable = false;          # Disable Podman and QEMU/KVM support
+
+# Runtime GNU reduction
+# features.compat.enable = false;                  # Disable nix-ld/glibc compatibility
+#                                                  # Fish, uutils and LLVM are already used
 ```
 
 Display defaults are configured separately when needed:
