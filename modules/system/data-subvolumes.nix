@@ -20,8 +20,10 @@ let
 in
 {
   config = lib.mkIf config.features.snapshots.enable {
-    fileSystems."${userHome}/.local/share/Steam" = subvolume "@steam";
-    fileSystems."${userHome}/Nextcloud" = subvolume "@nextcloud";
-    fileSystems."${userHome}/smb" = subvolume "@smb";
+    fileSystems = {
+      "${userHome}/.local/share/Steam" = subvolume "@steam";
+      "${userHome}/Nextcloud" = subvolume "@nextcloud";
+      "${userHome}/smb" = subvolume "@smb";
+    };
   };
 }

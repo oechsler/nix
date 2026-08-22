@@ -22,8 +22,7 @@ in
   };
 
   config.desktop.pinnedApps =
-    [ ]
-    ++ lib.optional browserEnabled browser
+    lib.optional browserEnabled browser
     ++ lib.optional usesTerminalFileManager "yazi"
     ++ lib.optional (!usesTerminalFileManager) (
       if isKde then "org.kde.dolphin" else "org.gnome.Nautilus"

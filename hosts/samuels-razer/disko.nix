@@ -23,16 +23,16 @@
 # - Root (/) is ephemeral, rolled back to blank snapshot on reboot
 # - Only /home, /nix, /persist survive reboots
 
-args@{ ... }:
+args:
 
 let
   username =
-    if args ? username then
-      args.username
-    else if args ? config && args.config ? user then
-      args.config.user.name
-    else
-      throw "samuels-razer/disko.nix requires the global user.name option";
+    args.username or (
+      if args ? config && args.config ? user then
+        args.config.user.name
+      else
+        throw "samuels-razer/disko.nix requires the global user.name option"
+    );
 in
 
 {

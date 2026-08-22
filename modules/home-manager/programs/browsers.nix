@@ -218,27 +218,29 @@ in
         isDefault = true;
 
         # Extensions
-        extensions.force = true; # Prevent the browser from disabling extensions
-        extensions.settings."FirefoxColor@mozilla.com" = {
-          force = lib.mkForce true;
-          settings = {
-            firstRunDone = true;
-            theme = catppuccinFirefoxTheme;
+        extensions = {
+          force = true; # Prevent the browser from disabling extensions
+          settings."FirefoxColor@mozilla.com" = {
+            force = lib.mkForce true;
+            settings = {
+              firstRunDone = true;
+              theme = catppuccinFirefoxTheme;
+            };
           };
+          packages =
+            with inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system};
+            [
+              firefox-color # catppuccin.firefox
+              ublock-origin
+              proton-pass
+              new-tab-override
+              stylus
+              catppuccin-web-file-icons
+            ]
+            ++ lib.optionals (features.desktop.wm == "kde") [
+              inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system}.plasma-integration
+            ];
         };
-        extensions.packages =
-          with inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system};
-          [
-            firefox-color # catppuccin.firefox
-            ublock-origin
-            proton-pass
-            new-tab-override
-            stylus
-            catppuccin-web-file-icons
-          ]
-          ++ lib.optionals (features.desktop.wm == "kde") [
-            inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system}.plasma-integration
-          ];
 
         # Search configuration
         search = {

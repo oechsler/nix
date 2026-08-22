@@ -22,16 +22,16 @@
 # - Replace the placeholder disk device with the real stable by-id path from:
 #   ls -l /dev/disk/by-id/ | grep nvme
 
-args@{ ... }:
+args:
 
 let
   username =
-    if args ? username then
-      args.username
-    else if args ? config && args.config ? user then
-      args.config.user.name
-    else
-      throw "samuels-ser9/disko.nix requires the global user.name option";
+    args.username or (
+      if args ? config && args.config ? user then
+        args.config.user.name
+      else
+        throw "samuels-ser9/disko.nix requires the global user.name option"
+    );
 in
 
 {
