@@ -45,7 +45,7 @@ features = {
   desktop = {
     wm = "kde";                                    # "hyprland" or "kde"
     login = "greeter";                             # "greeter" or "autologin"
-    fileManager = "default";                      # "default" or "terminal"
+    fileManager = "default";                       # "default" or "terminal"
     browser = {
       type = "librewolf";                          # "librewolf" or "firefox"
       homepage = "https://dash.example.com";
@@ -53,10 +53,10 @@ features = {
   };
 
   impermanence.enable = true;                       # Root rollback on boot
-  encryption.unlockMethod = "tpm2";                # "tpm2", "yubikey", or "password"
+  encryption.unlockMethod = "tpm2";                 # "tpm2", "yubikey", or "password"
   gaming.enable = true;                             # Steam and gaming tools
   dev.enable = true;                                # Development tools
-  virtualisation.enable = true;                    # Containers and VMs
+  virtualisation.enable = true;                     # Containers and VMs
   compat.enable = true;                             # nix-ld/glibc compatibility
 };
 ```
