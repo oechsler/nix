@@ -104,14 +104,9 @@ window#waybar {
   -gtk-icon-style: symbolic;
 }
 
-#tray:hover,
 #custom-power-profile:hover {
   color: @blue;
   text-shadow: 0 0 0.6em alpha(@blue, highlight_alpha);
-}
-
-#tray image:hover {
-  -gtk-icon-effect: highlight;
 }
 
 /* System status group - connected pill */
