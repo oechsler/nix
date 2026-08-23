@@ -17,6 +17,16 @@ This clones the repo and launches the interactive installer. It will:
 
 > **Note:** YubiKey enrollment (both LUKS and PAM) is **not done during install** — it must be run after first boot using `sudo yubikey-luks-init` and `sudo yubikey-init`. The installer shows you exactly which commands to run at the end.
 
+## Graphical Offline ISO
+
+Build the graphical ISO on a machine with enough RAM:
+
+```bash
+./build-iso.sh
+```
+
+The ISO is written to `result/nixos-installer.iso` and contains the prebuilt closures for every host directory in `hosts/`. Boot the ISO, open the NixOS Installer from the Plasma session, and select the host. The ISO uses the matching system closure directly, so the target machine does not compile the kernel or desktop locally.
+
 CLI flags are passed through to `install.sh`:
 
 ```bash

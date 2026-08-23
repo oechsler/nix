@@ -243,22 +243,44 @@
       mkDiskoExternal = hostPath: import (hostPath + "/disko.nix");
 
       pkgs = import nixpkgs { inherit system; };
+
+      hostNames = lib.attrNames (
+        lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./hosts)
+      );
+
+      nixosConfigurations = lib.genAttrs hostNames mkHost;
+      diskoConfigurations = lib.genAttrs hostNames mkDisko;
+      hostClosures = lib.mapAttrs (_: host: host.config.system.build.toplevel) nixosConfigurations;
+      hostManifest = lib.mapAttrs (_: systemClosure: { system = toString systemClosure; }) hostClosures;
+
+      mkInstallerIso =
+        selectedHosts:
+        let
+          selectedClosures = lib.getAttrs selectedHosts hostClosures;
+          selectedManifest = lib.getAttrs selectedHosts hostManifest;
+        in
+        (lib.nixosSystem {
+          inherit system;
+          modules = [
+            "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-graphical-base.nix"
+            ./installer/iso.nix
+            {
+              _module.args = {
+                diskoPackage = inputs.disko.packages.${system}.disko;
+                hostClosures = selectedClosures;
+                hostManifest = selectedManifest;
+              };
+            }
+          ];
+        }).config.system.build.isoImage;
+
+      installerIso = mkInstallerIso hostNames;
     in
     {
       #===========================
       # Local Host Configurations
       #===========================
-      nixosConfigurations = {
-        samuels-razer = mkHost "samuels-razer";
-        samuels-ser9 = mkHost "samuels-ser9";
-        samuels-terra = mkHost "samuels-terra";
-      };
-
-      diskoConfigurations = {
-        samuels-razer = mkDisko "samuels-razer";
-        samuels-ser9 = mkDisko "samuels-ser9";
-        samuels-terra = mkDisko "samuels-terra";
-      };
+      inherit nixosConfigurations diskoConfigurations;
 
       #===========================
       # Exported Library Functions
@@ -275,7 +297,10 @@
         };
       };
 
-      packages.${system}.pam-lldap = pkgs.callPackage ./modules/packages/pam-lldap.nix { };
+      packages.${system} = {
+        inherit installerIso;
+        pam-lldap = pkgs.callPackage ./modules/packages/pam-lldap.nix { };
+      };
 
       #===========================
       # Formatter

@@ -10,6 +10,7 @@ backgrounds/files/
 # NixOS build results
 result
 result-*
+installer-output/
 
 # Editor files
 .vscode/
