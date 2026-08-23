@@ -29,12 +29,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-output_dir="$repo_dir/installer-output"
+output_dir="$repo_dir/result"
 out_link="$output_dir/nixos-installer.iso"
 mkdir -p "$output_dir"
 rm -f "$out_link"
 
-printf 'Building %s...\n' "$output"
+printf 'Building graphical multi-host installer ISO...\n'
 nix build --show-trace ".#packages.${system}.${output}" --out-link "$out_link"
 
 printf 'ISO: %s\n' "$(readlink -f "$out_link")"
