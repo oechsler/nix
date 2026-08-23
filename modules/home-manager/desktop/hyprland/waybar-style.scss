@@ -99,7 +99,7 @@ window#waybar {
   background-color: alpha(@base, container_alpha);
   color: @text;
   font-weight: bold;
-  padding: vertical_spacing calc(control_spacing + compact_spacing / 2);
+  padding: vertical_spacing module_spacing;
   margin: 0;
   border-radius: window_radius;
   border: border_width solid @blue;
@@ -129,7 +129,7 @@ window#waybar {
 #battery,
 #clock {
   background-color: alpha(@base, container_alpha);
-  padding: vertical_spacing content_spacing;
+  padding: vertical_spacing module_spacing;
   margin: 0;
   border-radius: 0;
   border: border_width solid @blue;
@@ -153,15 +153,13 @@ window#waybar {
 
 #network {
   margin-left: content_spacing;
-  padding-left: calc(control_spacing + compact_spacing / 2);
-  padding-right: calc(content_spacing + compact_spacing);
+  padding-right: content_spacing;
   border-left: border_width solid @blue;
   border-top-left-radius: window_radius;
   border-bottom-left-radius: window_radius;
 }
 
 #clock {
-  padding-right: calc(control_spacing + compact_spacing / 2);
   border-right: border_width solid @blue;
   border-top-right-radius: window_radius;
   border-bottom-right-radius: window_radius;
@@ -183,8 +181,4 @@ window#waybar {
 
 #network.disconnected {
   color: @red;
-}
-
-#custom-power-profile {
-  padding: vertical_spacing content_spacing;
 }
