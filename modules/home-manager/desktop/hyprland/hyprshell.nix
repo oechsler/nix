@@ -81,6 +81,11 @@ let
       padding: ${toString (theme.gaps.outer / 2)}px;
     }
 
+    flowbox {
+      row-spacing: ${toString theme.gaps.inner}px;
+      column-spacing: ${toString theme.gaps.inner}px;
+    }
+
     .client,
     .workspace {
       border: ${toString theme.border.width}px solid var(--border-color);
