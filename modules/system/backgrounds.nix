@@ -362,7 +362,6 @@ in
       theme = {
         wallpaperPath = "${outputDir}/${currentFile}";
         blurredWallpaperPath = "${outputDir}/${blurredFile}";
-        wallpaperLut = wallpaperThemeJSON;
       };
     }
 

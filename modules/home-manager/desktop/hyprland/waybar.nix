@@ -59,7 +59,6 @@ let
         "highlight_alpha"
         "subtle_alpha"
         "window_radius"
-        "control_radius"
         "control_spacing"
         "compact_spacing"
         "vertical_spacing"
@@ -83,7 +82,6 @@ let
         (lib.strings.floatToString theme.alpha.highlight)
         (lib.strings.floatToString theme.alpha.subtle)
         "${toString theme.radius.default}px"
-        "${toString theme.radius.control}px"
         "${toString theme.spacing.control}px"
         "${toString theme.spacing.compact}px"
         "${toString theme.spacing.vertical}px"
