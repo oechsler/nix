@@ -15,6 +15,7 @@ let
       "subvol=${name}"
       "compress=zstd"
       "noatime"
+      "x-gvfs-hide"
     ];
   };
 in
