@@ -73,7 +73,6 @@ let
         gowall convert "$trimmed" --theme ${snowflakeTheme} --output "$output" --yes
         cp "$output" "$out"
       '';
-  snowflake = "${pkgs.nixos-icons}/share/icons/hicolor/1024x1024/apps/nix-snowflake.png";
 in
 {
   #===========================
@@ -175,11 +174,6 @@ in
         type = lib.types.int;
         default = 16;
         description = "Default border radius for windows, panels, and notifications";
-      };
-      control = lib.mkOption {
-        type = lib.types.int;
-        default = 18;
-        description = "Border radius for inputs and regular controls";
       };
     };
 
@@ -304,24 +298,11 @@ in
       description = "Runtime path to blurred wallpaper for SDDM login screen (set by backgrounds module)";
     };
 
-    wallpaperLut = lib.mkOption {
-      type = lib.types.path;
-      readOnly = true;
-      description = "Generated Catppuccin LUT theme used for wallpaper color grading";
-    };
-
     snowflakeCatppuccinized = lib.mkOption {
       type = lib.types.path;
       readOnly = true;
       default = snowflakeCatppuccinized;
       description = "Catppuccin-themed NixOS logo for terminal integrations";
-    };
-
-    snowflake = lib.mkOption {
-      type = lib.types.path;
-      readOnly = true;
-      default = snowflake;
-      description = "Original NixOS logo for terminal integrations";
     };
 
     qtConfig = lib.mkOption {
