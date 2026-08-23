@@ -201,7 +201,7 @@ save_state() {
     printf 'FEAT_SECURE_BOOT=%q\n' "${FEAT_SECURE_BOOT:-false}"
     printf 'FEAT_DESKTOP=%q\n' "${FEAT_DESKTOP:-false}"
     printf 'FEAT_WM=%q\n' "${FEAT_WM:-}"
-    printf 'FEAT_SERVER=%q\n' "${FEAT_SERVER:-false}"
+    printf 'FEAT_FORM_FACTOR=%q\n' "${FEAT_FORM_FACTOR:-}"
     printf 'CONFIG_USERNAME=%q\n' "${CONFIG_USERNAME:-}"
     printf 'CONFIG_PASSWORD_LOCKED=%q\n' "${CONFIG_PASSWORD_LOCKED:-false}"
     # Progress — prevents double-enrollment if installer crashes after TPM enroll
@@ -347,7 +347,7 @@ FEAT_YUBIKEY_LUKS=false
 FEAT_SECURE_BOOT=false
 FEAT_DESKTOP=false
 FEAT_WM=""
-FEAT_SERVER=false
+FEAT_FORM_FACTOR=""
 CONFIG_USERNAME=""
 CONFIG_PASSWORD_LOCKED=false
 LUKS_DEVICES=()
@@ -380,7 +380,7 @@ phase_detect_features() {
       secureBoot = cfg.features.secureBoot.enable;
       desktop = cfg.features.desktop.enable;
       wm = cfg.features.desktop.wm;
-      server = cfg.features.server;
+      formFactor = cfg.features.hardware.formFactor;
       userName = cfg.user.name;
       # passwordLocked: true only when hashedPassword = "!" AND no sops secret covers it.
       # When user/password is in sops, user-passwd.service sets the password at boot.
@@ -399,7 +399,7 @@ phase_detect_features() {
   FEAT_SECURE_BOOT=$(echo "$json"     | jq -r '.secureBoot')
   FEAT_DESKTOP=$(echo "$json"         | jq -r '.desktop')
   FEAT_WM=$(echo "$json"              | jq -r '.wm')
-  FEAT_SERVER=$(echo "$json"          | jq -r '.server')
+  FEAT_FORM_FACTOR=$(echo "$json"      | jq -r '.formFactor')
   CONFIG_USERNAME=$(echo "$json"      | jq -r '.userName')
   CONFIG_PASSWORD_LOCKED=$(echo "$json" | jq -r '.passwordLocked')
 
@@ -408,10 +408,11 @@ phase_detect_features() {
 
   echo -e "    Host:          ${BOLD}$HOST${RESET}"
   echo -e "    Username:      ${BOLD}$CONFIG_USERNAME${RESET}"
-  if [[ "$FEAT_SERVER" == "true" ]]; then
-    echo -e "    Mode:          ${BOLD}Server${RESET}"
-  elif [[ "$FEAT_DESKTOP" == "true" ]]; then
+  if [[ "$FEAT_DESKTOP" == "true" ]]; then
     echo -e "    Desktop:       ${BOLD}$FEAT_WM${RESET}"
+  fi
+  if [[ -n "$FEAT_FORM_FACTOR" && "$FEAT_FORM_FACTOR" != "null" ]]; then
+    echo -e "    Form factor:   ${BOLD}$FEAT_FORM_FACTOR${RESET}"
   fi
   echo -e "    Encryption:    $(label_bool "$FEAT_ENCRYPTION")"
   echo -e "    Impermanence:  $(label_bool "$FEAT_IMPERMANENCE")"
