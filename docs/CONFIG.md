@@ -201,7 +201,7 @@ Set in `configuration.nix`:
 | Option | Default | Description |
 |--------|---------|-------------|
 | `locale.timezone` | `"Europe/Berlin"` | Timezone |
-| `locale.language` | `"de_DE.UTF-8"` | System locale |
+| `locale.language` | `"en_US.UTF-8"` | System locale; user-facing generated text uses English by default and German for `de_*` locales |
 | `locale.keyboard` | `"de"` | Keyboard layout |
 
 ## Display Options

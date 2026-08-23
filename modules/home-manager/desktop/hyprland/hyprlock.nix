@@ -28,6 +28,7 @@
   lib,
   pkgs,
   theme,
+  i18n,
   fonts,
   displays,
   ...
@@ -104,7 +105,7 @@ in
           check_color = "$accent";
           fail_color = "$red";
           capslock_color = "$peach";
-          placeholder_text = "Passwort";
+          placeholder_text = "${i18n.translate "Password" "Passwort"}";
           fail_text = "$FAIL ($ATTEMPTS)";
           font_family = "${fonts.ui}";
         }

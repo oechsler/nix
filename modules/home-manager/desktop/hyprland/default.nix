@@ -44,6 +44,7 @@
   lib,
   theme,
   locale,
+  i18n,
   displays,
   input,
   features,
@@ -213,8 +214,8 @@ let
   # ============================================================================
   # Show volume level and mute status with dunst notification
   # Used by: Media keys (XF86AudioRaiseVolume, XF86AudioLowerVolume, XF86AudioMute)
-  volumeNotify = import ./scripts/volume-notify.nix { inherit pkgs; };
-  batteryWarning = import ./scripts/battery-warning.nix { inherit pkgs; };
+  volumeNotify = import ./scripts/volume-notify.nix { inherit pkgs i18n; };
+  batteryWarning = import ./scripts/battery-warning.nix { inherit pkgs i18n; };
 
   fileManagerCommand =
     if features.desktop.fileManager == "terminal" then "kitty yazi" else "nautilus";

@@ -33,6 +33,7 @@
   fonts,
   theme,
   locale,
+  i18n,
   displays,
   features,
   lib,
@@ -226,7 +227,7 @@ in
 
         "pulseaudio" = {
           format = "{icon}  <span rise='1500'>{volume}%</span>";
-          format-muted = "<span size='large'>󰝟</span>  <span rise='1500'>Stumm</span>";
+          format-muted = "<span size='large'>󰝟</span>  <span rise='1500'>${i18n.translate "Muted" "Stumm"}</span>";
           format-icons = {
             default = [
               "<span size='large'>󰕿</span>"
@@ -244,9 +245,9 @@ in
           exec = pkgs.writeShellScript "waybar-power-profile" ''
             profile=$(${pkgs.power-profiles-daemon}/bin/powerprofilesctl get)
             case "$profile" in
-              performance) echo '{"text": "<span size=\"large\">󱐋</span>", "tooltip": "Leistung"}' ;;
-              power-saver)  echo '{"text": "<span size=\"large\">󰌪</span>", "tooltip": "Energiesparen"}' ;;
-              *)             echo '{"text": "<span size=\"large\">󰾆</span>", "tooltip": "Ausgewogen"}' ;;
+               performance) echo '{"text": "<span size=\"large\">󱐋</span>", "tooltip": "${i18n.translate "Performance" "Leistung"}"}' ;;
+              power-saver)  echo '{"text": "<span size=\"large\">󰌪</span>", "tooltip": "${i18n.translate "Power saver" "Energiesparen"}"}' ;;
+               *)             echo '{"text": "<span size=\"large\">󰾆</span>", "tooltip": "${i18n.translate "Balanced" "Ausgewogen"}"}' ;;
             esac
           '';
           exec-if = "command -v powerprofilesctl";

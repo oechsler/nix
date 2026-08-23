@@ -22,8 +22,7 @@
 # 5. Notify user if reboot is needed
 #
 # Notifications:
-# - Success: "Systemaktualisierung abgeschlossen" (if reboot needed)
-# - No change: "Das System ist bereits auf dem neuesten Stand"
+# - Success/failure notifications follow the configured system locale
 # - Failure: Shows last 5 error lines from journal
 
 {
@@ -33,6 +32,10 @@
   ...
 }:
 
+let
+  isGerman = lib.hasPrefix "de" config.locale.language;
+  translate = english: german: if isGerman then german else english;
+in
 {
   #===========================
   # Configuration
@@ -195,13 +198,13 @@
             if [ "$current" != "$booted" ]; then
               # New system generation built, reboot needed to activate
               ${notify} -u normal \
-                "Systemaktualisierung abgeschlossen" \
-                "Ein Neustart wird empfohlen."
+                "${translate "System update completed" "Systemaktualisierung abgeschlossen"}" \
+                "${translate "A reboot is recommended." "Ein Neustart wird empfohlen."}"
             else
               # No changes, system already up-to-date
               ${notify} -u low \
-                "Systemaktualisierung" \
-                "Das System ist bereits auf dem neuesten Stand."
+                "${translate "System update" "Systemaktualisierung"}" \
+                "${translate "The system is already up to date." "Das System ist bereits auf dem neuesten Stand."}"
             fi
           '';
         in
@@ -236,8 +239,8 @@
             ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
               --user --pipe --quiet --collect \
               ${pkgs.libnotify}/bin/notify-send -u critical \
-                "Systemaktualisierung fehlgeschlagen" \
-                "Die automatische Aktualisierung konnte nicht durchgeführt werden.\n\n$error"
+                "${translate "System update failed" "Systemaktualisierung fehlgeschlagen"}" \
+                "${translate "The automatic update could not be completed." "Die automatische Aktualisierung konnte nicht durchgeführt werden."}\n\n$error"
           '';
         in
         {

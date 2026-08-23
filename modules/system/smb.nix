@@ -30,6 +30,7 @@
 let
   cfg = config.features.smb;
   user = config.users.users.${config.user.name};
+  translate = english: german: if lib.hasPrefix "de" config.locale.language then german else english;
 
   # ============================================================================
   # NETWORK READINESS CHECK
@@ -83,11 +84,11 @@ let
         if [ "$MOUNTED" = true ]; then
           echo "SMB mount successful: $LABEL"
           sudo -u ${user.name} DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$MOUNT_UID/bus \
-            ${pkgs.libnotify}/bin/notify-send -a "SMB Mount" -i network-server "SMB-Mount erfolgreich" "$LABEL wurde verbunden" || true
+            ${pkgs.libnotify}/bin/notify-send -a "SMB Mount" -i network-server "${translate "SMB mount successful" "SMB-Mount erfolgreich"}" "${translate "$LABEL was connected" "$LABEL wurde verbunden"}" || true
         else
           echo "Mount failed after 5 attempts: $LABEL"
           sudo -u ${user.name} DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$MOUNT_UID/bus \
-            ${pkgs.libnotify}/bin/notify-send -a "SMB Mount" -u critical -i dialog-error "SMB-Mount fehlgeschlagen" "$LABEL konnte nicht verbunden werden" || true
+            ${pkgs.libnotify}/bin/notify-send -a "SMB Mount" -u critical -i dialog-error "${translate "SMB mount failed" "SMB-Mount fehlgeschlagen"}" "${translate "$LABEL could not be connected" "$LABEL konnte nicht verbunden werden"}" || true
         fi
       fi
     ''

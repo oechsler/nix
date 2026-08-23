@@ -5,7 +5,10 @@
 # - ≤5%: Critical warning + auto-suspend after 5 seconds.
 # - ≤10%: Warning, once per discharge cycle.
 # - >10% or charging: Reset warning flag.
-{ pkgs }:
+{ pkgs, i18n }:
+let
+  lowBattery = i18n.translate "Low battery" "Niedriger Akkustand";
+in
 pkgs.writeShellScript "battery-warning" ''
   warned=""
   while true; do
@@ -16,13 +19,13 @@ pkgs.writeShellScript "battery-warning" ''
       if [ "$capacity" -le 5 ]; then
         ${pkgs.dunst}/bin/dunstify -a "battery" -u critical -t 5000 \
           -h string:x-dunst-stack-tag:battery \
-          "󰂃  Akku kritisch" "Gerät wird in den Ruhezustand versetzt."
+          "󰂃  ${i18n.translate "Battery critical" "Akku kritisch"}" "${i18n.translate "The device will suspend." "Gerät wird in den Ruhezustand versetzt."}"
         sleep 5
         systemctl suspend
       elif [ "$capacity" -le 10 ] && [ -z "$warned" ]; then
         ${pkgs.dunst}/bin/dunstify -a "battery" -u critical -t 15000 \
           -h string:x-dunst-stack-tag:battery \
-          "󰁺  Niedriger Akkustand (''${capacity}%)" "Bitte Ladegerät anschließen."
+          "󰁺  ${lowBattery} (''${capacity}%)" "${i18n.translate "Please connect a charger." "Bitte Ladegerät anschließen."}"
         warned="1"
       fi
     fi
