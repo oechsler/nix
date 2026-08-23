@@ -38,7 +38,6 @@ in
     # Qt theme with Kvantum
     qt = {
       enable = true;
-      platformTheme.name = "qtct";
       style.name = "kvantum";
     };
 
@@ -48,11 +47,15 @@ in
     catppuccin.hyprland.enable = false;
     catppuccin.kvantum.enable = true;
 
-    systemd.user.sessionVariables.QT_QPA_PLATFORM = "wayland;xcb";
+    systemd.user.sessionVariables = {
+      QT_QPA_PLATFORM = "wayland;xcb";
+      QT_QPA_PLATFORMTHEME = "qt6ct";
+    };
 
     home = {
       sessionVariables = {
         QT_QPA_PLATFORM = "wayland;xcb";
+        QT_QPA_PLATFORMTHEME = "qt6ct";
         QT_STYLE_OVERRIDE = "kvantum";
       };
 
