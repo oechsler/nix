@@ -260,7 +260,34 @@
 
       # Complete system closures embedded into the offline installer ISO.
       hostClosures = lib.mapAttrs (_: host: host.config.system.build.toplevel) nixosConfigurations;
-      hostManifest = lib.mapAttrs (_: systemClosure: { system = toString systemClosure; }) hostClosures;
+      hostManifest = lib.mapAttrs (
+        _: host:
+        let
+          cfg = host.config;
+        in
+        {
+          system = toString cfg.system.build.toplevel;
+          encryption = cfg.features.encryption.enable;
+          impermanence = cfg.features.impermanence.enable;
+          persistPrefix = cfg.features.impermanence.persistPrefix;
+          totp = cfg.features.auth.totp.enable;
+          yubikey = cfg.features.auth.yubikey.enable;
+          yubikeyLuks = cfg.features.encryption.unlockMethod == "yubikey";
+          secureBoot = cfg.features.secureBoot.enable;
+          desktop = cfg.features.desktop.enable;
+          wm = cfg.features.desktop.wm;
+          formFactor = cfg.features.hardware.formFactor;
+          kernel = cfg.features.kernel;
+          kernelVersion = cfg.boot.kernelPackages.kernel.name;
+          keyboard = cfg.locale.keyboard;
+          language = cfg.locale.language;
+          userName = cfg.user.name;
+          passwordLocked = cfg.user.hashedPassword == "!" && !(cfg.sops.secrets ? "user/password");
+          luksDevices = builtins.attrValues (
+            builtins.mapAttrs (name: dev: dev.device) cfg.boot.initrd.luks.devices
+          );
+        }
+      ) nixosConfigurations;
 
       #===========================
       # Graphical Offline Installer
@@ -278,7 +305,7 @@
           inherit system;
           modules = [
             "${nixpkgs}/nixos/modules/installer/cd-dvd/installation-cd-graphical-base.nix"
-            ./installer/iso.nix
+            ./modules/installer/iso.nix
             {
               _module.args = {
                 diskoPackage = inputs.disko.packages.${system}.disko;
