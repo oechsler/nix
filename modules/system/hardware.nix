@@ -42,17 +42,25 @@
     graphics = lib.mkIf (config.features.hardware.gpu != null) {
       enable = true;
 
-      extraPackages =
+      extraPackages = [
+        pkgs.ocl-icd
+      ]
+      ++ (
         if config.features.hardware.gpu == "amd" then
-          [ pkgs.libvdpau-va-gl ]
+          [
+            pkgs.libvdpau-va-gl
+            pkgs.rocmPackages.clr.icd
+          ]
         else if config.features.hardware.gpu == "intel" then
           with pkgs;
           [
             intel-media-driver # iHD VA-API driver (Broadwell+)
             libvdpau-va-gl
+            intel-compute-runtime # OpenCL runtime
           ]
         else
-          [ ];
+          [ ]
+      );
     };
   };
 
