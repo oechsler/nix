@@ -441,7 +441,7 @@ in
           ]
           [
             "QT_QPA_PLATFORMTHEME"
-            "qt5ct"
+            "qt6ct"
           ]
           [
             "QT_STYLE_OVERRIDE"
