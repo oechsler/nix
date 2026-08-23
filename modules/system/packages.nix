@@ -62,13 +62,13 @@ in
         packages = [
           "com.github.tchx84.Flatseal" # Flatpak permission manager
           "io.github.flattool.Warehouse" # Flatpak manager with cleanup (replaces flatsweep)
+          "org.fedoraproject.MediaWriter" # Fedora Media Writer for bootable USB drives
         ];
       };
 
-      # Theme integration: flatpak apps are sandboxed and don't see the host's
-      # theme files or environment variables. Set env vars and grant filesystem
-      # access globally for all flatpak apps via flatpak override --system.
-      # Qt overrides only on non-KDE — KDE Plasma manages Qt theming natively.
+      # Theme integration: Flatpak apps are sandboxed and don't see the host's
+      # theme files or environment variables. Set env vars and grant read-only
+      # access globally via flatpak override --system.
       system.activationScripts.flatpakThemeOverrides = ''
         THEME="catppuccin-${config.theme.catppuccin.flavor}-${config.theme.catppuccin.accent}-standard"
         FLATPAK="${pkgs.flatpak}/bin/flatpak"
@@ -80,19 +80,20 @@ in
           $FLATPAK override --system --filesystem=xdg-config/qt5ct:ro
           $FLATPAK override --system --filesystem=xdg-config/qt6ct:ro
           $FLATPAK override --system --filesystem=xdg-config/Kvantum:ro
+          $FLATPAK override --system --filesystem=xdg-config/kdeglobals:ro
+          $FLATPAK override --system --filesystem=xdg-data/icons:ro
+          $FLATPAK override --system --filesystem=xdg-data/color-schemes:ro
+          # Do not force a Qt style globally. Flatpak apps ship different Qt
+          # and QML stacks; a missing style module can make them crash at start.
+          $FLATPAK override --system --unset-env=QT_STYLE_OVERRIDE
         fi
       ''
-      + lib.optionalString (config.features.desktop.wm != "kde") ''
+      + lib.optionalString (config.features.desktop.wm == "kde") ''
         if [ -x "$FLATPAK" ]; then
-          # Kvantum style plugin must be installed in the sandbox for QT_STYLE_OVERRIDE to work.
-          # Auto-detect KDE runtime branch and install the matching extension version.
-          KDE_BRANCH=$($FLATPAK list --system --runtime 2>/dev/null \
-            | grep 'org\.kde\.Platform' | head -1 \
-            | grep -oP '\b\d+\.\d+(-\d+\.\d+)?\b' | head -1)
-          if [ -n "$KDE_BRANCH" ]; then
-            $FLATPAK install --system --noninteractive flathub "org.kde.KStyle.Kvantum//$KDE_BRANCH" 2>/dev/null || true
-          fi
-          $FLATPAK override --system --env=QT_STYLE_OVERRIDE=kvantum
+          # KDE Flatpaks otherwise get the runtime default instead of Plasma's
+          # color scheme, icon theme, and widget style.
+          $FLATPAK override --system --env=QT_QPA_PLATFORMTHEME=kde
+          $FLATPAK override --system --unset-env=QT_STYLE_OVERRIDE
         fi
       ''
       + lib.optionalString hasHDR ''
