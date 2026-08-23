@@ -88,7 +88,7 @@ let
         "${toString theme.spacing.workspace}px"
         "${toString (theme.spacing.vertical / 2)}px"
         "${toString theme.spacing.content}px"
-        "${toString (theme.spacing.content * 4)}px"
+        "${toString (theme.spacing.content * 3)}px"
         "${toString theme.gaps.outer}px"
         "${toString theme.gaps.outer}px"
         "${toString fonts.uiPixelSize}px"
