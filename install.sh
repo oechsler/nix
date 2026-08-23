@@ -970,7 +970,7 @@ copy_config() {
 
     # Copy the exact build-time repository snapshot used by the installer.
     cp -a "$REPO_DIR" "$dest"
-    success "Config copied to ~/repos/nix"
+    success "Config copied to ~${dest#/mnt/home/$CONFIG_USERNAME}"
   fi
 }
 
