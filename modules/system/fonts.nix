@@ -81,6 +81,13 @@
       description = "Default font size for UI elements";
     };
 
+    uiPixelSize = lib.mkOption {
+      type = lib.types.int;
+      default = builtins.floor (config.fonts.defaults.size * 4 / 3);
+      readOnly = true;
+      description = "CSS pixel equivalent of the typographic UI size";
+    };
+
     terminalSize = lib.mkOption {
       type = lib.types.int;
       default = config.fonts.defaults.size;

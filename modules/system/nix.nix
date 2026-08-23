@@ -35,6 +35,9 @@
 let
   isGerman = lib.hasPrefix "de" config.locale.language;
   translate = english: german: if isGerman then german else english;
+  updateIcon = "${config.theme.icons.package}/share/icons/Papirus/32x32/apps/system-software-update.svg";
+  currentIcon = "${config.theme.icons.package}/share/icons/Papirus/32x32/status/dialog-information.svg";
+  errorIcon = "${config.theme.icons.package}/share/icons/Papirus/32x32/status/dialog-error.svg";
 in
 {
   #===========================
@@ -118,7 +121,7 @@ in
     timers.nixos-upgrade = {
       timerConfig = {
         OnBootSec = "30min"; # First upgrade 30min after boot
-        OnUnitActiveSec = "24h"; # Subsequent upgrades every 24h
+        OnUnitActiveSec = "8h"; # Subsequent upgrades every 8h while powered on
         Persistent = lib.mkForce false; # Don't run missed upgrades on boot
       };
     };
@@ -152,8 +155,14 @@ in
           # Solution: Use systemd-run --machine=<user>@ to run notify-send in user session
           notify = pkgs.writeShellScript "nixos-upgrade-notify" ''
             ${pkgs.systemd}/bin/systemd-run --machine=${user}@ \
-              --user --pipe --quiet --collect \
-              ${pkgs.libnotify}/bin/notify-send "$@"
+               --user --pipe --quiet --collect \
+               ${pkgs.libnotify}/bin/notify-send "$@"
+          '';
+
+          startingNotification = pkgs.writeShellScript "nixos-upgrade-starting" ''
+            ${notify} -u low -i "${updateIcon}" \
+              "${translate "System update starting" "Systemaktualisierung wird gestartet"}" \
+              "${translate "The automatic system update is starting now." "Die automatische Systemaktualisierung startet jetzt."}"
           '';
 
           # Pre-upgrade script: Sync with remote, then apply Secure Boot override if needed.
@@ -197,12 +206,12 @@ in
             booted=$(readlink /run/booted-system)
             if [ "$current" != "$booted" ]; then
               # New system generation built, reboot needed to activate
-              ${notify} -u normal \
+               ${notify} -u normal -i "${updateIcon}" \
                 "${translate "System update completed" "Systemaktualisierung abgeschlossen"}" \
                 "${translate "A reboot is recommended." "Ein Neustart wird empfohlen."}"
             else
               # No changes, system already up-to-date
-              ${notify} -u low \
+               ${notify} -u low -i "${currentIcon}" \
                 "${translate "System update" "Systemaktualisierung"}" \
                 "${translate "The system is already up to date." "Das System ist bereits auf dem neuesten Stand."}"
             fi
@@ -214,7 +223,10 @@ in
             pkgs.gnused
           ];
 
-          serviceConfig.ExecStartPre = lib.mkBefore [ "${updateFlake}" ];
+          serviceConfig.ExecStartPre = lib.mkBefore [
+            "${startingNotification}"
+            "${updateFlake}"
+          ];
           serviceConfig.ExecStartPost = [
             "${cleanupOverride}"
             "${successScript}"
@@ -238,7 +250,7 @@ in
             # Send critical notification to user session
             ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
               --user --pipe --quiet --collect \
-              ${pkgs.libnotify}/bin/notify-send -u critical \
+              ${pkgs.libnotify}/bin/notify-send -u critical -i "${errorIcon}" \
                 "${translate "System update failed" "Systemaktualisierung fehlgeschlagen"}" \
                 "${translate "The automatic update could not be completed." "Die automatische Aktualisierung konnte nicht durchgeführt werden."}\n\n$error"
           '';

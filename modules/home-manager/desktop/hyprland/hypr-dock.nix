@@ -32,6 +32,26 @@ let
   baseHex = palette.base.hex;
   surfaceHex = palette.surface0.hex;
   textHex = palette.text.hex;
+  themeTrigger = pkgs.writeText "hypr-dock-theme-trigger" (
+    builtins.toJSON {
+      inherit (theme)
+        alpha
+        border
+        gaps
+        radius
+        spacing
+        ;
+      inherit (config.catppuccin) accent flavor;
+    }
+  );
+  configTrigger = pkgs.writeText "hypr-dock-config-trigger" (
+    builtins.toJSON {
+      inherit (config.desktop) pinnedApps;
+      iconSize = 36;
+      position = "bottom";
+      previewMode = "live";
+    }
+  );
 in
 {
   #===========================
@@ -55,7 +75,11 @@ in
         After = [ "graphical-session.target" ];
         PartOf = [ "graphical-session.target" ];
         ConditionEnvironment = "WAYLAND_DISPLAY";
-        X-Restart-Triggers = [ config.theme.catppuccin.restartTrigger ];
+        X-Restart-Triggers = [
+          config.theme.catppuccin.restartTrigger
+          themeTrigger
+          configTrigger
+        ];
       };
       Service = {
         ExecStart = "${pkgs.hypr-dock}/bin/hypr-dock";
@@ -100,12 +124,12 @@ in
       "hypr-dock/themes/catppuccin/theme.conf".text = ''
         [Theme]
         Blur = true
-        Spacing = 5
+         Spacing = ${toString theme.spacing.compact}
 
         [Theme.preview]
         Size = 120
         BorderRadius = ${toString theme.radius.small}
-        Padding = 10
+         Padding = ${toString theme.spacing.control}
       '';
       "hypr-dock/themes/catppuccin/style.css".text = ''
         window {
@@ -113,27 +137,27 @@ in
         }
 
         #app {
-          background-color: alpha(${baseHex}, 0.92);
+           background-color: alpha(${baseHex}, ${lib.strings.floatToString theme.alpha.container});
           border-radius: ${toString theme.radius.default}px;
-          border: 2px solid ${accentHex};
-          padding: 6px;
+           border: ${toString theme.border.width}px solid ${accentHex};
+           padding: ${toString theme.spacing.compact}px;
         }
 
         button {
           background-color: rgba(0, 0, 0, 0);
-          padding: 5px;
-          margin: 1px;
+           padding: ${toString theme.spacing.compact}px;
+           margin: ${toString (theme.spacing.compact / 4)}px;
           border-radius: ${toString theme.radius.default}px;
           border: none;
           transition: all 120ms cubic-bezier(0.23, 1, 0.32, 1);
         }
 
         button:hover {
-          background-color: alpha(${accentHex}, 0.15);
+           background-color: alpha(${accentHex}, ${lib.strings.floatToString theme.alpha.hover});
         }
 
         button:active {
-          background-color: alpha(${accentHex}, 0.3);
+           background-color: alpha(${accentHex}, ${lib.strings.floatToString theme.alpha.active});
         }
 
         #menu-item {
@@ -142,18 +166,18 @@ in
         }
 
         menu {
-          background-color: alpha(${baseHex}, 0.92);
-          border: 2px solid alpha(${accentHex}, 0.5);
+           background-color: alpha(${baseHex}, ${lib.strings.floatToString theme.alpha.container});
+           border: ${toString theme.border.width}px solid alpha(${accentHex}, ${lib.strings.floatToString theme.alpha.border});
           border-radius: ${toString theme.radius.small}px;
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
           outline: none;
           background-image: none;
-          padding: 4px;
+           padding: ${toString theme.spacing.compact}px;
         }
 
         menuitem {
           color: ${textHex};
-          padding: 4px 8px;
+           padding: ${toString theme.spacing.compact}px ${toString theme.spacing.control}px;
           border-radius: ${toString theme.radius.small}px;
           transition: all 0.18s cubic-bezier(0.23, 1, 0.32, 1);
         }
@@ -164,15 +188,15 @@ in
         }
 
         #pv-item {
-          background-color: alpha(${surfaceHex}, 0.8);
+           background-color: alpha(${surfaceHex}, ${lib.strings.floatToString theme.alpha.surface});
           transition: all 0.18s cubic-bezier(0.23, 1, 0.32, 1);
           border-radius: ${toString theme.radius.small}px;
-          border: 1px solid alpha(${accentHex}, 0.2);
+           border: ${toString theme.border.subtle}px solid alpha(${accentHex}, ${lib.strings.floatToString theme.alpha.subtle});
         }
 
         #pv-item.hover {
-          background-color: alpha(${accentHex}, 0.15);
-          border-color: alpha(${accentHex}, 0.5);
+           background-color: alpha(${accentHex}, ${lib.strings.floatToString theme.alpha.hover});
+           border-color: alpha(${accentHex}, ${lib.strings.floatToString theme.alpha.border});
         }
       '';
 

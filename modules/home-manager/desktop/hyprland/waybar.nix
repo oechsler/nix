@@ -49,13 +49,65 @@ let
   rawStyle = builtins.readFile ./waybar-style.scss;
   style =
     builtins.replaceStrings
-      [ "@blue" "system_font" "separator_alpha" ]
+      [
+        "@blue"
+        "system_font"
+        "separator_alpha"
+        "container_alpha"
+        "inactive_alpha"
+        "selected_alpha"
+        "highlight_alpha"
+        "subtle_alpha"
+        "window_radius"
+        "control_radius"
+        "control_spacing"
+        "compact_spacing"
+        "vertical_spacing"
+        "workspace_vertical_spacing"
+        "content_spacing"
+        "launcher_width"
+        "bar_height"
+        "outer_spacing"
+        "ui_font_size"
+        "launcher_font_size"
+        "border_width"
+      ]
       [
         "@${accent}"
         fonts.ui
         (if isLight then "0.15" else "0.5")
+        (lib.strings.floatToString theme.alpha.container)
+        (lib.strings.floatToString theme.alpha.inactive)
+        (lib.strings.floatToString theme.alpha.selected)
+        (lib.strings.floatToString theme.alpha.highlight)
+        (lib.strings.floatToString theme.alpha.subtle)
+        "${toString theme.radius.default}px"
+        "${toString theme.radius.control}px"
+        "${toString theme.spacing.control}px"
+        "${toString theme.spacing.compact}px"
+        "${toString theme.spacing.vertical}px"
+        "${toString (theme.spacing.compact / 2)}px"
+        "${toString theme.spacing.content}px"
+        "${toString (theme.spacing.content * 4)}px"
+        "${toString theme.gaps.outer}px"
+        "${toString theme.gaps.outer}px"
+        "${toString fonts.uiPixelSize}px"
+        "${toString (fonts.uiPixelSize + 6)}px"
+        "${toString theme.border.width}px"
       ]
       rawStyle;
+  themeTrigger = pkgs.writeText "waybar-theme-trigger" (
+    builtins.toJSON {
+      inherit (theme)
+        alpha
+        border
+        gaps
+        radius
+        spacing
+        ;
+      inherit (config.catppuccin) accent flavor;
+    }
+  );
 
   # Generate persistent-workspaces configuration per monitor.
   # The "*" fallback prevents Waybar from using its own default for unknown outputs.
@@ -165,7 +217,7 @@ in
         ];
 
         "custom/launcher" = {
-          format = "<span size='x-large' rise='-2000'>󱄅</span>";
+          format = "󱄅";
           on-click = "${config.rofi.toggle}";
           tooltip = false;
         };
@@ -291,7 +343,10 @@ in
     };
 
     systemd.user.services.waybar = {
-      Unit.X-Restart-Triggers = [ config.theme.catppuccin.restartTrigger ];
+      Unit.X-Restart-Triggers = [
+        config.theme.catppuccin.restartTrigger
+        themeTrigger
+      ];
     };
   };
 }

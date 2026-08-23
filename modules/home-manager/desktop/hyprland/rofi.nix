@@ -270,7 +270,9 @@ in
         disable-history = false;
         sorting-method = "fzf";
         display-drun = "Apps";
-        display-window = "Fenster";
+        display-window = translate "Windows" "Fenster";
+        window-format = "{w}  {c}  {t}";
+        window-match-fields = "title,class,role,name";
       };
       theme =
         let
@@ -278,6 +280,8 @@ in
           palette = config.theme.catppuccinPalette;
           stripHash = hex: lib.removePrefix "#" hex;
           accentColor = "@${config.catppuccin.accent}";
+          # Rasi does not support GTK's alpha() color function. Keep the
+          # Catppuccin glass color in its native Rasi-compatible form.
           glassColor = mkLiteral "#${stripHash palette.base.hex}eb";
         in
         {
@@ -289,7 +293,7 @@ in
             background-color = glassColor;
           };
           "mainbox" = {
-            padding = mkLiteral "18px";
+            padding = mkLiteral "${toString theme.spacing.panel}px";
             background-color = mkLiteral "transparent";
             spacing = mkLiteral "0px";
           };
@@ -300,11 +304,11 @@ in
               "entry"
             ];
             background-color = mkLiteral "transparent";
-            border = mkLiteral "2px solid";
+            border = mkLiteral "${toString theme.border.width}px solid";
             border-color = mkLiteral "@surface1";
-            border-radius = mkLiteral "18px";
-            padding = mkLiteral "12px 18px";
-            spacing = mkLiteral "8px";
+            border-radius = mkLiteral "${toString theme.radius.default}px";
+            padding = mkLiteral "${toString theme.spacing.control}px ${toString theme.spacing.panel}px";
+            spacing = mkLiteral "${toString theme.spacing.control}px";
           };
           "prompt" = {
             text-color = mkLiteral accentColor;
@@ -322,15 +326,15 @@ in
             lines = 6;
             fixed-height = false;
             dynamic = true;
-            padding = mkLiteral "16px 0px 0px 0px";
+            padding = mkLiteral "${toString theme.spacing.content}px 0px 0px 0px";
             spacing = mkLiteral "0px";
             border = mkLiteral "0px";
             scrollbar = false;
             background-color = mkLiteral "transparent";
           };
           "element" = {
-            padding = mkLiteral "10px 18px";
-            spacing = mkLiteral "14px";
+            padding = mkLiteral "${toString theme.spacing.control}px ${toString theme.spacing.panel}px";
+            spacing = mkLiteral "${toString theme.spacing.content}px";
             background-color = mkLiteral "transparent";
             text-color = mkLiteral "@subtext0";
             border-radius = mkLiteral "${toString theme.radius.default}px";

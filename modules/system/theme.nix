@@ -176,6 +176,11 @@ in
         default = 16;
         description = "Default border radius for windows, panels, and notifications";
       };
+      control = lib.mkOption {
+        type = lib.types.int;
+        default = 18;
+        description = "Border radius for inputs and regular controls";
+      };
     };
 
     gaps = {
@@ -191,11 +196,94 @@ in
       };
     };
 
+    # Shared component spacing, from compact controls to large panels.
+    spacing = {
+      vertical = lib.mkOption {
+        type = lib.types.int;
+        default = 3;
+        description = "Compact vertical spacing for bars and controls";
+      };
+      compact = lib.mkOption {
+        type = lib.types.int;
+        default = 4;
+        description = "Compact spacing for icons and small controls";
+      };
+      control = lib.mkOption {
+        type = lib.types.int;
+        default = 8;
+        description = "Spacing inside controls and list elements";
+      };
+      content = lib.mkOption {
+        type = lib.types.int;
+        default = 16;
+        description = "Spacing between content groups";
+      };
+      panel = lib.mkOption {
+        type = lib.types.int;
+        default = 18;
+        description = "Padding for standalone panels and overlays";
+      };
+    };
+
+    # Shared alpha values for translucent surfaces and interaction states.
+    alpha = {
+      container = lib.mkOption {
+        type = lib.types.float;
+        default = 0.92;
+        description = "Alpha for top-level UI containers";
+      };
+      surface = lib.mkOption {
+        type = lib.types.float;
+        default = 0.80;
+        description = "Alpha for secondary surfaces and previews";
+      };
+      inactive = lib.mkOption {
+        type = lib.types.float;
+        default = 0.25;
+        description = "Alpha for inactive controls";
+      };
+      hover = lib.mkOption {
+        type = lib.types.float;
+        default = 0.15;
+        description = "Alpha for hovered controls";
+      };
+      active = lib.mkOption {
+        type = lib.types.float;
+        default = 0.30;
+        description = "Alpha for active controls";
+      };
+      border = lib.mkOption {
+        type = lib.types.float;
+        default = 0.50;
+        description = "Alpha for secondary borders";
+      };
+      selected = lib.mkOption {
+        type = lib.types.float;
+        default = 0.90;
+        description = "Alpha for selected controls";
+      };
+      highlight = lib.mkOption {
+        type = lib.types.float;
+        default = 0.40;
+        description = "Alpha for prominent hover and glow states";
+      };
+      subtle = lib.mkOption {
+        type = lib.types.float;
+        default = 0.20;
+        description = "Alpha for subtle borders and shadows";
+      };
+    };
+
     border = {
       width = lib.mkOption {
         type = lib.types.int;
         default = 2;
         description = "Window border width in pixels";
+      };
+      subtle = lib.mkOption {
+        type = lib.types.int;
+        default = 1;
+        description = "Subtle border width for secondary controls";
       };
     };
 
