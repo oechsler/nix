@@ -10,6 +10,7 @@
 # - hypridle.nix - Idle management (auto-lock, screen timeout)
 # - dunst.nix - Notification daemon
 # - hypr-dock.nix - Application dock
+# - automount.nix - GVFS removable media automount
 #
 # Key features:
 # - Multi-monitor support with per-monitor workspaces
@@ -240,6 +241,7 @@ in
   #===========================
   # Hyprland-specific modules
   imports = [
+    ./automount.nix # GVFS removable media automount
     ./theme.nix # Qt/Kvantum theming, hidden window buttons
     ./waybar.nix # Status bar
     ./rofi.nix # Application launcher, power menu, window switcher
