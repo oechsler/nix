@@ -203,6 +203,11 @@ in
         default = 3;
         description = "Compact vertical spacing for bars and controls";
       };
+      workspace = lib.mkOption {
+        type = lib.types.int;
+        default = 1;
+        description = "Vertical inset for compact workspace buttons";
+      };
       compact = lib.mkOption {
         type = lib.types.int;
         default = 4;

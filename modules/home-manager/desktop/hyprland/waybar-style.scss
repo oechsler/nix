@@ -61,20 +61,37 @@ window#waybar {
 #workspaces button {
   min-height: 0;
   padding: workspace_vertical_spacing content_spacing;
-  margin: 0 workspace_vertical_spacing;
+  margin: 0 workspace_horizontal_spacing;
   background-color: alpha(@text, inactive_alpha);
-  border-radius: window_radius;
+  border-radius: 0;
   transition: all 0.18s cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+#workspaces button:first-child {
+  margin-left: 0;
+}
+
+#workspaces button:last-child {
+  margin-right: 0;
+}
+
+#workspaces button:first-child {
+  border-top-left-radius: window_radius;
+  border-bottom-left-radius: window_radius;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+#workspaces button:last-child {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  border-top-right-radius: window_radius;
+  border-bottom-right-radius: window_radius;
 }
 
 #workspaces button.active {
   background-color: alpha(@blue, selected_alpha);
   box-shadow: 0 0 0.9em alpha(@blue, highlight_alpha);
-}
-
-#workspaces button:hover {
-  background-color: alpha(@blue, highlight_alpha);
-  box-shadow: 0 0 0.6em alpha(@blue, subtle_alpha);
 }
 
 /* Window title */
@@ -102,11 +119,6 @@ window#waybar {
 
 #tray image {
   -gtk-icon-style: symbolic;
-}
-
-#custom-power-profile:hover {
-  color: @blue;
-  text-shadow: 0 0 0.6em alpha(@blue, highlight_alpha);
 }
 
 /* System status group - connected pill */
