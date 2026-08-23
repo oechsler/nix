@@ -29,6 +29,8 @@
 { ... }:
 
 {
+  locale.language = "de_DE.UTF-8";
+
   imports = [
     ./disko.nix
     ./hardware-configuration.nix

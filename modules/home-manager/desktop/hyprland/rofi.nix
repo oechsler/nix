@@ -27,10 +27,24 @@
   lib,
   fonts,
   theme,
+  i18n,
   ...
 }:
 
 let
+  inherit (i18n) translate;
+  powerPrompt = translate "Power" "Energie";
+  powerLock = "󰌾  ${translate "Lock" "Sperren"}";
+  powerSuspend = "󰒲  ${translate "Suspend" "Standby"}";
+  powerLogout = "󰍃  ${translate "Log out" "Abmelden"}";
+  powerReboot = "󰜉  ${translate "Reboot" "Neustart"}";
+  powerOff = "󰐥  ${translate "Shut down" "Herunterfahren"}";
+  powerFirmware = "󰘚  ${translate "Firmware" "Firmware"}";
+  profileBalanced = "󰾆  ${translate "Balanced" "Ausgewogen"}";
+  profileSaver = "󰌪  ${translate "Power saver" "Energiesparen"}";
+  profilePerformance = "󱐋  ${translate "Performance" "Leistung"}";
+  profilePrompt = translate "Power profile" "Energieprofil";
+
   # ============================================================================
   # TOGGLE ROFI SCRIPT
   # ============================================================================
@@ -83,19 +97,19 @@ let
       ${import ./scripts/lock-suspend.nix { inherit pkgs; }}
     }
 
-    if pgrep -x rofi > /dev/null && pgrep -fa "rofi -dmenu -p Energie" > /dev/null; then
+    if pgrep -x rofi > /dev/null && pgrep -fa "rofi -dmenu -p ${powerPrompt}" > /dev/null; then
       pkill -x rofi
       exit 0
     fi
     pgrep -x rofi > /dev/null && exit 0
-    choice=$(printf "󰌾  Sperren\n󰒲  Standby\n󰍃  Abmelden\n󰜉  Neustart\n󰐥  Herunterfahren\n󰘚  Firmware" | rofi -dmenu -p "Energie" -i -no-custom -no-show-icons -lines 6)
+    choice=$(printf '%s\n' "${powerLock}" "${powerSuspend}" "${powerLogout}" "${powerReboot}" "${powerOff}" "${powerFirmware}" | rofi -dmenu -p "${powerPrompt}" -i -no-custom -no-show-icons -lines 6)
     case "$choice" in
-      "󰌾  Sperren")        hyprlock ;;
-      "󰒲  Standby")        suspend ;;
-      "󰍃  Abmelden")      ${pkgs.uwsm}/bin/uwsm stop ;;
-      "󰜉  Neustart")       systemctl reboot ;;
-      "󰐥  Herunterfahren") systemctl poweroff ;;
-      "󰘚  Firmware") systemctl reboot --firmware-setup ;;
+      "${powerLock}")     hyprlock ;;
+      "${powerSuspend}")  suspend ;;
+      "${powerLogout}")   ${pkgs.uwsm}/bin/uwsm stop ;;
+      "${powerReboot}")   systemctl reboot ;;
+      "${powerOff}")      systemctl poweroff ;;
+      "${powerFirmware}") systemctl reboot --firmware-setup ;;
     esac
   '';
 
@@ -167,7 +181,7 @@ let
   #
   # Shows current profile first in the list
   powerProfileMenu = pkgs.writeShellScript "rofi-power-profile" ''
-    if pgrep -x rofi > /dev/null && pgrep -fa "rofi -dmenu -p.*[Pp]ower.*[Pp]rofil" > /dev/null; then
+    if pgrep -x rofi > /dev/null && pgrep -fa "rofi -dmenu -p" > /dev/null; then
       pkill -x rofi
       exit 0
     fi
@@ -180,21 +194,21 @@ let
     profiles=""
     case "$current" in
       "balanced")
-        profiles="󰾆  Ausgewogen\n󰌪  Energiesparen\n󱐋  Leistung"
+        profiles="${profileBalanced}\n${profileSaver}\n${profilePerformance}"
         ;;
       "power-saver")
-        profiles="󰌪  Energiesparen\n󰾆  Ausgewogen\n󱐋  Leistung"
+        profiles="${profileSaver}\n${profileBalanced}\n${profilePerformance}"
         ;;
       "performance")
-        profiles="󱐋  Leistung\n󰾆  Ausgewogen\n󰌪  Energiesparen"
+        profiles="${profilePerformance}\n${profileBalanced}\n${profileSaver}"
         ;;
     esac
 
-    choice=$(printf "$profiles" | rofi -dmenu -p "Energieprofil" -i -no-custom -no-show-icons)
+    choice=$(printf '%b' "$profiles" | rofi -dmenu -p "${profilePrompt}" -i -no-custom -no-show-icons)
     case "$choice" in
-      "󰾆  Ausgewogen")     ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set balanced ;;
-      "󰌪  Energiesparen")  ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set power-saver ;;
-      "󱐋  Leistung")       ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set performance ;;
+      "${profileBalanced}")   ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set balanced ;;
+      "${profileSaver}")      ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set power-saver ;;
+      "${profilePerformance}") ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set performance ;;
     esac
   '';
 in

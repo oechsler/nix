@@ -10,6 +10,7 @@
 
 {
   imports = [
+    ./i18n.nix
     ./programs
     ./desktop
   ];

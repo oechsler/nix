@@ -4,7 +4,7 @@
 #
 # Configuration:
 #   locale.timezone = "Europe/Berlin";  # System timezone
-#   locale.language = "de_DE.UTF-8";    # System locale for UI/formats
+#   locale.language = "en_US.UTF-8";    # System locale for UI/formats
 #   locale.keyboard = "de";             # Console keyboard layout
 #
 # Applied to:
@@ -31,7 +31,7 @@ in
     };
     language = lib.mkOption {
       type = lib.types.str;
-      default = "de_DE.UTF-8";
+      default = "en_US.UTF-8";
       description = "System locale";
     };
     keyboard = lib.mkOption {
