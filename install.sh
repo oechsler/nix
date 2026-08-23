@@ -220,7 +220,8 @@ save_state() {
 # (disko, systemd-cryptenroll).
 luks_password_file() {
   if [[ -z "$LUKS_PASSWORD_FILE" ]]; then
-    LUKS_PASSWORD_FILE=$(mktemp "$STATE_DIR/luks-password.XXXXXX")
+    LUKS_PASSWORD_FILE="$STATE_DIR/luks-password"
+    : > "$LUKS_PASSWORD_FILE"
     chmod 600 "$LUKS_PASSWORD_FILE"
     printf '%s' "$LUKS_PASSWORD" > "$LUKS_PASSWORD_FILE"
   fi
