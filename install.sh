@@ -77,6 +77,7 @@ Options:
   --skip-totp           Skip TOTP setup (deferred to totp-init after first boot)
   -y, --yes             Skip all confirmation prompts (non-interactive mode)
   --dry-run             Show summary and exit without making changes
+  --iso                 Use prebuilt system closure from the installer ISO
   -h, --help            Show this help
 
 Non-interactive examples:
@@ -109,6 +110,7 @@ while [[ $# -gt 0 ]]; do
     --format)            DO_FORMAT=true; shift ;;
     --install)           DO_INSTALL=true; shift ;;
     --post-install)      DO_POST_INSTALL=true; shift ;;
+    --iso)               INSTALLER_ISO=true; shift ;;
     *)
       echo "Unknown option: $1" >&2
       echo "Run '$0 --help' for usage information." >&2
@@ -116,6 +118,18 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+ISO_MANIFEST="/etc/nixos-installer/manifest.json"
+INSTALLER_ISO="${INSTALLER_ISO:-false}"
+if [[ -f "$ISO_MANIFEST" ]]; then
+  INSTALLER_ISO=true
+  REPO_DIR="/etc/nixos-installer/repo"
+fi
+
+if [[ "$INSTALLER_ISO" == true && ! -f "$ISO_MANIFEST" ]]; then
+  echo "Installer ISO manifest not found: $ISO_MANIFEST" >&2
+  exit 1
+fi
 
 # Default: all steps if none specified
 if [[ "$DO_FORMAT" == false && "$DO_INSTALL" == false && "$DO_POST_INSTALL" == false ]]; then
@@ -204,6 +218,8 @@ save_state() {
     printf 'FEAT_FORM_FACTOR=%q\n' "${FEAT_FORM_FACTOR:-}"
     printf 'FEAT_KERNEL=%q\n' "${FEAT_KERNEL:-}"
     printf 'FEAT_KERNEL_VERSION=%q\n' "${FEAT_KERNEL_VERSION:-}"
+    printf 'FEAT_KEYBOARD=%q\n' "${FEAT_KEYBOARD:-}"
+    printf 'FEAT_LANGUAGE=%q\n' "${FEAT_LANGUAGE:-}"
     printf 'CONFIG_USERNAME=%q\n' "${CONFIG_USERNAME:-}"
     printf 'CONFIG_PASSWORD_LOCKED=%q\n' "${CONFIG_PASSWORD_LOCKED:-false}"
     # Progress — prevents double-enrollment if installer crashes after TPM enroll
@@ -353,6 +369,8 @@ FEAT_WM=""
 FEAT_FORM_FACTOR=""
 FEAT_KERNEL=""
 FEAT_KERNEL_VERSION=""
+FEAT_KEYBOARD=""
+FEAT_LANGUAGE=""
 CONFIG_USERNAME=""
 CONFIG_PASSWORD_LOCKED=false
 LUKS_DEVICES=()
@@ -388,6 +406,8 @@ phase_detect_features() {
       formFactor = cfg.features.hardware.formFactor;
       kernel = cfg.features.kernel;
       kernelVersion = cfg.boot.kernelPackages.kernel.name;
+      keyboard = cfg.locale.keyboard;
+      language = cfg.locale.language;
       userName = cfg.user.name;
       # passwordLocked: true only when hashedPassword = "!" AND no sops secret covers it.
       # When user/password is in sops, user-passwd.service sets the password at boot.
@@ -409,6 +429,8 @@ phase_detect_features() {
   FEAT_FORM_FACTOR=$(echo "$json"      | jq -r '.formFactor')
   FEAT_KERNEL=$(echo "$json"           | jq -r '.kernel')
   FEAT_KERNEL_VERSION=$(echo "$json"   | jq -r '.kernelVersion')
+  FEAT_KEYBOARD=$(echo "$json"         | jq -r '.keyboard')
+  FEAT_LANGUAGE=$(echo "$json"          | jq -r '.language')
   CONFIG_USERNAME=$(echo "$json"      | jq -r '.userName')
   CONFIG_PASSWORD_LOCKED=$(echo "$json" | jq -r '.passwordLocked')
 
@@ -425,6 +447,12 @@ phase_detect_features() {
   fi
   if [[ "$FEAT_DESKTOP" == "true" ]]; then
     echo -e "    Desktop:       ${BOLD}$FEAT_WM${RESET}"
+  fi
+  if [[ -n "$FEAT_KEYBOARD" && "$FEAT_KEYBOARD" != "null" ]]; then
+    echo -e "    Keyboard:      ${BOLD}$FEAT_KEYBOARD${RESET}"
+  fi
+  if [[ -n "$FEAT_LANGUAGE" && "$FEAT_LANGUAGE" != "null" ]]; then
+    echo -e "    Language:      ${BOLD}$FEAT_LANGUAGE${RESET}"
   fi
   echo -e "    Encryption:    $(label_bool "$FEAT_ENCRYPTION")"
   echo -e "    Impermanence:  $(label_bool "$FEAT_IMPERMANENCE")"
@@ -445,6 +473,25 @@ phase_detect_features() {
   echo ""
   success "Features detected"
   save_state
+}
+
+apply_keyboard_layout() {
+  [[ -n "$FEAT_KEYBOARD" && "$FEAT_KEYBOARD" != "null" ]] || return 0
+
+  if command -v loadkeys &>/dev/null; then
+    loadkeys "$FEAT_KEYBOARD" 2>/dev/null || warn "Could not apply console keyboard layout: $FEAT_KEYBOARD"
+  fi
+
+  if command -v setxkbmap &>/dev/null && [[ -n "${DISPLAY:-}" ]]; then
+    setxkbmap "$FEAT_KEYBOARD" 2>/dev/null || warn "Could not apply X11 keyboard layout: $FEAT_KEYBOARD"
+  fi
+
+  if command -v localectl &>/dev/null; then
+    localectl set-keymap "$FEAT_KEYBOARD" 2>/dev/null || true
+    localectl set-x11-keymap "$FEAT_KEYBOARD" 2>/dev/null || true
+  fi
+
+  success "Keyboard layout: $FEAT_KEYBOARD"
 }
 
 #===========================
@@ -702,7 +749,11 @@ phase_partition() {
     disko_ref="github:nix-community/disko"
   fi
 
-  if ! nix run "$disko_ref" -- "${disko_args[@]}"; then
+  if [[ "$INSTALLER_ISO" == true ]]; then
+    if ! disko "${disko_args[@]}"; then
+      error "Disko failed. Check disk IDs in hosts/$HOST/disko.nix"
+    fi
+  elif ! nix run "$disko_ref" -- "${disko_args[@]}"; then
     error "Disko failed. Check disk IDs in hosts/$HOST/disko.nix"
   fi
 
@@ -719,7 +770,11 @@ phase_mount() {
     disko_ref="github:nix-community/disko"
   fi
 
-  if ! nix run "$disko_ref" -- "${disko_args[@]}"; then
+  if [[ "$INSTALLER_ISO" == true ]]; then
+    if ! disko "${disko_args[@]}"; then
+      error "Disko mount failed. Are the disks connected?"
+    fi
+  elif ! nix run "$disko_ref" -- "${disko_args[@]}"; then
     error "Disko mount failed. Are the disks connected?"
   fi
 
@@ -745,19 +800,32 @@ phase_install() {
 
   [[ "$FEAT_ENCRYPTION" == "true" ]] && luks_password_file > /dev/null
 
-  info "Generating hardware configuration..."
-  echo ""
-  nixos-generate-config --root /mnt --show-hardware-config > "$host_dir/hardware-configuration.generated.nix"
-  nix flake lock "$REPO_DIR"
-  git -C "$REPO_DIR" add "$host_dir/hardware-configuration.generated.nix" "$REPO_DIR/flake.lock"
-  success "Hardware configuration generated"
-  echo ""
+  if [[ "$INSTALLER_ISO" == true ]]; then
+    success "Using prebuilt system closure from installer ISO"
+  else
+    info "Generating hardware configuration..."
+    echo ""
+    nixos-generate-config --root /mnt --show-hardware-config > "$host_dir/hardware-configuration.generated.nix"
+    nix flake lock "$REPO_DIR"
+    git -C "$REPO_DIR" add "$host_dir/hardware-configuration.generated.nix" "$REPO_DIR/flake.lock"
+    success "Hardware configuration generated"
+    echo ""
+  fi
 
   # Redirect nix temp/build dirs to /mnt so they land on disk, not the live ISO tmpfs
   mkdir -p /mnt/tmp
   export TMPDIR=/mnt/tmp
 
-  if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
+  if [[ "$INSTALLER_ISO" == true ]]; then
+    local system_path
+    system_path=$(jq -r --arg host "$HOST" '.hosts[$host].system // empty' "$ISO_MANIFEST")
+    [[ -n "$system_path" && -e "$system_path" ]] \
+      || error "Prebuilt system closure for $HOST is missing from the installer ISO."
+
+    if ! nixos-install --system "$system_path" --no-root-password --max-jobs "$max_jobs"; then
+      error "nixos-install failed. Check the output above."
+    fi
+  elif [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
     # Disable lanzaboote for the install — keys don't exist yet.
     # secure-boot-init handles everything after first boot.
     local override_nix="$host_dir/secure-boot-install-override.nix"
@@ -893,13 +961,14 @@ copy_config() {
   if [[ ! -d "$dest" ]]; then
     mkdir -p "/mnt/home/$CONFIG_USERNAME/repos"
 
-    # Stage all local changes (stateVersion, hardware config, password hash) so
-    # nix eval on the installed system sees them immediately. Committing is left
-    # to the user — the installer does not create commits on their behalf.
-    git -C "$REPO_DIR" add --all
+    if [[ "$INSTALLER_ISO" != true ]]; then
+      # Stage all local changes (stateVersion, hardware config, password hash) so
+      # nix eval on the installed system sees them immediately. Committing is left
+      # to the user — the installer does not create commits on their behalf.
+      git -C "$REPO_DIR" add --all
+    fi
 
-    # Copy full repo including .git so the installed system has history, remote
-    # tracking, and can run git pull / nixos-rebuild for upgrades.
+    # Copy the exact build-time repository snapshot used by the installer.
     cp -a "$REPO_DIR" "$dest"
     success "Config copied to ~/repos/nix"
   fi
@@ -1305,7 +1374,7 @@ main() {
   phase_select_host
 
   # On an installed system: always upgrade — step flags are ignored.
-  if [[ "$IS_LIVE" != true ]]; then
+  if [[ "$IS_LIVE" != true && "$INSTALLER_ISO" != true ]]; then
     echo -e "    ${DIM}Pulls the latest configuration from git and rebuilds the system.${RESET}"
     echo -e "    ${DIM}Activates immediately — no reboot required.${RESET}"
     echo ""
@@ -1331,6 +1400,7 @@ main() {
   echo ""
 
   phase_detect_features
+  apply_keyboard_layout
   phase_collect_inputs
   phase_summary
 
