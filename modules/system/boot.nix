@@ -1,13 +1,13 @@
 # Boot Configuration
 #
 # This module configures the boot process and kernel:
-# - Kernel selection (CachyOS optimized or default NixOS kernel)
+# - Kernel selection (CachyOS optimized or latest nixpkgs kernel)
 # - systemd-boot bootloader with EFI support
 # - Plymouth boot splash (when desktop is enabled)
 # - Silent boot (minimal boot messages)
 #
 # Configuration:
-#   features.kernel = "cachyos";        # Options: cachyos, cachyos-v3, cachyos-v4, cachyos-lts, default
+#   features.kernel = "cachyos";        # Options: cachyos, cachyos-v3, cachyos-v4, cachyos-lts, default, default-lts
 #
 # Boot behavior:
 # - Configuration limit: Keep last 10 boot entries
@@ -29,7 +29,8 @@ let
     "cachyos-v3" = pkgs.cachyosKernels.linuxPackages-cachyos-latest-x86_64-v3;
     "cachyos-v4" = pkgs.cachyosKernels.linuxPackages-cachyos-latest-x86_64-v4;
     "cachyos-lts" = pkgs.cachyosKernels.linuxPackages-cachyos-lts;
-    "default" = pkgs.linuxPackages;
+    "default" = pkgs.linuxPackages_latest;
+    "default-lts" = pkgs.linuxPackages;
   };
 in
 {
@@ -40,9 +41,10 @@ in
       "cachyos-v4"
       "cachyos-lts"
       "default"
+      "default-lts"
     ];
     default = "cachyos";
-    description = "Kernel variant (cachyos, cachyos-v3, cachyos-v4, cachyos-lts, or default NixOS kernel)";
+    description = "Kernel variant (CachyOS variants or latest/LTS nixpkgs kernel)";
   };
 
   config = lib.mkMerge [

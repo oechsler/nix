@@ -68,7 +68,7 @@
 
   features = {
     # --- Hardware & Kernel ---
-    kernel = "cachyos-v3"; # Intel Core i7-8550U (Kaby Lake-R) — x86_64-v3 optimized build
+    kernel = "default"; # Use the standard NixOS kernel on this laptop
     hardware = {
       formFactor = "laptop";
       cpu = "intel"; # Intel Core i7-8550U (Kaby Lake-R)

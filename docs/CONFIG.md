@@ -68,7 +68,7 @@ features.ssh.enable = true;
 | `features.secureBoot.enable` | `false` | UEFI Secure Boot via lanzaboote |
 | `features.ssh.enable` | `false` | OpenSSH server + GitHub key sync (every 15 min) |
 | `features.snapshots.enable` | `true` | Automatic btrfs snapshots (hourly, see [SNAPSHOTS.md](SNAPSHOTS.md)) |
-| `features.kernel` | `"cachyos"` | Kernel variant: `"cachyos"` (x86_64-v3, latest) / `"cachyos-v3"` (explicit x86_64-v3) / `"cachyos-v4"` (x86_64-v4, Zen 4+) / `"cachyos-lts"` / `"default"` (NixOS stock) |
+| `features.kernel` | `"cachyos"` | Kernel variant: `"cachyos"` (generic, latest) / `"cachyos-v3"` (explicit x86_64-v3) / `"cachyos-v4"` (x86_64-v4, Zen 4+) / `"cachyos-lts"` / `"default"` (latest nixpkgs kernel) / `"default-lts"` (stable nixpkgs kernel) |
 
 ### Virtualisation
 
