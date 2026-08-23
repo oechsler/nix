@@ -68,9 +68,19 @@ in
         gap_size = theme.gaps.inner;
 
         font = "${fonts.ui} 10";
+        icon_theme = theme.icons.name;
+        icon_path = lib.mkForce (
+          lib.concatStringsSep ":" [
+            "${theme.icons.package}/share/icons/Papirus/32x32/status"
+            "${theme.icons.package}/share/icons/Papirus/32x32/devices"
+            "${theme.icons.package}/share/icons/Papirus/32x32/apps"
+            "${theme.icons.package}/share/icons/Papirus/32x32/actions"
+          ]
+        );
+        default_icon = "${theme.icons.package}/share/icons/Papirus/32x32/status/dialog-information.svg";
         icon_position = "left";
         min_icon_size = 32;
-        max_icon_size = 64;
+        max_icon_size = 32;
 
         alignment = "left";
         vertical_alignment = "center";

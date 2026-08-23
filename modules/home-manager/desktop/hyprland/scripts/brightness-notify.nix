@@ -2,20 +2,20 @@
 #
 # Shows current brightness level via dunst notification.
 # Used as keybinding handler for brightness media keys in Hyprland.
-{ pkgs }:
+{
+  pkgs,
+  i18n,
+  theme,
+}:
+let
+  icon = "${theme.icons.package}/share/icons/Papirus/32x32/apps/brightness.svg";
+in
 pkgs.writeShellScript "brightness-notify" ''
   brightness="$1"
 
-  if [ "$brightness" -ge 70 ]; then
-    icon="󰃠"
-  elif [ "$brightness" -ge 30 ]; then
-    icon="󰃟"
-  else
-    icon="󰃞"
-  fi
-
   ${pkgs.dunst}/bin/dunstify -a "changeBrightness" -u low \
+    -i "${icon}" \
     -h string:x-dunst-stack-tag:brightness \
     -h int:value:"$brightness" \
-    "$icon  Helligkeit ''${brightness}%"
+    "${i18n.translate "Brightness" "Helligkeit"} ''${brightness}%"
 ''

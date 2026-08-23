@@ -30,6 +30,7 @@
 #   Super+M          - Exit Hyprland
 #   Super+V          - Toggle floating
 #   Super+Space      - Application launcher (rofi)
+#   Super+Tab        - MRU window switcher (native Hyprland)
 #   Super+[1-9]      - Switch workspace
 #   Super+Shift+[1-9] - Move window to workspace
 #   Super+F          - Toggle maximize
@@ -147,7 +148,7 @@ let
   };
   execBind = key: command: bind key "exec_cmd(${builtins.toJSON command})";
 
-  brightnessController = import ./scripts/brightness-controller.nix { inherit pkgs; };
+  brightnessController = import ./scripts/brightness-controller.nix { inherit pkgs i18n theme; };
   displayBrightnessInit = "${brightnessController} init";
   displayBrightness = "${brightnessController} adjust";
 
@@ -215,8 +216,8 @@ let
   # ============================================================================
   # Show volume level and mute status with dunst notification
   # Used by: Media keys (XF86AudioRaiseVolume, XF86AudioLowerVolume, XF86AudioMute)
-  volumeNotify = import ./scripts/volume-notify.nix { inherit pkgs i18n; };
-  batteryWarning = import ./scripts/battery-warning.nix { inherit pkgs i18n; };
+  volumeNotify = import ./scripts/volume-notify.nix { inherit pkgs i18n theme; };
+  batteryWarning = import ./scripts/battery-warning.nix { inherit pkgs i18n theme; };
 
   fileManagerCommand =
     if features.desktop.fileManager == "terminal" then "kitty yazi" else "nautilus";
@@ -242,6 +243,7 @@ in
   # Hyprland-specific modules
   imports = [
     ./automount.nix # GVFS removable media automount
+    ./hyprshell.nix # Rust/GTK4 workspace-aware window switcher
     ./theme.nix # Qt/Kvantum theming, hidden window buttons
     ./waybar.nix # Status bar
     ./rofi.nix # Application launcher, power menu, window switcher
@@ -493,6 +495,7 @@ in
             rounding = theme.radius.default;
             active_opacity = 1.0;
             inactive_opacity = 1.0;
+            dim_around = 0.0;
             shadow = {
               enabled = true;
               range = 4;
@@ -781,7 +784,7 @@ in
         ];
 
         layer_rule = {
-          match.namespace = "^(rofi|waybar|hypr-dock)$";
+          match.namespace = "^(rofi|waybar|hypr-dock|hyprshell_switch)$";
           blur = true;
           blur_popups = true;
           ignore_alpha = 0.2;

@@ -2,11 +2,16 @@
 #
 # Provides shared backlight, DDC/CI, and gamma brightness actions.
 # Manual adjustment and idle dimming use the same backend priority.
-{ pkgs }:
+{
+  pkgs,
+  i18n,
+  theme,
+}:
 
 pkgs.writeShellScript "display-brightness-controller" ''
   state_dir="''${XDG_RUNTIME_DIR:-/tmp}/display-brightness"
   gamma_pidfile="$state_dir/gamma.pid"
+  idle_backlight_state="$state_dir/idle-backlight-state"
   ${pkgs.uutils-coreutils-noprefix}/bin/mkdir -p "$state_dir"
 
   has_backlight() {
@@ -59,36 +64,64 @@ pkgs.writeShellScript "display-brightness-controller" ''
       fi
     else
       ${pkgs.uutils-coreutils-noprefix}/bin/rm -f "$displays_tmp"
+      ${pkgs.uutils-coreutils-noprefix}/bin/rm -f "$state_dir/displays" "$state_dir/ready"
+      ${pkgs.uutils-coreutils-noprefix}/bin/rm -f "$buses_tmp"
+      return 1
     fi
     ${pkgs.uutils-coreutils-noprefix}/bin/rm -f "$buses_tmp"
     ${pkgs.uutils-coreutils-noprefix}/bin/touch "$state_dir/ready"
   }
 
+  invalidate_ddc() {
+    ${pkgs.uutils-coreutils-noprefix}/bin/rm -f "$state_dir/ready" "$state_dir/displays"
+  }
+
   write_ddc_percent() {
     local target="$1"
-    local pids=""
-    local failed=0
-    while read -r bus _ maximum; do
-      value=$((target * maximum / 100))
-      ${pkgs.uutils-coreutils-noprefix}/bin/timeout 2 ${pkgs.ddcutil}/bin/ddcutil --bus "$bus" setvcp 10 "$value" --noverify >/dev/null 2>&1 &
-      pids="$pids $!"
-    done < "$state_dir/displays"
-    for pid in $pids; do
-      wait "$pid" || failed=1
+    local attempt
+    for attempt in 1 2 3; do
+      local pids=""
+      local failed=0
+      while read -r bus _ maximum; do
+        value=$((target * maximum / 100))
+        ${pkgs.uutils-coreutils-noprefix}/bin/timeout 4 ${pkgs.ddcutil}/bin/ddcutil --bus "$bus" setvcp 10 "$value" --noverify >/dev/null 2>&1 &
+        pids="$pids $!"
+      done < "$state_dir/displays"
+      for pid in $pids; do
+        wait "$pid" || failed=1
+      done
+      [ "$failed" -eq 0 ] && return 0
+      ${pkgs.uutils-coreutils-noprefix}/bin/sleep 1
     done
-    return "$failed"
+    return 1
   }
 
   restore_ddc_values() {
     local source="$1"
     local pids=""
+    local failed=0
     while read -r bus current _; do
-      ${pkgs.uutils-coreutils-noprefix}/bin/timeout 2 ${pkgs.ddcutil}/bin/ddcutil --bus "$bus" setvcp 10 "$current" --noverify >/dev/null 2>&1 &
+      ${pkgs.uutils-coreutils-noprefix}/bin/timeout 4 ${pkgs.ddcutil}/bin/ddcutil --bus "$bus" setvcp 10 "$current" --noverify >/dev/null 2>&1 &
       pids="$pids $!"
     done < "$source"
     for pid in $pids; do
-      wait "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || failed=1
     done
+    return "$failed"
+  }
+
+  restore_ddc_with_retry() {
+    local source="$1"
+    local attempt
+    for attempt in 1 2 3 4 5 6 7 8; do
+      if restore_ddc_values "$source"; then
+        return 0
+      fi
+      invalidate_ddc
+      init_ddc || true
+      ${pkgs.uutils-coreutils-noprefix}/bin/sleep 1
+    done
+    return 1
   }
 
   update_ddc_state() {
@@ -112,7 +145,8 @@ pkgs.writeShellScript "display-brightness-controller" ''
           update_ddc_state "$target"
           clear_gamma
         else
-          restore_ddc_values "$state_dir/displays"
+          invalidate_ddc
+          init_ddc || true
           set_gamma "$target"
           return
         fi
@@ -131,6 +165,10 @@ pkgs.writeShellScript "display-brightness-controller" ''
       *) exit 2 ;;
     esac
 
+    if [ -s "$state_dir/idle-backend" ]; then
+      restore || return
+    fi
+
     if has_backlight; then
       if [ "$direction" = "up" ]; then
         ${pkgs.brightnessctl}/bin/brightnessctl -e4 -n2 set 5%+ -q
@@ -138,10 +176,10 @@ pkgs.writeShellScript "display-brightness-controller" ''
         ${pkgs.brightnessctl}/bin/brightnessctl -e4 -n2 set 5%- -q
       fi
       brightness=$(${pkgs.brightnessctl}/bin/brightnessctl -m | ${pkgs.gawk}/bin/awk -F, '{ print substr($4, 1, length($4) - 1) }')
-      exec ${import ./brightness-notify.nix { inherit pkgs; }} "$brightness"
+      exec ${import ./brightness-notify.nix { inherit pkgs i18n theme; }} "$brightness"
     fi
 
-    init_ddc
+    init_ddc || true
     exec 9>"$state_dir/target.lock"
     ${pkgs.util-linux}/bin/flock 9
     [ -s "$state_dir/idle-backend" ] && return
@@ -156,7 +194,7 @@ pkgs.writeShellScript "display-brightness-controller" ''
     fi
     printf '%s\n' "$brightness" > "$state_dir/target"
     ${pkgs.util-linux}/bin/flock -u 9
-    ${import ./brightness-notify.nix { inherit pkgs; }} "$brightness" &
+    ${import ./brightness-notify.nix { inherit pkgs i18n theme; }} "$brightness" &
     "$0" apply >/dev/null 2>&1 &
   }
 
@@ -170,9 +208,9 @@ pkgs.writeShellScript "display-brightness-controller" ''
 
     if has_backlight; then
       printf 'backlight\n' > "$state_dir/idle-backend"
-      ${pkgs.brightnessctl}/bin/brightnessctl -s
       current=$(${pkgs.brightnessctl}/bin/brightnessctl get)
       maximum=$(${pkgs.brightnessctl}/bin/brightnessctl max)
+      printf '%s %s\n' "$current" "$maximum" > "$idle_backlight_state"
       target_value=$((maximum * target / 100))
       step=$((maximum * step_percent / 100))
       [ "$step" -lt 1 ] && step=1
@@ -211,9 +249,13 @@ pkgs.writeShellScript "display-brightness-controller" ''
         clear_gamma
         return
       fi
-      restore_ddc_values "$state_dir/idle-ddc-state"
-      ${pkgs.uutils-coreutils-noprefix}/bin/rm -f "$state_dir/idle-ddc-state"
+      if restore_ddc_with_retry "$state_dir/idle-ddc-state"; then
+        ${pkgs.uutils-coreutils-noprefix}/bin/rm -f "$state_dir/idle-ddc-state"
+      else
+        return 1
+      fi
     fi
+    invalidate_ddc
     printf 'gamma\n' > "$state_dir/idle-backend"
     set_gamma "$target"
   }
@@ -225,13 +267,19 @@ pkgs.writeShellScript "display-brightness-controller" ''
     backend=$(<"$state_dir/idle-backend")
     case "$backend" in
       backlight)
-        ${pkgs.brightnessctl}/bin/brightnessctl -r
+        if [ -s "$idle_backlight_state" ]; then
+          read -r current _ < "$idle_backlight_state"
+          ${pkgs.brightnessctl}/bin/brightnessctl set "$current" -q || return 1
+          ${pkgs.uutils-coreutils-noprefix}/bin/rm -f "$idle_backlight_state"
+        else
+          ${pkgs.brightnessctl}/bin/brightnessctl -r || return 1
+        fi
         ;;
       ddc)
         exec 8>"$state_dir/ddc.lock"
         ${pkgs.util-linux}/bin/flock -w 3 8 || return
         if [ -s "$state_dir/idle-ddc-state" ]; then
-          restore_ddc_values "$state_dir/idle-ddc-state"
+          restore_ddc_with_retry "$state_dir/idle-ddc-state" || return 1
           ${pkgs.uutils-coreutils-noprefix}/bin/mv "$state_dir/idle-ddc-state" "$state_dir/displays"
           ${pkgs.gawk}/bin/awk 'NR == 1 { print int(100 * $2 / $3); exit }' "$state_dir/displays" > "$state_dir/target"
         fi
