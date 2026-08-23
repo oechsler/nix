@@ -38,6 +38,7 @@ let
   updateIcon = "${config.theme.icons.package}/share/icons/Papirus/32x32/apps/system-software-update.svg";
   currentIcon = "${config.theme.icons.package}/share/icons/Papirus/32x32/status/dialog-information.svg";
   errorIcon = "${config.theme.icons.package}/share/icons/Papirus/32x32/status/dialog-error.svg";
+  updateTitle = translate "System update" "Systemaktualisierung";
 in
 {
   #===========================
@@ -161,8 +162,8 @@ in
 
           startingNotification = pkgs.writeShellScript "nixos-upgrade-starting" ''
             ${notify} -u low -i "${updateIcon}" \
-              "${translate "System update starting" "Systemaktualisierung wird gestartet"}" \
-              "${translate "The automatic system update is starting now." "Die automatische Systemaktualisierung startet jetzt."}"
+              "${updateTitle}" \
+              "${translate "Automatic system update started." "Automatische Systemaktualisierung gestartet."}"
           '';
 
           # Pre-upgrade script: Sync with remote, then apply Secure Boot override if needed.
@@ -207,13 +208,13 @@ in
             if [ "$current" != "$booted" ]; then
               # New system generation built, reboot needed to activate
                ${notify} -u normal -i "${updateIcon}" \
-                "${translate "System update completed" "Systemaktualisierung abgeschlossen"}" \
-                "${translate "A reboot is recommended." "Ein Neustart wird empfohlen."}"
+                 "${updateTitle}" \
+                 "${translate "Update completed. A reboot is recommended." "Aktualisierung abgeschlossen. Ein Neustart wird empfohlen."}"
             else
               # No changes, system already up-to-date
                ${notify} -u low -i "${currentIcon}" \
-                "${translate "System update" "Systemaktualisierung"}" \
-                "${translate "The system is already up to date." "Das System ist bereits auf dem neuesten Stand."}"
+                 "${updateTitle}" \
+                 "${translate "The system is already up to date." "Das System ist bereits auf dem neuesten Stand."}"
             fi
           '';
         in
@@ -251,7 +252,7 @@ in
             ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
               --user --pipe --quiet --collect \
               ${pkgs.libnotify}/bin/notify-send -u critical -i "${errorIcon}" \
-                "${translate "System update failed" "Systemaktualisierung fehlgeschlagen"}" \
+                "${updateTitle}" \
                 "${translate "The automatic update could not be completed." "Die automatische Aktualisierung konnte nicht durchgeführt werden."}\n\n$error"
           '';
         in
