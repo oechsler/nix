@@ -270,7 +270,7 @@
 
       overlays = {
         default = final: _prev: {
-          hypr-dock = final.callPackage ./packages/hypr-dock.nix { };
+          hypr-dock = final.callPackage ./modules/packages/hypr-dock.nix { };
           pam-lldap = final.callPackage ./modules/packages/pam-lldap.nix { };
         };
       };
@@ -314,7 +314,8 @@
         # shellcheck: Shell script linter (enforced)
         # https://www.shellcheck.net
         shellcheck = pkgs.runCommand "shellcheck-check" { } ''
-          ${pkgs.shellcheck}/bin/shellcheck ${./.}/*.sh
+          find ${./.} -type f -name '*.sh' -print0 \
+            | xargs --null --no-run-if-empty ${pkgs.shellcheck}/bin/shellcheck
           touch $out
         '';
 

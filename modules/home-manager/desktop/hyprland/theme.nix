@@ -48,11 +48,11 @@ in
     catppuccin.hyprland.enable = false;
     catppuccin.kvantum.enable = true;
 
-    systemd.user.sessionVariables.QT_QPA_PLATFORM = "wayland";
+    systemd.user.sessionVariables.QT_QPA_PLATFORM = "wayland;xcb";
 
     home = {
       sessionVariables = {
-        QT_QPA_PLATFORM = "wayland";
+        QT_QPA_PLATFORM = "wayland;xcb";
         QT_STYLE_OVERRIDE = "kvantum";
       };
 

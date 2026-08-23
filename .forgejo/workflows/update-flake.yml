@@ -26,6 +26,7 @@ jobs:
       - name: Check for changes
         id: check
         run: |
+          set -euo pipefail
           if git diff --exit-code flake.lock; then
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else

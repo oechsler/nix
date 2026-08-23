@@ -56,7 +56,16 @@ let
     exit 1
   '';
 
-  setWallpaperScript = pkgs.writeShellScript "awww-set" wallpaperCommands;
+  setWallpaperScript = pkgs.writeShellScript "awww-set" ''
+    export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+    wayland_socket=$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null \
+      | grep -v '\.lock$' \
+      | grep -v '\-awww-daemon\.sock$' \
+      | head -1 || true)
+    [ -n "$wayland_socket" ] || exit 0
+    export WAYLAND_DISPLAY=$(${pkgs.uutils-coreutils-noprefix}/bin/basename "$wayland_socket")
+    ${wallpaperCommands}
+  '';
 in
 {
   #===========================
@@ -88,10 +97,6 @@ in
           Service = {
             Type = "oneshot";
             ExecStart = setWallpaperScript;
-            Environment = [
-              "XDG_RUNTIME_DIR=%t"
-              "WAYLAND_DISPLAY=wayland-1"
-            ];
           };
         };
       };
@@ -105,15 +110,6 @@ in
 
     home.activation.setWallpaper = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       if ${pkgs.procps}/bin/pgrep -x "awww-daemon" > /dev/null 2>&1; then
-        export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-
-        WAYLAND_SOCKET=$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null | grep -v '\.lock$' | grep -v '\-awww-daemon\.sock$' | head -1)
-        if [ -n "$WAYLAND_SOCKET" ]; then
-          export WAYLAND_DISPLAY=$(${pkgs.uutils-coreutils-noprefix}/bin/basename "$WAYLAND_SOCKET")
-        else
-          export WAYLAND_DISPLAY="wayland-1"
-        fi
-
         run ${setWallpaperScript}
       fi
     '';

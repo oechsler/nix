@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 echo "=== Import SSH Key for sops-nix ==="
 echo ""
@@ -34,7 +34,7 @@ else
         echo "  [$i] ${SSH_KEYS[$i]}"
     done
     echo ""
-    read -p "Select key number [0]: " KEY_NUM
+    read -rp "Select key number [0]: " KEY_NUM
     KEY_NUM=${KEY_NUM:-0}
     SSH_KEY="${SSH_KEYS[$KEY_NUM]}"
     echo "✓ Selected: $SSH_KEY"
@@ -77,7 +77,16 @@ echo "Updating .sops.yaml..."
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_DIR="$(dirname "$SCRIPT_DIR")"
 USER_ALIAS="user_$(whoami)"
-cat > "$CONFIG_DIR/.sops.yaml" <<EOF
+CONFIG_FILE="$CONFIG_DIR/.sops.yaml"
+TEMP_CONFIG=$(mktemp "$CONFIG_DIR/.sops.yaml.XXXXXX")
+trap 'rm -f "$TEMP_CONFIG"' EXIT
+
+if [ -f "$CONFIG_FILE" ]; then
+    cp -p "$CONFIG_FILE" "$CONFIG_FILE.bak"
+    echo "✓ Existing .sops.yaml backed up to .sops.yaml.bak"
+fi
+
+cat > "$TEMP_CONFIG" <<EOF
 keys:
   - &${USER_ALIAS} $AGE_PUBLIC_KEY
 
@@ -85,8 +94,10 @@ creation_rules:
   - path_regex: sops/sops.*\.yaml$
     key_groups:
       - age:
-          - *${USER_ALIAS}
+           - *${USER_ALIAS}
 EOF
+mv "$TEMP_CONFIG" "$CONFIG_FILE"
+trap - EXIT
 echo "✓ .sops.yaml updated with user alias: $USER_ALIAS"
 
 echo ""

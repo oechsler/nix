@@ -123,7 +123,10 @@ in
       systemd.user.services.proton-pass-ssh-agent = {
         Unit = {
           Description = "Proton Pass SSH Agent";
-          After = [ "graphical-session.target" ];
+          # Keep this service on default.target: the agent is also used on
+          # servers, and SSH must not silently fall back to a stale key while
+          # waiting for a graphical session. The service retries until the
+          # Proton Pass session created by proton-pass-init is available.
         };
 
         Service = {

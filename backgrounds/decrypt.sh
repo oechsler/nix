@@ -1,13 +1,19 @@
 #!/usr/bin/env nix-shell
-#!nix-shell -i bash -p openssl gzip gnutar
+#!nix-shell -i bash -p age gzip gnutar
+# shellcheck shell=bash
 
 set -euo pipefail
 cd "$(dirname "$0")"
 
-read -rsp "Password: " PASSWORD
-echo
+AGE_KEY_FILE="${SOPS_AGE_KEY_FILE:-$HOME/.config/sops/age/keys.txt}"
+[ -f "$AGE_KEY_FILE" ] || {
+  echo "Error: Age identity not found: $AGE_KEY_FILE" >&2
+  exit 1
+}
 
 mkdir -p files
-openssl enc -d -aes-256-cbc -pbkdf2 -pass pass:"$PASSWORD" < blob.tar.gz.enc | gzip -d | tar xf - -C files
+age -d -i "$AGE_KEY_FILE" blob.tar.gz.age \
+  | gzip -d \
+  | tar xf - -C files
 
-echo "Decrypted to ./files/"
+echo "Decrypted blob.tar.gz.age to ./files/"

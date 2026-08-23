@@ -94,12 +94,17 @@ let
 
   # Wrapper script that generates config with secrets at runtime
   pvetuiWithSecrets = pkgs.writeShellScriptBin "pvetui" ''
-        CONFIG_DIR="$HOME/.config/pvetui"
-        CONFIG_FILE="$CONFIG_DIR/config.yml"
-        mkdir -p "$CONFIG_DIR"
+    set -euo pipefail
+    umask 077
+    CONFIG_DIR="$HOME/.config/pvetui"
+    CONFIG_FILE="$CONFIG_DIR/config.yml"
+    mkdir -p "$CONFIG_DIR"
+    temporary=$(mktemp "$CONFIG_DIR/config.yml.XXXXXX")
+    trap 'rm -f "$temporary"' EXIT
 
-        # Generate config with secrets
-        cat > "$CONFIG_FILE" << EOF
+    # Generate config with secrets in a private temporary file, then replace
+    # the visible config atomically.
+    cat > "$temporary" << EOF
     profiles:
     ${lib.concatMapStringsSep "\n" (
       profile:
@@ -161,8 +166,10 @@ let
       tasks_page: "F3"
       storage_page: "F4"
     EOF
+    mv "$temporary" "$CONFIG_FILE"
+    trap - EXIT
 
-        exec ${pvetui}/bin/pvetui "$@"
+    exec ${pvetui}/bin/pvetui "$@"
   '';
 in
 {

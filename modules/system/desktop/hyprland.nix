@@ -51,10 +51,6 @@
 
     xdg.portal = {
       enable = true;
-      extraPortals = [
-        pkgs.xdg-desktop-portal-hyprland
-        pkgs.xdg-desktop-portal-gtk
-      ];
       # Hyprland portal handles screen/input; GTK portal handles Settings
       # (color-scheme for WebKitGTK/Tauri apps)
       config.hyprland = {
