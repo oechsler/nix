@@ -107,6 +107,17 @@ let
       import sys, os
 
       config_path, plugin, key, value = sys.argv[1:5]
+
+      def write_atomic(content):
+          temporary = config_path + ".tmp"
+          try:
+              with open(temporary, "w") as f:
+                  f.writelines(content)
+              os.replace(temporary, config_path)
+          finally:
+              if os.path.exists(temporary):
+                  os.unlink(temporary)
+
       if not os.path.isfile(config_path):
           sys.exit(0)
 
@@ -131,9 +142,8 @@ let
       target_exists = any(line.strip() == target for line in lines)
 
       if not target_exists:
-          # Section missing (fresh KDE install) — append it
-          with open(config_path, "a") as f:
-              f.write(f"\n{target}\n{key}={value}\n")
+          # Section missing (fresh KDE install) — append it atomically
+          write_atomic(lines + [f"\n{target}\n{key}={value}\n"])
           sys.exit(0)
 
       in_target = False
@@ -155,8 +165,7 @@ let
       if in_target and not found:
           result.append(f"{key}={value}\n")
 
-      with open(config_path, "w") as f:
-          f.writelines(result)
+      write_atomic(result)
     '';
   };
 in

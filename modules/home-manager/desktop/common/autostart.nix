@@ -7,13 +7,13 @@
 # - Feature-flag aware (only starts apps if features enabled)
 #
 # WM-specific implementation:
-# - Hyprland: Uses exec-once in hyprland/default.nix
+# - Hyprland: Generates systemd user services in hyprland/default.nix
 # - KDE: See kde/autostart.nix for XDG .desktop generation
 #
 # Default autostart apps:
 # - Proton Pass - Password manager
 # - Vesktop - Discord client (minimized)
-# - Nextcloud - Cloud sync (Hyprland only, KDE uses XDG autostart)
+# - Nextcloud - Cloud sync (XDG autostart on both WMs)
 # - Pika Backup Monitor (if features.apps.enable)
 # - Trayscale - Tailscale tray (if features.tailscale.enable)
 # - Steam (if features.gaming.enable)

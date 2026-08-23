@@ -5,7 +5,7 @@
 # 2. URL download (theme.backgrounds.path = "https://...")
 # 3. Catppuccin color grading via gowall (theme.backgrounds.catppuccinize.enable = true)
 # 4. Blurred wallpaper generation for SDDM login screen
-# 5. Fallback solid color when SOPS key is missing
+# 5. Fallback solid color when the Age identity is missing
 #
 # Modes (auto-detected from theme.backgrounds.path):
 #   URL (http:// or https://) → download via curl
@@ -25,8 +25,8 @@
 #   Defaults to [<system accent>], so the old single-accent behaviour is preserved.
 #
 # Wallpaper archive:
-#   Location: backgrounds/blob.tar.gz.enc (AES-256-CBC encrypted tar.gz)
-#   Password: Stored in SOPS secret "backgrounds/password"
+#   Location: backgrounds/blob.tar.gz.age (Age-encrypted tar.gz)
+#   Identity: The SSH-derived Age identity at config.sops.age.keyFile
 #
 # Output files:
 #   /var/lib/backgrounds/current.jpg         - Current wallpaper (Catppuccinized + JPG)
@@ -34,9 +34,9 @@
 #
 # How it works:
 # - If path is a URL → download via curl
-# - If SOPS key is available → try to decrypt archive and extract the file
+# - If the Age identity is available → try to decrypt archive and extract the file
 # - If archive extraction fails (wrong password, file not found) → fall back to direct path
-# - If no SOPS key → fall back to direct path;
+# - If no Age identity → fall back to direct path;
 #   if that also fails → solid color fallback
 # - Convert to JPG (if needed) and save as current.jpg
 # - Apply gowall Catppuccin grade (if theme.backgrounds.catppuccinize.enable is true)
@@ -61,9 +61,8 @@ let
   # WALLPAPER ARCHIVE
   # ============================================================================
   # Encrypted tar.gz archive containing wallpapers
-  # Encryption: AES-256-CBC with PBKDF2
-  # Password: SOPS secret "backgrounds/password"
-  archiveFile = ../../backgrounds/blob.tar.gz.enc;
+  # Encryption: Age using the same SSH-derived identity as sops-nix.
+  archiveFile = ../../backgrounds/blob.tar.gz.age;
 
   # ============================================================================
   # FALLBACK COLOR
@@ -242,7 +241,7 @@ let
   prepareScript = pkgs.writeShellScript "prepare-wallpaper" ''
     set -euo pipefail
 
-    SECRET_FILE="${config.sops.secrets."backgrounds/password".path}"
+    IDENTITY_FILE="${config.sops.age.keyFile}"
     OUTPUT_DIR="${outputDir}"
     CURRENT="${outputDir}/${currentFile}"
     BLURRED="${outputDir}/${blurredFile}"
@@ -251,15 +250,13 @@ let
 
     archive_ok=0
 
-    if [[ -f "$SECRET_FILE" ]]; then
-      if ${pkgs.openssl}/bin/openssl enc -d -aes-256-cbc -pbkdf2 -pass file:"$SECRET_FILE" \
-           < "${archiveFile}" 2>/dev/null \
-        | ${pkgs.gzip}/bin/gzip -d 2>/dev/null \
+    if [[ -f "$IDENTITY_FILE" ]]; then
+      if ${pkgs.age}/bin/age -d -i "$IDENTITY_FILE" "${archiveFile}" 2>/dev/null \
+         | ${pkgs.gzip}/bin/gzip -d 2>/dev/null \
          | ${pkgs.gnutar}/bin/tar tf - 2>/dev/null \
          | ${pkgs.gnugrep}/bin/grep -xF "./${wallpaperPath}" >/dev/null; then
         echo "Extracting ${wallpaperPath} from archive"
-        ${pkgs.openssl}/bin/openssl enc -d -aes-256-cbc -pbkdf2 -pass file:"$SECRET_FILE" \
-          < "${archiveFile}" \
+        ${pkgs.age}/bin/age -d -i "$IDENTITY_FILE" "${archiveFile}" \
         | ${pkgs.gzip}/bin/gzip -d \
         | ${pkgs.gnutar}/bin/tar xf - -C "$OUTPUT_DIR" "./${wallpaperPath}"
         ${pkgs.imagemagick}/bin/magick "$OUTPUT_DIR/${wallpaperPath}" "$CURRENT"
@@ -267,7 +264,7 @@ let
         archive_ok=1
       fi
     else
-      echo "No SOPS key, skipping archive extraction"
+      echo "No Age identity, skipping archive extraction"
     fi
 
     if [[ $archive_ok -eq 0 ]]; then
@@ -420,15 +417,12 @@ in
     #---------------------------
     # Tries archive extraction first; falls back to direct Nix store path
     (lib.mkIf (!isUrl) {
-      sops.secrets."backgrounds/password" = { };
-
       systemd.services.prepare-wallpaper = {
         description = "Prepare wallpaper (archive or direct)";
         wantedBy = [ "multi-user.target" ];
         before = [ "display-manager.service" ];
         after = [
           "local-fs.target"
-          "sops-install-secrets.service"
         ];
 
         environment = {

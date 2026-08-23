@@ -8,8 +8,8 @@ images locally, they're stored in an encrypted archive.
 
 ## Archive Flow
 
-1. `blob.tar.gz.enc` contains all wallpapers (AES-256 encrypted)
-2. The password is stored in `sops/sops.encrypted.yaml` under `backgrounds/password`
+1. `blob.tar.gz.age` contains all wallpapers (Age encrypted)
+2. The archive uses the same SSH-derived Age identity as sops-nix
 3. At boot, a systemd service decrypts and extracts the archive
 4. `theme.backgrounds.path` in host configs is just the filename inside the archive
 
@@ -18,5 +18,5 @@ images locally, they're stored in an encrypted archive.
 ```bash
 ./decrypt.sh      # extracts to ./files/
                   # edit files in ./files/
-./encrypt.sh      # re-encrypts to blob.tar.gz.enc
+./encrypt.sh      # re-encrypts to blob.tar.gz.age
 ```

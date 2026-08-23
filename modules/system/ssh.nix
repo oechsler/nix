@@ -33,13 +33,18 @@ let
   keysFile = "${user.home}/.ssh/authorized_keys";
 
   fetchGithubKeys = pkgs.writeShellScript "fetch-github-keys" ''
+    set -euo pipefail
     keys=$(${pkgs.curl}/bin/curl -sf "https://github.com/${config.user.github}.keys" 2>/dev/null)
     if [ -n "$keys" ]; then
       mkdir -p "${user.home}/.ssh"
-      echo "$keys" > "${keysFile}"
-      chown ${config.user.name}:${user.group} "${user.home}/.ssh" "${keysFile}"
+      temporary=$(mktemp "${keysFile}.XXXXXX")
+      trap 'rm -f "$temporary"' EXIT
+      printf '%s\n' "$keys" > "$temporary"
+      chown ${config.user.name}:${user.group} "${user.home}/.ssh" "$temporary"
       chmod 700 "${user.home}/.ssh"
-      chmod 600 "${keysFile}"
+      chmod 600 "$temporary"
+      mv "$temporary" "${keysFile}"
+      trap - EXIT
     fi
   '';
 in

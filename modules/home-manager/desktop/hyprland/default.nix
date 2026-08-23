@@ -295,6 +295,7 @@ in
         battery-warning = {
           Unit = {
             Description = "Battery warning notifications";
+            After = [ "graphical-session.target" ];
             PartOf = [ "graphical-session.target" ];
           };
           Service = {
@@ -322,6 +323,7 @@ in
         cliphist-text = {
           Unit = {
             Description = "Clipboard history - text";
+            After = [ "graphical-session.target" ];
             PartOf = [ "graphical-session.target" ];
           };
           Service = {
@@ -335,6 +337,7 @@ in
         cliphist-image = {
           Unit = {
             Description = "Clipboard history - images";
+            After = [ "graphical-session.target" ];
             PartOf = [ "graphical-session.target" ];
           };
           Service = {
@@ -349,6 +352,7 @@ in
           Unit = {
             Description = "Power button inhibitor for desktop mode";
             Documentation = "man:systemd-inhibit(1)";
+            After = [ "graphical-session.target" ];
             PartOf = [ "graphical-session.target" ];
           };
           Service = {
@@ -428,7 +432,7 @@ in
           ]
           [
             "QT_QPA_PLATFORM"
-            "wayland"
+            "wayland;xcb"
           ]
           [
             "QT_QPA_PLATFORMTHEME"

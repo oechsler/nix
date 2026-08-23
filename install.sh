@@ -47,8 +47,16 @@ if [[ ! -f "$REPO_DIR/flake.nix" ]]; then
     REPO_DIR="$USER_HOME/repos/nix"
   fi
 fi
-STATE_FILE="/tmp/install.env"
-trap 'rm -f /tmp/luks-password "$STATE_FILE"' EXIT
+STATE_DIR="/var/lib/nixos-install"
+STATE_FILE="$STATE_DIR/state.env"
+LUKS_PASSWORD_FILE=""
+
+cleanup() {
+  rm -f "$LUKS_PASSWORD_FILE" "$STATE_FILE"
+}
+
+trap cleanup EXIT
+trap 'exit 130' HUP INT TERM
 
 show_help() {
   cat <<'EOF'
@@ -169,6 +177,9 @@ load_state() {
 }
 
 save_state() {
+  local temporary
+  temporary=$(mktemp "$STATE_DIR/state.env.XXXXXX")
+  trap 'rm -f "$temporary"' RETURN
   {
     # Inputs
     printf 'HOST=%q\n' "$HOST"
@@ -195,19 +206,25 @@ save_state() {
     printf 'CONFIG_PASSWORD_LOCKED=%q\n' "${CONFIG_PASSWORD_LOCKED:-false}"
     # Progress — prevents double-enrollment if installer crashes after TPM enroll
     printf 'TPM_ENROLLED=%q\n' "${TPM_ENROLLED:-false}"
-  } > "$STATE_FILE"
-  chmod 600 "$STATE_FILE"
+  } > "$temporary"
+  chmod 600 "$temporary"
+  mv "$temporary" "$STATE_FILE"
+  trap - RETURN
 }
 
 #===========================
 # Phase 1: Environment
 #===========================
 
-# Write LUKS_PASSWORD to /tmp/luks-password for tools that need a file (disko, systemd-cryptenroll)
+# Write LUKS_PASSWORD to a private temporary file for tools that need a file
+# (disko, systemd-cryptenroll).
 luks_password_file() {
-  printf '%s' "$LUKS_PASSWORD" > /tmp/luks-password
-  chmod 600 /tmp/luks-password
-  echo /tmp/luks-password
+  if [[ -z "$LUKS_PASSWORD_FILE" ]]; then
+    LUKS_PASSWORD_FILE=$(mktemp "$STATE_DIR/luks-password.XXXXXX")
+    chmod 600 "$LUKS_PASSWORD_FILE"
+    printf '%s' "$LUKS_PASSWORD" > "$LUKS_PASSWORD_FILE"
+  fi
+  echo "$LUKS_PASSWORD_FILE"
 }
 
 phase_validate() {
@@ -221,6 +238,10 @@ phase_validate() {
   if [[ $EUID -ne 0 ]]; then
     exec sudo env _HEADER_PRINTED=1 "$0" "${ORIGINAL_ARGS[@]}"
   fi
+
+  mkdir -p "$STATE_DIR"
+  chmod 700 "$STATE_DIR"
+  chown root:root "$STATE_DIR"
 
   if [[ "$DRY_RUN" == true ]]; then
     warn "Dry-run mode: no changes will be made"
@@ -243,6 +264,15 @@ warn-dirty = false"
 #===========================
 # Phase 2: Host Selection
 #===========================
+
+ensure_jq() {
+  # jq is not included in the NixOS installer image but is required for
+  # evaluating the selected host's feature summary.
+  if ! command -v jq &>/dev/null; then
+    nix profile install nixpkgs#jq 2>/dev/null || nix-env -iA nixos.jq 2>/dev/null
+  fi
+  command -v jq &>/dev/null || error "jq is required but could not be installed."
+}
 
 phase_select_host() {
   local hosts=()
@@ -269,12 +299,6 @@ phase_select_host() {
       if [[ "$h" == "$current_hostname" ]]; then
         HOST="$current_hostname"
         success "Host detected from hostname: $HOST"
-  # Ensure jq is available (not on NixOS ISO by default)
-  if ! command -v jq &>/dev/null; then
-    nix profile install nixpkgs#jq 2>/dev/null || nix-env -iA nixos.jq 2>/dev/null
-  fi
-
-  echo ""
         return
       fi
     done
@@ -338,10 +362,7 @@ phase_detect_features() {
     return
   fi
 
-  # Ensure jq is available (not on NixOS ISO by default)
-  if ! command -v jq &>/dev/null; then
-    nix profile install nixpkgs#jq 2>/dev/null || nix-env -iA nixos.jq 2>/dev/null
-  fi
+  ensure_jq
 
   echo ""
   info "Reading configuration for $HOST..."
@@ -1266,8 +1287,8 @@ phase_upgrade() {
 #===========================
 
 main() {
-  load_state
   phase_validate
+  load_state
   phase_select_host
 
   # On an installed system: always upgrade — step flags are ignored.

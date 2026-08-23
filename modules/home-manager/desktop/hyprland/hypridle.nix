@@ -45,6 +45,7 @@ let
   onAC = "! ${hasBattery} || ${acOnline}";
 
   brightnessController = import ./scripts/brightness-controller.nix { inherit pkgs; };
+  lockSuspend = import ./scripts/lock-suspend.nix { inherit pkgs; };
   dimDisplay = "${brightnessController} dim ${toString config.hypridle.dim.percent} ${toString config.hypridle.dim.stepPercent} ${config.hypridle.dim.stepDelay}";
   undimDisplay = "${brightnessController} restore";
 
@@ -67,42 +68,10 @@ let
   );
 
   # Lock + suspend on battery
-  suspendBattery = toString (
-    pkgs.writeShellScript "suspend-battery" ''
-      if ${onBattery}; then
-        loginctl lock-session
-        # Let hyprlock appear and finish its lock animation before suspending.
-        for _ in $(seq 1 100); do
-          if pidof hyprlock > /dev/null; then
-            sleep 1
-            systemctl suspend
-            exit 0
-          fi
-          sleep 0.05
-        done
-        exit 1
-      fi
-    ''
-  );
+  suspendBattery = "${onBattery} && ${lockSuspend}";
 
   # Lock + suspend on AC
-  suspendAc = toString (
-    pkgs.writeShellScript "suspend-ac" ''
-      if ${onAC}; then
-        loginctl lock-session
-        # Let hyprlock appear and finish its lock animation before suspending.
-        for _ in $(seq 1 100); do
-          if pidof hyprlock > /dev/null; then
-            sleep 1
-            systemctl suspend
-            exit 0
-          fi
-          sleep 0.05
-        done
-        exit 1
-      fi
-    ''
-  );
+  suspendAc = "${onAC} && ${lockSuspend}";
 
   # ============================================================================
   # LISTENERS
@@ -172,7 +141,10 @@ in
         general = {
           lock_cmd = "pidof hyprlock || hyprlock";
           before_sleep_cmd = "loginctl lock-session";
-          after_sleep_cmd = "${pkgs.runtimeShell} -c 'hyprctl reload 2>/dev/null || true; systemctl --user try-restart awww.service xdg-desktop-portal.service xdg-desktop-portal-hyprland.service xdg-desktop-portal-gtk.service 2>/dev/null || true; pkill -USR2 hyprlock 2>/dev/null || true; for i in 1 2 3; do hyprctl dispatch dpms on 2>/dev/null && break; sleep 0.5; done'";
+          # Do not restart portals after every resume: this can terminate
+          # active PipeWire screen-capture sessions. Hyprland, wallpaper,
+          # locker, and display state are refreshed independently.
+          after_sleep_cmd = "${pkgs.runtimeShell} -c 'hyprctl reload 2>/dev/null || true; systemctl --user try-restart awww.service 2>/dev/null || true; pkill -USR2 hyprlock 2>/dev/null || true; for i in 1 2 3; do hyprctl dispatch dpms on 2>/dev/null && break; sleep 0.5; done'";
         };
 
         listener = sharedListeners ++ lib.optionals isLaptop laptopListeners;

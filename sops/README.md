@@ -59,7 +59,6 @@ git commit -m "Update secrets"
 | `user/password` | Local login password for the primary user | `modules/system/users.nix` |
 | `wifi/<name>/psk` | WiFi WPA2 pre-shared key | `modules/system/networking/wifi.nix` (NetworkManager) |
 | `smb/<name>/password` | SMB/CIFS mount credentials | `modules/system/smb.nix` (systemd mount units) |
-| `backgrounds/password` | Wallhaven API password for wallpaper sync | `modules/system/backgrounds.nix` |
 | `opencode/opencode-go/api-key` | OpenCode Go API key | `modules/home-manager/programs/opencode.nix` |
 
 ### WiFi Networks

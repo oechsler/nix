@@ -12,8 +12,7 @@ smb:
     pika:
         password: ENC[AES256_GCM,data:ry42jLMdEm3ztwFcnrKhJDiyYVRiPE64,iv:ZJxoDgFuR7HFuGmWRrvvjibpqxUQc8K0Fu9/fIOAFlI=,tag:IMfmTyp1z0tn9x5HmIIXbQ==,type:str]
 #ENC[AES256_GCM,data:1XN2bGrYuCxne1ipDSxEnIS1fDAGmL9h+g/yU526RnMzbuf6o82Z9p+crz/xXDE+dyZWGmN9ZPd7DMP2AuagolRwk0u7r33UPGI=,iv:3oUn3TYnyIUMAosFpmtqqCXnn0rgMXohnDq6wtkTNe4=,tag:+qoijLCUhFkcHEc3973y2w==,type:comment]
-backgrounds:
-    password: ENC[AES256_GCM,data:a1kzzB+oRzUsPfg6b0rI1WWZm+gUzdHxifOB0YXSjKg=,iv:MyfAkGWikNubOLmvME/InRpFmyqUa6AfFQkEU1ht40E=,tag:IaQ8yv2KFj+lZbOegZTOOg==,type:str]
+backgrounds: {}
 #ENC[AES256_GCM,data:m7vFldtVFD96pZAntSU5PNjGkQzRLltAIvFXH7YccWboiMbuViw8mxKvqkm4wqypVysy1z0diSAAwg5uQ2YP8xDrkTyM,iv:cnnsntup+tnoI7L3pkuE6GWX87EtgAHGfhmJOigP3GQ=,tag:KgosjIcEnAFkVDYaa0blGQ==,type:comment]
 opencode:
     opencode-go:
@@ -35,7 +34,7 @@ sops:
             7dTRFAXsemNel6RjzgsIPW2AwHRrp1dV9EL78IVy/vKso+SdR0tMVQ==
             -----END AGE ENCRYPTED FILE-----
           recipient: age1jd4xd4pa2gyq83cnhftndr7xl4km2cmhyctyj3k69q9vfu3wqc6sfjcp4j
-    lastmodified: "2026-08-20T17:17:08Z"
-    mac: ENC[AES256_GCM,data:Mh7aocM9zQR/J1sN9hxD4J4VahjMVRxwdF7RqlQnbGS/W90S1CYHLCg0DgFMgstxG2zCrBp8+LkVTNtM+/3lE02++X4XEmUxXeB6jEdp+RnxGBtKrVGdGyPkiXgB0sVr8AoMbWq4TgbPG2Fi+IcR/U+7x4XBLZNoUBYUr+yUlUE=,iv:98ZWPADi3iVYyec+Ad7kvnJz+PY5l78C2zHrkvJjSTU=,tag:DvOWZy8zD1dJWNmNpvNN3w==,type:str]
+    lastmodified: "2026-08-23T09:46:10Z"
+    mac: ENC[AES256_GCM,data:WV7oTruKr2tp9vdNBTMBbrHL+g+hCvpkD1ZxPXIm2JLnUBDPBsqOMnwQ4JGW8j2SA9BCqv9VEv9nS7rKCUefpDYNlg/0wITXawDo8NIJ0IaWw6Pulu6iD2JmRFgQtnWIcLC0SZEm+ocTaQb2IPon1snBT7z4a6WFkERi3L5ge6E=,iv:D1a2YTFLvAxLkJ1xcMCgcm5gzd5ELsR7Eqw6jPJAByU=,tag:hi/ajQGwXeedJAs0NFTZTQ==,type:str]
     unencrypted_suffix: _unencrypted
     version: 3.13.3
