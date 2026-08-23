@@ -10,12 +10,14 @@
   pkgs,
   lib,
   features,
+  i18n,
   ...
 }:
 
 let
   enableAppPreviews = features.apps.enable;
   enableRichPreviews = features.dev.enable;
+  inherit (i18n) translate;
 
   yaziBookmarks =
     config.fileManager.bookmarks
@@ -32,7 +34,7 @@ let
       (toString i)
     ];
     run = "cd '${bookmark.path}'";
-    desc = "Go to ${bookmark.name}";
+    desc = translate "Go to ${bookmark.name}" "Zu ${bookmark.name}";
   }) yaziBookmarks;
 
   tabKeymaps =
@@ -43,7 +45,7 @@ let
           key
         ];
         run = "tab_switch ${toString (i - 1)}";
-        desc = "Switch to tab ${toString i}";
+        desc = translate "Switch to tab ${toString i}" "Zu Tab ${toString i} wechseln";
       })
       [
         "1"
@@ -159,7 +161,7 @@ let
         "m"
       ];
       run = "plugin mediainfo -- toggle-metadata";
-      desc = "Toggle media preview metadata";
+      desc = translate "Toggle media preview metadata" "Mediendaten ein-/ausblenden";
     }
     {
       on = [
@@ -168,7 +170,7 @@ let
         "i"
       ];
       run = "plugin mediainfo -- toggle-preview";
-      desc = "Toggle media preview image";
+      desc = translate "Toggle media preview image" "Medienvorschau ein-/ausblenden";
     }
   ];
 in
@@ -232,7 +234,7 @@ in
       opener.extract = [
         {
           run = ''ouch d -y "$@"'';
-          desc = "Extract here with ouch";
+          desc = translate "Extract here with ouch" "Hier mit ouch entpacken";
           for = "unix";
         }
       ];
@@ -274,7 +276,7 @@ in
             "i"
           ];
           run = "help";
-          desc = "Show yazi help";
+          desc = translate "Show yazi help" "Yazi-Hilfe anzeigen";
         }
         {
           on = "y";
@@ -282,12 +284,12 @@ in
             "yank"
             "plugin clipboard -- --action=copy"
           ];
-          desc = "Yank and copy to system clipboard";
+          desc = translate "Yank and copy to system clipboard" "Kopieren und in die Zwischenablage legen";
         }
         {
           on = "p";
           run = "plugin clipboard -- --action=paste";
-          desc = "Paste files from system clipboard";
+          desc = translate "Paste files from system clipboard" "Dateien aus der Zwischenablage einfuegen";
         }
         {
           on = [
@@ -295,7 +297,7 @@ in
             "h"
           ];
           run = "tab_switch -1 --relative";
-          desc = "Switch to previous tab";
+          desc = translate "Switch to previous tab" "Zum vorherigen Tab wechseln";
         }
         {
           on = [
@@ -303,7 +305,7 @@ in
             "l"
           ];
           run = "tab_switch 1 --relative";
-          desc = "Switch to next tab";
+          desc = translate "Switch to next tab" "Zum nächsten Tab wechseln";
         }
         {
           on = [
@@ -311,7 +313,7 @@ in
             "H"
           ];
           run = "tab_swap -1";
-          desc = "Move tab left";
+          desc = translate "Move tab left" "Tab nach links verschieben";
         }
         {
           on = [
@@ -319,7 +321,7 @@ in
             "L"
           ];
           run = "tab_swap 1";
-          desc = "Move tab right";
+          desc = translate "Move tab right" "Tab nach rechts verschieben";
         }
         {
           on = [
@@ -327,7 +329,7 @@ in
             "t"
           ];
           run = "tab_create --current";
-          desc = "New tab in current directory";
+          desc = translate "New tab in current directory" "Neuen Tab im aktuellen Verzeichnis öffnen";
         }
         {
           on = [
@@ -335,7 +337,7 @@ in
             "q"
           ];
           run = "close";
-          desc = "Close tab or quit";
+          desc = translate "Close tab or quit" "Tab schließen oder beenden";
         }
       ]
       ++ tabKeymaps
@@ -347,7 +349,7 @@ in
             "m"
           ];
           run = "plugin recycle-bin";
-          desc = "Open recycle bin menu";
+          desc = translate "Open recycle bin menu" "Papierkorb-Menü öffnen";
         }
         {
           on = [
@@ -356,7 +358,7 @@ in
             "u"
           ];
           run = "plugin restore";
-          desc = "Restore last deleted files";
+          desc = translate "Restore last deleted files" "Zuletzt gelöschte Dateien wiederherstellen";
         }
         {
           on = [
@@ -365,7 +367,7 @@ in
             "U"
           ];
           run = "plugin restore -- --interactive";
-          desc = "Restore deleted files interactively";
+          desc = translate "Restore deleted files interactively" "Gelöschte Dateien interaktiv wiederherstellen";
         }
         {
           on = [
@@ -373,7 +375,7 @@ in
             "a"
           ];
           run = "shell --block 'zip -r --junk-paths archiv.zip %s'";
-          desc = "Zip selected files";
+          desc = translate "Zip selected files" "Ausgewaehlte Dateien als ZIP archivieren";
         }
         {
           on = [
@@ -381,7 +383,7 @@ in
             "x"
           ];
           run = "shell --block 'unzip -q %h'";
-          desc = "Extract ZIP file";
+          desc = translate "Extract ZIP file" "ZIP-Datei entpacken";
         }
       ]
       ++ lib.optionals enableAppPreviews mediaKeymaps;
@@ -389,7 +391,7 @@ in
 
   xdg.desktopEntries.yazi = {
     name = "Yazi";
-    genericName = "File Manager";
+    genericName = translate "File Manager" "Dateimanager";
     exec = "kitty yazi %U";
     icon = "folder";
     terminal = false;

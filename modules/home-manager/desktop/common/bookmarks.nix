@@ -61,6 +61,7 @@ in
     let
       dirs = config.xdg.userDirs;
       name = builtins.baseNameOf;
+      removableMedia = "/mnt/removable";
     in
     [
       {
@@ -87,6 +88,11 @@ in
         name = name dirs.pictures;
         path = dirs.pictures;
         icon = "folder-pictures";
+      }
+      {
+        name = "Wechselmedien";
+        path = removableMedia;
+        icon = "drive-removable-media";
       }
     ];
 }
