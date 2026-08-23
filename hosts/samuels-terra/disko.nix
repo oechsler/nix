@@ -16,7 +16,7 @@
 #
 # Encryption:
 # - LUKS with YubiKey FIDO2 unlock (via luks.nix)
-# - Password file at /tmp/luks-password during installation
+# - Password file at /var/lib/nixos-install/luks-password during installation
 #
 # Impermanence:
 # - Root (/) is ephemeral, rolled back to blank snapshot on reboot
@@ -66,7 +66,7 @@ in
                 type = "luks";
                 name = "cryptroot";
                 settings.allowDiscards = true;
-                passwordFile = "/tmp/luks-password";
+                passwordFile = "/var/lib/nixos-install/luks-password";
                 content = {
                   type = "btrfs";
                   extraArgs = [
