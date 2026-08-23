@@ -41,6 +41,11 @@
   #===========================
   # Host-specific Overrides
   #===========================
+  theme.backgrounds = {
+    path = "Forma_6k_6.png";
+    catppuccinize.accent = null;
+  };
+
   displays.monitors = [
     {
       name = "eDP-1";
