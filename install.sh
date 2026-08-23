@@ -408,11 +408,11 @@ phase_detect_features() {
 
   echo -e "    Host:          ${BOLD}$HOST${RESET}"
   echo -e "    Username:      ${BOLD}$CONFIG_USERNAME${RESET}"
-  if [[ "$FEAT_DESKTOP" == "true" ]]; then
-    echo -e "    Desktop:       ${BOLD}$FEAT_WM${RESET}"
-  fi
   if [[ -n "$FEAT_FORM_FACTOR" && "$FEAT_FORM_FACTOR" != "null" ]]; then
     echo -e "    Form factor:   ${BOLD}$FEAT_FORM_FACTOR${RESET}"
+  fi
+  if [[ "$FEAT_DESKTOP" == "true" ]]; then
+    echo -e "    Desktop:       ${BOLD}$FEAT_WM${RESET}"
   fi
   echo -e "    Encryption:    $(label_bool "$FEAT_ENCRYPTION")"
   echo -e "    Impermanence:  $(label_bool "$FEAT_IMPERMANENCE")"
