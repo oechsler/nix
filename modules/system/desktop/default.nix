@@ -9,6 +9,10 @@
 
 { config, lib, ... }:
 
+let
+  primaryUser = config.users.users.${config.user.name};
+in
+
 {
   imports = [
     ./sddm.nix
@@ -23,6 +27,7 @@
   # UDisks mounts removable media below /run/media/<user>. Keep that standard
   # mountpoint for portals and expose a convenient stable alias below /mnt.
   systemd.tmpfiles.rules = lib.mkIf config.features.desktop.enable [
+    "d /run/media/${config.user.name} 0700 ${primaryUser.name} ${primaryUser.group} -"
     "L+ /mnt/removable - - - - /run/media/${config.user.name}"
   ];
 }
