@@ -202,6 +202,11 @@ in
         default = 1;
         description = "Vertical inset for compact workspace buttons";
       };
+      workspaceHorizontal = lib.mkOption {
+        type = lib.types.float;
+        default = 1.5;
+        description = "Horizontal inset for compact workspace buttons";
+      };
       compact = lib.mkOption {
         type = lib.types.int;
         default = 4;
@@ -212,6 +217,11 @@ in
         default = 8;
         description = "Spacing inside controls and list elements";
       };
+      module = lib.mkOption {
+        type = lib.types.int;
+        default = 10;
+        description = "Outer spacing for standalone bar modules";
+      };
       content = lib.mkOption {
         type = lib.types.int;
         default = 16;
@@ -221,6 +231,14 @@ in
         type = lib.types.int;
         default = 18;
         description = "Padding for standalone panels and overlays";
+      };
+    };
+
+    sizes = {
+      launcher = lib.mkOption {
+        type = lib.types.int;
+        default = 48;
+        description = "Width of the Waybar launcher button";
       };
     };
 
