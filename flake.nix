@@ -9,6 +9,7 @@
 #   - lib.mkDisko: Helper for importing disko configurations (optional)
 #   - nixosConfigurations: Local host configurations (samuels-terra, samuels-razer, etc.)
 #   - diskoConfigurations: Disk layouts for local hosts
+#   - packages.installerIso: Graphical offline installer with all host closures
 #   - formatter: nixfmt for `nix fmt`
 #   - checks: CI/CD linters (custom conventions, statix, deadnix)
 #
@@ -244,15 +245,29 @@
 
       pkgs = import nixpkgs { inherit system; };
 
+      #===========================
+      # Host Inventory and Closures
+      #===========================
+      # Every directory with a configuration.nix is a supported host. Keeping
+      # this derived from the filesystem prevents the ISO and host outputs from
+      # drifting apart when a host is added or removed.
       hostNames = lib.attrNames (
         lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./hosts)
       );
 
       nixosConfigurations = lib.genAttrs hostNames mkHost;
       diskoConfigurations = lib.genAttrs hostNames mkDisko;
+
+      # Complete system closures embedded into the offline installer ISO.
       hostClosures = lib.mapAttrs (_: host: host.config.system.build.toplevel) nixosConfigurations;
       hostManifest = lib.mapAttrs (_: systemClosure: { system = toString systemClosure; }) hostClosures;
 
+      #===========================
+      # Graphical Offline Installer
+      #===========================
+      # The ISO is built on a capable machine and contains every host closure.
+      # The live installer selects a host from the generated manifest and uses
+      # its closure directly, so the target machine does not compile locally.
       mkInstallerIso =
         selectedHosts:
         let
@@ -297,6 +312,8 @@
         };
       };
 
+      # Packages and build artifacts. The installer output is intentionally
+      # named separately from regular packages because it is a bootable image.
       packages.${system} = {
         inherit installerIso;
         pam-lldap = pkgs.callPackage ./modules/packages/pam-lldap.nix { };

@@ -970,7 +970,8 @@ copy_config() {
 
     # Copy the exact build-time repository snapshot used by the installer.
     cp -a "$REPO_DIR" "$dest"
-    success "Config copied to ~${dest#/mnt/home/$CONFIG_USERNAME}"
+    local home_prefix="/mnt/home/$CONFIG_USERNAME"
+    success "Config copied to ~${dest#"$home_prefix"}"
   fi
 }
 
