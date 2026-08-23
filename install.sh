@@ -297,16 +297,28 @@ phase_select_host() {
   local hosts=()
   local descriptions=()
 
-  for dir in "$REPO_DIR"/hosts/*/; do
-    local name
-    name="$(basename "$dir")"
-    [[ -f "$dir/configuration.nix" ]] || continue
-    hosts+=("$name")
-    # Extract description from first comment line of configuration.nix
-    local desc
-    desc="$(head -1 "$dir/configuration.nix" | sed 's/^# *//' | sed 's/ *$//')"
-    descriptions+=("$desc")
-  done
+  if [[ "$INSTALLER_ISO" == true ]]; then
+    ensure_jq
+    mapfile -t hosts < <(jq -r '.hosts | keys[]' "$ISO_MANIFEST")
+    for name in "${hosts[@]}"; do
+      local desc=""
+      if [[ -f "$REPO_DIR/hosts/$name/configuration.nix" ]]; then
+        desc="$(head -1 "$REPO_DIR/hosts/$name/configuration.nix" | sed 's/^# *//' | sed 's/ *$//')"
+      fi
+      descriptions+=("$desc")
+    done
+  else
+    for dir in "$REPO_DIR"/hosts/*/; do
+      local name
+      name="$(basename "$dir")"
+      [[ -f "$dir/configuration.nix" ]] || continue
+      hosts+=("$name")
+      # Extract description from first comment line of configuration.nix
+      local desc
+      desc="$(head -1 "$dir/configuration.nix" | sed 's/^# *//' | sed 's/ *$//')"
+      descriptions+=("$desc")
+    done
+  fi
 
   [[ ${#hosts[@]} -gt 0 ]] || error "No hosts found in $REPO_DIR/hosts/"
 
@@ -392,7 +404,11 @@ phase_detect_features() {
   echo ""
 
   local json
-  json=$(nix eval --json "$REPO_DIR#nixosConfigurations.${HOST}.config" --apply '
+  if [[ "$INSTALLER_ISO" == true ]]; then
+    json=$(jq -c --arg host "$HOST" '.hosts[$host] // empty' "$ISO_MANIFEST")
+    [[ -n "$json" ]] || error "Host '$HOST' is missing from the installer ISO manifest."
+  else
+    json=$(nix eval --json "$REPO_DIR#nixosConfigurations.${HOST}.config" --apply '
     cfg: {
       encryption = cfg.features.encryption.enable;
       impermanence = cfg.features.impermanence.enable;
@@ -415,7 +431,8 @@ phase_detect_features() {
         && !(cfg.sops.secrets ? "user/password");
       luksDevices = builtins.attrValues (builtins.mapAttrs (name: dev: dev.device) cfg.boot.initrd.luks.devices);
     }
-  ') || error "Failed to evaluate configuration. Check flake syntax."
+  }') || error "Failed to evaluate configuration. Check flake syntax."
+  fi
 
   FEAT_ENCRYPTION=$(echo "$json"      | jq -r '.encryption')
   FEAT_IMPERMANENCE=$(echo "$json"    | jq -r '.impermanence')
@@ -679,6 +696,11 @@ phase_summary() {
 phase_state_version() {
   local host_dir="$REPO_DIR/hosts/$HOST"
 
+  if [[ "$INSTALLER_ISO" == true ]]; then
+    success "Using prebuilt NixOS version"
+    return
+  fi
+
   local version
   version="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.pkgs.lib.version" | grep -o '^[0-9]*\.[0-9]*')"
   echo ""
@@ -742,19 +764,21 @@ phase_partition() {
   # shellcheck disable=SC2054  # comma is disko syntax, not array separator
   local disko_args=(--mode destroy,format,mount --flake "$REPO_DIR#$HOST" --yes-wipe-all-disks)
 
-  local disko_ref
-  disko_ref=$(nix flake metadata "path:${REPO_DIR}" --json 2>/dev/null \
-    | jq -r '.locks.nodes.disko.locked | "github:\(.owner)/\(.repo)/\(.rev)"')
-  if [[ -z "$disko_ref" || "$disko_ref" == "null" ]]; then
-    disko_ref="github:nix-community/disko"
-  fi
-
   if [[ "$INSTALLER_ISO" == true ]]; then
+    command -v disko &>/dev/null || error "Disko is missing from the installer ISO."
     if ! disko "${disko_args[@]}"; then
       error "Disko failed. Check disk IDs in hosts/$HOST/disko.nix"
     fi
-  elif ! nix run "$disko_ref" -- "${disko_args[@]}"; then
-    error "Disko failed. Check disk IDs in hosts/$HOST/disko.nix"
+  else
+    local disko_ref
+    disko_ref=$(nix flake metadata "path:${REPO_DIR}" --json 2>/dev/null \
+      | jq -r '.locks.nodes.disko.locked | "github:\(.owner)/\(.repo)/\(.rev)"')
+    if [[ -z "$disko_ref" || "$disko_ref" == "null" ]]; then
+      disko_ref="github:nix-community/disko"
+    fi
+    if ! nix run "$disko_ref" -- "${disko_args[@]}"; then
+      error "Disko failed. Check disk IDs in hosts/$HOST/disko.nix"
+    fi
   fi
 
   success "Disks partitioned and mounted at /mnt"
@@ -763,19 +787,21 @@ phase_partition() {
 phase_mount() {
   local disko_args=(--mode mount --flake "$REPO_DIR#$HOST")
 
-  local disko_ref
-  disko_ref=$(nix flake metadata "path:${REPO_DIR}" --json 2>/dev/null \
-    | jq -r '.locks.nodes.disko.locked | "github:\(.owner)/\(.repo)/\(.rev)"')
-  if [[ -z "$disko_ref" || "$disko_ref" == "null" ]]; then
-    disko_ref="github:nix-community/disko"
-  fi
-
   if [[ "$INSTALLER_ISO" == true ]]; then
+    command -v disko &>/dev/null || error "Disko is missing from the installer ISO."
     if ! disko "${disko_args[@]}"; then
       error "Disko mount failed. Are the disks connected?"
     fi
-  elif ! nix run "$disko_ref" -- "${disko_args[@]}"; then
-    error "Disko mount failed. Are the disks connected?"
+  else
+    local disko_ref
+    disko_ref=$(nix flake metadata "path:${REPO_DIR}" --json 2>/dev/null \
+      | jq -r '.locks.nodes.disko.locked | "github:\(.owner)/\(.repo)/\(.rev)"')
+    if [[ -z "$disko_ref" || "$disko_ref" == "null" ]]; then
+      disko_ref="github:nix-community/disko"
+    fi
+    if ! nix run "$disko_ref" -- "${disko_args[@]}"; then
+      error "Disko mount failed. Are the disks connected?"
+    fi
   fi
 
   success "Existing disks mounted at /mnt"
@@ -1416,7 +1442,10 @@ main() {
   STEP_TOTAL=0
   [[ "$DO_FORMAT" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
   [[ "${DO_MOUNT:-false}" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
-  [[ "$DO_INSTALL" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 2))  # state version + install
+  if [[ "$DO_INSTALL" == true ]]; then
+    STEP_TOTAL=$((STEP_TOTAL + 1))
+    [[ "$INSTALLER_ISO" != true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
+  fi
   [[ "$DO_POST_INSTALL" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
 
   if [[ "$DO_FORMAT" == true ]]; then
@@ -1428,7 +1457,7 @@ main() {
   fi
 
   if [[ "$DO_INSTALL" == true ]]; then
-    step "Detecting NixOS version"
+    [[ "$INSTALLER_ISO" != true ]] && step "Detecting NixOS version"
     phase_state_version
     step "Installing NixOS"
     phase_install

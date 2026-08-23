@@ -14,6 +14,11 @@
 {
   networking.networkmanager.enable = true;
 
+  security.sudo = {
+    enable = true;
+    wheelNeedsPassword = false;
+  };
+
   isoImage.edition = "plasma6";
 
   services.desktopManager.plasma6 = {
@@ -41,8 +46,8 @@
 
   environment.etc = {
     "nixos-installer/manifest.json".text = builtins.toJSON hostManifest;
-    "nixos-installer/install.sh".source = ../install.sh;
-    "nixos-installer/repo".source = ../.;
+    "nixos-installer/install.sh".source = ../../install.sh;
+    "nixos-installer/repo".source = ../../.;
     "xdg/autostart/nixos-installer.desktop".text = ''
       [Desktop Entry]
       Type=Application
@@ -52,6 +57,19 @@
       Terminal=false
       Categories=System;
     '';
+  };
+
+  systemd.user.services.nixos-installer = {
+    description = "NixOS graphical installer";
+    after = [ "graphical-session.target" ];
+    partOf = [ "graphical-session.target" ];
+    wantedBy = [ "graphical-session.target" ];
+    serviceConfig = {
+      Type = "exec";
+      ExecStart = "${pkgs.kdePackages.konsole}/bin/konsole --hold -e ${pkgs.sudo}/bin/sudo ${pkgs.bash}/bin/bash /etc/nixos-installer/install.sh --iso";
+      Restart = "on-failure";
+      RestartSec = 2;
+    };
   };
 
   isoImage.storeContents = lib.attrValues hostClosures;

@@ -25,7 +25,7 @@ Build the graphical ISO on a machine with enough RAM:
 ./build-iso.sh
 ```
 
-The ISO is written to `result/nixos-installer.iso` and contains the prebuilt closures for every host directory in `hosts/`. Boot the ISO, open the NixOS Installer from the Plasma session, and select the host. The ISO uses the matching system closure directly, so the target machine does not compile the kernel or desktop locally.
+The ISO build output is linked as `result/`; the bootable image is inside `result/iso/`. It contains the prebuilt closures for every host directory in `hosts/`. Boot the ISO, open the NixOS Installer from the Plasma session, and select the host. The ISO uses the matching system closure directly, so the target machine does not compile the kernel or desktop locally.
 
 CLI flags are passed through to `install.sh`:
 
