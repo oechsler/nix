@@ -202,6 +202,8 @@ save_state() {
     printf 'FEAT_DESKTOP=%q\n' "${FEAT_DESKTOP:-false}"
     printf 'FEAT_WM=%q\n' "${FEAT_WM:-}"
     printf 'FEAT_FORM_FACTOR=%q\n' "${FEAT_FORM_FACTOR:-}"
+    printf 'FEAT_KERNEL=%q\n' "${FEAT_KERNEL:-}"
+    printf 'FEAT_KERNEL_VERSION=%q\n' "${FEAT_KERNEL_VERSION:-}"
     printf 'CONFIG_USERNAME=%q\n' "${CONFIG_USERNAME:-}"
     printf 'CONFIG_PASSWORD_LOCKED=%q\n' "${CONFIG_PASSWORD_LOCKED:-false}"
     # Progress — prevents double-enrollment if installer crashes after TPM enroll
@@ -349,6 +351,8 @@ FEAT_SECURE_BOOT=false
 FEAT_DESKTOP=false
 FEAT_WM=""
 FEAT_FORM_FACTOR=""
+FEAT_KERNEL=""
+FEAT_KERNEL_VERSION=""
 CONFIG_USERNAME=""
 CONFIG_PASSWORD_LOCKED=false
 LUKS_DEVICES=()
@@ -382,6 +386,8 @@ phase_detect_features() {
       desktop = cfg.features.desktop.enable;
       wm = cfg.features.desktop.wm;
       formFactor = cfg.features.hardware.formFactor;
+      kernel = cfg.features.kernel;
+      kernelVersion = cfg.boot.kernelPackages.kernel.name;
       userName = cfg.user.name;
       # passwordLocked: true only when hashedPassword = "!" AND no sops secret covers it.
       # When user/password is in sops, user-passwd.service sets the password at boot.
@@ -401,6 +407,8 @@ phase_detect_features() {
   FEAT_DESKTOP=$(echo "$json"         | jq -r '.desktop')
   FEAT_WM=$(echo "$json"              | jq -r '.wm')
   FEAT_FORM_FACTOR=$(echo "$json"      | jq -r '.formFactor')
+  FEAT_KERNEL=$(echo "$json"           | jq -r '.kernel')
+  FEAT_KERNEL_VERSION=$(echo "$json"   | jq -r '.kernelVersion')
   CONFIG_USERNAME=$(echo "$json"      | jq -r '.userName')
   CONFIG_PASSWORD_LOCKED=$(echo "$json" | jq -r '.passwordLocked')
 
@@ -411,6 +419,9 @@ phase_detect_features() {
   echo -e "    Username:      ${BOLD}$CONFIG_USERNAME${RESET}"
   if [[ -n "$FEAT_FORM_FACTOR" && "$FEAT_FORM_FACTOR" != "null" ]]; then
     echo -e "    Form factor:   ${BOLD}$FEAT_FORM_FACTOR${RESET}"
+  fi
+  if [[ -n "$FEAT_KERNEL" && "$FEAT_KERNEL" != "null" ]]; then
+    echo -e "    Kernel:        ${BOLD}$FEAT_KERNEL${RESET} (${FEAT_KERNEL_VERSION})"
   fi
   if [[ "$FEAT_DESKTOP" == "true" ]]; then
     echo -e "    Desktop:       ${BOLD}$FEAT_WM${RESET}"
