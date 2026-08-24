@@ -18,6 +18,16 @@
 let
   cfg = config.features.wifi;
   ip6Privacy = if config.features.ipv6PrivacyExtensions.enable then 2 else 0;
+  wifiResume = pkgs.writeShellScript "networkmanager-wifi-resume" ''
+    ${pkgs.coreutils}/bin/sleep 3
+    wifi_device="$(${pkgs.networkmanager}/bin/nmcli -t -f DEVICE,TYPE device status | ${pkgs.gawk}/bin/awk -F: '$2 == "wifi" { print $1; exit }')"
+    [ -n "$wifi_device" ] || exit 0
+    for _ in $(${pkgs.coreutils}/bin/seq 1 30); do
+      ${pkgs.networkmanager}/bin/nmcli device connect "$wifi_device" >/dev/null 2>&1 && exit 0
+      ${pkgs.coreutils}/bin/sleep 1
+    done
+    exit 1
+  '';
   stableUuid =
     profileName:
     let
@@ -282,6 +292,16 @@ in
           '';
         };
 
+        NetworkManager-resume-wifi = {
+          description = "Reconnect WiFi after suspend/resume";
+          after = [ "NetworkManager.service" ];
+          wants = [ "NetworkManager.service" ];
+          serviceConfig = {
+            Type = "oneshot";
+            ExecStart = wifiResume;
+          };
+        };
+
         NetworkManager-ensure-profiles = {
           after = [ "sops-install-secrets.service" ];
           unitConfig.ConditionPathExists = config.sops.age.keyFile;
@@ -329,16 +349,9 @@ in
       };
 
       environment.etc."systemd/system-sleep/networkmanager-wifi-resume".source =
-        pkgs.writeShellScript "networkmanager-wifi-resume" ''
+        pkgs.writeShellScript "networkmanager-wifi-resume-hook" ''
           [ "$1" = post ] || exit 0
-          wifi_device="$(${pkgs.networkmanager}/bin/nmcli -t -f DEVICE,TYPE device status | ${pkgs.gawk}/bin/awk -F: '$2 == "wifi" { print $1; exit }')"
-          [ -n "$wifi_device" ] || exit 0
-          ${pkgs.coreutils}/bin/sleep 3
-          for _ in $(${pkgs.coreutils}/bin/seq 1 30); do
-            ${pkgs.networkmanager}/bin/nmcli device connect "$wifi_device" >/dev/null 2>&1 && exit 0
-            ${pkgs.coreutils}/bin/sleep 1
-          done
-          exit 1
+          ${pkgs.systemd}/bin/systemctl --no-block start NetworkManager-resume-wifi.service
         '';
 
       sops = {
