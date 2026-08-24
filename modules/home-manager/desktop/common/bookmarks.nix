@@ -67,7 +67,14 @@ in
         dirs = config.xdg.userDirs;
         name = builtins.baseNameOf;
       in
-      [
+      lib.optionals features.apps.enable [
+        {
+          name = "Nextcloud";
+          path = "${home}/Nextcloud";
+          icon = "folder-cloud";
+        }
+      ]
+      ++ [
         {
           name = name dirs.download;
           path = dirs.download;
@@ -92,13 +99,6 @@ in
           name = name dirs.pictures;
           path = dirs.pictures;
           icon = "folder-pictures";
-        }
-      ]
-      ++ lib.optionals features.apps.enable [
-        {
-          name = "Nextcloud";
-          path = "${home}/Nextcloud";
-          icon = "folder-cloud";
         }
       ];
 
