@@ -6,7 +6,7 @@ This repository is my approach to NixOS.
 
 After many years of using Linux, I reached a point where configuring yet
 another distribution started to feel like work without an end. I wanted to
-write the last Linux configuration of my life: a system that grows with me,
+write "the last Linux configuration of my life": a system that grows with me,
 does exactly what I need, and remains flexible, maintainable, and pleasant to
 use.
 
@@ -14,9 +14,11 @@ NixOS gave me a way to work towards that idea. I started by learning the
 language and the ecosystem, then gradually wrote that knowledge down as a
 reproducible configuration for my machines. This repository is the result: a
 personal system that is opinionated where it should be, and reusable where it
-can be. It is not a finished distribution or a universal answer to NixOS. I
-still have a lot to learn, and the configuration will keep changing as my
-understanding and my needs change.
+can be. What started with traditional dotfiles has grown into something much
+larger: a complete NixOS configuration for my machines. It is not a
+finished distribution or a universal answer to NixOS. I still have a lot to
+learn, and the configuration will keep changing as my understanding and my
+needs change.
 
 Here is a preview of what the configuration looks like today:
 
