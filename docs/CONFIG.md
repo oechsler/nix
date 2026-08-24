@@ -1,4 +1,5 @@
 # Configuration Reference
+
 This document describes the commonly used public configuration interface. It
 focuses on reusable options and defaults; host-specific values belong in host
 modules.
@@ -41,18 +42,18 @@ These options describe the machine and the guarantees required before
 userspace configuration starts. Hardware values are normally host-specific;
 the remaining options control boot-time storage and persistence.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `features.hardware.formFactor` | `"desktop"` | Machine form factor: `"desktop"` or `"laptop"`. |
-| `features.hardware.cpu` | `null` | CPU vendor: `"amd"` or `"intel"`; selects microcode. |
-| `features.hardware.gpu` | `null` | GPU vendor: `"amd"` or `"intel"`; selects graphics and VA-API support. |
-| `features.kernel` | `"cachyos"` | Kernel variant, such as `"cachyos-v3"`, `"cachyos-v4"`, `"cachyos-lts"`, `"default"`, or `"default-lts"`. |
-| `features.encryption.enable` | `true` | LUKS full disk encryption. |
-| `features.encryption.unlockMethod` | `"tpm2"` | LUKS unlock method: `"tpm2"`, `"yubikey"`, or `"password"`. |
-| `features.secureBoot.enable` | `false` | UEFI Secure Boot via lanzaboote. |
-| `features.impermanence.enable` | `true` | Impermanent root with btrfs rollback on boot. |
-| `features.impermanence.extraPaths` | `[]` | Additional paths to persist. |
-| `features.snapshots.enable` | `true` | Automatic btrfs snapshots. |
+| Option                             | Default     | Description                                                                                               |
+| ---------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------- |
+| `features.hardware.formFactor`     | `"desktop"` | Machine form factor: `"desktop"` or `"laptop"`.                                                           |
+| `features.hardware.cpu`            | `null`      | CPU vendor: `"amd"` or `"intel"`; selects microcode.                                                      |
+| `features.hardware.gpu`            | `null`      | GPU vendor: `"amd"` or `"intel"`; selects graphics and VA-API support.                                    |
+| `features.kernel`                  | `"cachyos"` | Kernel variant, such as `"cachyos-v3"`, `"cachyos-v4"`, `"cachyos-lts"`, `"default"`, or `"default-lts"`. |
+| `features.encryption.enable`       | `true`      | LUKS full disk encryption.                                                                                |
+| `features.encryption.unlockMethod` | `"tpm2"`    | LUKS unlock method: `"tpm2"`, `"yubikey"`, or `"password"`.                                               |
+| `features.secureBoot.enable`       | `false`     | UEFI Secure Boot via lanzaboote.                                                                          |
+| `features.impermanence.enable`     | `true`      | Impermanent root with btrfs rollback on boot.                                                             |
+| `features.impermanence.extraPaths` | `[]`        | Additional paths to persist.                                                                              |
+| `features.snapshots.enable`        | `true`      | Automatic btrfs snapshots.                                                                                |
 
 Example for a laptop with encrypted storage:
 
@@ -75,16 +76,16 @@ Networking options describe connectivity rather than individual applications.
 WiFi and SMB credentials are kept in SOPS; the host configuration only names
 the networks and shares.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `features.wifi.enable` | `true` | WiFi profiles via SOPS secrets. |
-| `features.wifi.networks` | `[]` | WPA2-PSK networks: `{ name, ssid }`. |
-| `features.wifi.enterpriseNetworks` | `[]` | WPA2 Enterprise networks: `{ name, ssid, identity }`. |
-| `features.wifi.preferEthernet.enable` | `true` | Prefer Ethernet and disable WiFi while a wired connection is active. |
-| `features.ipv6PrivacyExtensions.enable` | `true` | IPv6 privacy extensions for NetworkManager. |
-| `features.tailscale.enable` | `true` | Tailscale VPN and desktop tray integration. |
-| `features.smb.enable` | `true` | Automatic SMB network share mounts. |
-| `features.smb.shares` | `[]` | Shares to mount: `{ name, label, path, username? }`. |
+| Option                                  | Default | Description                                                          |
+| --------------------------------------- | ------- | -------------------------------------------------------------------- |
+| `features.wifi.enable`                  | `true`  | WiFi profiles via SOPS secrets.                                      |
+| `features.wifi.networks`                | `[]`    | WPA2-PSK networks: `{ name, ssid }`.                                 |
+| `features.wifi.enterpriseNetworks`      | `[]`    | WPA2 Enterprise networks: `{ name, ssid, identity }`.                |
+| `features.wifi.preferEthernet.enable`   | `true`  | Prefer Ethernet and disable WiFi while a wired connection is active. |
+| `features.ipv6PrivacyExtensions.enable` | `true`  | IPv6 privacy extensions for NetworkManager.                          |
+| `features.tailscale.enable`             | `true`  | Tailscale VPN and desktop tray integration.                          |
+| `features.smb.enable`                   | `true`  | Automatic SMB network share mounts.                                  |
+| `features.smb.shares`                   | `[]`    | Shares to mount: `{ name, label, path, username? }`.                 |
 
 ```nix
 features = {
@@ -116,24 +117,24 @@ browser uses `about:newtab` as its startup page and replaces the new-tab content
 with the configured dashboard. System-level power policy is supplemented by
 the selected desktop session.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `features.desktop.enable` | `true` | Desktop environment and login manager. |
-| `features.desktop.wm` | `"hyprland"` | Desktop: `"hyprland"` or `"kde"`. |
-| `features.desktop.login` | `"greeter"` | `"greeter"` or `"autologin"`. |
-| `features.desktop.fileManager` | `"default"` | `"default"` or terminal-based Yazi integration. |
-| `features.desktop.browser.enable` | `true` | Managed default browser. |
-| `features.desktop.browser.type` | `"librewolf"` | `"librewolf"` or `"firefox"`. |
-| `features.desktop.browser.newTabPage` | `https://dash.at.oechsler.it` | Dashboard URL used by the managed new-tab page. |
-| `features.desktop.browser.searchEngine` | `"ddg"` | Default search engine identifier. |
-| `features.desktop.browser.cookieAllowlist` | `[]` | Additional sites allowed to keep first-party cookies and sessions. |
-| `features.audio.enable` | `true` | PipeWire audio with PulseAudio compatibility. |
-| `features.bluetooth.enable` | `true` | Bluetooth support. |
-| `features.compat.enable` | `true` | `nix-ld` and glibc compatibility libraries. |
-| `features.auth.totp.enable` | `true` | TOTP for sudo and SSH. |
-| `features.auth.yubikey.enable` | `unlockMethod == "yubikey"` | YubiKey authentication. |
-| `features.auth.ldap.enable` | `false` | LLDAP authentication. |
-| `features.ssh.enable` | `false` | OpenSSH server and GitHub key sync. |
+| Option                                     | Default                       | Description                                                        |
+| ------------------------------------------ | ----------------------------- | ------------------------------------------------------------------ |
+| `features.desktop.enable`                  | `true`                        | Desktop environment and login manager.                             |
+| `features.desktop.wm`                      | `"hyprland"`                  | Desktop: `"hyprland"` or `"kde"`.                                  |
+| `features.desktop.login`                   | `"greeter"`                   | `"greeter"` or `"autologin"`.                                      |
+| `features.desktop.fileManager`             | `"default"`                   | `"default"` or terminal-based Yazi integration.                    |
+| `features.desktop.browser.enable`          | `true`                        | Managed default browser.                                           |
+| `features.desktop.browser.type`            | `"librewolf"`                 | `"librewolf"` or `"firefox"`.                                      |
+| `features.desktop.browser.newTabPage`      | `https://dash.at.oechsler.it` | Dashboard URL used by the managed new-tab page.                    |
+| `features.desktop.browser.searchEngine`    | `"ddg"`                       | Default search engine identifier.                                  |
+| `features.desktop.browser.cookieAllowlist` | `[]`                          | Additional sites allowed to keep first-party cookies and sessions. |
+| `features.audio.enable`                    | `true`                        | PipeWire audio with PulseAudio compatibility.                      |
+| `features.bluetooth.enable`                | `true`                        | Bluetooth support.                                                 |
+| `features.compat.enable`                   | `true`                        | `nix-ld` and glibc compatibility libraries.                        |
+| `features.auth.totp.enable`                | `true`                        | TOTP for sudo and SSH.                                             |
+| `features.auth.yubikey.enable`             | `unlockMethod == "yubikey"`   | YubiKey authentication.                                            |
+| `features.auth.ldap.enable`                | `false`                       | LLDAP authentication.                                              |
+| `features.ssh.enable`                      | `false`                       | OpenSSH server and GitHub key sync.                                |
 
 ```nix
 features = {
@@ -158,11 +159,11 @@ Virtualisation is split into a master switch and two independent child
 features. The master switch disables the resulting container and VM
 configuration; child options can still be selected independently.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `features.virtualisation.enable` | `true` | Master switch for container and VM support. |
-| `features.virtualisation.container.enable` | `true` | Podman with Docker-compatible CLI. |
-| `features.virtualisation.vm.enable` | `true` | QEMU/KVM, libvirt, and virt-manager. |
+| Option                                     | Default | Description                                 |
+| ------------------------------------------ | ------- | ------------------------------------------- |
+| `features.virtualisation.enable`           | `true`  | Master switch for container and VM support. |
+| `features.virtualisation.container.enable` | `true`  | Podman with Docker-compatible CLI.          |
+| `features.virtualisation.vm.enable`        | `true`  | QEMU/KVM, libvirt, and virt-manager.        |
 
 ```nix
 features = {
@@ -180,10 +181,10 @@ Gaming enables the shared Steam/Proton toolchain. The Steam Machine option is
 separate because it adds a login session rather than changing the desktop
 session itself.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `features.gaming.enable` | `true` | Steam, Proton-GE, Gamescope, GameMode, and MangoHud. |
-| `features.gaming.steamMachine.enable` | `false` | Steam Gamescope session in SDDM. |
+| Option                                | Default | Description                                          |
+| ------------------------------------- | ------- | ---------------------------------------------------- |
+| `features.gaming.enable`              | `true`  | Steam, Proton-GE, Gamescope, GameMode, and MangoHud. |
+| `features.gaming.steamMachine.enable` | `false` | Steam Gamescope session in SDDM.                     |
 
 ```nix
 features = {
@@ -199,12 +200,12 @@ features = {
 Development tools inherit from `features.dev.enable` by default. Individual
 IDE integrations can be disabled without removing the command-line toolchain.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `features.dev.enable` | `true` | Development languages, tools, and IDEs. |
-| `features.dev.opencode.enable` | `dev.enable` | OpenCode AI coding agent. |
-| `features.dev.jetbrains.enable` | `dev.enable` | JetBrains IDEs. |
-| `features.dev.dbeaver.enable` | `dev.enable` | DBeaver database GUI. |
+| Option                          | Default      | Description                             |
+| ------------------------------- | ------------ | --------------------------------------- |
+| `features.dev.enable`           | `true`       | Development languages, tools, and IDEs. |
+| `features.dev.opencode.enable`  | `dev.enable` | OpenCode AI coding agent.               |
+| `features.dev.jetbrains.enable` | `dev.enable` | JetBrains IDEs.                         |
+| `features.dev.dbeaver.enable`   | `dev.enable` | DBeaver database GUI.                   |
 
 ```nix
 features = {
@@ -222,16 +223,16 @@ Operations features provide declarative access to infrastructure. Profiles,
 clusters, and credentials are separate so the same module can be reused across
 hosts.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `features.ops.enable` | `true` | Infrastructure and operations tools. |
-| `features.ops.pvetui.enable` | `ops.enable` | Proxmox VE terminal UI. |
-| `features.ops.pvetui.profiles` | `[]` | Proxmox server profiles. |
-| `features.ops.pvetui.defaultProfile` | `""` | Default Proxmox profile or group. |
-| `features.ops.pvetui.groups` | `{}` | Proxmox profile groups. |
-| `features.ops.kubernetes.enable` | `ops.enable` | Kubernetes tools with OIDC support. |
-| `features.ops.kubernetes.clusters` | `[]` | Kubernetes cluster definitions. |
-| `features.ops.kubernetes.defaultContext` | `""` | Default Kubernetes context. |
+| Option                                   | Default      | Description                          |
+| ---------------------------------------- | ------------ | ------------------------------------ |
+| `features.ops.enable`                    | `true`       | Infrastructure and operations tools. |
+| `features.ops.pvetui.enable`             | `ops.enable` | Proxmox VE terminal UI.              |
+| `features.ops.pvetui.profiles`           | `[]`         | Proxmox server profiles.             |
+| `features.ops.pvetui.defaultProfile`     | `""`         | Default Proxmox profile or group.    |
+| `features.ops.pvetui.groups`             | `{}`         | Proxmox profile groups.              |
+| `features.ops.kubernetes.enable`         | `ops.enable` | Kubernetes tools with OIDC support.  |
+| `features.ops.kubernetes.clusters`       | `[]`         | Kubernetes cluster definitions.      |
+| `features.ops.kubernetes.defaultContext` | `""`         | Default Kubernetes context.          |
 
 ```nix
 features = {
@@ -251,21 +252,21 @@ Applications are the highest-level user-facing features. The general switch
 controls the desktop application set; application-specific options are grouped
 under their respective feature.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `features.apps.enable` | `true` | General desktop applications. |
-| `features.apps.mumble.enable` | `true` | Install and configure Mumble when `features.apps.enable` is enabled. |
-| `features.apps.mumble.username` | `user.name` | Default Mumble username. |
-| `features.apps.mumble.servers` | `[]` | Favorite servers; `name` defaults to `host`, `port` to `64738`. |
-| `features.apps.mumble.certificate.enable` | `false` | Import the optional SOPS-managed client certificate. |
-| `features.apps.mumble.disablePublicServerList` | `true` | Disable Mumble's public server list. |
-| `features.apps.mumble.autoConnectToLastServer` | `true` | Connect to the last server automatically. |
-| `features.apps.mumble.reconnectAutomatically` | `true` | Reconnect after a lost connection. |
-| `features.apps.mumble.hideInTray` | `true` | Keep Mumble in the system tray. |
-| `features.apps.mumble.quitBehavior` | `"AlwaysMinimize"` | Close behavior. |
-| `features.apps.mumble.serverFilterMode` | `"ShowAll"` | Favorite-list filter. |
-| `features.flatpak.enable` | `true` | Flatpak and Flathub. |
-| `features.appimage.enable` | `true` | AppImage support and watcher. |
+| Option                                         | Default            | Description                                                          |
+| ---------------------------------------------- | ------------------ | -------------------------------------------------------------------- |
+| `features.apps.enable`                         | `true`             | General desktop applications.                                        |
+| `features.apps.mumble.enable`                  | `true`             | Install and configure Mumble when `features.apps.enable` is enabled. |
+| `features.apps.mumble.username`                | `user.name`        | Default Mumble username.                                             |
+| `features.apps.mumble.servers`                 | `[]`               | Favorite servers; `name` defaults to `host`, `port` to `64738`.      |
+| `features.apps.mumble.certificate.enable`      | `false`            | Import the optional SOPS-managed client certificate.                 |
+| `features.apps.mumble.disablePublicServerList` | `true`             | Disable Mumble's public server list.                                 |
+| `features.apps.mumble.autoConnectToLastServer` | `true`             | Connect to the last server automatically.                            |
+| `features.apps.mumble.reconnectAutomatically`  | `true`             | Reconnect after a lost connection.                                   |
+| `features.apps.mumble.hideInTray`              | `true`             | Keep Mumble in the system tray.                                      |
+| `features.apps.mumble.quitBehavior`            | `"AlwaysMinimize"` | Close behavior.                                                      |
+| `features.apps.mumble.serverFilterMode`        | `"ShowAll"`        | Favorite-list filter.                                                |
+| `features.flatpak.enable`                      | `true`             | Flatpak and Flathub.                                                 |
+| `features.appimage.enable`                     | `true`             | AppImage support and watcher.                                        |
 
 #### Mumble
 
@@ -296,8 +297,8 @@ SOPS provides encrypted values to system and Home-Manager modules. Keep secret
 values in the encrypted SOPS file and configure only paths and feature switches
 in Nix.
 
-| Option | Default | Description |
-|--------|---------|-------------|
+| Option             | Default                          | Description                                                       |
+| ------------------ | -------------------------------- | ----------------------------------------------------------------- |
 | `sops.secretsFile` | `../../sops/sops.encrypted.yaml` | Path to encrypted SOPS secrets file (override for external repos) |
 
 ```nix
@@ -323,15 +324,15 @@ normally do not need per-host overrides:
 These options describe the primary local user. Passwords and other sensitive
 values are supplied through SOPS.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `user.name` | `flake.primaryUser` | Primary username; the flake value is shared with Disko and home paths. |
-| `user.fullName` | `"Samuel Oechsler"` | Full name |
-| `user.email` | `"samuel@oechsler.it"` | Email address |
-| `user.github` | `"oechsler"` | GitHub username (for SSH key import) |
-| `user.icon` | `.assets/sam-memoji.png` | Profile picture (SDDM) |
-| `user.hashedPassword` | `"!"` (locked) | Local shadow password fallback; the runtime password is set from SOPS (`user/password`) when local password authentication is enabled. Can be overridden per-host with a hash (`mkpasswd -m yescrypt`). |
-| `user.directories` | `[ "repos" ]` | Extra directories to create in `~` |
+| Option                | Default                  | Description                                                                                                                                                                                             |
+| --------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user.name`           | `flake.primaryUser`      | Primary username; the flake value is shared with Disko and home paths.                                                                                                                                  |
+| `user.fullName`       | `"Samuel Oechsler"`      | Full name                                                                                                                                                                                               |
+| `user.email`          | `"samuel@oechsler.it"`   | Email address                                                                                                                                                                                           |
+| `user.github`         | `"oechsler"`             | GitHub username (for SSH key import)                                                                                                                                                                    |
+| `user.icon`           | `.assets/sam-memoji.png` | Profile picture (SDDM)                                                                                                                                                                                  |
+| `user.hashedPassword` | `"!"` (locked)           | Local shadow password fallback; the runtime password is set from SOPS (`user/password`) when local password authentication is enabled. Can be overridden per-host with a hash (`mkpasswd -m yescrypt`). |
+| `user.directories`    | `[ "repos" ]`            | Extra directories to create in `~`                                                                                                                                                                      |
 
 ```nix
 user = {
@@ -346,26 +347,26 @@ user = {
 Theme options provide shared visual defaults for both supported desktop
 sessions.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `theme.catppuccin.flavor` | `"mocha"` | `"latte"` / `"frappe"` / `"macchiato"` / `"mocha"` |
-| `theme.catppuccin.accent` | `"mauve"` | Accent color (14 options: blue, flamingo, green, lavender, maroon, mauve, peach, pink, red, rosewater, sapphire, sky, teal, yellow) |
-| `theme.scale` | `1.0` | DPI / monitor scale factor |
-| `theme.backgrounds.path` | `"nix-black-4k.png"` | Wallpaper filename in archive, or path if `theme.backgrounds.enable = false` |
-| `theme.backgrounds.enable` | `true` | Extract wallpapers from encrypted archive at boot |
-| `theme.backgrounds.catppuccinize.enable` | `true` | Apply Catppuccin color grading to wallpapers via gowall |
-| `theme.backgrounds.catppuccinize.invert` | `false` | Invert wallpaper colors before Catppuccin color mapping |
-| `theme.backgrounds.catppuccinize.accent` | `[<system accent>]` | Wallpaper accent colors for gowall LUT mapping. `null` = all 14 flavour accents; `["lavender"]` = single accent shaded 14 ways; `["blue" "lavender"]` = cycled accents, each shaded. |
-| `theme.radius.small` | `6` | Border radius for small elements (progress bars) |
-| `theme.radius.default` | `16` | Border radius for windows/panels/notifications |
-| `theme.gaps.inner` | `8` | Gaps between windows |
-| `theme.gaps.outer` | `16` | Gaps at screen edges |
-| `theme.border.width` | `2` | Window border width |
-| `theme.cursor.name` | auto | Cursor theme (`"Breeze_Light"` on latte, `"breeze_cursors"` otherwise) |
-| `theme.cursor.package` | `kdePackages.breeze` | Cursor theme package |
-| `theme.cursor.size` | `24` | Cursor size |
-| `theme.icons.name` | auto | Icon theme (`"Papirus-Light"` on latte, `"Papirus-Dark"` otherwise) |
-| `theme.icons.package` | Catppuccin Papirus | Icon theme package (always Catppuccin Papirus) |
+| Option                                   | Default              | Description                                                                                                                                                                          |
+| ---------------------------------------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `theme.catppuccin.flavor`                | `"mocha"`            | `"latte"` / `"frappe"` / `"macchiato"` / `"mocha"`                                                                                                                                   |
+| `theme.catppuccin.accent`                | `"mauve"`            | Accent color (14 options: blue, flamingo, green, lavender, maroon, mauve, peach, pink, red, rosewater, sapphire, sky, teal, yellow)                                                  |
+| `theme.scale`                            | `1.0`                | DPI / monitor scale factor                                                                                                                                                           |
+| `theme.backgrounds.path`                 | `"nix-black-4k.png"` | Wallpaper filename in archive, or path if `theme.backgrounds.enable = false`                                                                                                         |
+| `theme.backgrounds.enable`               | `true`               | Extract wallpapers from encrypted archive at boot                                                                                                                                    |
+| `theme.backgrounds.catppuccinize.enable` | `true`               | Apply Catppuccin color grading to wallpapers via gowall                                                                                                                              |
+| `theme.backgrounds.catppuccinize.invert` | `false`              | Invert wallpaper colors before Catppuccin color mapping                                                                                                                              |
+| `theme.backgrounds.catppuccinize.accent` | `[<system accent>]`  | Wallpaper accent colors for gowall LUT mapping. `null` = all 14 flavour accents; `["lavender"]` = single accent shaded 14 ways; `["blue" "lavender"]` = cycled accents, each shaded. |
+| `theme.radius.small`                     | `6`                  | Border radius for small elements (progress bars)                                                                                                                                     |
+| `theme.radius.default`                   | `16`                 | Border radius for windows/panels/notifications                                                                                                                                       |
+| `theme.gaps.inner`                       | `8`                  | Gaps between windows                                                                                                                                                                 |
+| `theme.gaps.outer`                       | `16`                 | Gaps at screen edges                                                                                                                                                                 |
+| `theme.border.width`                     | `2`                  | Window border width                                                                                                                                                                  |
+| `theme.cursor.name`                      | auto                 | Cursor theme (`"Breeze_Light"` on latte, `"breeze_cursors"` otherwise)                                                                                                               |
+| `theme.cursor.package`                   | `kdePackages.breeze` | Cursor theme package                                                                                                                                                                 |
+| `theme.cursor.size`                      | `24`                 | Cursor size                                                                                                                                                                          |
+| `theme.icons.name`                       | auto                 | Icon theme (`"Papirus-Light"` on latte, `"Papirus-Dark"` otherwise)                                                                                                                  |
+| `theme.icons.package`                    | Catppuccin Papirus   | Icon theme package (always Catppuccin Papirus)                                                                                                                                       |
 
 ```nix
 theme = {
@@ -382,20 +383,20 @@ theme = {
 Waybar's system tray uses Papirus-Dark icon names for common applications.
 This section applies to Hyprland; KDE manages tray icons through Plasma.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `waybar.tray.icons` | `{}` | Custom StatusNotifierItem Id → Papirus icon name mappings |
+| Option              | Default | Description                                               |
+| ------------------- | ------- | --------------------------------------------------------- |
+| `waybar.tray.icons` | `{}`    | Custom StatusNotifierItem Id → Papirus icon name mappings |
 
 Default mappings are feature-gated and automatically applied:
 
-| Feature Flag | App | StatusNotifierItem Id | Papirus Icon |
-|--------------|-----|----------------------|--------------|
-| `features.gaming.enable` | Steam | `steam` | `steam_tray_mono` |
-| `features.apps.enable` | Nextcloud | `Nextcloud` | `state-ok` |
-| `features.apps.enable` | Mumble | `Mumble` | `mumble-indicator` |
-| `features.apps.enable` | Proton Pass | `Proton Pass_status_icon_1` | `dialog-password-panel` |
-| `features.apps.enable` | Vesktop | `vesktop_status_icon_1` | `discord-tray` |
-| `features.tailscale.enable` | Trayscale | `dev.deedles.Trayscale` | `network-vpn` |
+| Feature Flag                | App         | StatusNotifierItem Id       | Papirus Icon            |
+| --------------------------- | ----------- | --------------------------- | ----------------------- |
+| `features.gaming.enable`    | Steam       | `steam`                     | `steam_tray_mono`       |
+| `features.apps.enable`      | Nextcloud   | `Nextcloud`                 | `state-ok`              |
+| `features.apps.enable`      | Mumble      | `Mumble`                    | `mumble-indicator`      |
+| `features.apps.enable`      | Proton Pass | `Proton Pass_status_icon_1` | `dialog-password-panel` |
+| `features.apps.enable`      | Vesktop     | `vesktop_status_icon_1`     | `discord-tray`          |
+| `features.tailscale.enable` | Trayscale   | `dev.deedles.Trayscale`     | `network-vpn`           |
 
 ### Customizing Tray Icons
 
@@ -425,26 +426,26 @@ The Id is the last path component (e.g., `steam` from `:1.107/org/ayatana/Notifi
 
 Font options are set in `configuration.nix` and shared with Home Manager.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `fonts.defaults.monospace` | `"JetBrainsMono Nerd Font"` | Monospace font (terminal, code editors, UI when `uiStyle = "monospace"`) |
-| `fonts.defaults.sansSerif` | `"Noto Sans"` | Sans-serif font (UI when `uiStyle = "sans-serif"`) |
-| `fonts.defaults.serif` | `"Noto Serif"` | Serif font (fontconfig default) |
-| `fonts.defaults.uiStyle` | `"monospace"` | Font style for UI elements: `"monospace"` or `"sans-serif"` |
-| `fonts.defaults.ui` | *(read-only)* | Resolved font name based on `uiStyle` — used by waybar, dunst, rofi, hyprlock, SDDM, GTK, Qt |
-| `fonts.defaults.size` | `11` | Default font size for UI elements |
-| `fonts.defaults.terminalSize` | `fonts.defaults.size` | Terminal (kitty) font size |
-| `fonts.defaults.uiPixelSize` | `floor(size * 4 / 3)` | Resolved pixel size used by Waybar and other UI components (read-only). |
+| Option                        | Default                     | Description                                                                                  |
+| ----------------------------- | --------------------------- | -------------------------------------------------------------------------------------------- |
+| `fonts.defaults.monospace`    | `"JetBrainsMono Nerd Font"` | Monospace font (terminal, code editors, UI when `uiStyle = "monospace"`)                     |
+| `fonts.defaults.sansSerif`    | `"Noto Sans"`               | Sans-serif font (UI when `uiStyle = "sans-serif"`)                                           |
+| `fonts.defaults.serif`        | `"Noto Serif"`              | Serif font (fontconfig default)                                                              |
+| `fonts.defaults.uiStyle`      | `"monospace"`               | Font style for UI elements: `"monospace"` or `"sans-serif"`                                  |
+| `fonts.defaults.ui`           | _(read-only)_               | Resolved font name based on `uiStyle` — used by waybar, dunst, rofi, hyprlock, SDDM, GTK, Qt |
+| `fonts.defaults.size`         | `11`                        | Default font size for UI elements                                                            |
+| `fonts.defaults.terminalSize` | `fonts.defaults.size`       | Terminal (kitty) font size                                                                   |
+| `fonts.defaults.uiPixelSize`  | `floor(size * 4 / 3)`       | Resolved pixel size used by Waybar and other UI components (read-only).                      |
 
 ## Locale Options
 
 Locale options are set in `configuration.nix` and apply system-wide.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `locale.timezone` | `"Europe/Berlin"` | Timezone |
-| `locale.language` | `"de_DE.UTF-8"` | System locale; German is the default |
-| `locale.keyboard` | `"de"` | Keyboard layout |
+| Option            | Default           | Description                          |
+| ----------------- | ----------------- | ------------------------------------ |
+| `locale.timezone` | `"Europe/Berlin"` | Timezone                             |
+| `locale.language` | `"de_DE.UTF-8"`   | System locale; German is the default |
+| `locale.keyboard` | `"de"`            | Keyboard layout                      |
 
 ```nix
 locale = {
@@ -500,29 +501,29 @@ displays = {
 };
 ```
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `displays.defaults.vrr` | `2` | Default VRR mode for hotplugged/unlisted monitors where output-independent defaults are supported: `0` off, `1` always, `2` fullscreen/automatic |
-| `displays.defaults.hdr` | `1` | Default HDR mode for hotplugged/unlisted monitors where supported: `0` off, `1` Steam/Gamescope HDR, `2` full desktop HDR |
-| `displays.defaultWorkspaceCount` | `4` | Number of workspaces created by default. |
-| `displays.monitors` | `[]` | List of monitor configurations |
-| `displays.monitors.*.name` | — | Connector name (`"DP-1"`, `"HDMI-A-1"`, `"eDP-1"`) |
-| `displays.monitors.*.edidHash` | `null` | Optional stable EDID identifier for display matching. |
-| `displays.monitors.*.make` | `null` | Optional monitor manufacturer for display matching. |
-| `displays.monitors.*.model` | `null` | Optional monitor model for display matching. |
-| `displays.monitors.*.serial` | `null` | Optional monitor serial number for display matching. |
-| `displays.monitors.*.width` | `1920` | Horizontal resolution |
-| `displays.monitors.*.height` | `1080` | Vertical resolution |
-| `displays.monitors.*.refreshRate` | `60` | Refresh rate in Hz |
-| `displays.monitors.*.x` | `0` | Horizontal position offset |
-| `displays.monitors.*.y` | `0` | Vertical position offset |
-| `displays.monitors.*.scale` | `theme.scale` | Scale factor |
-| `displays.monitors.*.rotation` | `"normal"` | Rotation (`"normal"`, `"90"`, `"180"`, or `"270"`) |
-| `displays.monitors.*.wallpaper` | `null` | Per-monitor wallpaper; `null` uses the processed default |
-| `displays.monitors.*.workspaces` | `[]` | Workspace IDs to bind to this monitor (Hyprland only) |
-| `displays.monitors.*.vrr` | `0` | VRR mode: `0` off, `1` always, `2` fullscreen/automatic |
-| `displays.monitors.*.hdr` | `0` | HDR mode: `0` off, `1` Steam/Gamescope, `2` full desktop HDR |
-| `displays.monitors.*.hdrSdrMaxLuminance` | `450` | SDR white level in nits for HDR conversion |
+| Option                                   | Default       | Description                                                                                                                                      |
+| ---------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `displays.defaults.vrr`                  | `2`           | Default VRR mode for hotplugged/unlisted monitors where output-independent defaults are supported: `0` off, `1` always, `2` fullscreen/automatic |
+| `displays.defaults.hdr`                  | `1`           | Default HDR mode for hotplugged/unlisted monitors where supported: `0` off, `1` Steam/Gamescope HDR, `2` full desktop HDR                        |
+| `displays.defaultWorkspaceCount`         | `4`           | Number of workspaces created by default.                                                                                                         |
+| `displays.monitors`                      | `[]`          | List of monitor configurations                                                                                                                   |
+| `displays.monitors.*.name`               | —             | Connector name (`"DP-1"`, `"HDMI-A-1"`, `"eDP-1"`)                                                                                               |
+| `displays.monitors.*.edidHash`           | `null`        | Optional stable EDID identifier for display matching.                                                                                            |
+| `displays.monitors.*.make`               | `null`        | Optional monitor manufacturer for display matching.                                                                                              |
+| `displays.monitors.*.model`              | `null`        | Optional monitor model for display matching.                                                                                                     |
+| `displays.monitors.*.serial`             | `null`        | Optional monitor serial number for display matching.                                                                                             |
+| `displays.monitors.*.width`              | `1920`        | Horizontal resolution                                                                                                                            |
+| `displays.monitors.*.height`             | `1080`        | Vertical resolution                                                                                                                              |
+| `displays.monitors.*.refreshRate`        | `60`          | Refresh rate in Hz                                                                                                                               |
+| `displays.monitors.*.x`                  | `0`           | Horizontal position offset                                                                                                                       |
+| `displays.monitors.*.y`                  | `0`           | Vertical position offset                                                                                                                         |
+| `displays.monitors.*.scale`              | `theme.scale` | Scale factor                                                                                                                                     |
+| `displays.monitors.*.rotation`           | `"normal"`    | Rotation (`"normal"`, `"90"`, `"180"`, or `"270"`)                                                                                               |
+| `displays.monitors.*.wallpaper`          | `null`        | Per-monitor wallpaper; `null` uses the processed default                                                                                         |
+| `displays.monitors.*.workspaces`         | `[]`          | Workspace IDs to bind to this monitor (Hyprland only)                                                                                            |
+| `displays.monitors.*.vrr`                | `0`           | VRR mode: `0` off, `1` always, `2` fullscreen/automatic                                                                                          |
+| `displays.monitors.*.hdr`                | `0`           | HDR mode: `0` off, `1` Steam/Gamescope, `2` full desktop HDR                                                                                     |
+| `displays.monitors.*.hdrSdrMaxLuminance` | `450`         | SDR white level in nits for HDR conversion                                                                                                       |
 
 Default behavior and limitations:
 
@@ -541,10 +542,10 @@ Input settings define the default pointer and touchpad behavior shared by
 Hyprland and KDE. They are intentionally small; device-specific settings are
 handled by the desktop session when it starts.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `input.mouse.naturalScroll` | `true` | Use natural (reversed) scrolling for mice. |
-| `input.touchpad.naturalScroll` | `true` | Use natural (reversed) scrolling for touchpads. |
+| Option                         | Default | Description                                     |
+| ------------------------------ | ------- | ----------------------------------------------- |
+| `input.mouse.naturalScroll`    | `true`  | Use natural (reversed) scrolling for mice.      |
+| `input.touchpad.naturalScroll` | `true`  | Use natural (reversed) scrolling for touchpads. |
 
 ```nix
 input = {
@@ -566,8 +567,8 @@ Autostart entries are managed by Home Manager and translated to the selected
 desktop's session mechanism. Feature modules add their own entries when enabled;
 custom entries can be added to the same list.
 
-| Option | Default | Description |
-|--------|---------|-------------|
+| Option           | Default           | Description                                             |
+| ---------------- | ----------------- | ------------------------------------------------------- |
 | `autostart.apps` | Feature-dependent | Applications started when the graphical session begins. |
 
 ```nix
@@ -582,6 +583,7 @@ autostart = {
 ```
 
 The default list is extended by feature toggles:
+
 - `features.apps.enable` adds Nextcloud, Proton Pass, and Vesktop
 - `features.apps.enable` plus `features.apps.mumble.enable` adds Mumble
 - `features.gaming.enable` adds Steam
@@ -595,9 +597,9 @@ autostart entries; Hyprland starts the commands with `exec-once`.
 `features.desktop.fileManager` selects the primary file manager and keeps the
 desktop shortcuts, MIME associations, and pinned applications consistent.
 
-| Value | Behavior |
-|-------|----------|
-| `"default"` | Use Nautilus on Hyprland or Dolphin on KDE. |
+| Value        | Behavior                                                           |
+| ------------ | ------------------------------------------------------------------ |
+| `"default"`  | Use Nautilus on Hyprland or Dolphin on KDE.                        |
 | `"terminal"` | Use Yazi from Kitty and remove the GUI file manager from the pins. |
 
 ```nix
@@ -618,8 +620,8 @@ Bookmarks are shared across the supported file managers. The same declarative
 list is rendered as GTK bookmarks, KDE places, or Yazi shortcuts depending on
 the active desktop.
 
-| Option | Default | Description |
-|--------|---------|-------------|
+| Option                  | Default           | Description                           |
+| ----------------------- | ----------------- | ------------------------------------- |
 | `fileManager.bookmarks` | Feature-dependent | Sidebar bookmarks and Yazi shortcuts. |
 
 ```nix
@@ -645,8 +647,8 @@ Pinned applications control desktop presentation, not package installation.
 The default list follows the enabled feature groups and the selected file
 manager.
 
-| Option | Default | Description |
-|--------|---------|-------------|
+| Option               | Default           | Description                                  |
+| -------------------- | ----------------- | -------------------------------------------- |
 | `desktop.pinnedApps` | Feature-dependent | Desktop files pinned to the dock or taskbar. |
 
 ```nix
@@ -659,6 +661,7 @@ desktop = {
 ```
 
 The default list is extended by feature toggles:
+
 - `features.dev.enable` adds Neovim
 - `features.apps.enable` adds Obsidian, Vesktop, Spotify
 - `features.gaming.enable` adds Steam
@@ -672,12 +675,12 @@ These values define the shared idle policy. Hyprland implements it with
 `hypridle`; KDE translates it to PowerDevil. The session-specific implementation
 keeps the resulting lock, display, and suspend behavior aligned.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `idle.timeouts.dimBattery` | `120` | Seconds before dimming on battery. |
-| `idle.timeouts.suspendBattery` | `300` | Seconds before locking and suspending on battery. |
-| `idle.timeouts.dimAc` | `300` | Seconds before dimming on AC. |
-| `idle.timeouts.suspendAc` | `1800` | Seconds before locking and suspending on AC. |
+| Option                         | Default | Description                                       |
+| ------------------------------ | ------- | ------------------------------------------------- |
+| `idle.timeouts.dimBattery`     | `120`   | Seconds before dimming on battery.                |
+| `idle.timeouts.suspendBattery` | `300`   | Seconds before locking and suspending on battery. |
+| `idle.timeouts.dimAc`          | `300`   | Seconds before dimming on AC.                     |
+| `idle.timeouts.suspendAc`      | `1800`  | Seconds before locking and suspending on AC.      |
 
 ```nix
 idle = {
@@ -698,11 +701,11 @@ starts the sequence, `stepPercent` controls each brightness step, and
 PowerDevil provides its own built-in display dimming and uses the shared idle
 timeouts above.
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `hypridle.dim.percent` | `10` | Target brightness when dimmed (%) |
-| `hypridle.dim.stepPercent` | `5` | Brightness step size for smooth dimming (%) |
-| `hypridle.dim.stepDelay` | `"0.05"` | Delay between dim steps in seconds |
+| Option                     | Default  | Description                                 |
+| -------------------------- | -------- | ------------------------------------------- |
+| `hypridle.dim.percent`     | `10`     | Target brightness when dimmed (%)           |
+| `hypridle.dim.stepPercent` | `5`      | Brightness step size for smooth dimming (%) |
+| `hypridle.dim.stepDelay`   | `"0.05"` | Delay between dim steps in seconds          |
 
 ```nix
 hypridle = {

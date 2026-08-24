@@ -23,7 +23,7 @@
 # CONVENTIONS ENFORCED
 # ============================================================================
 #
-# 1. NO QUOTED NESTED ATTRIBUTES (NIX_CODE_STYLE.md §2)
+# 1. NO UNINTENTIONAL QUOTED NESTED ATTRIBUTES (NIX_CODE_STYLE.md §Configuration)
 #    ❌ WRONG:  "desktop.enable" = false;
 #    ✅ CORRECT: desktop.enable = false;
 #
@@ -33,11 +33,9 @@
 #    Exception: Application settings (Firefox, etc.) where quoted keys are
 #               required: settings = { "browser.startup.page" = 3; };
 #
-# 2. DOCUMENTATION HEADERS (NIX_DOCS_STYLE.md §1)
-#    ✅ All modules must have a header comment explaining:
-#       - Purpose of the module
-#       - Configuration options available
-#       - Key features
+# 2. DOCUMENTATION HEADERS (NIX_CODE_STYLE.md §Comments)
+#    ✅ Evaluated modules must have a short purpose comment in the first five lines.
+#       The check verifies header presence; review verifies its quality.
 #
 #    Example:
 #      # Module Name / Purpose
@@ -52,7 +50,11 @@
 #    Exception: default.nix (import-only files)
 #               packages/*.nix (use meta.description)
 #
-# 3. FUTURE CHECKS (can be added):
+# 3. MARKDOWN SHAPE (NIX_DOCS_STYLE.md §Markdown)
+#    ✅ Markdown documents must have an H1 title, no empty headings, and balanced
+#       fenced code blocks. Content quality remains a review concern.
+#
+# 4. FUTURE CHECKS (can be added):
 #    - Module structure (config = lib.mkIf ...)
 #    - Section separators (#=== vs #---)
 #    - Shell script documentation (Why/Problem/Solution/How)
@@ -115,11 +117,38 @@ pkgs.runCommand "nixos-config-lint" { } ''
 
   echo ""
 
+  # ==========================================================================
+  # CHECK 3: Markdown Shape
+  # ==========================================================================
+  echo "--- Check 3: Markdown Shape ---"
+
+  while IFS= read -r -d $'\0' f; do
+    total=$((total + 1))
+    if ! head -20 "$f" | grep -q '^# [^#]'; then
+      echo "  ❌ $f: Missing H1 title" >&2
+      fails=1
+    fi
+
+    if grep -n '^#$' "$f" 2>/dev/null; then
+      echo "  ❌ $f: Found empty Markdown heading" >&2
+      fails=1
+    fi
+
+    fences=$(grep -c '^```' "$f" 2>/dev/null || true)
+    if [ $((fences % 2)) -ne 0 ]; then
+      echo "  ❌ $f: Unbalanced fenced code blocks" >&2
+      fails=1
+    fi
+  done < <(find "$src" -name '*.md' -print0)
+
+  echo ""
+
   if [ "$fails" -eq 0 ]; then
     echo "✅ All checks passed!"
     echo "Files checked: $total"
-    echo "  - No quoted nested attributes"
+    echo "  - No unintentional quoted nested attributes"
     echo "  - All modules have documentation headers"
+    echo "  - Markdown has valid document shape"
   else
     echo "❌ Found files with issues"
     echo ""

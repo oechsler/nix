@@ -6,12 +6,12 @@ through the feature options.
 
 ## Overview
 
-| Method | Default | Setup |
-|--------|---------|-------|
-| TOTP (Time-based One-Time Password) | enabled | `sudo totp-init` |
-| YubiKey PAM (sudo, SSH) | on when `unlockMethod = "yubikey"` | `sudo yubikey-init` |
-| YubiKey FIDO2 LUKS unlock (boot) | via `features.encryption.unlockMethod` | `sudo yubikey-luks-init` |
-| TPM2 LUKS unlock (boot) | via `features.encryption.unlockMethod` | `sudo tpm-luks-init` |
+| Method                              | Default                                | Setup                    |
+| ----------------------------------- | -------------------------------------- | ------------------------ |
+| TOTP (Time-based One-Time Password) | enabled                                | `sudo totp-init`         |
+| YubiKey PAM (sudo, SSH)             | on when `unlockMethod = "yubikey"`     | `sudo yubikey-init`      |
+| YubiKey FIDO2 LUKS unlock (boot)    | via `features.encryption.unlockMethod` | `sudo yubikey-luks-init` |
+| TPM2 LUKS unlock (boot)             | via `features.encryption.unlockMethod` | `sudo tpm-luks-init`     |
 
 Both PAM methods work independently or combined. Password serves as a local fallback only — it is never accepted over SSH.
 
@@ -35,11 +35,11 @@ When enabled, a dedicated PAM module uses LLDAP only as the password provider fo
 
 Password only. TOTP is excluded because SDDM's greeter mishandles multi-prompt PAM. YubiKey is excluded so that `pam_gnome_keyring` can capture the password and auto-unlock the GNOME Keyring. SDDM inherits login's PAM configuration.
 
-| Enabled | Auth chain |
-|---------|-----------|
-| TOTP only | Password |
-| YubiKey only | Password |
-| Both | Password |
+| Enabled      | Auth chain |
+| ------------ | ---------- |
+| TOTP only    | Password   |
+| YubiKey only | Password   |
+| Both         | Password   |
 
 ### sudo
 
@@ -47,21 +47,21 @@ The configured methods are an ordered fallback chain, not cumulative factors
 for every login. The first successful method grants access; TOTP allows three
 attempts before the next method is tried.
 
-| Enabled | Auth chain |
-|---------|-----------|
-| TOTP only | OTP (3 attempts) → Password |
-| YubiKey only | YubiKey → Password |
-| Both | YubiKey → OTP (3 attempts) → Password |
+| Enabled      | Auth chain                            |
+| ------------ | ------------------------------------- |
+| TOTP only    | OTP (3 attempts) → Password           |
+| YubiKey only | YubiKey → Password                    |
+| Both         | YubiKey → OTP (3 attempts) → Password |
 
 ### Polkit
 
 Password only. TOTP and YubiKey are both excluded — password is required here for the same reason as SDDM: if polkit used a different credential, apps would prompt for the GNOME Keyring password separately on every privileged action.
 
-| Enabled | Auth chain |
-|---------|-----------|
-| TOTP only | Password |
-| YubiKey only | Password |
-| Both | Password |
+| Enabled      | Auth chain |
+| ------------ | ---------- |
+| TOTP only    | Password   |
+| YubiKey only | Password   |
+| Both         | Password   |
 
 ### SSH
 
@@ -72,11 +72,11 @@ SSH uses two-stage authentication: first the SSH key, then a second factor via P
 
 This is enforced by `AuthenticationMethods = "publickey,keyboard-interactive"` — both stages must succeed. Password auth (`PasswordAuthentication`) and unix PAM auth (`unixAuth`) are disabled, so there is no password fallback over SSH.
 
-| Enabled | Auth chain |
-|---------|-----------|
-| TOTP only | Public-Key + OTP |
-| YubiKey only | Public-Key + YubiKey |
-| Both | Public-Key + (YubiKey or OTP) |
+| Enabled      | Auth chain                    |
+| ------------ | ----------------------------- |
+| TOTP only    | Public-Key + OTP              |
+| YubiKey only | Public-Key + YubiKey          |
+| Both         | Public-Key + (YubiKey or OTP) |
 
 Requires `features.ssh.enable = true` on the host for the SSH server to run.
 
@@ -99,11 +99,13 @@ Scan the QR code on both devices. The old secret is replaced — previous device
 codes stop working after the file is replaced.
 
 **Manual verification** (e.g. to check clock drift):
+
 ```bash
 oathtool --totp -d 6 "$(sudo cat /persist/etc/users.oath | awk '{print $NF}')"
 ```
 
 **Disable** (not recommended):
+
 ```nix
 features = {
   auth.totp.enable = false;
@@ -180,12 +182,12 @@ password credential when enabled.
 
 Auth files use `persistPrefix` directly (not impermanence bind-mounts) because `pam_oath`/`pam_u2f` update files via `temp + rename()`, which fails across bind-mount boundaries.
 
-| File | Purpose |
-|------|---------|
-| `/persist/etc/users.oath` (or `/etc/users.oath` without impermanence) | TOTP secrets |
-| `/persist/etc/u2f_mappings` (or `/etc/u2f_mappings` without impermanence) | YubiKey credentials |
-| `modules/system/auth.nix` | PAM configuration, CLI tools |
-| `modules/system/users.nix` | Password hash (default: locked) |
+| File                                                                      | Purpose                         |
+| ------------------------------------------------------------------------- | ------------------------------- |
+| `/persist/etc/users.oath` (or `/etc/users.oath` without impermanence)     | TOTP secrets                    |
+| `/persist/etc/u2f_mappings` (or `/etc/u2f_mappings` without impermanence) | YubiKey credentials             |
+| `modules/system/auth.nix`                                                 | PAM configuration, CLI tools    |
+| `modules/system/users.nix`                                                | Password hash (default: locked) |
 
 ## Disabling
 

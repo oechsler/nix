@@ -1,0 +1,8 @@
+config:
+  default: true
+  MD013: false # Tables and technical references need flexible line lengths.
+  MD033: false # README previews use <details> and <summary> intentionally.
+  MD040: false # Some command/output blocks are intentionally untyped.
+  MD060: false # Existing tables use compact and aligned styles deliberately.
+ignores:
+  - "**/.git/**"

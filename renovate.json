@@ -3,27 +3,13 @@
   "extends": [
     "config:recommended"
   ],
-  "enabledManagers": ["github-actions", "custom.regex"],
-  "customManagers": [
-    {
-      "customType": "regex",
-      "description": "Update digest-pinned OCI images in Nix modules",
-      "managerFilePatterns": ["/\\.nix$/"],
-      "matchStrings": [
-        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+) versioning=(?<versioning>\\S+)\\s+\"[^\"]+:(?<currentValue>[^\"@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)\""
-      ]
-    }
-  ],
+  "enabledManagers": ["github-actions"],
   "dependencyDashboard": false,
   "labels": ["dependencies"],
   "packageRules": [
     {
-      "matchDepTypes": ["action"],
-      "groupName": "Forgejo Actions"
-    },
-    {
-      "matchManagers": ["custom.regex"],
-      "groupName": "OpenCode container images"
+      "matchManagers": ["github-actions"],
+      "groupName": "CI actions"
     }
   ]
 }

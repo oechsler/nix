@@ -60,21 +60,21 @@ git clone https://github.com/oechsler/nix.git /tmp/nix-config
 ./install.sh -h                           # Show help
 ```
 
-| Flag | Description |
-|------|-------------|
-| `--host HOST` | Pre-select host (skip menu) |
-| `-s`, `--ssh-key FILE` | SSH private key path |
-| `-p`, `--luks-password PASSWORD` | LUKS disk encryption password |
-| `--iso` | Use the prebuilt closure and manifest from the installer ISO |
-| `--format` | Partition and format disks (disko) |
-| `--install` | Install NixOS (nixos-install) |
-| `--post-install` | Post-install setup (SSH, SOPS, TOTP, YubiKey, TPM/FIDO2) |
-| `--skip-totp` | Skip TOTP setup for this run |
-| `--quiet` | Suppress upgrade prompts on installed systems |
-| `--repair` | Verify/repair the Nix store before an upgrade |
-| `-y`, `--yes` | Skip confirmation (requires `-s`, `-p` if encryption enabled) |
-| `--dry-run` | Show summary and exit without making changes |
-| `-h`, `--help` | Show help |
+| Flag                             | Description                                                   |
+| -------------------------------- | ------------------------------------------------------------- |
+| `--host HOST`                    | Pre-select host (skip menu)                                   |
+| `-s`, `--ssh-key FILE`           | SSH private key path                                          |
+| `-p`, `--luks-password PASSWORD` | LUKS disk encryption password                                 |
+| `--iso`                          | Use the prebuilt closure and manifest from the installer ISO  |
+| `--format`                       | Partition and format disks (disko)                            |
+| `--install`                      | Install NixOS (nixos-install)                                 |
+| `--post-install`                 | Post-install setup (SSH, SOPS, TOTP, YubiKey, TPM/FIDO2)      |
+| `--skip-totp`                    | Skip TOTP setup for this run                                  |
+| `--quiet`                        | Suppress upgrade prompts on installed systems                 |
+| `--repair`                       | Verify/repair the Nix store before an upgrade                 |
+| `-y`, `--yes`                    | Skip confirmation (requires `-s`, `-p` if encryption enabled) |
+| `--dry-run`                      | Show summary and exit without making changes                  |
+| `-h`, `--help`                   | Show help                                                     |
 
 Steps are combinable. Without step flags, all three run. The installer reads host feature flags from the local flake or, in ISO mode, from the embedded manifest.
 
@@ -93,13 +93,22 @@ subvolumes:
             ├── @home      → /home          (permanent user data)
             ├── @nix       → /nix           (permanent Nix store)
             ├── @persist   → /persist       (permanent state — only with impermanence enabled)
-            └── @snapshots → mounted at /mnt/btrfs-root/@snapshots by btrbk
+            ├── @snapshots → /.snapshots (normal snapshot access)
+            ├── @steam     → /home/<user>/.local/share/Steam
+            ├── @nextcloud → /home/<user>/Nextcloud
+            └── @smb       → /home/<user>/smb
 ```
+
+The `@steam`, `@nextcloud`, and `@smb` subvolumes keep large or independently
+managed data outside `@home` snapshots. When snapshots are enabled, btrbk also
+mounts the Btrfs top-level at `/mnt/btrfs-root` and stores snapshot copies in
+`/mnt/btrfs-root/@snapshots`.
 
 ## Impermanence
 
 When `features.impermanence.enable = true`, root (`@`) is wiped on every boot.
 Persistent data goes in `/persist`:
+
 - `/var/lib/NetworkManager`, `/var/lib/bluetooth`
 - `/var/lib/docker`
 - `/var/lib/nixos`, `/var/lib/sops`
@@ -114,6 +123,7 @@ Secrets are encrypted with SOPS and age. The repository uses an Age identity
 derived from the user's SSH key; see [sops/README.md](../sops/README.md).
 
 After install, verify sops works:
+
 ```bash
 cd ~/repos/nix
 ./sops/decrypt.sh  # should create sops.decrypted.yaml
@@ -122,6 +132,7 @@ cd ~/repos/nix
 ## Troubleshooting
 
 ### Boot fails
+
 ```bash
 # Boot from USB, unlock and mount:
 cryptsetup open /dev/disk/by-partlabel/disk-main-root cryptroot
@@ -132,6 +143,7 @@ nixos-enter --root /mnt
 ```
 
 ### Forgot LUKS password
+
 Recovery depends on the available LUKS slots, recovery keys, and backups. A
 reinstall is only necessary if no valid unlock method remains.
 
@@ -142,6 +154,7 @@ Secure Boot is disabled by default. To enable it:
 ### 1. Enable in config
 
 In your host's `configuration.nix`:
+
 ```nix
 features = {
   secureBoot.enable = true;
@@ -161,15 +174,19 @@ The script auto-detects your board and guides you through the correct steps. It 
 ### Standard boards
 
 **Step A** — In UEFI: enter Setup Mode:
+
 1. Disable Secure Boot
 2. Enable **Setup Mode** (sometimes called "Reset to Setup Mode") — this clears existing keys
 3. Save and reboot into NixOS
 
 **Step B** — Run `secure-boot-init`:
+
 ```bash
 sudo secure-boot-init
 ```
+
 The script generates keys, rebuilds with lanzaboote active, and enrolls:
+
 ```bash
 sbctl enroll-keys --microsoft --firmware-builtin
 ```
@@ -181,16 +198,20 @@ sbctl enroll-keys --microsoft --firmware-builtin
 ASUS firmware incorrectly reports SetupMode=0 after key deletion. `secure-boot-init` detects ASUS boards and uses partial enrollment to bypass the SetupMode check.
 
 **Step A** — In UEFI (Boot → Secure Boot): clear existing keys:
+
 1. **OS Type:** Other OS
 2. **Secure Boot Mode:** Custom
 3. **Key Management:** Clear Secure Boot Keys
 4. Save and reboot into NixOS
 
 **Step B** — Run `secure-boot-init`:
+
 ```bash
 sudo secure-boot-init
 ```
+
 The script generates keys, rebuilds with lanzaboote active, and enrolls via partial enrollment:
+
 ```bash
 sbctl enroll-keys --partial db  --microsoft --firmware-builtin --ignore-immutable --yes-this-might-brick-my-machine
 sbctl enroll-keys --partial KEK --microsoft --firmware-builtin --ignore-immutable --yes-this-might-brick-my-machine
@@ -198,6 +219,7 @@ sbctl enroll-keys --partial PK  --ignore-immutable --yes-this-might-brick-my-mac
 ```
 
 **Step C** — In UEFI: activate Secure Boot:
+
 1. **OS Type:** Windows UEFI mode
 2. **Secure Boot:** Enabled
 
@@ -226,11 +248,11 @@ If you use TPM2 auto-unlock **and** Secure Boot, always enroll TPM **after** Sec
 
 Three unlock methods are available. The active method is set per host via `features.encryption.unlockMethod`:
 
-| Method | Feature flag | Boot experience |
-|--------|-------------|-----------------|
+| Method           | Feature flag                      | Boot experience                     |
+| ---------------- | --------------------------------- | ----------------------------------- |
 | TPM2 auto-unlock | `unlockMethod = "tpm2"` (default) | Fully automatic (sealed to PCR 0+7) |
-| YubiKey FIDO2 | `unlockMethod = "yubikey"` | Plug in YubiKey + touch at boot |
-| Password | `unlockMethod = "password"` | Enter LUKS passphrase at boot |
+| YubiKey FIDO2    | `unlockMethod = "yubikey"`        | Plug in YubiKey + touch at boot     |
+| Password         | `unlockMethod = "password"`       | Enter LUKS passphrase at boot       |
 
 Password always remains as a fallback (slot 0 is never touched).
 

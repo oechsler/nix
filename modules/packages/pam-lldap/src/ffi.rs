@@ -28,7 +28,7 @@ const LOG_ERR: c_int = 3;
 const LOG_INFO: c_int = 6;
 
 #[repr(C)]
-pub(crate) struct PamHandle {
+pub struct PamHandle {
     _private: [u8; 0],
 }
 
@@ -40,7 +40,11 @@ pub(crate) struct Ldap {
 unsafe extern "C" {
     pub(crate) fn openlog(ident: *const c_char, option: c_int, facility: c_int);
     pub(crate) fn syslog(priority: c_int, format: *const c_char, ...);
-    pub(crate) fn pam_get_user(handle: *mut PamHandle, user: *mut *const c_char, prompt: *const c_char) -> c_int;
+    pub(crate) fn pam_get_user(
+        handle: *mut PamHandle,
+        user: *mut *const c_char,
+        prompt: *const c_char,
+    ) -> c_int;
     pub(crate) fn pam_get_authtok(
         handle: *mut PamHandle,
         item: c_int,
@@ -49,9 +53,17 @@ unsafe extern "C" {
     ) -> c_int;
     pub(crate) fn ldap_initialize(handle: *mut *mut Ldap, uri: *const c_char) -> c_int;
     pub(crate) fn ldap_set_option(handle: *mut Ldap, option: c_int, value: *const c_void) -> c_int;
-    pub(crate) fn ldap_simple_bind_s(handle: *mut Ldap, dn: *const c_char, password: *const c_char) -> c_int;
+    pub(crate) fn ldap_simple_bind_s(
+        handle: *mut Ldap,
+        dn: *const c_char,
+        password: *const c_char,
+    ) -> c_int;
     pub(crate) fn ldap_err2string(error: c_int) -> *const c_char;
-    pub(crate) fn ldap_unbind_ext_s(handle: *mut Ldap, server_controls: *const *mut c_void, client_controls: *const *mut c_void) -> c_int;
+    pub(crate) fn ldap_unbind_ext_s(
+        handle: *mut Ldap,
+        server_controls: *const *mut c_void,
+        client_controls: *const *mut c_void,
+    ) -> c_int;
 }
 
 pub(crate) fn log_info(message: &'static [u8]) {

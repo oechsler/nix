@@ -394,6 +394,35 @@
             | xargs --null --no-run-if-empty ${pkgs.nixfmt}/bin/nixfmt --check
           touch $out
         '';
+
+        markdownlint = pkgs.runCommand "markdownlint-check" { } ''
+          cp -r ${./.} ./source
+          cd ./source
+          ${pkgs.markdownlint-cli2}/bin/markdownlint-cli2 '**/*.md'
+          touch $out
+        '';
+
+        markdown-format = pkgs.runCommand "markdown-format-check" { } ''
+          ${pkgs.prettier}/bin/prettier --check '${./.}/**/*.md'
+          touch $out
+        '';
+
+        rust = pkgs.rustPlatform.buildRustPackage {
+          pname = "pam-lldap-check";
+          version = "0.1.0";
+          src = ./modules/packages/pam-lldap;
+          cargoHash = "sha256-+Du65HEaZSKbafS21q/TVPJGS28jd0FENP3+PsSF7F4=";
+          nativeBuildInputs = [
+            pkgs.clippy
+            pkgs.rustfmt
+          ];
+          dontBuild = true;
+          checkPhase = ''
+            cargo fmt --check
+            cargo clippy --offline --all-targets -- -D warnings
+          '';
+          installPhase = "touch $out";
+        };
       };
     };
 }

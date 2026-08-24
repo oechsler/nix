@@ -5,26 +5,30 @@ when the expected Btrfs layout is present.
 
 ## What Gets Snapshotted
 
-| Subvolume | Mountpoint | Purpose | Condition |
-|-----------|------------|---------|-----------|
-| `@` | `/` | Root filesystem | Only if `features.impermanence.enable = false` |
-| `@home` | `/home` | User data, dotfiles | Always |
-| `@persist` | `/persist` | System state (bluetooth, docker, NetworkManager, etc.) | Only if `features.impermanence.enable = true` |
+| Subvolume  | Mountpoint | Purpose                                                | Condition                                      |
+| ---------- | ---------- | ------------------------------------------------------ | ---------------------------------------------- |
+| `@`        | `/`        | Root filesystem                                        | Only if `features.impermanence.enable = false` |
+| `@home`    | `/home`    | User data, dotfiles                                    | Always                                         |
+| `@persist` | `/persist` | System state (bluetooth, docker, NetworkManager, etc.) | Only if `features.impermanence.enable = true`  |
 
 The root subvolume is not snapshotted while impermanence is enabled because it
 is recreated on boot. The Nix store is also excluded because it is immutable
 and managed by Nix.
 
+The `@steam`, `@nextcloud`, and `@smb` subvolumes are separate from `@home` so
+large or independently managed data does not enter hourly home snapshots. They
+are not snapshot sources in the default btrbk configuration.
+
 ## Retention Policy
 
 Snapshots are taken hourly and automatically cleaned up:
 
-| Keep | Duration |
-|------|----------|
-| 24 | Hourly (last 24 hours) |
-| 7 | Daily (last 7 days) |
-| 2 | Weekly (last 2 weeks) |
-| 6 | Monthly (last 6 months) |
+| Keep | Duration                |
+| ---- | ----------------------- |
+| 24   | Hourly (last 24 hours)  |
+| 7    | Daily (last 7 days)     |
+| 2    | Weekly (last 2 weeks)   |
+| 6    | Monthly (last 6 months) |
 
 ## Commands
 
@@ -47,7 +51,8 @@ sudo btrbk prune
 
 ## Browse Snapshots
 
-Snapshots are stored in `/.snapshots/` (mounted at boot). Browse directly:
+Snapshots are stored in `@snapshots`, which is mounted at `/.snapshots/` for
+normal browsing:
 
 ```bash
 ls /.snapshots/
@@ -56,7 +61,8 @@ ls /.snapshots/
 # ...
 ```
 
-Or mount the btrfs root to see all subvolumes:
+For the snapshot storage itself and all subvolumes, mount the Btrfs top-level at
+`/mnt/btrfs-root`. This is the technical path used by btrbk:
 
 ```bash
 # With LUKS encryption:
@@ -93,7 +99,8 @@ cp -r /.snapshots/@home.YYYYMMDDTHHMMSS/user/Projects/example ~/Projects/
 
 Full subvolume rollback is a recovery operation. Prefer restoring individual
 files first; renaming or deleting subvolumes can destroy data. The procedure
-below restores `@home`, not the ephemeral root `@`.
+below must be run from a recovery environment where `@home` is not mounted. It
+restores `@home`, not the ephemeral root `@`.
 
 ```bash
 # Mount the Btrfs top-level (adjust the device path)
@@ -105,7 +112,7 @@ cd /mnt/btrfs-root
 sudo mv @home @home.broken
 
 # Snapshot the backup as new @home
-sudo btrfs subvolume snapshot @snapshots/@home.20250215T1400 @home
+sudo btrfs subvolume snapshot @snapshots/@home.YYYYMMDDTHHMMSS @home
 
 # Reboot
 sudo reboot

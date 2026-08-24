@@ -20,13 +20,13 @@ there and the repository recipients must still permit decryption.
 
 ## Files
 
-| File | Purpose | In Git? |
-|------|---------|---------|
-| `sops.encrypted.yaml` | Encrypted secrets | ✅ Yes |
-| `sops.decrypted.yaml` | Plaintext secrets | ❌ No (gitignored) |
-| `setup.sh` | Generate Age key from SSH key | ✅ Yes |
-| `decrypt.sh` | Decrypt secrets for editing | ✅ Yes |
-| `encrypt.sh` | Encrypt secrets after editing | ✅ Yes |
+| File                  | Purpose                       | In Git?            |
+| --------------------- | ----------------------------- | ------------------ |
+| `sops.encrypted.yaml` | Encrypted secrets             | ✅ Yes             |
+| `sops.decrypted.yaml` | Plaintext secrets             | ❌ No (gitignored) |
+| `setup.sh`            | Generate Age key from SSH key | ✅ Yes             |
+| `decrypt.sh`          | Decrypt secrets for editing   | ✅ Yes             |
+| `encrypt.sh`          | Encrypt secrets after editing | ✅ Yes             |
 
 ## Scripts
 
@@ -56,13 +56,13 @@ git commit -m "Update secrets"
 
 ## Managed Secrets
 
-| Secret | Purpose | Used By |
-|--------|---------|---------|
-| `mumble/certificate` | Optional Mumble identity certificate | `modules/home-manager/programs/mumble.nix` |
-| `opencode/opencode-go/api-key` | OpenCode Go API key | `modules/home-manager/programs/opencode.nix` |
-| `smb/<name>/password` | SMB/CIFS share password | `modules/system/smb.nix` |
-| `user/password` | Local login password | `modules/system/users.nix` |
-| `wifi/<name>/psk` | WiFi pre-shared key | `modules/system/networking/wifi.nix` |
+| Secret                         | Purpose                              | Used By                                      |
+| ------------------------------ | ------------------------------------ | -------------------------------------------- |
+| `mumble/certificate`           | Optional Mumble identity certificate | `modules/home-manager/programs/mumble.nix`   |
+| `opencode/opencode-go/api-key` | OpenCode Go API key                  | `modules/home-manager/programs/opencode.nix` |
+| `smb/<name>/password`          | SMB/CIFS share password              | `modules/system/smb.nix`                     |
+| `user/password`                | Local login password                 | `modules/system/users.nix`                   |
+| `wifi/<name>/psk`              | WiFi pre-shared key                  | `modules/system/networking/wifi.nix`         |
 
 Secret names containing `<name>` use the identifier of the corresponding
 declarative network or share configuration.
@@ -72,14 +72,15 @@ the module imports it into the local Mumble profile. Without the secret,
 Mumble continues to work without a client certificate.
 
 ### Mumble
+
 - `mumble/certificate` — Optional PKCS#12 identity certificate, imported into Mumble's `net.certificate` setting when enabled
 - The certificate is stored as an encrypted Base64 value in `sops.encrypted.yaml`; the private key and the original `.p12` file must never be committed.
 
 ### Why Secrets Are Encrypted
+
 - **Credentials**: WiFi keys, SMB passwords, API tokens, and certificates must never appear in plaintext in the Git history.
 - **Reproducibility**: The same encrypted SOPS file can be used by every host with an appropriate Age key.
 - **Auditability**: Changes to secrets are tracked via Git (encrypted), with the decrypted version gitignored.
-
 
 ## Security Notes
 

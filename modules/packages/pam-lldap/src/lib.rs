@@ -13,6 +13,10 @@ use config::Options;
 use ffi::{PamHandle, PAM_AUTH_ERR, PAM_IGNORE, PAM_OPEN_ERR, PAM_SUCCESS, PAM_USER_UNKNOWN};
 
 #[no_mangle]
+/// # Safety
+///
+/// The PAM framework must provide a valid handle and argument array according
+/// to the PAM module ABI.
 pub unsafe extern "C" fn pam_sm_authenticate(
     handle: *mut PamHandle,
     _flags: i32,
@@ -24,7 +28,8 @@ pub unsafe extern "C" fn pam_sm_authenticate(
     };
 
     let mut user = ptr::null();
-    if unsafe { ffi::pam_get_user(handle, &mut user, ptr::null()) } != PAM_SUCCESS || user.is_null() {
+    if unsafe { ffi::pam_get_user(handle, &mut user, ptr::null()) } != PAM_SUCCESS || user.is_null()
+    {
         return PAM_USER_UNKNOWN;
     }
     if unsafe { CStr::from_ptr(user) } != options.user.as_c_str() {
@@ -32,7 +37,8 @@ pub unsafe extern "C" fn pam_sm_authenticate(
     }
 
     let mut token = ptr::null();
-    if unsafe { ffi::pam_get_authtok(handle, ffi::PAM_AUTHTOK, &mut token, ptr::null()) } != PAM_SUCCESS
+    if unsafe { ffi::pam_get_authtok(handle, ffi::PAM_AUTHTOK, &mut token, ptr::null()) }
+        != PAM_SUCCESS
         || token.is_null()
     {
         return PAM_AUTH_ERR;
@@ -71,21 +77,41 @@ pub unsafe extern "C" fn pam_sm_authenticate(
 }
 
 #[no_mangle]
-pub extern "C" fn pam_sm_setcred(_: *mut PamHandle, _: i32, _: i32, _: *const *const std::os::raw::c_char) -> i32 {
+pub extern "C" fn pam_sm_setcred(
+    _: *mut PamHandle,
+    _: i32,
+    _: i32,
+    _: *const *const std::os::raw::c_char,
+) -> i32 {
     PAM_SUCCESS
 }
 
 #[no_mangle]
-pub extern "C" fn pam_sm_acct_mgmt(_: *mut PamHandle, _: i32, _: i32, _: *const *const std::os::raw::c_char) -> i32 {
+pub extern "C" fn pam_sm_acct_mgmt(
+    _: *mut PamHandle,
+    _: i32,
+    _: i32,
+    _: *const *const std::os::raw::c_char,
+) -> i32 {
     PAM_SUCCESS
 }
 
 #[no_mangle]
-pub extern "C" fn pam_sm_open_session(_: *mut PamHandle, _: i32, _: i32, _: *const *const std::os::raw::c_char) -> i32 {
+pub extern "C" fn pam_sm_open_session(
+    _: *mut PamHandle,
+    _: i32,
+    _: i32,
+    _: *const *const std::os::raw::c_char,
+) -> i32 {
     PAM_IGNORE
 }
 
 #[no_mangle]
-pub extern "C" fn pam_sm_close_session(_: *mut PamHandle, _: i32, _: i32, _: *const *const std::os::raw::c_char) -> i32 {
+pub extern "C" fn pam_sm_close_session(
+    _: *mut PamHandle,
+    _: i32,
+    _: i32,
+    _: *const *const std::os::raw::c_char,
+) -> i32 {
     PAM_IGNORE
 }
