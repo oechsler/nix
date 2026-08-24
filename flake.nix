@@ -268,6 +268,7 @@
         {
           system = toString cfg.system.build.toplevel;
           encryption = cfg.features.encryption.enable;
+          unlockMethod = cfg.features.encryption.unlockMethod;
           impermanence = cfg.features.impermanence.enable;
           persistPrefix = cfg.features.impermanence.persistPrefix;
           totp = cfg.features.auth.totp.enable;
