@@ -72,16 +72,16 @@ Steps (combinable, default: all):
   --post-install        Post-install setup (SSH, SOPS, TOTP, TPM/FIDO2)
 
 Options:
-  --host HOST           Pre-select host configuration
-  -s, --ssh-key PATH    Path to SSH private key
-  -p, --luks-password   LUKS disk encryption password
-  --repair              Verify/repair the Nix store before rebuilding (requires root)
-  --skip-totp           Skip TOTP setup (deferred to totp-init after first boot)
-  --quiet               Suppress upgrade prompts on installed systems
-  -y, --yes             Skip all confirmation prompts (non-interactive mode)
-  --dry-run             Show summary and exit without making changes
-  --iso                 Use prebuilt system closure from the installer ISO
-  -h, --help            Show this help
+  --host HOST                Pre-select host configuration
+  -s, --ssh-key PATH         Path to SSH private key
+  -p, --luks-password PASS   LUKS disk encryption password
+  --iso                      Use prebuilt system closure from the installer ISO
+  --skip-totp                Skip TOTP setup (deferred to totp-init after first boot)
+  --repair                   Verify/repair the Nix store before rebuilding
+  --quiet                    Suppress upgrade prompts on installed systems
+  -y, --yes                  Skip all confirmation prompts
+  --dry-run                  Show summary and exit without making changes
+  -h, --help                 Show this help
 
 Non-interactive examples:
   install.sh --host samuels-terra -s /path/to/key.pem -p luks-pw --skip-totp -y

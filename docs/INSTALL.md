@@ -58,21 +58,21 @@ git clone https://github.com/oechsler/nix.git /tmp/nix-config
 
 | Flag | Description |
 |------|-------------|
-| `--format` | Partition and format disks (disko) |
-| `--install` | Install NixOS (nixos-install) |
-| `--post-install` | Post-install setup (SSH, SOPS, TOTP, YubiKey, TPM/FIDO2) |
 | `--host HOST` | Pre-select host (skip menu) |
 | `-s`, `--ssh-key FILE` | SSH private key path |
 | `-p`, `--luks-password PASSWORD` | LUKS disk encryption password |
+| `--iso` | Use the prebuilt closure and manifest from the installer ISO |
+| `--format` | Partition and format disks (disko) |
+| `--install` | Install NixOS (nixos-install) |
+| `--post-install` | Post-install setup (SSH, SOPS, TOTP, YubiKey, TPM/FIDO2) |
 | `--skip-totp` | Skip TOTP setup for this run |
 | `--quiet` | Suppress upgrade prompts on installed systems |
 | `--repair` | Verify/repair the Nix store before an upgrade |
-| `--iso` | Use the prebuilt closure and manifest from the installer ISO |
 | `-y`, `--yes` | Skip confirmation (requires `-s`, `-p` if encryption enabled) |
 | `--dry-run` | Show summary and exit without making changes |
 | `-h`, `--help` | Show help |
 
-Steps are combinable. Without step flags, all three run. The installer reads host feature flags with `nix eval` and only asks relevant questions.
+Steps are combinable. Without step flags, all three run. The installer reads host feature flags from the local flake or, in ISO mode, from the embedded manifest.
 
 ## Disk Layout
 
