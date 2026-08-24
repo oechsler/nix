@@ -62,6 +62,19 @@ let
   stripHash = hex: lib.removePrefix "#" hex;
   accentColor = "rgba(${stripHash palette.${config.catppuccin.accent}.hex}ff)";
   surface0Color = "rgba(${stripHash palette.surface0.hex}ff)";
+  screenshotSavedTitle = i18n.translate "Screenshot saved" "Screenshot gespeichert";
+  screenshotSavedMessage = i18n.translate "Saved to" "Gespeichert unter";
+  screenshotCommand = mode: ''
+    output="${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
+    ${pkgs.hyprshot}/bin/hyprshot -m ${mode} --raw \
+      | ${pkgs.satty}/bin/satty -f - \
+        --copy-command '${pkgs.wl-clipboard}/bin/wl-copy --type image/png' \
+        --early-exit --output-filename "$output"
+    if [[ -f "$output" ]]; then
+      ${pkgs.libnotify}/bin/notify-send -u low -i "$output" \
+        "${screenshotSavedTitle}" "${screenshotSavedMessage}: $output"
+    fi
+  '';
   displayHelpers = import ../../../lib/displays.nix { inherit lib; };
 
   # ============================================================================
@@ -823,9 +836,9 @@ in
           (bind (modKey "P") "window.pseudo()")
           (bind (modKey "Space") ''layout("togglesplit")'')
           (bind (modKey "F") ''window.fullscreen({ mode = "maximized" })'')
-          (execBind "Print" "hyprshot -m output --raw | satty -f - --copy-command '${pkgs.wl-clipboard}/bin/wl-copy --type image/png' --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png")
-          (execBind "SHIFT + Print" "hyprshot -m region --raw | satty -f - --copy-command '${pkgs.wl-clipboard}/bin/wl-copy --type image/png' --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png")
-          (execBind (modKey "SHIFT + Print") "hyprshot -m window --raw | satty -f - --copy-command '${pkgs.wl-clipboard}/bin/wl-copy --type image/png' --early-exit --output-filename ${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png")
+          (execBind "Print" (screenshotCommand "output"))
+          (execBind "SHIFT + Print" (screenshotCommand "region"))
+          (execBind (modKey "SHIFT + Print") (screenshotCommand "window"))
           (execBind (modKey "C") config.rofi.clipboard)
           (execBind (modKey "SHIFT + R") config.waybar.reload)
           (bind (modKey "H") ''focus({ direction = "left" })'')
