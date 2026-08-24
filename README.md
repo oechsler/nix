@@ -1,4 +1,6 @@
-# NixOS Config
+# :snowflake: NixOS Config
+
+Hello :wave:,
 
 This repository is my approach to NixOS.
 
@@ -15,6 +17,8 @@ personal system that is opinionated where it should be, and reusable where it
 can be. It is not a finished distribution or a universal answer to NixOS. I
 still have a lot to learn, and the configuration will keep changing as my
 understanding and my needs change.
+
+Here is a preview of what the configuration looks like today:
 
 ![Hyprland Preview](.assets/preview-hyprland.png)
 
