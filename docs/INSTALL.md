@@ -85,28 +85,28 @@ LUKS-encrypted Btrfs partition. Disko creates the following named volumes and
 mounts:
 
 ```
-/dev/nvme...                                      # Physical disk
-├── BOOT (512 MiB, FAT32)                         # EFI system partition
-│   └── /boot
-└── root (remaining space)                        # Main data partition
-    └── cryptroot                                  # LUKS2 mapping
-        └── nixos                                  # Btrfs filesystem
-            ├── @                                  # Root filesystem
-            │   └── /
-            ├── @home                              # User data
-            │   └── /home
-            ├── @nix                               # Nix store
-            │   └── /nix
-            ├── @persist                           # Persistent system state
-            │   └── /persist
-            ├── @steam                             # Independent Steam data
-            │   └── /home/<user>/.local/share/Steam
-            ├── @nextcloud                         # Independent Nextcloud data
-            │   └── /home/<user>/Nextcloud
-            ├── @smb                               # SMB mount root
-            │   └── /home/<user>/smb
-            └── @snapshots                          # Snapshot storage and access
-                └── /.snapshots
+/dev/nvme...                                            # Physical disk
+├── BOOT (512 MiB, FAT32)                               # EFI system partition
+│   └── /boot                                           #
+└── root (remaining space)                              # Main data partition
+    └── cryptroot                                       # LUKS2 mapping
+        └── nixos                                       # Btrfs filesystem
+            ├── @                                       # Root filesystem
+            │   └── /                                   #
+            ├── @home                                   # User data
+            │   └── /home                               #
+            ├── @nix                                    # Nix store
+            │   └── /nix                                #
+            ├── @persist                                # Persistent system state
+            │   └── /persist                            #
+            ├── @steam                                  # Independent Steam data
+            │   └── /home/<user>/.local/share/Steam     #
+            ├── @nextcloud                              # Independent Nextcloud data
+            │   └── /home/<user>/Nextcloud              #
+            ├── @smb                                    # SMB mount root
+            │   └── /home/<user>/smb                    #
+            └── @snapshots                              # Snapshot storage and access
+                └── /.snapshots                         #
 ```
 
 When impermanence is enabled, `@` is reset on boot while `/home`, `/nix`, and
