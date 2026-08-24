@@ -1,8 +1,7 @@
 # Configuration Reference
-#
-# This document describes the commonly used public configuration interface. It
-# focuses on reusable options and defaults; host-specific values belong in host
-# modules.
+This document describes the commonly used public configuration interface. It
+focuses on reusable options and defaults; host-specific values belong in host
+modules.
 
 ## Feature Toggles
 

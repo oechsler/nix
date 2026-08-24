@@ -1,4 +1,8 @@
-# Wallpapers
+# Backgrounds
+
+This directory contains the background assets used by the desktop theme. The
+archive is kept encrypted in the repository and is decrypted locally only when
+the system needs to use the configured background.
 
 ## Why encrypted?
 

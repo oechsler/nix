@@ -1,6 +1,20 @@
 # NixOS Config
 
-My personal NixOS configurations using Flakes and Home-Manager.
+This repository is my approach to NixOS.
+
+After many years of using Linux, I reached a point where configuring yet
+another distribution started to feel like work without an end. I wanted to
+write the last Linux configuration of my life: a system that grows with me,
+does exactly what I need, and remains flexible, maintainable, and pleasant to
+use.
+
+NixOS gave me a way to work towards that idea. I started by learning the
+language and the ecosystem, then gradually wrote that knowledge down as a
+reproducible configuration for my machines. This repository is the result: a
+personal system that is opinionated where it should be, and reusable where it
+can be. It is not a finished distribution or a universal answer to NixOS. I
+still have a lot to learn, and the configuration will keep changing as my
+understanding and my needs change.
 
 ![Hyprland Preview](.assets/preview-hyprland.png)
 
@@ -14,65 +28,69 @@ My personal NixOS configurations using Flakes and Home-Manager.
 
 The wallpaper shown in the preview can be purchased from [kram.store](https://kram.store/collections/wallpaper).
 
-## Structure
+## What is here
+
+The configuration is split into reusable modules and host-specific choices:
 
 ```
-hosts/              # Per-host configs
-modules/
-  system/           # Boot, networking, impermanence, snapshots
-  desktop/          # Hyprland, KDE, SDDM
-  home-manager/     # User programs, dotfiles, theming
-sops/               # Encrypted secrets
+flake.nix                 # Entry point, host discovery, outputs, and checks
+hosts/                    # Machine-specific configuration
+modules/system/           # Hardware, boot, networking, storage, and security
+modules/home-manager/     # Desktop, programs, theming, and user configuration
+modules/lib/              # Reusable module helpers
+modules/packages/         # Packages maintained by this configuration
+backgrounds/              # Encrypted personal background archive
+sops/                     # Encrypted secrets
+docs/                     # Installation, configuration, and operational guides
 ```
 
-## Quick Start
+The flake discovers local hosts automatically from `hosts/`. Shared behavior
+lives in modules; a host mostly describes its hardware and the choices that
+make it different.
 
-- **Fresh install:** [docs/INSTALL.md](docs/INSTALL.md)
-- **Use as base for your config:** [docs/QUICKSTART.md](docs/QUICKSTART.md)
+## Getting started
+
+- **Fresh installation:** [docs/INSTALL.md](docs/INSTALL.md)
+- **Use this as a base:** [docs/QUICKSTART.md](docs/QUICKSTART.md)
 - **Configuration reference:** [docs/CONFIG.md](docs/CONFIG.md)
-- **Security overview:** [docs/SECURITY.md](docs/SECURITY.md)
+- **Security model:** [docs/SECURITY.md](docs/SECURITY.md)
 
-## Host Overrides
+## Making it yours
 
-Example host overrides. Keep the values that apply to the host and remove the rest:
+Host configuration is organized by feature groups. Keep only the values that
+are different for the machine:
 
 ```nix
 features = {
   hardware = {
-    formFactor = "laptop";                         # "desktop" or "laptop"
-    cpu = "amd";                                   # "amd" or "intel"
-    gpu = "amd";                                   # "amd" or "intel"
+    formFactor = "laptop";
+    cpu = "intel";
+    gpu = "intel";
   };
 
   desktop = {
-    wm = "kde";                                    # "hyprland" or "kde"
-    login = "greeter";                             # "greeter" or "autologin"
-    fileManager = "default";                       # "default" or "terminal"
+    wm = "kde";
+    fileManager = "default";
     browser = {
-      type = "librewolf";                          # "librewolf" or "firefox"
+      type = "librewolf";
       newTabPage = "https://dash.example.com";
     };
   };
 
-  impermanence.enable = true;                       # Root rollback on boot
-  encryption.unlockMethod = "tpm2";                 # "tpm2", "yubikey", or "password"
-  gaming.enable = true;                             # Steam and gaming tools
-  dev.enable = true;                                # Development tools
-  virtualisation.enable = true;                     # Containers and VMs
-  compat.enable = true;                             # nix-ld/glibc compatibility
+  encryption = {
+    unlockMethod = "tpm2";
+  };
+
+  gaming.enable = false;
+  virtualisation.vm.enable = false;
 };
 ```
 
-Less common options, including browser cookie exceptions and display defaults,
-are documented in [docs/CONFIG.md](docs/CONFIG.md).
+Most defaults are useful for a normal desktop or laptop. The full set of
+overrides, defaults, and examples is in [docs/CONFIG.md](docs/CONFIG.md).
 
-```nix
-displays.defaults = {
-  hdr = 1;  # 0=off, 1=Steam, 2=full desktop
-  vrr = 2;  # VRR mode for unknown displays
-};
-```
+## Using as a flake input
 
-## Using as Flake Input
-
-This flake exports `lib.mkHost` for building NixOS systems. See [docs/QUICKSTART.md](docs/QUICKSTART.md) for setup guide.
+The flake exports `lib.mkHost` and `lib.mkDisko` for use from another
+repository. The current interface and a complete example are documented in
+[docs/QUICKSTART.md](docs/QUICKSTART.md).
