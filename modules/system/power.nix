@@ -29,7 +29,9 @@ in
 
   services.logind.settings.Login = {
     InhibitDelayMaxSec = "2s";
-    HandlePowerKey = if config.features.desktop.wm == "kde" then "ignore" else "suspend";
+    # PowerDevil inhibits this while a KDE session is active. At SDDM there is
+    # no inhibitor, so the power button still suspends at the login screen.
+    HandlePowerKey = "suspend";
     HandlePowerKeyLongPress = "poweroff";
     HandleSuspendKey = "suspend";
     HandleHibernateKey = "suspend";
