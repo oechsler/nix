@@ -36,6 +36,7 @@ SKIP_TOTP=false
 QUIET_UPGRADE=false
 REPAIR=false
 REPO_URL="${REPO_URL:-https://github.com/oechsler/nix.git}"
+REPO_REMOTE_URL="https://git.at.oechsler.it/samuel/nix.git"
 ORIGINAL_ARGS=("$@")
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 # When invoked via PATH (not from the repo directory), resolve the repo location
@@ -1019,6 +1020,7 @@ copy_config() {
       local remote_dest="${dest}.remote"
       rm -rf "$remote_dest"
       if git clone --depth 1 --branch main "$REPO_URL" "$remote_dest" &>/dev/null; then
+        git -C "$remote_dest" remote set-url origin "$REPO_REMOTE_URL"
         rm -rf "$dest"
         mv "$remote_dest" "$dest"
         success "Online repository cloned to ~${dest#"$home_prefix"}"
@@ -1026,6 +1028,10 @@ copy_config() {
       fi
       rm -rf "$remote_dest"
       warn "Online repository clone failed; keeping the embedded ISO snapshot."
+    fi
+
+    if git -C "$dest" remote get-url origin &>/dev/null; then
+      git -C "$dest" remote set-url origin "$REPO_REMOTE_URL"
     fi
 
     success "Config copied to ~${dest#"$home_prefix"}"
