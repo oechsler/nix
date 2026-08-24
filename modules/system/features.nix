@@ -58,46 +58,9 @@
 #
 # --- FEATURE REFERENCE ---
 #
-# Hardware and desktop:
-#   features.hardware.formFactor = "desktop" | "laptop" (default: "desktop")
-#   features.hardware.cpu = "amd" | "intel" | null (required for microcode)
-#   features.hardware.gpu = "amd" | "intel" | null (required for graphics)
-#   features.desktop.wm = "hyprland" | "kde" (default: "hyprland")
-#   features.desktop.fileManager = "default" | "terminal" (default: "default")
-#   features.desktop.browser.enable = true (default: true)
-#   features.desktop.browser.type = "librewolf" | "firefox" (default: "librewolf")
-#   features.desktop.browser.homepage = "https://dash.at.oechsler.it"
-#     (default: "https://dash.at.oechsler.it")
-#     Used as both the browser startup homepage and the new-tab page.
-#   features.desktop.browser.searchEngine = "ddg" (default: DuckDuckGo)
-#   features.desktop.browser.cookieAllowlist = [ "https://example.com" ]
-#     (appended to the built-in oechsler.it and oech.it allowlist)
-#   features.compat.enable = false (default: true)
-#     Disable nix-ld and its glibc compatibility libraries.
-#
-# Security and authentication:
-#   features.encryption.enable = true (default: true)
-#   features.encryption.unlockMethod = "tpm2" | "yubikey" | "password"
-#   features.auth.yubikey.enable = true (default: unlockMethod == "yubikey")
-#   features.auth.totp.enable = true (default: true)
-#
-# Development and operations:
-#   features.dev.enable = true (default: true)
-#   features.dev.opencode.enable = true (default: dev.enable)
-#   features.ops.enable = true (default: true)
-#   features.ops.pvetui.enable = true (default: ops.enable)
-#   features.ops.kubernetes.enable = true (default: ops.enable)
-#
-# Virtualisation:
-#   features.virtualisation.enable = true (master switch, default: true)
-#   features.virtualisation.container.enable = true (Podman, default: true)
-#   features.virtualisation.vm.enable = true (QEMU/KVM, default: true)
-#
-# Setting features.virtualisation.enable = false disables both child features.
-# The child features can otherwise be disabled independently.
-#
-# Desktop applications:
-#   features.apps.enable = true (default: true)
+# Feature options are defined below in the same order as the configuration
+# layers: hardware, boot/security, desktop, development/operations, and apps.
+# Detailed defaults and examples live in docs/CONFIG.md.
 #
 
 { config, lib, ... }:
@@ -112,42 +75,6 @@ in
   # Feature toggles consumed by multiple modules.
   # Single-module toggles (gaming, bluetooth, etc.) are defined in their own modules.
   options.features = {
-    impermanence = {
-      enable = (lib.mkEnableOption "impermanent root with rollback on boot") // {
-        default = true;
-      };
-      persistPrefix = lib.mkOption {
-        type = lib.types.str;
-        readOnly = true;
-        default = if config.features.impermanence.enable then "/persist" else "";
-        description = "Path prefix for persistent files. '/persist' when impermanence is active, '' otherwise. Use this for files that must bypass bind-mounts (e.g., pam_oath usersfile).";
-      };
-      extraPaths = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [ ];
-        description = "Additional paths to persist (beyond feature-based defaults)";
-        example = [
-          "/var/lib/custom-app"
-          "/etc/custom-config"
-        ];
-      };
-    };
-
-    encryption = {
-      enable = (lib.mkEnableOption "LUKS full disk encryption") // {
-        default = true;
-      };
-      unlockMethod = lib.mkOption {
-        type = lib.types.enum [
-          "yubikey"
-          "tpm2"
-          "password"
-        ];
-        default = "tpm2";
-        description = "How LUKS devices are unlocked at boot.";
-      };
-    };
-
     hardware = {
       formFactor = lib.mkOption {
         type = lib.types.enum [
@@ -190,6 +117,42 @@ in
         );
         default = null;
         description = "GPU vendor — enables graphics support and the correct VA-API driver for hardware video decoding. AMD also gets 32-bit libs when gaming is enabled. NVIDIA is not supported.";
+      };
+    };
+
+    impermanence = {
+      enable = (lib.mkEnableOption "impermanent root with rollback on boot") // {
+        default = true;
+      };
+      persistPrefix = lib.mkOption {
+        type = lib.types.str;
+        readOnly = true;
+        default = if config.features.impermanence.enable then "/persist" else "";
+        description = "Path prefix for persistent files. '/persist' when impermanence is active, '' otherwise. Use this for files that must bypass bind-mounts (e.g., pam_oath usersfile).";
+      };
+      extraPaths = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "Additional paths to persist (beyond feature-based defaults)";
+        example = [
+          "/var/lib/custom-app"
+          "/etc/custom-config"
+        ];
+      };
+    };
+
+    encryption = {
+      enable = (lib.mkEnableOption "LUKS full disk encryption") // {
+        default = true;
+      };
+      unlockMethod = lib.mkOption {
+        type = lib.types.enum [
+          "yubikey"
+          "tpm2"
+          "password"
+        ];
+        default = "tpm2";
+        description = "How LUKS devices are unlocked at boot.";
       };
     };
 
@@ -429,10 +392,23 @@ in
       };
     };
 
+    virtualisation = {
+      enable = (lib.mkEnableOption "container and virtualisation support") // {
+        default = true;
+      };
+      container.enable = (lib.mkEnableOption "container support") // {
+        default = true;
+      };
+      vm.enable = (lib.mkEnableOption "QEMU/KVM virtual machines") // {
+        default = true;
+      };
+    };
+
     apps = {
       enable = (lib.mkEnableOption "desktop applications (Discord, Spotify, etc.)") // {
         default = true;
       };
+
       mumble = {
         enable = (lib.mkEnableOption "Mumble voice chat") // {
           default = true;
@@ -482,7 +458,7 @@ in
             "ShowReachable"
             "ShowAll"
           ];
-          default = "ShowReachable";
+          default = "ShowAll";
           description = "Which servers are shown in the Mumble server list.";
         };
         servers = lib.mkOption {
