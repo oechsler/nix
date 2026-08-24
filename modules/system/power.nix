@@ -28,6 +28,7 @@ in
   services.power-profiles-daemon.enable = true;
 
   services.logind.settings.Login = {
+    InhibitDelayMaxSec = "2s";
     HandlePowerKey = if config.features.desktop.wm == "kde" then "ignore" else "suspend";
     HandlePowerKeyLongPress = "poweroff";
     HandleSuspendKey = "suspend";

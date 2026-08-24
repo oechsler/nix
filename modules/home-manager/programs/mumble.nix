@@ -58,7 +58,7 @@ let
   command = pkgs.writeShellScript "mumble-launcher" ''
     config_file="$HOME/.config/Mumble/Mumble/mumble_settings.json"
     if [ -f "$config_file" ]; then
-      ${pkgs.jq}/bin/jq '.mumble_has_quit_normally = true | .ui.theme = "" | .ui.theme_style = "" | .ui.disable_public_server_list = true' \
+      ${pkgs.jq}/bin/jq '.mumble_has_quit_normally = true | .ui.theme = "" | .ui.theme_style = "" | .ui.disable_public_server_list = ${lib.boolToString cfg.disablePublicServerList}' \
         "$config_file" > "$config_file.tmp" && ${pkgs.coreutils}/bin/mv "$config_file.tmp" "$config_file"
     fi
     exec ${pkgs.mumble}/bin/mumble "$@"
