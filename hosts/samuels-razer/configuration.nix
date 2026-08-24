@@ -113,12 +113,15 @@
     gaming.enable = false;
 
     # --- Applications ---
-    apps.mumble.username = "Sam";
-    apps.mumble.servers = [
-      {
-        host = "mumble.at.oechsler.it";
-      }
-    ];
+    apps.mumble = {
+      username = "Sam";
+      certificate.enable = true;
+      servers = [
+        {
+          host = "mumble.at.oechsler.it";
+        }
+      ];
+    };
 
     # --- Operations Tools ---
     ops = {

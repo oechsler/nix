@@ -442,6 +442,9 @@ in
           default = config.user.name;
           description = "Default Mumble username.";
         };
+        certificate = {
+          enable = lib.mkEnableOption "Mumble identity certificate";
+        };
         disablePublicServerList = lib.mkOption {
           type = lib.types.bool;
           default = true;

@@ -68,6 +68,11 @@ git commit -m "Update secrets"
 - `smb/personal-drive/password` — Personal NAS share credentials
 - `smb/pika/password` — Pika server share credentials
 
+### Mumble
+- `mumble/certificate` — Optional PKCS#12 identity certificate, imported into Mumble's `net.certificate` setting when enabled
+- The host configuration sets the Mumble username to `Sam` and provisions the favorite server declaratively.
+- The certificate is stored as an encrypted Base64 value in `sops.encrypted.yaml`; the private key and the original `.p12` file must never be committed.
+
 ### Why Secrets Are Encrypted
 - **Credentials**: WiFi keys, SMB passwords, API tokens must never appear in plaintext in the Git history.
 - **Reproducibility**: The same SOPS file works across all hosts — only the Age key needs to be provisioned on each machine.
