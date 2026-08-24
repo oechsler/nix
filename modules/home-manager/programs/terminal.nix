@@ -105,7 +105,7 @@ in
         settings = {
           window_padding_width = theme.gaps.outer;
           confirm_os_window_close = 0;
-          background_opacity = "0.92";
+          background_opacity = if features.desktop.wm == "kde" then "1.0" else "0.92";
         }
         // lib.optionalAttrs (features.desktop.wm != "hyprland") {
           remember_window_size = "no";

@@ -17,14 +17,13 @@ let
   enableAppPreviews = features.apps.enable;
   enableRichPreviews = features.dev.enable;
 
-  yaziBookmarks =
-    config.fileManager.bookmarks
-    ++ lib.optionals features.apps.enable [
-      {
-        name = "Nextcloud";
-        path = "${config.home.homeDirectory}/Nextcloud";
-      }
-    ];
+  yaziBookmarks = config.fileManager.bookmarks ++ [
+    {
+      name = "Wechselmedien";
+      path = "/mnt/removable";
+      icon = "drive-removable-media";
+    }
+  ];
 
   staticBookmarkKeymaps = lib.imap1 (i: bookmark: {
     on = [
