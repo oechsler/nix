@@ -112,6 +112,13 @@
     };
     gaming.enable = false;
 
+    # --- Applications ---
+    apps.mumble.servers = [
+      {
+        host = "mumble.at.oechsler.it";
+      }
+    ];
+
     # --- Operations Tools ---
     ops = {
       pvetui = {

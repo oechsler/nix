@@ -31,6 +31,7 @@
 
 let
   isKde = features.desktop.wm == "kde";
+  mumbleEnabled = features.apps.enable && features.apps.mumble.enable;
 
   desktopSteamCondition = pkgs.writeShellScript "steam-desktop-condition" ''
     set -eu
@@ -85,9 +86,11 @@ in
             name = "Vesktop";
             exec = "vesktop --start-minimized";
           }
+        ]
+        ++ lib.optionals mumbleEnabled [
           {
             name = "Mumble";
-            exec = "mumble";
+            exec = config.programs.mumble.command;
           }
         ]
         # Hyprland starts Steam via a dedicated delayed service below so Steam
@@ -98,6 +101,22 @@ in
             exec = "steam -silent";
           }
         ];
+
+      # Use the same recovery wrapper when Mumble is launched from the
+      # application menu or a desktop shortcut, not only during autostart.
+      home.file = lib.mkIf mumbleEnabled {
+        ${".local/share/applications/info.mumble.Mumble.desktop"} = {
+          text = ''
+            [Desktop Entry]
+            Type=Application
+            Name=Mumble
+            Exec=${config.programs.mumble.command} %u
+            Icon=mumble
+            Terminal=false
+            MimeType=x-scheme-handler/mumble;
+          '';
+        };
+      };
 
       #---------------------------
       # Nextcloud XDG Autostart (declarative)

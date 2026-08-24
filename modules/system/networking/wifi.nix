@@ -267,8 +267,8 @@ in
             set -u
             while IFS= read -r uuid; do
               [ -n "$uuid" ] || continue
-              id=$(${pkgs.networkmanager}/bin/nmcli -g connection.id connection show uuid "$uuid" 2>/dev/null || true)
-              type=$(${pkgs.networkmanager}/bin/nmcli -g connection.type connection show uuid "$uuid" 2>/dev/null || true)
+               id=$(${pkgs.networkmanager}/bin/nmcli -g NAME connection show uuid "$uuid" 2>/dev/null || true)
+               type=$(${pkgs.networkmanager}/bin/nmcli -g TYPE connection show uuid "$uuid" 2>/dev/null || true)
               [ "$type" = "802-11-wireless" ] || continue
               case "$id" in
                 ${managedWifiCases}
@@ -278,7 +278,7 @@ in
                   esac
                   ;;
               esac
-            done < <(${pkgs.networkmanager}/bin/nmcli -g connection.uuid connection show)
+            done < <(${pkgs.networkmanager}/bin/nmcli -g UUID connection show)
           '';
         };
 

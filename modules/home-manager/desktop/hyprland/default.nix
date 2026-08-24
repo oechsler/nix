@@ -235,19 +235,6 @@ let
   fileManagerCommand =
     if features.desktop.fileManager == "terminal" then "kitty yazi" else "nautilus";
 
-  mumbleSetQuitFlag = pkgs.writeShellScript "mumble-set-quit-flag" ''
-    [ -n "''${MAINPID:-}" ] && kill -0 "$MAINPID" 2>/dev/null || exit 0
-    config_file="$HOME/.config/Mumble/Mumble/mumble_settings.json"
-    [ -f "$config_file" ] || exit 0
-    config_dir="$(${pkgs.uutils-coreutils-noprefix}/bin/dirname "$config_file")"
-    tmp_file="$(${pkgs.uutils-coreutils-noprefix}/bin/mktemp --tmpdir="$config_dir" .mumble-settings.XXXXXX)" || exit 0
-    trap '${pkgs.uutils-coreutils-noprefix}/bin/rm -f "$tmp_file"' EXIT
-    if ${pkgs.jq}/bin/jq '.mumble_has_quit_normally = true' "$config_file" > "$tmp_file" \
-      && ${pkgs.uutils-coreutils-noprefix}/bin/chmod --reference="$config_file" "$tmp_file"; then
-      ${pkgs.uutils-coreutils-noprefix}/bin/mv "$tmp_file" "$config_file"
-    fi
-  '';
-
 in
 {
   #===========================
@@ -302,7 +289,7 @@ in
               TimeoutStopSec = 5;
             }
             // lib.optionalAttrs (app.name == "Mumble") {
-              ExecStop = "${mumbleSetQuitFlag}";
+              ExecStop = config.programs.mumble.setQuitNormallyCommand;
             };
             Install.WantedBy = [ "graphical-session.target" ];
           };

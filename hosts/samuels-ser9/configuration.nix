@@ -129,6 +129,13 @@
     };
     gaming.steamMachine.enable = true;
 
+    # --- Applications ---
+    apps.mumble.servers = [
+      {
+        host = "mumble.at.oechsler.it";
+      }
+    ];
+
     # --- Operations Tools ---
     ops = {
       pvetui = {

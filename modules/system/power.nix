@@ -28,7 +28,7 @@ in
   services.power-profiles-daemon.enable = true;
 
   services.logind.settings.Login = {
-    HandlePowerKey = "suspend";
+    HandlePowerKey = if config.features.desktop.wm == "kde" then "ignore" else "suspend";
     HandlePowerKeyLongPress = "poweroff";
     HandleSuspendKey = "suspend";
     HandleHibernateKey = "suspend";
