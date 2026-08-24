@@ -145,6 +145,7 @@
     gaming.steamMachine.enable = true;
 
     # --- Applications ---
+    apps.mumble.username = "Sam";
     apps.mumble.servers = [
       {
         host = "mumble.at.oechsler.it";
