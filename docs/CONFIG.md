@@ -14,70 +14,106 @@ features.desktop.browser.homepage = "https://dash.example.com";
 features.ssh.enable = true;
 ```
 
-| Toggle | Default | Description |
+### Hardware & Boot
+
+| Option | Default | Description |
 |--------|---------|-------------|
-| `features.hardware.formFactor` | `"desktop"` | Machine form factor — `"desktop"` or `"laptop"`. Laptop enables lid switch suspend and keeps GPU runtime PM active. Desktop disables lid switch and GPU runtime PM (safest for AMD). |
-| `features.impermanence.enable` | `true` | Impermanent root with btrfs rollback on boot — see [System Requirements](#system-requirements) |
-| `features.impermanence.extraPaths` | `[]` | Additional paths to persist (beyond feature-based defaults) |
-| `features.encryption.enable` | `true` | LUKS full disk encryption |
-| `features.encryption.unlockMethod` | `"tpm2"` | How LUKS is unlocked at boot: `"tpm2"`, `"yubikey"`, `"password"`. `"yubikey"` auto-enables `auth.yubikey.enable`. |
-| `features.desktop.enable` | `true` | Desktop environment (SDDM, Firefox, theming) |
-| `features.desktop.wm` | `"hyprland"` | Window manager (`"hyprland"` / `"kde"`) |
-| `features.desktop.login` | `"greeter"` | How the desktop session is entered: `"greeter"` (SDDM login) or `"autologin"`. Autologin only auto-unlocks the keyring with `unlockMethod = "password"`. |
-| `features.desktop.fileManager` | `"default"` | Primary file manager: `"default"` uses Nautilus (Hyprland) or Dolphin (KDE); `"terminal"` uses Yazi in Kitty and removes the GUI file manager from pinned apps. |
-| `features.desktop.browser.enable` | `true` | Install and configure the managed browser. Disable to use another browser configuration. |
-| `features.desktop.browser.type` | `"librewolf"` | Selects the declaratively configured browser: `"librewolf"` or `"firefox"`. No profile migration is performed when switching. |
-| `features.desktop.browser.homepage` | `https://dash.at.oechsler.it` | Homepage for the selected browser and the declarative new-tab page. |
-| `features.desktop.browser.searchEngine` | `"ddg"` | Default search engine identifier. DuckDuckGo remains the default. |
-| `features.desktop.browser.cookieAllowlist` | `oechsler.it`, `oech.it` and subdomains | Browser cookie/session exceptions applied to Firefox and LibreWolf. Include both the root domain and `https://*.domain` for subdomains. |
-| `features.compat.enable` | `true` | Enables `nix-ld` and glibc compatibility libraries for downloaded/vendor binaries. Disable for a more GNU-reduced runtime. |
-| `features.audio.enable` | `true` | PipeWire audio (ALSA, PulseAudio compat) |
-| `features.bluetooth.enable` | `true` | Bluetooth support (power on boot) |
-| `features.gaming.enable` | `true` | Steam + Proton-GE, GameMode, Gamescope, MangoHud, ProtonUp-Qt |
-| `features.gaming.steamMachine.enable` | `false` | Adds a Steam Gamescope session to SDDM for hybrid desktop/Steam Machine use. |
-| `features.hardware.cpu` | `null` | CPU vendor (`"amd"` / `"intel"`) — enables the correct microcode update package loaded at early boot (security patches from AMD/Intel). |
-| `features.hardware.gpu` | `null` | GPU vendor (`"amd"` / `"intel"`) — enables graphics support and VA-API hardware decoding for all contexts (browser, video players). AMD also gets 32-bit libs when `gaming.enable = true`. **NVIDIA is not supported** — the enum only accepts `"amd"` and `"intel"`. |
-| `features.ipv6PrivacyExtensions.enable` | `true` | IPv6 privacy extensions for NetworkManager profiles |
-| `features.virtualisation.enable` | `true` | Master switch for container and VM support |
-| `features.virtualisation.container.enable` | `true` | Podman with Docker-compatible CLI + user group |
-| `features.virtualisation.vm.enable` | `true` | QEMU/KVM, libvirt, virt-manager, and `libvirtd` user group |
-| `features.smb.enable` | `true` | SMB network share mounts (auto-mount with retry) |
-| `features.smb.shares` | `[]` | SMB shares to mount — list of `{ name, label, path, username? }`. `username` defaults to `config.user.name`. Only `smb/<name>/password` needs a SOPS secret. |
-| `features.flatpak.enable` | `true` | Flatpak + Flathub (Flatseal, Flatsweep) |
-| `features.appimage.enable` | `true` | AppImage support + auto-watcher in ~/Applications |
-| `features.tailscale.enable` | `true` | Tailscale VPN (+ trayscale tray icon on desktop) |
-| `features.wifi.enable` | `true` | WiFi profiles via SOPS secrets |
-| `features.wifi.networks` | `[]` | WPA2-PSK networks — list of `{ name, ssid }`. Only `wifi/<name>/psk` needs a SOPS secret. |
-| `features.wifi.enterpriseNetworks` | `[]` | WPA2 Enterprise (EAP-PEAP) networks — list of `{ name, ssid, identity }`. Only `wifi/<name>/password` needs a SOPS secret. |
-| `features.dev.enable` | `true` | Languages, CLI dev tools, desktop IDEs on desktop hosts |
-| `features.dev.opencode.enable` | `dev.enable` | OpenCode AI coding agent with OpenAI/opencode-go providers |
-| `features.dev.jetbrains.enable` | `dev.enable` | JetBrains IDEs (GoLand, RustRover) |
-| `features.dev.dbeaver.enable` | `dev.enable` | DBeaver database GUI |
-| `features.ops.enable` | `true` | Operations tools - infrastructure management |
-| `features.ops.pvetui.enable` | `ops.enable` | Proxmox VE Terminal UI with pre-configured profiles and API token auth via SOPS |
-| `features.ops.pvetui.profiles` | `[]` | Proxmox server profiles — list of `{ name, addr, user?, realm?, tokenId?, insecure?, sshUser?, vmSshUser?, sshKeyfile?, groups? }`. Defaults use `config.user.name`. Only `pvetui/<name>/token-secret` needs a SOPS secret. |
-| `features.ops.pvetui.defaultProfile` | `""` | Default profile or group name (can be a profile name or a group name for Group Mode) |
-| `features.ops.pvetui.groups` | `{}` | Group settings for Group Mode — attrs of `{ mode }` where mode is `"aggregate"` (combines resources) or `"cluster"` (active/passive failover) |
-| `features.ops.kubernetes.enable` | `ops.enable` | Kubernetes tools (kubectl, helm, k9s) with OIDC authentication |
-| `features.ops.kubernetes.clusters` | `[]` | Kubernetes clusters — list of `{ name, server, caData, namespace?, user?, oidc = { issuerUrl, clientId, extraScopes? } }`. Kubeconfig is generated automatically. |
-| `features.ops.kubernetes.defaultContext` | `""` | Default Kubernetes context (empty = first cluster) |
-| `features.apps.enable` | `true` | Desktop apps (Discord, Spotify, Obsidian, LibreOffice, ...) |
-| `features.apps.mumble.enable` | `true` | Install and configure Mumble, including desktop/autostart integration |
-| `features.apps.mumble.username` | `user.name` | Default Mumble username |
-| `features.apps.mumble.servers` | `[]` | Favorite servers — list of `{ name?, host, port?, username? }`; `name` defaults to `host`, `port` defaults to `64738`, and `username` defaults to `features.apps.mumble.username` |
-| `features.apps.mumble.disablePublicServerList` | `true` | Hide Mumble's public Internet server list |
-| `features.apps.mumble.autoConnectToLastServer` | `true` | Automatically connect to the last server |
-| `features.apps.mumble.reconnectAutomatically` | `true` | Reconnect after a lost connection |
-| `features.apps.mumble.hideInTray` | `true` | Keep Mumble in the system tray instead of the taskbar |
-| `features.apps.mumble.quitBehavior` | `"AlwaysMinimize"` | Close behavior: `AlwaysAsk`, `AskWhenConnected`, `AlwaysMinimize`, `MinimizeWhenConnected`, or `AlwaysQuit` |
-| `features.apps.mumble.serverFilterMode` | `"ShowReachable"` | Favorite-list filter: `ShowPopulated`, `ShowReachable`, or `ShowAll` |
-| `features.auth.totp.enable` | `true` | TOTP for sudo, SSH (see [AUTH.md](AUTH.md)) |
-| `features.auth.yubikey.enable` | `unlockMethod == "yubikey"` | YubiKey for sudo, SSH (see [AUTH.md](AUTH.md)). Auto-enabled when `encryption.unlockMethod = "yubikey"`. |
-| `features.auth.ldap.enable` | `false` | LLDAP authentication (see [AUTH.md](AUTH.md)) |
-| `features.secureBoot.enable` | `false` | UEFI Secure Boot via lanzaboote |
-| `features.ssh.enable` | `false` | OpenSSH server + GitHub key sync (every 15 min) |
-| `features.snapshots.enable` | `true` | Automatic btrfs snapshots (hourly, see [SNAPSHOTS.md](SNAPSHOTS.md)) |
-| `features.kernel` | `"cachyos"` | Kernel variant: `"cachyos"` (generic, latest) / `"cachyos-v3"` (explicit x86_64-v3) / `"cachyos-v4"` (x86_64-v4, Zen 4+) / `"cachyos-lts"` / `"default"` (latest nixpkgs kernel) / `"default-lts"` (stable nixpkgs kernel) |
+| `features.hardware.formFactor` | `"desktop"` | Machine form factor: `"desktop"` or `"laptop"`. |
+| `features.hardware.cpu` | `null` | CPU vendor: `"amd"` or `"intel"`; selects microcode. |
+| `features.hardware.gpu` | `null` | GPU vendor: `"amd"` or `"intel"`; selects graphics and VA-API support. |
+| `features.kernel` | `"cachyos"` | Kernel variant, such as `"cachyos-v3"`, `"cachyos-v4"`, `"cachyos-lts"`, `"default"`, or `"default-lts"`. |
+| `features.encryption.enable` | `true` | LUKS full disk encryption. |
+| `features.encryption.unlockMethod` | `"tpm2"` | LUKS unlock method: `"tpm2"`, `"yubikey"`, or `"password"`. |
+| `features.secureBoot.enable` | `false` | UEFI Secure Boot via lanzaboote. |
+| `features.impermanence.enable` | `true` | Impermanent root with btrfs rollback on boot. |
+| `features.impermanence.extraPaths` | `[]` | Additional paths to persist. |
+| `features.snapshots.enable` | `true` | Automatic btrfs snapshots. |
+
+### Networking
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `features.wifi.enable` | `true` | WiFi profiles via SOPS secrets. |
+| `features.wifi.networks` | `[]` | WPA2-PSK networks: `{ name, ssid }`. |
+| `features.wifi.enterpriseNetworks` | `[]` | WPA2 Enterprise networks: `{ name, ssid, identity }`. |
+| `features.ipv6PrivacyExtensions.enable` | `true` | IPv6 privacy extensions for NetworkManager. |
+| `features.tailscale.enable` | `true` | Tailscale VPN and desktop tray integration. |
+| `features.smb.enable` | `true` | Automatic SMB network share mounts. |
+| `features.smb.shares` | `[]` | Shares to mount: `{ name, label, path, username? }`. |
+
+### Desktop & Security
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `features.desktop.enable` | `true` | Desktop environment and login manager. |
+| `features.desktop.wm` | `"hyprland"` | Desktop: `"hyprland"` or `"kde"`. |
+| `features.desktop.login` | `"greeter"` | `"greeter"` or `"autologin"`. |
+| `features.desktop.fileManager` | `"default"` | `"default"` or terminal-based Yazi integration. |
+| `features.desktop.browser.enable` | `true` | Managed default browser. |
+| `features.desktop.browser.type` | `"librewolf"` | `"librewolf"` or `"firefox"`. |
+| `features.desktop.browser.homepage` | `https://dash.at.oechsler.it` | Browser homepage and new-tab URL. |
+| `features.audio.enable` | `true` | PipeWire audio with PulseAudio compatibility. |
+| `features.bluetooth.enable` | `true` | Bluetooth support. |
+| `features.compat.enable` | `true` | `nix-ld` and glibc compatibility libraries. |
+| `features.auth.totp.enable` | `true` | TOTP for sudo and SSH. |
+| `features.auth.yubikey.enable` | `unlockMethod == "yubikey"` | YubiKey authentication. |
+| `features.auth.ldap.enable` | `false` | LLDAP authentication. |
+| `features.ssh.enable` | `false` | OpenSSH server and GitHub key sync. |
+
+### Virtualisation
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `features.virtualisation.enable` | `true` | Master switch for container and VM support. |
+| `features.virtualisation.container.enable` | `true` | Podman with Docker-compatible CLI. |
+| `features.virtualisation.vm.enable` | `true` | QEMU/KVM, libvirt, and virt-manager. |
+
+### Gaming
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `features.gaming.enable` | `true` | Steam, Proton-GE, Gamescope, GameMode, and MangoHud. |
+| `features.gaming.steamMachine.enable` | `false` | Steam Gamescope session in SDDM. |
+
+### Development
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `features.dev.enable` | `true` | Development languages, tools, and IDEs. |
+| `features.dev.opencode.enable` | `dev.enable` | OpenCode AI coding agent. |
+| `features.dev.jetbrains.enable` | `dev.enable` | JetBrains IDEs. |
+| `features.dev.dbeaver.enable` | `dev.enable` | DBeaver database GUI. |
+
+### Operations
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `features.ops.enable` | `true` | Infrastructure and operations tools. |
+| `features.ops.pvetui.enable` | `ops.enable` | Proxmox VE terminal UI. |
+| `features.ops.pvetui.profiles` | `[]` | Proxmox server profiles. |
+| `features.ops.pvetui.defaultProfile` | `""` | Default Proxmox profile or group. |
+| `features.ops.pvetui.groups` | `{}` | Proxmox profile groups. |
+| `features.ops.kubernetes.enable` | `ops.enable` | Kubernetes tools with OIDC support. |
+| `features.ops.kubernetes.clusters` | `[]` | Kubernetes cluster definitions. |
+| `features.ops.kubernetes.defaultContext` | `""` | Default Kubernetes context. |
+
+### Applications
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `features.apps.enable` | `true` | General desktop applications. |
+| `features.apps.mumble.enable` | `true` | Install and configure Mumble. |
+| `features.apps.mumble.username` | `user.name` | Default Mumble username. |
+| `features.apps.mumble.servers` | `[]` | Favorite servers; `name` defaults to `host`, `port` to `64738`. |
+| `features.apps.mumble.certificate.enable` | `false` | Import the optional SOPS-managed client certificate. |
+| `features.apps.mumble.disablePublicServerList` | `true` | Disable Mumble's public server list. |
+| `features.apps.mumble.autoConnectToLastServer` | `true` | Connect to the last server automatically. |
+| `features.apps.mumble.reconnectAutomatically` | `true` | Reconnect after a lost connection. |
+| `features.apps.mumble.hideInTray` | `true` | Keep Mumble in the system tray. |
+| `features.apps.mumble.quitBehavior` | `"AlwaysMinimize"` | Close behavior. |
+| `features.apps.mumble.serverFilterMode` | `"ShowAll"` | Favorite-list filter. |
+| `features.flatpak.enable` | `true` | Flatpak and Flathub. |
+| `features.appimage.enable` | `true` | AppImage support and watcher. |
 
 ### Mumble
 
