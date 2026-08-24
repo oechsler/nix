@@ -98,7 +98,7 @@ let
   # UNMOUNT SCRIPT
   # ============================================================================
   umountContent = lib.concatMapStringsSep "\n" (share: ''
-    umount -l "${user.home}/smb/${share.label}" || true
+    timeout 1s umount -l "${user.home}/smb/${share.label}" || true
   '') cfg.shares;
 in
 {
@@ -172,6 +172,7 @@ in
 
         path = [
           pkgs.cifs-utils
+          pkgs.coreutils
           pkgs.util-linux
           pkgs.sudo
           pkgs.libnotify
@@ -182,7 +183,7 @@ in
         serviceConfig = {
           Type = "oneshot";
           RemainAfterExit = true;
-          TimeoutStopSec = "5s";
+          TimeoutStopSec = "2s";
           ExecStartPre = "${waitForNetwork}";
           ExecStart = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-mount.sh".path}";
           ExecStop = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-umount.sh".path}";
