@@ -182,6 +182,7 @@ in
         serviceConfig = {
           Type = "oneshot";
           RemainAfterExit = true;
+          TimeoutStopSec = "5s";
           ExecStartPre = "${waitForNetwork}";
           ExecStart = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-mount.sh".path}";
           ExecStop = "${pkgs.bash}/bin/bash ${config.sops.templates."smb-umount.sh".path}";
