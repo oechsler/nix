@@ -31,6 +31,14 @@ let
   cfg = config.features.smb;
   user = config.users.users.${config.user.name};
   translate = english: german: if lib.hasPrefix "de" config.locale.language then german else english;
+  shareHosts = lib.unique (
+    map (share: builtins.elemAt (lib.splitString "/" (lib.removePrefix "//" share.path)) 0) cfg.shares
+  );
+  shareHostChecks = lib.concatMapStringsSep "\n" (host: ''
+    if ! ${pkgs.systemd}/bin/resolvectl query "${host}" >/dev/null 2>&1; then
+      ready=false
+    fi
+  '') shareHosts;
 
   # ============================================================================
   # NETWORK READINESS CHECK
@@ -39,7 +47,9 @@ let
     echo "Waiting for network and DNS..."
     for i in $(seq 1 30); do
       if ${pkgs.iproute2}/bin/ip route | ${pkgs.gnugrep}/bin/grep -q '^default'; then
-        if ${pkgs.systemd}/bin/resolvectl query localhost >/dev/null 2>&1; then
+        ready=true
+        ${shareHostChecks}
+        if [ "$ready" = true ]; then
           echo "Network and DNS ready"
           exit 0
         fi
