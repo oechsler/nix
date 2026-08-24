@@ -75,14 +75,7 @@ jobs:
 
       - name: Run linters
         if: steps.check-update.outputs.needs_update == 'true'
-        run: >-
-          nix build
-          .#checks.x86_64-linux.lint
-          .#checks.x86_64-linux.statix
-          .#checks.x86_64-linux.deadnix
-          .#checks.x86_64-linux.shellcheck
-          .#checks.x86_64-linux.format
-          --no-link --print-build-logs
+        run: nix flake check --print-build-logs
 
       - name: Evaluate all host configurations
         if: steps.check-update.outputs.needs_update == 'true'

@@ -285,7 +285,7 @@
           userName = cfg.user.name;
           passwordLocked = cfg.user.hashedPassword == "!" && !(cfg.sops.secrets ? "user/password");
           luksDevices = builtins.attrValues (
-            builtins.mapAttrs (name: dev: dev.device) cfg.boot.initrd.luks.devices
+            builtins.mapAttrs (_name: dev: dev.device) cfg.boot.initrd.luks.devices
           );
         }
       ) nixosConfigurations;
