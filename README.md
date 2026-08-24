@@ -4,21 +4,22 @@ Hello :wave:,
 
 This repository is my approach to NixOS.
 
-After many years of using Linux, I reached a point where configuring yet
-another distribution started to feel like work without an end. I wanted to
-write "the last Linux configuration of my life": a system that grows with me,
-does exactly what I need, and remains flexible, maintainable, and pleasant to
-use.
+After many years of using Linux, I grew tired of configuring one distribution
+after another. I started collecting dotfiles and scripts to automate setup,
+even building an installer, but there was always configuration happening around
+them. The systems worked, yet they slowly drifted away from what was written
+down. I wanted "the last Linux configuration of my life": a reproducible system
+that consistently delivers the state it declares.
 
-NixOS gave me a way to work towards that idea. I started by learning the
-language and the ecosystem, then gradually wrote that knowledge down as a
-reproducible configuration for my machines. This repository is the result: a
-personal system that is opinionated where it should be, and reusable where it
-can be. What started with traditional dotfiles has grown into something much
-larger: a complete NixOS configuration for my machines. It is not a
-finished distribution or a universal answer to NixOS. I still have a lot to
-learn, and the configuration will keep changing as my understanding and my
-needs change.
+NixOS offered a way to work towards that idea. I began learning the language
+and the ecosystem, then turned that knowledge into this configuration for my
+machines. What started as traditional dotfiles has grown into a complete
+operating system configuration: opinionated where it should be, flexible where
+it can be, and still evolving as I learn more and my needs change. It is not a
+distribution or a universal answer to NixOS, just an honest record of that
+ongoing process.
+
+Thanks for taking the time to look at my repository.
 
 Here is a preview of what the configuration looks like today:
 
