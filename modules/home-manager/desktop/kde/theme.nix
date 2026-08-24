@@ -257,38 +257,54 @@ in
     };
 
     # Autostart script to configure taskbar launchers and kickoff icon
-    xdg.configFile."autostart/kde-launchers-setup.desktop".text = ''
-      [Desktop Entry]
-      Type=Application
-      Name=KDE Launchers Setup
-      Exec=${pkgs.writeShellScript "kde-launchers-setup" ''
-        # Wait for Plasma to be ready
-        timeout=30
-        while [ $timeout -gt 0 ]; do
-          if ${pkgs.kdePackages.qttools}/bin/qdbus org.kde.plasmashell /PlasmaShell >/dev/null 2>&1; then
-            break
-          fi
-          sleep 0.5
-          timeout=$((timeout - 1))
-        done
+    xdg.configFile = {
+      "autostart/kde-launchers-setup.desktop".text = ''
+        [Desktop Entry]
+        Type=Application
+        Name=KDE Launchers Setup
+        Exec=${pkgs.writeShellScript "kde-launchers-setup" ''
+          # Wait for Plasma to be ready
+          timeout=30
+          while [ $timeout -gt 0 ]; do
+            if ${pkgs.kdePackages.qttools}/bin/qdbus org.kde.plasmashell /PlasmaShell >/dev/null 2>&1; then
+              break
+            fi
+            sleep 0.5
+            timeout=$((timeout - 1))
+          done
 
-        config="$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
-        # Wait for Plasma to write its initial config (missing on first login)
-        config_timeout=30
-        while [ ! -f "$config" ] && [ $config_timeout -gt 0 ]; do
-          sleep 0.5
-          config_timeout=$((config_timeout - 1))
-        done
-        if [ -f "$config" ]; then
-          ${plasmaWidgetConfig} "$config" "org.kde.plasma.icontasks" "launchers" "${pinnedLaunchersStr}" \
-            || ${plasmaWidgetConfig} "$config" "org.kde.plasma.taskmanager" "launchers" "${pinnedLaunchersStr}" \
-            || true
-          ${plasmaWidgetConfig} "$config" "org.kde.plasma.kickoff" "icon" "${kickoffIcon}" 2>/dev/null || true
-        fi
-      ''}
-      X-KDE-autostart-phase=2
-      Hidden=false
-    '';
+          config="$HOME/.config/plasma-org.kde.plasma.desktop-appletsrc"
+          # Wait for Plasma to write its initial config (missing on first login)
+          config_timeout=30
+          while [ ! -f "$config" ] && [ $config_timeout -gt 0 ]; do
+            sleep 0.5
+            config_timeout=$((config_timeout - 1))
+          done
+          if [ -f "$config" ]; then
+            ${plasmaWidgetConfig} "$config" "org.kde.plasma.icontasks" "launchers" "${pinnedLaunchersStr}" \
+              || ${plasmaWidgetConfig} "$config" "org.kde.plasma.taskmanager" "launchers" "${pinnedLaunchersStr}" \
+              || true
+            ${plasmaWidgetConfig} "$config" "org.kde.plasma.kickoff" "icon" "${kickoffIcon}" 2>/dev/null || true
+          fi
+        ''}
+        X-KDE-autostart-phase=2
+        Hidden=false
+      '';
+
+      # Re-apply Breeze after Plasma's Catppuccin look-and-feel has loaded.
+      "autostart/kde-breeze-decoration.desktop".text = ''
+        [Desktop Entry]
+        Type=Application
+        Name=Breeze Window Decoration
+        Exec=${pkgs.writeShellScript "kde-breeze-decoration" ''
+          ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key library org.kde.breeze
+          ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key theme Breeze
+          ${pkgs.kdePackages.qttools}/bin/qdbus org.kde.KWin /KWin reconfigure 2>/dev/null || true
+        ''}
+        X-KDE-autostart-phase=2
+        Hidden=false
+      '';
+    };
 
     home.activation.applyKdeTheme = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       # Most settings are now managed by plasma-manager declaratively.
