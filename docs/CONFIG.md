@@ -1,4 +1,7 @@
 # Configuration Reference
+#
+# This document describes the public configuration interface. It focuses on
+# reusable options and defaults; host-specific values belong in host modules.
 
 ## Feature Toggles
 
@@ -10,11 +13,15 @@ features.gaming.enable = false;
 features.gaming.steamMachine.enable = true;
 features.desktop.wm = "kde";
 features.desktop.fileManager = "terminal";
-features.desktop.browser.homepage = "https://dash.example.com";
+features.desktop.browser.newTabPage = "https://dash.example.com";
 features.ssh.enable = true;
 ```
 
 ### Hardware & Boot
+
+These options describe the machine and the guarantees required before the
+userspace configuration starts. Hardware values are normally host-specific;
+the remaining options control boot-time storage and persistence.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -29,7 +36,22 @@ features.ssh.enable = true;
 | `features.impermanence.extraPaths` | `[]` | Additional paths to persist. |
 | `features.snapshots.enable` | `true` | Automatic btrfs snapshots. |
 
+Example for a laptop with encrypted storage:
+
+```nix
+features.hardware = {
+  formFactor = "laptop";
+  cpu = "intel";
+  gpu = "intel";
+};
+features.encryption.unlockMethod = "yubikey";
+```
+
 ### Networking
+
+Networking options describe connectivity rather than individual applications.
+WiFi and SMB credentials are kept in SOPS; the host configuration only names
+the networks and shares.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -43,6 +65,10 @@ features.ssh.enable = true;
 
 ### Desktop & Security
 
+This layer selects the interactive session and its security integrations. The
+browser's managed new-tab page is also its homepage; desktop-specific power
+management is configured by the selected session.
+
 | Option | Default | Description |
 |--------|---------|-------------|
 | `features.desktop.enable` | `true` | Desktop environment and login manager. |
@@ -51,7 +77,7 @@ features.ssh.enable = true;
 | `features.desktop.fileManager` | `"default"` | `"default"` or terminal-based Yazi integration. |
 | `features.desktop.browser.enable` | `true` | Managed default browser. |
 | `features.desktop.browser.type` | `"librewolf"` | `"librewolf"` or `"firefox"`. |
-| `features.desktop.browser.homepage` | `https://dash.at.oechsler.it` | Browser homepage and new-tab URL. |
+| `features.desktop.browser.newTabPage` | `https://dash.at.oechsler.it` | Dashboard URL used by the managed new-tab page, also used as homepage. |
 | `features.audio.enable` | `true` | PipeWire audio with PulseAudio compatibility. |
 | `features.bluetooth.enable` | `true` | Bluetooth support. |
 | `features.compat.enable` | `true` | `nix-ld` and glibc compatibility libraries. |
@@ -62,13 +88,29 @@ features.ssh.enable = true;
 
 ### Virtualisation
 
+Virtualisation is split into a master switch and two independent child
+features. Disable the master switch to remove both containers and virtual
+machines, or disable only the child feature that is not needed.
+
 | Option | Default | Description |
 |--------|---------|-------------|
 | `features.virtualisation.enable` | `true` | Master switch for container and VM support. |
 | `features.virtualisation.container.enable` | `true` | Podman with Docker-compatible CLI. |
 | `features.virtualisation.vm.enable` | `true` | QEMU/KVM, libvirt, and virt-manager. |
 
+```nix
+features.virtualisation = {
+  enable = true;
+  container.enable = true;
+  vm.enable = false;
+};
+```
+
 ### Gaming
+
+Gaming enables the shared Steam/Proton toolchain. The Steam Machine option is
+separate because it adds a login session rather than changing the desktop
+session itself.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -76,6 +118,9 @@ features.ssh.enable = true;
 | `features.gaming.steamMachine.enable` | `false` | Steam Gamescope session in SDDM. |
 
 ### Development
+
+Development tools inherit from `features.dev.enable` by default. Individual
+IDE integrations can be disabled without removing the command-line toolchain.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -85,6 +130,10 @@ features.ssh.enable = true;
 | `features.dev.dbeaver.enable` | `dev.enable` | DBeaver database GUI. |
 
 ### Operations
+
+Operations features provide declarative access to infrastructure. Profiles,
+clusters, and credentials are separate so the same module can be reused across
+hosts.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -98,6 +147,10 @@ features.ssh.enable = true;
 | `features.ops.kubernetes.defaultContext` | `""` | Default Kubernetes context. |
 
 ### Applications
+
+Applications are the highest-level user-facing features. The general switch
+controls the desktop application set; application-specific options are grouped
+under their respective feature.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -115,9 +168,10 @@ features.ssh.enable = true;
 | `features.flatpak.enable` | `true` | Flatpak and Flathub. |
 | `features.appimage.enable` | `true` | AppImage support and watcher. |
 
-### Mumble
+#### Mumble
 
-Mumble favorites are stored in its SQLite database; the module synchronizes the declarative `servers` list during Home-Manager activation. A minimal host configuration is:
+Mumble favorites are stored in its SQLite database and synchronized during
+Home-Manager activation. A minimal configuration is:
 
 ```nix
 features.apps.mumble.servers = [
@@ -125,34 +179,25 @@ features.apps.mumble.servers = [
 ];
 ```
 
-Mumble can optionally use a client identity certificate managed through SOPS. When certificate support is disabled, Mumble runs without a client certificate. The default Mumble username is the configured system username (`user.name`); individual hosts may override it.
+The default username is `user.name`; hosts can override it. Client
+certificates are optional and are imported from SOPS only when enabled.
 
 Set `features.apps.mumble.disablePublicServerList = false` to show the public server list again.
 
-### Virtualisation
-
-The master switch controls both virtualisation features. The container and VM
-switches can be disabled independently:
-
-```nix
-features.virtualisation.enable = true;
-features.virtualisation.container.enable = true;
-features.virtualisation.vm.enable = true;
-```
-
-Set `features.virtualisation.enable = false` to disable both. For only VMs,
-set `features.virtualisation.container.enable = false`; for only containers,
-set `features.virtualisation.vm.enable = false`.
-
 ## SOPS Options
 
-Set in `configuration.nix`:
+SOPS provides encrypted values to system and Home-Manager modules. Keep secret
+values in the encrypted SOPS file and configure only paths and feature switches
+in Nix.
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `sops.secretsFile` | `../../sops/sops.encrypted.yaml` | Path to encrypted SOPS secrets file (override for external repos) |
 
 ## Networking Policy
+
+The following implementation choices apply to the managed networking stack and
+normally do not need per-host overrides:
 
 - NetworkManager owns IP configuration and routing.
 - `iwd` handles WiFi authentication only.
@@ -163,7 +208,8 @@ Set in `configuration.nix`:
 
 ## User Options
 
-Set in `configuration.nix`:
+These options describe the primary local user. Passwords and other sensitive
+values are supplied through SOPS.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -177,7 +223,8 @@ Set in `configuration.nix`:
 
 ## Theme Options
 
-Set in `configuration.nix`:
+Theme options provide shared visual defaults for both supported desktop
+sessions.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -202,7 +249,8 @@ Set in `configuration.nix`:
 
 ## Waybar Tray Icons
 
-Set in `home.nix`. Waybar's system tray uses Papirus-Dark icon names for common applications. **Hyprland only** — KDE manages tray icons through Plasma's own panel system and ignores this option.
+Waybar's system tray uses Papirus-Dark icon names for common applications.
+This section applies to Hyprland; KDE manages tray icons through Plasma.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -241,7 +289,7 @@ The Id is the last path component (e.g., `steam` from `:1.107/org/ayatana/Notifi
 
 ## Font Options
 
-Set in `configuration.nix`:
+User options are set in `configuration.nix` and shared with Home Manager.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -255,7 +303,7 @@ Set in `configuration.nix`:
 
 ## Locale Options
 
-Set in `configuration.nix`:
+Theme options are set in `configuration.nix` and shared by both desktop sessions.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -265,7 +313,8 @@ Set in `configuration.nix`:
 
 ## Display Options
 
-Set in `configuration.nix`. Works on both Hyprland and KDE. When `displays.monitors` is empty, the system falls back to automatic layout detection and `theme.scale`.
+Display options work on both Hyprland and KDE. When `displays.monitors` is
+empty, the system uses automatic layout detection and `theme.scale`.
 
 To find your connector names, resolution and refresh rate:
 
@@ -294,19 +343,19 @@ displays.monitors = [
 | `displays.defaults.vrr` | `2` | Default VRR mode for hotplugged/unlisted monitors where output-independent defaults are supported: `0` off, `1` always, `2` fullscreen/automatic |
 | `displays.defaults.hdr` | `1` | Default HDR mode for hotplugged/unlisted monitors where supported: `0` off, `1` Steam/Gamescope HDR, `2` full desktop HDR |
 | `displays.monitors` | `[]` | List of monitor configurations |
-| `monitors.*.name` | — | Connector name (`"DP-1"`, `"HDMI-A-1"`, `"eDP-1"`) |
-| `monitors.*.width` | `1920` | Horizontal resolution |
-| `monitors.*.height` | `1080` | Vertical resolution |
-| `monitors.*.refreshRate` | `60` | Refresh rate in Hz |
-| `monitors.*.x` | `0` | Horizontal position offset |
-| `monitors.*.y` | `0` | Vertical position offset |
-| `monitors.*.scale` | `theme.scale` | Scale factor (defaults to `theme.scale`) |
-| `monitors.*.rotation` | `"normal"` | Rotation (`"normal"` / `"90"` / `"180"` / `"270"`) |
-| `monitors.*.wallpaper` | `null` | Per-monitor wallpaper (`null` = use the processed `theme.backgrounds.path` wallpaper) |
-| `monitors.*.workspaces` | `[]` | Workspace IDs to bind to this monitor (Hyprland only, e.g. `[1 2 3 4 5]`) |
-| `monitors.*.vrr` | `0` | Explicit VRR mode for this monitor: `0` off, `1` always, `2` fullscreen/automatic |
-| `monitors.*.hdr` | `0` | Explicit HDR mode for this monitor: `0` off, `1` Steam/Gamescope HDR, `2` full desktop HDR |
-| `monitors.*.hdrSdrMaxLuminance` | `450` | SDR white level in nits for HDR conversion on this monitor |
+| `displays.monitors.*.name` | — | Connector name (`"DP-1"`, `"HDMI-A-1"`, `"eDP-1"`) |
+| `displays.monitors.*.width` | `1920` | Horizontal resolution |
+| `displays.monitors.*.height` | `1080` | Vertical resolution |
+| `displays.monitors.*.refreshRate` | `60` | Refresh rate in Hz |
+| `displays.monitors.*.x` | `0` | Horizontal position offset |
+| `displays.monitors.*.y` | `0` | Vertical position offset |
+| `displays.monitors.*.scale` | `theme.scale` | Scale factor |
+| `displays.monitors.*.rotation` | `"normal"` | Rotation (`"normal"`, `"90"`, `"180"`, or `"270"`) |
+| `displays.monitors.*.wallpaper` | `null` | Per-monitor wallpaper; `null` uses the processed default |
+| `displays.monitors.*.workspaces` | `[]` | Workspace IDs to bind to this monitor (Hyprland only) |
+| `displays.monitors.*.vrr` | `0` | VRR mode: `0` off, `1` always, `2` fullscreen/automatic |
+| `displays.monitors.*.hdr` | `0` | HDR mode: `0` off, `1` Steam/Gamescope, `2` full desktop HDR |
+| `displays.monitors.*.hdrSdrMaxLuminance` | `450` | SDR white level in nits for HDR conversion |
 
 Default behavior and limitations:
 
@@ -321,7 +370,7 @@ On Hyprland, a catch-all fallback rule (`preferred, auto, theme.scale`) is alway
 
 ## Input Options
 
-Set in `configuration.nix`. Applied to both Hyprland and KDE.
+Input options apply to both Hyprland and KDE.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -332,7 +381,8 @@ On KDE, touchpad settings are detected and configured per-device at activation t
 
 ## Autostart Apps
 
-Set in `home.nix`:
+Autostart entries are managed by Home Manager and use the selected desktop's
+session integration.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -359,7 +409,8 @@ Yazi integrations follow existing feature toggles instead of adding yazi-specifi
 
 ## File Manager Bookmarks
 
-Set in `home.nix`:
+The primary file manager is selected by the desktop feature. Bookmarks are
+shared across supported file managers.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -371,7 +422,8 @@ Bookmarks are managed declaratively — on Nautilus via GTK bookmarks, on Dolphi
 
 ## Pinned Dock/Taskbar Apps
 
-Set in `home.nix`:
+Pinned applications are desktop integration, not installation switches. Their
+defaults follow the enabled feature groups.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -386,7 +438,8 @@ Each entry is a desktop file name without `.desktop` suffix (e.g. `"firefox"`).
 
 ## Idle / Power Management
 
-Set in `home.nix`. Works on both Hyprland (via hypridle) and KDE (via PowerDevil).
+Idle and power settings are shared at the policy level and translated to
+Hyprland (`hypridle`) or KDE (`PowerDevil`).
 
 | Option | Default | Description |
 |--------|---------|-------------|
