@@ -202,7 +202,7 @@ in
         Cookies.Allow = defaultCookieAllowlist ++ features.desktop.browser.cookieAllowlist;
         "3rdparty".Extensions."newtaboverride@agenedia.com" = {
           type = "custom_url";
-          url = features.desktop.browser.homepage;
+          url = features.desktop.browser.newTabPage;
         };
       };
 
@@ -320,8 +320,10 @@ in
           # Home Manager sets this automatically when extension settings exist.
           "extensions.autoDisableScopes" = 0;
 
-          "browser.startup.homepage" = features.desktop.browser.homepage;
-          "browser.startup.page" = 3; # 3 = Restore previous session
+          # Start with Firefox's new-tab page. The managed extension supplies
+          # the dashboard content for that page.
+          "browser.startup.homepage" = "about:newtab";
+          "browser.startup.page" = 1; # 1 = Open homepage (about:newtab)
           "browser.sessionstore.resume_from_crash" = true;
 
           # Keep cookies and active web sessions across restarts. Password

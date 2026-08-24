@@ -196,10 +196,10 @@ in
           default = "librewolf";
           description = "Default web browser";
         };
-        homepage = lib.mkOption {
+        newTabPage = lib.mkOption {
           type = lib.types.str;
           default = "https://dash.at.oechsler.it";
-          description = "Default browser homepage and new-tab URL";
+          description = "URL used by the managed new-tab page";
         };
         searchEngine = lib.mkOption {
           type = lib.types.str;
