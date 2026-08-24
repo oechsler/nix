@@ -11,11 +11,11 @@ class of compromise.
 LUKS2 encrypts the root and data storage; the EFI system partition remains
 unencrypted. The unlock method is configured per host:
 
-| Method | Feature flag | Behavior |
-|--------|-------------|----------|
-| TPM2 | `features.encryption.unlockMethod = "tpm2"` (default) | Auto-unlock, sealed to PCR 0+7 |
-| YubiKey | `features.encryption.unlockMethod = "yubikey"` | FIDO2 touch at boot |
-| Password | `features.encryption.unlockMethod = "password"` | LUKS passphrase prompt |
+| Method   | Feature flag                                          | Behavior                       |
+| -------- | ----------------------------------------------------- | ------------------------------ |
+| TPM2     | `features.encryption.unlockMethod = "tpm2"` (default) | Auto-unlock, sealed to PCR 0+7 |
+| YubiKey  | `features.encryption.unlockMethod = "yubikey"`        | FIDO2 touch at boot            |
+| Password | `features.encryption.unlockMethod = "password"`       | LUKS passphrase prompt         |
 
 To disable encryption entirely:
 
@@ -61,11 +61,11 @@ Multi-factor authentication is available for sudo and SSH. Graphical login,
 hyprlock, and other local desktop prompts use a password credential; LDAP can
 provide that credential when enabled.
 
-| Method | Where | Setup |
-|--------|-------|-------|
-| TOTP | sudo, SSH | `sudo totp-init` |
-| YubiKey (FIDO2) | sudo, SSH | `sudo yubikey-init` |
-| Password | local or LDAP-backed login | SOPS-provided local password is hashed at boot |
+| Method          | Where                      | Setup                                          |
+| --------------- | -------------------------- | ---------------------------------------------- |
+| TOTP            | sudo, SSH                  | `sudo totp-init`                               |
+| YubiKey (FIDO2) | sudo, SSH                  | `sudo yubikey-init`                            |
+| Password        | local or LDAP-backed login | SOPS-provided local password is hashed at boot |
 
 SSH enforces public-key + second factor (`publickey,keyboard-interactive`). Password-only SSH is disabled.
 
@@ -95,12 +95,12 @@ runtime; see [sops/README.md](../sops/README.md).
 
 ## Summary
 
-| Layer | Primary protection |
-|-------|-----------------|
-| LUKS | Physical disk access, theft |
-| Secure Boot | Bootkit, unsigned kernel/initrd |
-| Impermanence | Persistence of changes on the ephemeral root filesystem |
-| TOTP / YubiKey | Stolen passwords, unauthorized login |
-| Firewall | Network-based attacks, open ports |
-| SSH hardening | Brute force, password-based SSH |
-| SOPS | Secrets leaking from the repository |
+| Layer          | Primary protection                                      |
+| -------------- | ------------------------------------------------------- |
+| LUKS           | Physical disk access, theft                             |
+| Secure Boot    | Bootkit, unsigned kernel/initrd                         |
+| Impermanence   | Persistence of changes on the ephemeral root filesystem |
+| TOTP / YubiKey | Stolen passwords, unauthorized login                    |
+| Firewall       | Network-based attacks, open ports                       |
+| SSH hardening  | Brute force, password-based SSH                         |
+| SOPS           | Secrets leaking from the repository                     |

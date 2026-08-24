@@ -13,6 +13,9 @@ result-*
 .result-installer-iso-*
 installer-output/
 
+# Rust build artifacts
+target/
+
 # Editor files
 .vscode/
 .idea/

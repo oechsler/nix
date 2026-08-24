@@ -12,14 +12,14 @@ pub(crate) fn check_password(options: &Options, password: &[u8]) -> i32 {
         return ffi::LDAP_INVALID_CREDENTIALS;
     };
     let mut handle = ptr::null_mut();
-    let mut version: i32 = 3;
+    let version: i32 = 3;
 
     let status = unsafe {
         if options.connection_mode.uses_tls() {
             let status = ffi::ldap_set_option(
                 ptr::null_mut(),
                 ffi::LDAP_OPT_X_TLS_CACERTFILE,
-                b"/etc/ssl/certs/ca-certificates.crt\0".as_ptr() as *const c_void,
+                c"/etc/ssl/certs/ca-certificates.crt".as_ptr() as *const c_void,
             );
             if status != ffi::LDAP_SUCCESS {
                 ffi::log_status(b"ldap_set_option(CACERTFILE)\0", status);

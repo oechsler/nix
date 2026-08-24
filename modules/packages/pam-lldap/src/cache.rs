@@ -7,8 +7,12 @@ use std::path::Path;
 use crate::ffi;
 
 pub(crate) fn matches(path: &Path, password: &[u8]) -> bool {
-    let Ok(hash) = fs::read_to_string(path) else { return false };
-    let Ok(hash) = PasswordHash::new(hash.trim()) else { return false };
+    let Ok(hash) = fs::read_to_string(path) else {
+        return false;
+    };
+    let Ok(hash) = PasswordHash::new(hash.trim()) else {
+        return false;
+    };
     Argon2::default().verify_password(password, &hash).is_ok()
 }
 
@@ -33,7 +37,13 @@ pub(crate) fn update(path: &Path, password: &[u8]) -> bool {
     };
 
     let temporary = path.with_extension("new");
-    let Ok(mut file) = OpenOptions::new().create(true).truncate(true).write(true).mode(0o600).open(&temporary) else {
+    let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .mode(0o600)
+        .open(&temporary)
+    else {
         ffi::log_error(b"pam_lldap: cache temporary file open failed\0");
         return false;
     };
