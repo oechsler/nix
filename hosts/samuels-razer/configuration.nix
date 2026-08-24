@@ -37,6 +37,7 @@
   ];
 
   networking.hostName = "samuels-razer";
+  theme.catppuccin.accent = "lavender";
 
   #===========================
   # Host-specific Overrides

@@ -23,6 +23,8 @@
 
 let
   home = config.home.homeDirectory;
+  pathToUri =
+    path: "file://${lib.replaceStrings [ "%" " " "#" "?" ] [ "%25" "%20" "%23" "%3F" ] path}";
 in
 {
   #===========================
@@ -57,42 +59,54 @@ in
   # Configuration
   #===========================
 
-  config.fileManager.bookmarks =
-    let
-      dirs = config.xdg.userDirs;
-      name = builtins.baseNameOf;
-      removableMedia = "/mnt/removable";
-    in
-    [
-      {
-        name = name dirs.download;
-        path = dirs.download;
-        icon = "folder-download";
-      }
-      {
-        name = name dirs.desktop;
-        path = dirs.desktop;
-        icon = "folder-desktop";
-      }
-      {
-        name = "Repos";
-        path = "${home}/repos";
-        icon = "folder-git";
-      }
-      {
-        name = name dirs.documents;
-        path = dirs.documents;
-        icon = "folder-documents";
-      }
-      {
-        name = name dirs.pictures;
-        path = dirs.pictures;
-        icon = "folder-pictures";
-      }
-      {
-        name = "Wechselmedien";
-        path = removableMedia;
-        icon = "drive-removable-media";
-      }
-    ];
+  config = {
+    fileManager.bookmarks =
+      let
+        dirs = config.xdg.userDirs;
+        name = builtins.baseNameOf;
+        removableMedia = "/mnt/removable";
+      in
+      [
+        {
+          name = name dirs.download;
+          path = dirs.download;
+          icon = "folder-download";
+        }
+        {
+          name = name dirs.desktop;
+          path = dirs.desktop;
+          icon = "folder-desktop";
+        }
+        {
+          name = "Repos";
+          path = "${home}/repos";
+          icon = "folder-git";
+        }
+        {
+          name = name dirs.documents;
+          path = dirs.documents;
+          icon = "folder-documents";
+        }
+        {
+          name = name dirs.pictures;
+          path = dirs.pictures;
+          icon = "folder-pictures";
+        }
+        {
+          name = "Wechselmedien";
+          path = removableMedia;
+          icon = "drive-removable-media";
+        }
+      ];
+
+    # GTK file portals and Nautilus use this shared bookmark format.
+    xdg.configFile."gtk-3.0/bookmarks" = {
+      force = true;
+      text =
+        lib.concatMapStringsSep "\n" (
+          bookmark: "${pathToUri bookmark.path} ${bookmark.name}"
+        ) config.fileManager.bookmarks
+        + "\n";
+    };
+  };
 }
