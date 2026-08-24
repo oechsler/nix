@@ -333,7 +333,8 @@ in
           [ "$1" = post ] || exit 0
           wifi_device="$(${pkgs.networkmanager}/bin/nmcli -t -f DEVICE,TYPE device status | ${pkgs.gawk}/bin/awk -F: '$2 == "wifi" { print $1; exit }')"
           [ -n "$wifi_device" ] || exit 0
-          for _ in $(${pkgs.coreutils}/bin/seq 1 10); do
+          ${pkgs.coreutils}/bin/sleep 3
+          for _ in $(${pkgs.coreutils}/bin/seq 1 30); do
             ${pkgs.networkmanager}/bin/nmcli device connect "$wifi_device" >/dev/null 2>&1 && exit 0
             ${pkgs.coreutils}/bin/sleep 1
           done
