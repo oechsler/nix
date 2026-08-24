@@ -267,8 +267,8 @@ in
             set -u
             while IFS= read -r uuid; do
               [ -n "$uuid" ] || continue
-               id=$(${pkgs.networkmanager}/bin/nmcli -g NAME connection show uuid "$uuid" 2>/dev/null || true)
-               type=$(${pkgs.networkmanager}/bin/nmcli -g TYPE connection show uuid "$uuid" 2>/dev/null || true)
+              id=$(${pkgs.networkmanager}/bin/nmcli -g NAME connection show uuid "$uuid" 2>/dev/null || true)
+              type=$(${pkgs.networkmanager}/bin/nmcli -g TYPE connection show uuid "$uuid" 2>/dev/null || true)
               [ "$type" = "802-11-wireless" ] || continue
               case "$id" in
                 ${managedWifiCases}
@@ -327,6 +327,18 @@ in
             ) cfg.enterpriseNetworks;
         };
       };
+
+      environment.etc."systemd/system-sleep/networkmanager-wifi-resume".source =
+        pkgs.writeShellScript "networkmanager-wifi-resume" ''
+          [ "$1" = post ] || exit 0
+          wifi_device="$(${pkgs.networkmanager}/bin/nmcli -t -f DEVICE,TYPE device status | ${pkgs.gawk}/bin/awk -F: '$2 == "wifi" { print $1; exit }')"
+          [ -n "$wifi_device" ] || exit 0
+          for _ in $(${pkgs.coreutils}/bin/seq 1 10); do
+            ${pkgs.networkmanager}/bin/nmcli device connect "$wifi_device" >/dev/null 2>&1 && exit 0
+            ${pkgs.coreutils}/bin/sleep 1
+          done
+          exit 1
+        '';
 
       sops = {
         templates."wifi-env".content = wifiEnvContent;
