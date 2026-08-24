@@ -754,8 +754,10 @@ features = {
 ## System Requirements
 
 The default installation expects a Btrfs layout with `@` for `/`, `@home` for
-`/home`, `@nix` for `/nix`, `@persist` for persistent state, and `@snapshots`
-for snapshot targets. Full-disk encryption is also enabled by default.
+`/home`, `@nix` for `/nix`, and separate `@persist`, `@steam`, `@nextcloud`, and
+`@smb` data subvolumes. The `@snapshots` subvolume is listed last because it is
+used for snapshot storage rather than normal application data. Full-disk
+encryption is also enabled by default.
 
 These requirements are installation constraints rather than runtime feature
 settings. Changing the impermanence or encryption defaults requires a matching

@@ -80,29 +80,41 @@ Steps are combinable. Without step flags, all three run. The installer reads hos
 
 ## Disk Layout
 
-The default layout uses LUKS encryption for the data partition and Btrfs
-subvolumes:
+The default layout consists of an unencrypted EFI system partition and one
+LUKS-encrypted Btrfs partition. Disko creates the following named volumes and
+mounts:
 
 ```
-/dev/nvme...
-├── BOOT (512M, FAT32, /boot) - unencrypted EFI partition
-└── root (rest)
-    └── LUKS (cryptroot)
-        └── btrfs (label: nixos)
-            ├── @          → /              (ephemeral — wiped on boot when impermanence enabled)
-            ├── @home      → /home          (permanent user data)
-            ├── @nix       → /nix           (permanent Nix store)
-            ├── @persist   → /persist       (permanent state — only with impermanence enabled)
-            ├── @snapshots → /.snapshots (normal snapshot access)
-            ├── @steam     → /home/<user>/.local/share/Steam
-            ├── @nextcloud → /home/<user>/Nextcloud
-            └── @smb       → /home/<user>/smb
+/dev/nvme...                                      # Physical disk
+├── BOOT (512 MiB, FAT32)                         # EFI system partition
+│   └── /boot
+└── root (remaining space)                        # Main data partition
+    └── cryptroot                                  # LUKS2 mapping
+        └── nixos                                  # Btrfs filesystem
+            ├── @                                  # Root filesystem
+            │   └── /
+            ├── @home                              # User data
+            │   └── /home
+            ├── @nix                               # Nix store
+            │   └── /nix
+            ├── @persist                           # Persistent system state
+            │   └── /persist
+            ├── @steam                             # Independent Steam data
+            │   └── /home/<user>/.local/share/Steam
+            ├── @nextcloud                         # Independent Nextcloud data
+            │   └── /home/<user>/Nextcloud
+            ├── @smb                               # SMB mount root
+            │   └── /home/<user>/smb
+            └── @snapshots                          # Snapshot storage and access
+                └── /.snapshots
 ```
 
-The `@steam`, `@nextcloud`, and `@smb` subvolumes keep large or independently
-managed data outside `@home` snapshots. When snapshots are enabled, btrbk also
-mounts the Btrfs top-level at `/mnt/btrfs-root` and stores snapshot copies in
-`/mnt/btrfs-root/@snapshots`.
+When impermanence is enabled, `@` is reset on boot while `/home`, `/nix`, and
+`/persist` retain their declared state. The `@steam`, `@nextcloud`, and `@smb`
+subvolumes keep large or independently managed data outside `@home` snapshots.
+For snapshot management, btrbk mounts the Btrfs top-level at
+`/mnt/btrfs-root` and stores snapshot copies in
+`/mnt/btrfs-root/@snapshots`; `/.snapshots` is the normal mounted view.
 
 ## Impermanence
 
