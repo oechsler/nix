@@ -35,6 +35,7 @@ DO_POST_INSTALL=false
 SKIP_TOTP=false
 QUIET_UPGRADE=false
 REPAIR=false
+REPO_URL="${REPO_URL:-https://github.com/oechsler/nix.git}"
 ORIGINAL_ARGS=("$@")
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 # When invoked via PATH (not from the repo directory), resolve the repo location
@@ -994,6 +995,8 @@ setup_tpm() {
 
 copy_config() {
   local dest="/mnt/home/$CONFIG_USERNAME/repos/nix"
+  local home_prefix="/mnt/home/$CONFIG_USERNAME"
+  [[ -L "$dest" ]] && rm -f "$dest"
   if [[ ! -d "$dest" ]]; then
     mkdir -p "/mnt/home/$CONFIG_USERNAME/repos"
 
@@ -1005,8 +1008,22 @@ copy_config() {
     fi
 
     # Copy the exact build-time repository snapshot used by the installer.
-    cp -a "$REPO_DIR" "$dest"
-    local home_prefix="/mnt/home/$CONFIG_USERNAME"
+    cp -aL "$REPO_DIR" "$dest"
+
+    if [[ "$INSTALLER_ISO" == true ]] && command -v git &>/dev/null \
+      && timeout 10 git ls-remote "$REPO_URL" HEAD &>/dev/null; then
+      local remote_dest="${dest}.remote"
+      rm -rf "$remote_dest"
+      if git clone --depth 1 --branch main "$REPO_URL" "$remote_dest" &>/dev/null; then
+        rm -rf "$dest"
+        mv "$remote_dest" "$dest"
+        success "Online repository cloned to ~${dest#"$home_prefix"}"
+        return 0
+      fi
+      rm -rf "$remote_dest"
+      warn "Online repository clone failed; keeping the embedded ISO snapshot."
+    fi
+
     success "Config copied to ~${dest#"$home_prefix"}"
   fi
 }
