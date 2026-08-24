@@ -201,9 +201,9 @@ in
 
     plugins = {
       inherit (pkgs.yaziPlugins)
-        clipboard
         ouch
         restore
+        wl-clipboard
         ;
 
       git = {
@@ -279,13 +279,13 @@ in
           on = "y";
           run = [
             "yank"
-            "plugin clipboard -- --action=copy"
+            "plugin wl-clipboard -- --action=copy"
           ];
           desc = "Yank and copy to system clipboard";
         }
         {
           on = "p";
-          run = "plugin clipboard -- --action=paste";
+          run = "plugin wl-clipboard -- --action=paste";
           desc = "Paste files from system clipboard";
         }
         {

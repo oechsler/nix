@@ -76,4 +76,13 @@ in
       };
     };
   };
+
+  # Lock on the AC suspend schedule and require the password immediately.
+  config.programs.plasma.kscreenlocker = {
+    autoLock = true;
+    timeout = cfg.timeouts.suspendAc / 60;
+    lockOnResume = true;
+    passwordRequired = true;
+    passwordRequiredDelay = 0;
+  };
 }
