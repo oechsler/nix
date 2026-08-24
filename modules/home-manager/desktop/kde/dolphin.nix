@@ -67,8 +67,10 @@ let
   hiddenPlaces = builtins.filter (d: !(builtins.elem d.path bookmarkedPaths)) xdgPlaces;
 
   # Generate visible bookmark entry (XBEL format)
+  pathToUri =
+    path: "file://${lib.replaceStrings [ "%" " " "#" "?" ] [ "%25" "%20" "%23" "%3F" ] path}";
   entry = b: ''
-    <bookmark href="file://${b.path}">
+    <bookmark href="${pathToUri b.path}">
      <title>${b.name}</title>
      <info><metadata owner="http://freedesktop.org">
       <bookmark:icon name="${b.icon}"/>
@@ -77,7 +79,7 @@ let
 
   # Generate hidden bookmark entry (XBEL format with IsHidden flag)
   hiddenEntry = d: ''
-    <bookmark href="file://${d.path}">
+    <bookmark href="${pathToUri d.path}">
      <title>${builtins.baseNameOf d.path}</title>
      <info><metadata owner="http://freedesktop.org">
       <bookmark:icon name="${d.icon}"/>
