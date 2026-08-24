@@ -12,10 +12,10 @@
 #   - @home subvolume: /home (persistent)
 #   - @nix subvolume: /nix (persistent)
 #   - @persist subvolume: /persist (persistent)
-#   - @snapshots subvolume: /.snapshots (persistent)
 #   - @steam subvolume: Steam library, persistent but excluded from @home snapshots
 #   - @nextcloud subvolume: sync client data, persistent and resyncable
 #   - @smb subvolume: persistent mount root for network shares
+#   - @snapshots subvolume: /.snapshots (persistent snapshot storage)
 #
 # Encryption:
 # - LUKS with YubiKey FIDO2 unlock (via luks.nix)
@@ -105,13 +105,6 @@ in
                         "noatime"
                       ];
                     };
-                    "@snapshots" = {
-                      mountpoint = "/.snapshots";
-                      mountOptions = [
-                        "compress=zstd"
-                        "noatime"
-                      ];
-                    };
                     "@steam" = {
                       mountpoint = "/home/${username}/.local/share/Steam";
                     };
@@ -120,6 +113,13 @@ in
                     };
                     "@smb" = {
                       mountpoint = "/home/${username}/smb";
+                    };
+                    "@snapshots" = {
+                      mountpoint = "/.snapshots";
+                      mountOptions = [
+                        "compress=zstd"
+                        "noatime"
+                      ];
                     };
                   };
                 };
