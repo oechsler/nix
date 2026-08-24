@@ -10,6 +10,7 @@ backgrounds/files/
 # NixOS build results
 result
 result-*
+.result-installer-iso-*
 installer-output/
 
 # Editor files

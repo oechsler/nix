@@ -25,7 +25,7 @@ Build the graphical ISO on a machine with enough RAM:
 ./build-iso.sh
 ```
 
-The ISO build output is linked as `result/`; the bootable image is inside `result/iso/`. It contains the prebuilt closures for every host directory in `hosts/`. Boot the ISO, open the NixOS Installer from the Plasma session, and select the host. The ISO uses the matching system closure directly, so the target machine does not compile the kernel or desktop locally.
+The ISO build output is linked as `result/`; the bootable image is inside `result/iso/`. It contains the prebuilt closures for every host directory in `hosts/`. Boot the ISO, open Konsole, and run `install-nixos` to select a host. The ISO uses the matching system closure directly, so the target machine does not compile the kernel or desktop locally.
 
 CLI flags are passed through to `install.sh`:
 
@@ -48,7 +48,7 @@ git clone https://github.com/oechsler/nix.git /tmp/nix-config
 
 ```
 ./install.sh                              # Full install (all steps)
-./install.sh --host mythinkpad            # Pre-select host
+./install.sh --host samuels-terra         # Pre-select host
 ./install.sh --host HOST -s KEY -p PWD -y # Fully automated
 ./install.sh --install --post-install     # Reinstall without formatting
 ./install.sh --post-install               # Re-run post-install only
@@ -64,6 +64,10 @@ git clone https://github.com/oechsler/nix.git /tmp/nix-config
 | `--host HOST` | Pre-select host (skip menu) |
 | `-s`, `--ssh-key FILE` | SSH private key path |
 | `-p`, `--luks-password PASSWORD` | LUKS disk encryption password |
+| `--skip-totp` | Skip TOTP setup for this run |
+| `--quiet` | Suppress upgrade prompts on installed systems |
+| `--repair` | Verify/repair the Nix store before an upgrade |
+| `--iso` | Use the prebuilt closure and manifest from the installer ISO |
 | `-y`, `--yes` | Skip confirmation (requires `-s`, `-p` if encryption enabled) |
 | `--dry-run` | Show summary and exit without making changes |
 | `-h`, `--help` | Show help |

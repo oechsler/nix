@@ -40,7 +40,6 @@
     diskoPackage
     pkgs.git
     pkgs.jq
-    pkgs.kdePackages.kdialog
     pkgs.kdePackages.konsole
   ];
 
@@ -48,21 +47,10 @@
     "nixos-installer/manifest.json".text = builtins.toJSON { hosts = hostManifest; };
     "nixos-installer/install.sh".source = ../../install.sh;
     "nixos-installer/repo".source = ../../.;
-    "nixos-installer/NixOS Installer.desktop".text = ''
-      [Desktop Entry]
-      Type=Application
-      Name=NixOS Installer
-      Comment=Install a prebuilt NixOS host
-      Exec=${pkgs.kdePackages.konsole}/bin/konsole -e /run/wrappers/bin/sudo ${pkgs.bash}/bin/bash /etc/nixos-installer/install.sh --iso
-      Terminal=false
-      Categories=System;
+    "profile.d/nixos-installer.sh".text = ''
+      alias install-nixos='/run/wrappers/bin/sudo ${pkgs.bash}/bin/bash /etc/nixos-installer/install.sh --iso'
     '';
   };
-
-  systemd.tmpfiles.rules = [
-    "d /home/nixos/Desktop 0755 nixos users - -"
-    "C /home/nixos/Desktop/NixOS Installer.desktop 0755 nixos users - /etc/nixos-installer/NixOS Installer.desktop"
-  ];
 
   isoImage.storeContents = lib.attrValues hostClosures;
 }

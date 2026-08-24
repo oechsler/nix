@@ -30,11 +30,13 @@ while [[ $# -gt 0 ]]; do
 done
 
 out_link="$repo_dir/result"
-# Replace the previous generated Nix output link or directory.
-rm -rf "$out_link"
+tmp_link="$repo_dir/.result-installer-iso.$$"
+trap 'rm -rf "$tmp_link"' EXIT
 
 printf 'Building graphical multi-host installer ISO...\n'
-nix build --show-trace ".#packages.${system}.${output}" --out-link "$out_link"
+nix build --show-trace ".#packages.${system}.${output}" --out-link "$tmp_link"
+rm -rf "$out_link"
+mv "$tmp_link" "$out_link"
 
 printf 'Build output: %s\n' "$(readlink -f "$out_link")"
 printf 'ISO image: %s\n' "$out_link/iso/"
