@@ -26,6 +26,10 @@
 
 let
   opencodeWithSecrets = pkgs.writeShellScriptBin "opencode" ''
+    if ! test -r ${config.sops.secrets."opencode/opencode-go/api-key".path}; then
+      echo "OpenCode Go API key is missing: run sops-install-secrets.service and check the SOPS age key" >&2
+      exit 1
+    fi
     exec env \
       OPENCODE_GO_API_KEY="$(< ${config.sops.secrets."opencode/opencode-go/api-key".path})" \
       ${pkgs.opencode}/bin/opencode "$@"
@@ -65,6 +69,7 @@ in
             name = "OpenCode Go";
             options = {
               baseURL = "https://opencode.ai/zen/go/v1";
+              apiKey = "{env:OPENCODE_GO_API_KEY}";
             };
             models = {
               "deepseek-v4-flash" = {
