@@ -19,7 +19,7 @@ it can be, and still evolving as I learn more and my needs change. It is not a
 distribution or a universal answer to NixOS, just an honest record of that
 ongoing process.
 
-Thanks for taking the time to look at my repository.
+Thanks for taking the time to look at my repository. — Sam
 
 Here is a preview of what the configuration looks like today:
 
