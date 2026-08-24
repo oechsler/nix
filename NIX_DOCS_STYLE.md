@@ -7,6 +7,7 @@ Documentation must be short, current, and actionable.
 - Prefer one precise sentence over an explanation block.
 - Document decisions and tradeoffs in the vault, not in repo docs.
 - Keep repo docs focused on what exists, how to use it, and defaults.
+- The root README may use a personal voice and explain the project's motivation; reference and operational docs should stay direct and task-focused.
 - Do not repeat information already listed in a reference table.
 - Use examples only when they prevent ambiguity.
 - Avoid vague labels like "important", "advanced", "optional feature", or "how it works" unless the section proves it.
