@@ -337,12 +337,13 @@ in
           "privacy.clearOnShutdown.sessions" = false;
           "privacy.clearOnShutdown.siteSettings" = false;
 
-          # Vertical tabs — collapsed, no extra tools
+          # Vertical tabs — fixed on the right, no hover expansion or extra tools
           "sidebar.verticalTabs" = true;
           "sidebar.revamp" = true;
           "sidebar.visibility" = "always-show";
+          "sidebar.expandOnHover" = false;
+          "sidebar.position_start" = false;
           "sidebar.main.tools" = "";
-          "sidebar.installed.extensions" = stylusId;
 
           # DRM content (Netflix, Spotify, etc.)
           "media.eme.enabled" = true;
