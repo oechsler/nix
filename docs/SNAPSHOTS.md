@@ -1,6 +1,7 @@
 # Btrfs Snapshots
 
-Automatic hourly snapshots via btrbk. Enabled by default.
+Automatic hourly Btrfs snapshots via btrbk. The feature is enabled by default
+when the expected Btrfs layout is present.
 
 ## What Gets Snapshotted
 
@@ -10,10 +11,9 @@ Automatic hourly snapshots via btrbk. Enabled by default.
 | `@home` | `/home` | User data, dotfiles | Always |
 | `@persist` | `/persist` | System state (bluetooth, docker, NetworkManager, etc.) | Only if `features.impermanence.enable = true` |
 
-Not snapshotted:
-- `@` (root) — when impermanence enabled (wiped on boot anyway)
-- `@persist` — when impermanence disabled (unused/unnecessary)
-- `@nix` — immutable, managed by Nix
+The root subvolume is not snapshotted while impermanence is enabled because it
+is recreated on boot. The Nix store is also excluded because it is immutable
+and managed by Nix.
 
 ## Retention Policy
 
@@ -51,9 +51,8 @@ Snapshots are stored in `/.snapshots/` (mounted at boot). Browse directly:
 
 ```bash
 ls /.snapshots/
-# @home.20250215T1400
-# @home.20250215T1300
-# @persist.20250215T1400
+# @home.YYYYMMDDTHHMMSS
+# @persist.YYYYMMDDTHHMMSS
 # ...
 ```
 
@@ -79,27 +78,30 @@ ls /mnt/btrfs-root/@snapshots/
 # Find the snapshot
 ls /.snapshots/ | grep @home
 
-# Copy file from snapshot
-cp /.snapshots/@home.20250215T1400/samuel/Documents/wichtig.txt ~/Documents/
+# Copy a file from a snapshot
+cp /.snapshots/@home.YYYYMMDDTHHMMSS/user/Documents/example.txt ~/Documents/
 ```
 
 ### Directory
 
 ```bash
-# Restore entire directory
-cp -r /.snapshots/@home.20250215T1400/samuel/Projects/myproject ~/Projects/
+# Restore an entire directory
+cp -r /.snapshots/@home.YYYYMMDDTHHMMSS/user/Projects/example ~/Projects/
 ```
 
 ### Full Subvolume Rollback
 
-For a complete rollback (e.g., after a broken config change):
+Full subvolume rollback is a recovery operation. Prefer restoring individual
+files first; renaming or deleting subvolumes can destroy data. The procedure
+below restores `@home`, not the ephemeral root `@`.
 
 ```bash
-# Mount btrfs root (adjust device path: /dev/mapper/cryptroot or /dev/nvme0n1p2)
+# Mount the Btrfs top-level (adjust the device path)
 sudo mount -o subvol=/ /dev/mapper/cryptroot /mnt/btrfs-root
 cd /mnt/btrfs-root
 
-# Rename current subvolume
+# Ensure the active @home is unmounted before continuing.
+# Rename the current subvolume
 sudo mv @home @home.broken
 
 # Snapshot the backup as new @home
@@ -119,5 +121,10 @@ sudo btrfs subvolume delete /mnt/btrfs-root/@home.broken
 ## Disable Snapshots
 
 ```nix
-features.snapshots.enable = false;
+features = {
+  snapshots.enable = false;
+};
 ```
+
+Disabling snapshots stops future snapshot jobs; it does not delete existing
+snapshots.

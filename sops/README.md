@@ -14,7 +14,9 @@ Age Key (~/.config/sops/age/keys.txt)
 SOPS encrypts/decrypts secrets
 ```
 
-The Age key is derived from your SSH key - same SSH key = same Age key on any machine.
+The Age identity is derived from the SSH private key. The same private key
+produces the same identity on another machine, but the key must be available
+there and the repository recipients must still permit decryption.
 
 ## Files
 

@@ -1,25 +1,44 @@
 # Configuration Reference
 #
-# This document describes the public configuration interface. It focuses on
-# reusable options and defaults; host-specific values belong in host modules.
+# This document describes the commonly used public configuration interface. It
+# focuses on reusable options and defaults; host-specific values belong in host
+# modules.
 
 ## Feature Toggles
 
-Most desktop-oriented features default to enabled. Some toggles inherit their parent feature, and opt-in features default to disabled. Override per host in `configuration.nix`:
+Most desktop-oriented features default to enabled. Child features usually
+inherit their parent switch and can be overridden independently. Group related
+overrides in `configuration.nix`:
 
 ```nix
-features.hardware.formFactor = "desktop";  # Or "laptop"
-features.gaming.enable = false;
-features.gaming.steamMachine.enable = true;
-features.desktop.wm = "kde";
-features.desktop.fileManager = "terminal";
-features.desktop.browser.newTabPage = "https://dash.example.com";
-features.ssh.enable = true;
+features = {
+  hardware = {
+    formFactor = "laptop";
+    cpu = "intel";
+    gpu = "intel";
+  };
+
+  desktop = {
+    wm = "kde";
+    login = "greeter";
+    browser = {
+      type = "firefox";
+      newTabPage = "https://dash.example.com";
+      searchEngine = "ddg";
+      cookieAllowlist = [ "https://example.org" ];
+    };
+  };
+
+  encryption.unlockMethod = "tpm2";
+  gaming.enable = false;
+  dev.enable = true;
+  virtualisation.vm.enable = false;
+};
 ```
 
 ### Hardware & Boot
 
-These options describe the machine and the guarantees required before the
+These options describe the machine and the guarantees required before
 userspace configuration starts. Hardware values are normally host-specific;
 the remaining options control boot-time storage and persistence.
 
@@ -39,12 +58,16 @@ the remaining options control boot-time storage and persistence.
 Example for a laptop with encrypted storage:
 
 ```nix
-features.hardware = {
-  formFactor = "laptop";
-  cpu = "intel";
-  gpu = "intel";
+features = {
+  hardware = {
+    formFactor = "laptop";
+    cpu = "intel";
+    gpu = "intel";
+  };
+  encryption = {
+    unlockMethod = "yubikey";
+  };
 };
-features.encryption.unlockMethod = "yubikey";
 ```
 
 ### Networking
@@ -58,16 +81,41 @@ the networks and shares.
 | `features.wifi.enable` | `true` | WiFi profiles via SOPS secrets. |
 | `features.wifi.networks` | `[]` | WPA2-PSK networks: `{ name, ssid }`. |
 | `features.wifi.enterpriseNetworks` | `[]` | WPA2 Enterprise networks: `{ name, ssid, identity }`. |
+| `features.wifi.preferEthernet.enable` | `true` | Prefer Ethernet and disable WiFi while a wired connection is active. |
 | `features.ipv6PrivacyExtensions.enable` | `true` | IPv6 privacy extensions for NetworkManager. |
 | `features.tailscale.enable` | `true` | Tailscale VPN and desktop tray integration. |
 | `features.smb.enable` | `true` | Automatic SMB network share mounts. |
 | `features.smb.shares` | `[]` | Shares to mount: `{ name, label, path, username? }`. |
 
+```nix
+features = {
+  wifi = {
+    enable = true;
+    networks = [
+      {
+        name = "home";
+        ssid = "Example WiFi";
+      }
+    ];
+  };
+  smb = {
+    shares = [
+      {
+        name = "documents";
+        label = "Documents";
+        path = "//nas.example.org/Documents";
+      }
+    ];
+  };
+};
+```
+
 ### Desktop & Security
 
 This layer selects the interactive session and its security integrations. The
-browser's managed new-tab page is also its homepage; desktop-specific power
-management is configured by the selected session.
+browser uses `about:newtab` as its startup page and replaces the new-tab content
+with the configured dashboard. System-level power policy is supplemented by
+the selected desktop session.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -77,7 +125,9 @@ management is configured by the selected session.
 | `features.desktop.fileManager` | `"default"` | `"default"` or terminal-based Yazi integration. |
 | `features.desktop.browser.enable` | `true` | Managed default browser. |
 | `features.desktop.browser.type` | `"librewolf"` | `"librewolf"` or `"firefox"`. |
-| `features.desktop.browser.newTabPage` | `https://dash.at.oechsler.it` | Dashboard URL used by the managed new-tab page, also used as homepage. |
+| `features.desktop.browser.newTabPage` | `https://dash.at.oechsler.it` | Dashboard URL used by the managed new-tab page. |
+| `features.desktop.browser.searchEngine` | `"ddg"` | Default search engine identifier. |
+| `features.desktop.browser.cookieAllowlist` | `[]` | Additional sites allowed to keep first-party cookies and sessions. |
 | `features.audio.enable` | `true` | PipeWire audio with PulseAudio compatibility. |
 | `features.bluetooth.enable` | `true` | Bluetooth support. |
 | `features.compat.enable` | `true` | `nix-ld` and glibc compatibility libraries. |
@@ -86,11 +136,28 @@ management is configured by the selected session.
 | `features.auth.ldap.enable` | `false` | LLDAP authentication. |
 | `features.ssh.enable` | `false` | OpenSSH server and GitHub key sync. |
 
+```nix
+features = {
+  desktop = {
+    wm = "kde";
+    login = "greeter";
+    browser = {
+      enable = true;
+      type = "librewolf";
+      newTabPage = "https://dashboard.example.org";
+    };
+  };
+  auth = {
+    totp.enable = true;
+  };
+};
+```
+
 ### Virtualisation
 
 Virtualisation is split into a master switch and two independent child
-features. Disable the master switch to remove both containers and virtual
-machines, or disable only the child feature that is not needed.
+features. The master switch disables the resulting container and VM
+configuration; child options can still be selected independently.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -99,10 +166,12 @@ machines, or disable only the child feature that is not needed.
 | `features.virtualisation.vm.enable` | `true` | QEMU/KVM, libvirt, and virt-manager. |
 
 ```nix
-features.virtualisation = {
-  enable = true;
-  container.enable = true;
-  vm.enable = false;
+features = {
+  virtualisation = {
+    enable = true;
+    container.enable = true;
+    vm.enable = false;
+  };
 };
 ```
 
@@ -117,6 +186,15 @@ session itself.
 | `features.gaming.enable` | `true` | Steam, Proton-GE, Gamescope, GameMode, and MangoHud. |
 | `features.gaming.steamMachine.enable` | `false` | Steam Gamescope session in SDDM. |
 
+```nix
+features = {
+  gaming = {
+    enable = true;
+    steamMachine.enable = false;
+  };
+};
+```
+
 ### Development
 
 Development tools inherit from `features.dev.enable` by default. Individual
@@ -128,6 +206,16 @@ IDE integrations can be disabled without removing the command-line toolchain.
 | `features.dev.opencode.enable` | `dev.enable` | OpenCode AI coding agent. |
 | `features.dev.jetbrains.enable` | `dev.enable` | JetBrains IDEs. |
 | `features.dev.dbeaver.enable` | `dev.enable` | DBeaver database GUI. |
+
+```nix
+features = {
+  dev = {
+    enable = true;
+    jetbrains.enable = false;
+    dbeaver.enable = true;
+  };
+};
+```
 
 ### Operations
 
@@ -146,6 +234,18 @@ hosts.
 | `features.ops.kubernetes.clusters` | `[]` | Kubernetes cluster definitions. |
 | `features.ops.kubernetes.defaultContext` | `""` | Default Kubernetes context. |
 
+```nix
+features = {
+  ops = {
+    enable = true;
+    kubernetes = {
+      enable = true;
+      defaultContext = "cluster.example.org";
+    };
+  };
+};
+```
+
 ### Applications
 
 Applications are the highest-level user-facing features. The general switch
@@ -155,7 +255,7 @@ under their respective feature.
 | Option | Default | Description |
 |--------|---------|-------------|
 | `features.apps.enable` | `true` | General desktop applications. |
-| `features.apps.mumble.enable` | `true` | Install and configure Mumble. |
+| `features.apps.mumble.enable` | `true` | Install and configure Mumble when `features.apps.enable` is enabled. |
 | `features.apps.mumble.username` | `user.name` | Default Mumble username. |
 | `features.apps.mumble.servers` | `[]` | Favorite servers; `name` defaults to `host`, `port` to `64738`. |
 | `features.apps.mumble.certificate.enable` | `false` | Import the optional SOPS-managed client certificate. |
@@ -171,12 +271,19 @@ under their respective feature.
 #### Mumble
 
 Mumble favorites are stored in its SQLite database and synchronized during
-Home-Manager activation. A minimal configuration is:
+Home-Manager activation. The server `name` is optional and defaults to `host`;
+the default port is `64738`. A minimal configuration is:
 
 ```nix
-features.apps.mumble.servers = [
-  { host = "mumble.at.oechsler.it"; }
-];
+features = {
+  apps = {
+    mumble = {
+      servers = [
+        { host = "mumble.at.oechsler.it"; }
+      ];
+    };
+  };
+};
 ```
 
 The default username is `user.name`; hosts can override it. Client
@@ -194,13 +301,19 @@ in Nix.
 |--------|---------|-------------|
 | `sops.secretsFile` | `../../sops/sops.encrypted.yaml` | Path to encrypted SOPS secrets file (override for external repos) |
 
+```nix
+sops = {
+  secretsFile = ./sops/sops.encrypted.yaml;
+};
+```
+
 ## Networking Policy
 
 The following implementation choices apply to the managed networking stack and
 normally do not need per-host overrides:
 
-- NetworkManager owns IP configuration and routing.
-- `iwd` handles WiFi authentication only.
+- NetworkManager owns connection profiles, IP configuration, and routing.
+- `iwd` is used as NetworkManager's WiFi backend.
 - Docker/Tailscale interfaces are unmanaged in NetworkManager: `docker0`, `br-*`, `veth*`, `tailscale0`.
 - Desktop hosts disable IPv6 only on Docker bridge/veth interfaces to reduce local development link churn.
 - LLMNR is disabled in `systemd-resolved` to avoid resolver scopes on Docker/veth links.
@@ -217,9 +330,17 @@ values are supplied through SOPS.
 | `user.fullName` | `"Samuel Oechsler"` | Full name |
 | `user.email` | `"samuel@oechsler.it"` | Email address |
 | `user.github` | `"oechsler"` | GitHub username (for SSH key import) |
-| `user.icon` | `pictures/sam-memoji.png` | Profile picture (SDDM) |
+| `user.icon` | `.assets/sam-memoji.png` | Profile picture (SDDM) |
 | `user.hashedPassword` | `"!"` (locked) | Local shadow password fallback; the runtime password is set from SOPS (`user/password`) when local password authentication is enabled. Can be overridden per-host with a hash (`mkpasswd -m yescrypt`). |
-| `user.directories` | `[]` | Extra directories to create in `~` |
+| `user.directories` | `[ "repos" ]` | Extra directories to create in `~` |
+
+```nix
+user = {
+  fullName = "Example User";
+  email = "user@example.org";
+  directories = [ "Projects" "Documents" ];
+};
+```
 
 ## Theme Options
 
@@ -247,6 +368,16 @@ sessions.
 | `theme.icons.name` | auto | Icon theme (`"Papirus-Light"` on latte, `"Papirus-Dark"` otherwise) |
 | `theme.icons.package` | Catppuccin Papirus | Icon theme package (always Catppuccin Papirus) |
 
+```nix
+theme = {
+  catppuccin = {
+    flavor = "mocha";
+    accent = "lavender";
+  };
+  scale = 1.0;
+};
+```
+
 ## Waybar Tray Icons
 
 Waybar's system tray uses Papirus-Dark icon names for common applications.
@@ -272,9 +403,13 @@ Default mappings are feature-gated and automatically applied:
 Add or override mappings in `home.nix`:
 
 ```nix
-waybar.tray.icons = {
-  "MyApp" = "my-app-icon";
-  steam = "custom_steam_icon";  # override default
+waybar = {
+  tray = {
+    icons = {
+      "MyApp" = "my-app-icon";
+      steam = "custom_steam_icon";  # override default
+    };
+  };
 };
 ```
 
@@ -289,7 +424,7 @@ The Id is the last path component (e.g., `steam` from `:1.107/org/ayatana/Notifi
 
 ## Font Options
 
-User options are set in `configuration.nix` and shared with Home Manager.
+Font options are set in `configuration.nix` and shared with Home Manager.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -300,16 +435,25 @@ User options are set in `configuration.nix` and shared with Home Manager.
 | `fonts.defaults.ui` | *(read-only)* | Resolved font name based on `uiStyle` — used by waybar, dunst, rofi, hyprlock, SDDM, GTK, Qt |
 | `fonts.defaults.size` | `11` | Default font size for UI elements |
 | `fonts.defaults.terminalSize` | `fonts.defaults.size` | Terminal (kitty) font size |
+| `fonts.defaults.uiPixelSize` | `floor(size * 4 / 3)` | Resolved pixel size used by Waybar and other UI components (read-only). |
 
 ## Locale Options
 
-Theme options are set in `configuration.nix` and shared by both desktop sessions.
+Locale options are set in `configuration.nix` and apply system-wide.
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `locale.timezone` | `"Europe/Berlin"` | Timezone |
-| `locale.language` | `"en_US.UTF-8"` | System locale; user-facing generated text uses English by default and German for `de_*` locales |
+| `locale.language` | `"de_DE.UTF-8"` | System locale; German is the default |
 | `locale.keyboard` | `"de"` | Keyboard layout |
+
+```nix
+locale = {
+  timezone = "Europe/Berlin";
+  language = "de_DE.UTF-8";
+  keyboard = "de";
+};
+```
 
 ## Display Options
 
@@ -327,23 +471,47 @@ kscreen-doctor -o
 ```
 
 ```nix
-displays.defaults = {
-  vrr = 2;                     # Hotplug/unlisted default: 0=off, 1=always, 2=fullscreen/automatic
-  hdr = 1;                     # Hotplug/unlisted default: 0=off, 1=Steam/Gamescope, 2=full desktop HDR
+displays = {
+  defaults = {
+    vrr = 2;
+    hdr = 1;
+  };
+  monitors = [
+    {
+      name = "DP-1";
+      width = 2560;
+      height = 1440;
+      refreshRate = 165;
+      x = 0;
+      y = 0;
+      vrr = 2;
+      hdr = 1;
+    }
+    {
+      name = "DP-2";
+      width = 2560;
+      height = 1440;
+      refreshRate = 165;
+      x = 2560;
+      y = 0;
+      vrr = 2;
+      hdr = 1;
+    }
+  ];
 };
-
-displays.monitors = [
-  { name = "DP-1"; width = 2560; height = 1440; refreshRate = 165; x = 0; y = 0; vrr = 2; hdr = 1; }
-  { name = "DP-2"; width = 2560; height = 1440; refreshRate = 165; x = 2560; y = 0; vrr = 2; hdr = 1; }
-];
 ```
 
 | Option | Default | Description |
 |--------|---------|-------------|
 | `displays.defaults.vrr` | `2` | Default VRR mode for hotplugged/unlisted monitors where output-independent defaults are supported: `0` off, `1` always, `2` fullscreen/automatic |
 | `displays.defaults.hdr` | `1` | Default HDR mode for hotplugged/unlisted monitors where supported: `0` off, `1` Steam/Gamescope HDR, `2` full desktop HDR |
+| `displays.defaultWorkspaceCount` | `4` | Number of workspaces created by default. |
 | `displays.monitors` | `[]` | List of monitor configurations |
 | `displays.monitors.*.name` | — | Connector name (`"DP-1"`, `"HDMI-A-1"`, `"eDP-1"`) |
+| `displays.monitors.*.edidHash` | `null` | Optional stable EDID identifier for display matching. |
+| `displays.monitors.*.make` | `null` | Optional monitor manufacturer for display matching. |
+| `displays.monitors.*.model` | `null` | Optional monitor model for display matching. |
+| `displays.monitors.*.serial` | `null` | Optional monitor serial number for display matching. |
 | `displays.monitors.*.width` | `1920` | Horizontal resolution |
 | `displays.monitors.*.height` | `1080` | Vertical resolution |
 | `displays.monitors.*.refreshRate` | `60` | Refresh rate in Hz |
@@ -370,85 +538,166 @@ On Hyprland, a catch-all fallback rule (`preferred, auto, theme.scale`) is alway
 
 ## Input Options
 
-Input options apply to both Hyprland and KDE.
+Input settings define the default pointer and touchpad behavior shared by
+Hyprland and KDE. They are intentionally small; device-specific settings are
+handled by the desktop session when it starts.
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `input.mouse.naturalScroll` | `true` | Natural (reverse) scroll direction for mice |
-| `input.touchpad.naturalScroll` | `true` | Natural (reverse) scroll direction for touchpads |
+| `input.mouse.naturalScroll` | `true` | Use natural (reversed) scrolling for mice. |
+| `input.touchpad.naturalScroll` | `true` | Use natural (reversed) scrolling for touchpads. |
 
-On KDE, touchpad settings are detected and configured per-device at activation time.
+```nix
+input = {
+  mouse = {
+    naturalScroll = true;
+  };
+  touchpad = {
+    naturalScroll = true;
+  };
+};
+```
+
+On KDE, touchpad settings are detected and applied per device during session
+startup.
 
 ## Autostart Apps
 
-Autostart entries are managed by Home Manager and use the selected desktop's
-session integration.
+Autostart entries are managed by Home Manager and translated to the selected
+desktop's session mechanism. Feature modules add their own entries when enabled;
+custom entries can be added to the same list.
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `autostart.apps` | Proton Pass, Vesktop, CoolerControl (+ conditional) | Apps to start on login (works on Hyprland + KDE) |
+| `autostart.apps` | Feature-dependent | Applications started when the graphical session begins. |
 
-Default autostart apps are extended based on feature toggles:
-- Nextcloud is always added (via XDG autostart `.desktop` — works on both Hyprland and KDE)
-- `features.apps.enable` adds Proton Pass, Vesktop, Mumble
+```nix
+autostart = {
+  apps = [
+    {
+      name = "Example App";
+      exec = "example-app";
+    }
+  ];
+};
+```
+
+The default list is extended by feature toggles:
+- `features.apps.enable` adds Nextcloud, Proton Pass, and Vesktop
+- `features.apps.enable` plus `features.apps.mumble.enable` adds Mumble
 - `features.gaming.enable` adds Steam
 - `features.tailscale.enable` adds Trayscale
 
-Each entry is `{ name = "..."; exec = "..."; }` — on KDE these generate XDG autostart `.desktop` files, on Hyprland they're launched via `exec-once`.
+Each entry contains a display `name` and an `exec` command. KDE writes XDG
+autostart entries; Hyprland starts the commands with `exec-once`.
 
 ## File Manager
 
-`features.desktop.fileManager` controls the primary file manager integration:
+`features.desktop.fileManager` selects the primary file manager and keeps the
+desktop shortcuts, MIME associations, and pinned applications consistent.
 
 | Value | Behavior |
 |-------|----------|
-| `"default"` | Use the desktop's GUI file manager: Nautilus on Hyprland, Dolphin on KDE. |
-| `"terminal"` | Use Yazi as the primary file manager. Hyprland `Super+E` and KDE `Meta+E` open `kitty yazi`; directory MIME defaults point to `yazi.desktop`; the GUI file manager is omitted from dock/taskbar pins. |
+| `"default"` | Use Nautilus on Hyprland or Dolphin on KDE. |
+| `"terminal"` | Use Yazi from Kitty and remove the GUI file manager from the pins. |
 
-Yazi integrations follow existing feature toggles instead of adding yazi-specific toggles. Heavy preview integrations are only enabled when the corresponding app/development feature is enabled.
+```nix
+features = {
+  desktop = {
+    fileManager = "terminal";
+  };
+};
+```
+
+Yazi integrations follow the existing feature toggles. Heavy preview
+integrations are enabled only when their corresponding application or
+development feature is enabled.
 
 ## File Manager Bookmarks
 
-The primary file manager is selected by the desktop feature. Bookmarks are
-shared across supported file managers.
+Bookmarks are shared across the supported file managers. The same declarative
+list is rendered as GTK bookmarks, KDE places, or Yazi shortcuts depending on
+the active desktop.
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `fileManager.bookmarks` | Downloads, Schreibtisch, Repos, Dokumente, Bilder | Sidebar bookmarks for Nautilus (Hyprland), Dolphin (KDE), and Yazi shortcuts |
+| `fileManager.bookmarks` | Feature-dependent | Sidebar bookmarks and Yazi shortcuts. |
 
-Each entry is `{ name = "..."; path = "/absolute/path"; icon = "folder-..."; }`. The `icon` field defaults to `"folder"`.
+```nix
+fileManager = {
+  bookmarks = [
+    {
+      name = "Projects";
+      path = "/home/user/Projects";
+      icon = "folder-development";
+    }
+  ];
+};
+```
 
-Bookmarks are managed declaratively — on Nautilus via GTK bookmarks, on Dolphin via `user-places.xbel`, and on Yazi as `g1`, `g2`, ... shortcuts.
+Each entry has a display `name`, an absolute `path`, and an optional icon. The
+`icon` field defaults to `"folder"`.
+
+Bookmarks are managed declaratively for Nautilus, Dolphin, and Yazi.
 
 ## Pinned Dock/Taskbar Apps
 
-Pinned applications are desktop integration, not installation switches. Their
-defaults follow the enabled feature groups.
+Pinned applications control desktop presentation, not package installation.
+The default list follows the enabled feature groups and the selected file
+manager.
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `desktop.pinnedApps` | Selected browser, Kitty, Dolphin/Nautilus or Yazi (+ conditional) | Pinned dock/taskbar apps (works on Hyprland + KDE). Yazi replaces Dolphin/Nautilus when `features.desktop.fileManager = "terminal"`. |
+| `desktop.pinnedApps` | Feature-dependent | Desktop files pinned to the dock or taskbar. |
 
-Default pinned apps are extended based on feature toggles:
+```nix
+desktop = {
+  pinnedApps = [
+    "firefox"
+    "kitty"
+  ];
+};
+```
+
+The default list is extended by feature toggles:
 - `features.dev.enable` adds Neovim
 - `features.apps.enable` adds Obsidian, Vesktop, Spotify
 - `features.gaming.enable` adds Steam
 
-Each entry is a desktop file name without `.desktop` suffix (e.g. `"firefox"`).
+Each entry is a desktop file name without the `.desktop` suffix, such as
+`"firefox"`.
 
 ## Idle / Power Management
 
-Idle and power settings are shared at the policy level and translated to
-Hyprland (`hypridle`) or KDE (`PowerDevil`).
+These values define the shared idle policy. Hyprland implements it with
+`hypridle`; KDE translates it to PowerDevil. The session-specific implementation
+keeps the resulting lock, display, and suspend behavior aligned.
 
 | Option | Default | Description |
 |--------|---------|-------------|
-| `idle.timeouts.dimBattery` | `120` | Seconds until dim on battery |
-| `idle.timeouts.suspendBattery` | `300` | Seconds until lock + suspend on battery |
-| `idle.timeouts.dimAc` | `300` | Seconds until dim on AC |
-| `idle.timeouts.suspendAc` | `1800` | Seconds until lock + suspend on AC |
+| `idle.timeouts.dimBattery` | `120` | Seconds before dimming on battery. |
+| `idle.timeouts.suspendBattery` | `300` | Seconds before locking and suspending on battery. |
+| `idle.timeouts.dimAc` | `300` | Seconds before dimming on AC. |
+| `idle.timeouts.suspendAc` | `1800` | Seconds before locking and suspending on AC. |
+
+```nix
+idle = {
+  timeouts = {
+    dimBattery = 120;
+    suspendBattery = 300;
+    dimAc = 300;
+    suspendAc = 1800;
+  };
+};
+```
 
 ### Hyprland Dim Settings
+
+Hyprland uses a custom gradual dimming sequence: the configured idle timeout
+starts the sequence, `stepPercent` controls each brightness step, and
+`stepDelay` controls the transition speed. KDE does not use these options;
+PowerDevil provides its own built-in display dimming and uses the shared idle
+timeouts above.
 
 | Option | Default | Description |
 |--------|---------|-------------|
@@ -456,37 +705,68 @@ Hyprland (`hypridle`) or KDE (`PowerDevil`).
 | `hypridle.dim.stepPercent` | `5` | Brightness step size for smooth dimming (%) |
 | `hypridle.dim.stepDelay` | `"0.05"` | Delay between dim steps in seconds |
 
+```nix
+hypridle = {
+  dim = {
+    percent = 10;
+    stepPercent = 5;
+    stepDelay = "0.05";
+  };
+};
+```
+
 ## Impermanence
 
-Root (`/`) is wiped on every boot when `features.impermanence.enable = true`. Only declared `/persist` paths survive. See [INSTALL.md](INSTALL.md#impermanence).
+Impermanence recreates the root filesystem on every boot. Persistent state is
+kept under `/persist` and is declared by feature modules or
+`features.impermanence.extraPaths`. This makes the base system reproducible,
+but it also means that undeclared state is intentionally discarded.
+
+Use `extraPaths` only for state that is not already covered by a feature module.
+The installation must provide the `/persist` Btrfs subvolume when this feature
+is enabled. See [INSTALL.md](INSTALL.md#impermanence) for the installation
+layout.
+
+```nix
+features = {
+  impermanence = {
+    enable = true;
+    extraPaths = [ "/var/lib/example" ];
+  };
+};
+```
 
 ## Snapshots
 
-See [SNAPSHOTS.md](SNAPSHOTS.md) for snapshot management (restore, browse, cleanup).
+Snapshots are separate from impermanence. Impermanence controls what survives a
+reboot; snapshots provide historical restore points for persistent Btrfs state.
+Snapshots do not make undeclared root state persistent and are not a substitute
+for backups. See [SNAPSHOTS.md](SNAPSHOTS.md) for restore, browse, and cleanup.
+
+```nix
+features = {
+  snapshots.enable = false;
+};
+```
 
 ## System Requirements
 
-### Defaults
+The default installation expects a Btrfs layout with `@` for `/`, `@home` for
+`/home`, `@nix` for `/nix`, `@persist` for persistent state, and `@snapshots`
+for snapshot targets. Full-disk encryption is also enabled by default.
 
-- BTRFS subvolumes: `@` (root), `@home` (/home), `@nix` (/nix), `@snapshots` (snapshot target)
-- `@persist` (/persist) — required when `features.impermanence.enable = true` (the default)
-- LUKS2 full disk encryption
-- Impermanent root filesystem
-
-### Disabling Features
-
-Both impermanence and encryption can be disabled:
+These requirements are installation constraints rather than runtime feature
+settings. Changing the impermanence or encryption defaults requires a matching
+disk layout:
 
 ```nix
-# Traditional persistent root (no rollback)
-features.impermanence.enable = false;
+features = {
+  # Traditional persistent root (no rollback)
+  impermanence.enable = false;
 
-# Unencrypted disk (not recommended for laptops)
-features.encryption.enable = false;
+  # Unencrypted disk (not recommended for laptops)
+  encryption.enable = false;
+};
 ```
-
-Disabling encryption requires a matching non-LUKS disk layout.
-
-### Partition Layout Requirements
 
 See [INSTALL.md](INSTALL.md#disk-layout) for the required partition and subvolume structure.
