@@ -218,6 +218,7 @@ save_state() {
     fi
     # Detected features — cached to avoid re-running nix eval on resume
     printf 'FEAT_ENCRYPTION=%q\n' "${FEAT_ENCRYPTION:-false}"
+    printf 'FEAT_UNLOCK_METHOD=%q\n' "${FEAT_UNLOCK_METHOD:-}"
     printf 'FEAT_IMPERMANENCE=%q\n' "${FEAT_IMPERMANENCE:-false}"
     printf 'PERSIST_PREFIX=%q\n' "${PERSIST_PREFIX:-}"
     printf 'FEAT_TOTP=%q\n' "${FEAT_TOTP:-false}"
@@ -381,6 +382,7 @@ phase_select_host() {
 
 # Feature variables (populated by detect_features)
 FEAT_ENCRYPTION=false
+FEAT_UNLOCK_METHOD=""
 FEAT_IMPERMANENCE=false
 PERSIST_PREFIX=""
 FEAT_TOTP=false
@@ -422,6 +424,7 @@ phase_detect_features() {
     json=$(nix eval --json "$REPO_DIR#nixosConfigurations.${HOST}.config" --apply '
     cfg: {
       encryption = cfg.features.encryption.enable;
+      unlockMethod = cfg.features.encryption.unlockMethod;
       impermanence = cfg.features.impermanence.enable;
       persistPrefix = cfg.features.impermanence.persistPrefix;
       totp = cfg.features.auth.totp.enable;
@@ -446,6 +449,7 @@ phase_detect_features() {
   fi
 
   FEAT_ENCRYPTION=$(echo "$json"      | jq -r '.encryption')
+  FEAT_UNLOCK_METHOD=$(echo "$json"     | jq -r '.unlockMethod')
   FEAT_IMPERMANENCE=$(echo "$json"    | jq -r '.impermanence')
   PERSIST_PREFIX=$(echo "$json"       | jq -r '.persistPrefix')
   FEAT_TOTP=$(echo "$json"            | jq -r '.totp')
@@ -1100,7 +1104,7 @@ phase_complete() {
   # TPM: deferred when Secure Boot is enabled so the seal is made against the
   # final SB state (PCR 7). Enrolling before SB is active produces a broken seal.
   if [[ "$TPM_ENROLLED" != "true" && "$FEAT_ENCRYPTION" == "true" && \
-        "$FEAT_YUBIKEY_LUKS" != "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
+        "$FEAT_UNLOCK_METHOD" == "tpm2" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
     tpm_deferred=true
     post_boot_tasks+=("tpm-luks-init       — enroll TPM2 for automatic LUKS unlock at boot")
   fi
@@ -1239,17 +1243,19 @@ show_pending_setup() {
       yubikeyLuks   = cfg.features.encryption.unlockMethod == "yubikey";
       totp          = cfg.features.auth.totp.enable;
       encryption    = cfg.features.encryption.enable;
+      unlockMethod  = cfg.features.encryption.unlockMethod;
       persistPrefix = cfg.features.impermanence.persistPrefix;
     }
-    }' 2>/dev/null) || json="{}"
+    ' 2>/dev/null) || error "Failed to evaluate setup status. Check flake syntax."
   fi
 
-  local feat_sb feat_yubikey feat_yubikey_luks feat_totp feat_enc persist_prefix
+  local feat_sb feat_yubikey feat_yubikey_luks feat_totp feat_enc feat_unlock_method persist_prefix
   feat_sb=$(echo "$json"           | jq -r '.secureBoot    // false')
   feat_yubikey=$(echo "$json"      | jq -r '.yubikey       // false')
   feat_yubikey_luks=$(echo "$json" | jq -r '.yubikeyLuks   // false')
   feat_totp=$(echo "$json"         | jq -r '.totp          // false')
   feat_enc=$(echo "$json"          | jq -r '.encryption    // false')
+  feat_unlock_method=$(echo "$json" | jq -r '.unlockMethod  // "password"')
   persist_prefix=$(echo "$json"    | jq -r '.persistPrefix // ""')
 
   # Live state checks
@@ -1268,6 +1274,14 @@ show_pending_setup() {
     first_dev=$(lsblk -rno NAME,TYPE,PKNAME | awk '$2=="crypt" && $3!="" {print "/dev/"$3; exit}')
     if [[ -n "$first_dev" ]] && systemd-cryptenroll "$first_dev" 2>/dev/null | grep -q "fido2"; then
       yubikey_luks_enrolled=true
+    fi
+  fi
+  local tpm_enrolled=false
+  if [[ "$feat_unlock_method" == "tpm2" && "$feat_enc" == "true" ]]; then
+    local tpm_first_dev
+    tpm_first_dev=$(lsblk -rno NAME,TYPE,PKNAME | awk '$2=="crypt" && $3!="" {print "/dev/"$3; exit}')
+    if [[ -n "$tpm_first_dev" ]] && systemd-cryptenroll "$tpm_first_dev" 2>/dev/null | grep -q "tpm2"; then
+      tpm_enrolled=true
     fi
   fi
   if [[ "$feat_yubikey" == "true" ]]; then
@@ -1293,6 +1307,9 @@ show_pending_setup() {
 
   [[ "$feat_totp" == "true"         && "$totp_enrolled" != "true"         ]] && \
     pending+=("totp-init           — set up TOTP two-factor authentication for sudo and SSH")
+
+  [[ "$feat_unlock_method" == "tpm2" && "$feat_enc" == "true" && "$tpm_enrolled" != "true" ]] && \
+    pending+=("tpm-luks-init       — enroll TPM2 for automatic disk unlock at boot")
 
   if [[ ${#pending[@]} -eq 0 ]]; then
     success "All features are fully set up."

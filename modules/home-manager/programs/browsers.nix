@@ -342,7 +342,7 @@ in
           "sidebar.revamp" = true;
           "sidebar.visibility" = "always-show";
           "sidebar.expandOnHover" = false;
-          "sidebar.position_start" = false;
+          "sidebar.position_start" = true;
           "sidebar.main.tools" = "";
 
           # DRM content (Netflix, Spotify, etc.)
