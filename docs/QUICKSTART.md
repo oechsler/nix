@@ -1,6 +1,8 @@
 # Quickstart
 
-Use this flake as a base NixOS configuration.
+Use this flake as a reusable NixOS configuration base. Start with the
+configuration reference, then override only the features that differ for your
+host.
 
 ## 1. Create Flake
 
@@ -13,11 +15,7 @@ Use this flake as a base NixOS configuration.
     nixosConfigurations.my-host = base-config.lib.mkHost {
       hostName = "my-host";
       hostPath = ./hosts/my-host;
-      # features.hardware.formFactor determines machine type:
-      #   "desktop" — default, lid switch ignore, no GPU runtime PM on AMD
-      #   "laptop"  — lid switch suspend, GPU runtime PM enabled
-      # Set in the host's configuration.nix, not here:
-      extraModules = [ ];   # optional: additional NixOS modules
+      extraModules = [ ];   # optional additional NixOS modules
     };
   };
 }
@@ -34,6 +32,7 @@ mkdir -p hosts/my-host
 {
   imports = [ ./hardware-configuration.nix ];
 
+  # Use the release matching the NixOS version used for installation.
   system.stateVersion = "25.11";
 
   user = {
@@ -71,34 +70,36 @@ WiFi and SMB need SOPS secrets. Point the host at your encrypted file:
 sops.secretsFile = ./sops/sops.encrypted.yaml;
 ```
 
-Create the age key and install it on the target machine:
+Install the SSH-derived Age identity used by this repository:
 
 ```bash
-age-keygen -o sops/age.key
-sudo mkdir -p /var/lib/sops/age
-sudo cp sops/age.key /var/lib/sops/age/keys.txt
+sudo ./sops/setup.sh
 ```
 
 Or disable features that need secrets:
 
 ```nix
-features.wifi.enable = false;
-features.smb.enable = false;
+features = {
+  wifi.enable = false;
+  smb.enable = false;
+};
 ```
 
 ## Defaults To Review
 
 - Impermanence: `features.impermanence.enable = true`
 - LUKS encryption: `features.encryption.enable = true`
-- BTRFS subvolumes: `@`, `@home`, `@nix`, `@persist`, `@snapshots`
+- The Btrfs subvolume layout must match the selected installation mode.
 
 To disable:
 
 ```nix
 # hosts/my-host/configuration.nix
 {
-  features.impermanence.enable = false;
-  features.encryption.enable = false;
+  features = {
+    impermanence.enable = false;
+    encryption.enable = false;
+  };
 }
 ```
 

@@ -48,7 +48,7 @@ features = {
     fileManager = "default";                       # "default" or "terminal"
     browser = {
       type = "librewolf";                          # "librewolf" or "firefox"
-      homepage = "https://dash.example.com";
+      newTabPage = "https://dash.example.com";
     };
   };
 

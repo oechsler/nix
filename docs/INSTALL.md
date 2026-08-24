@@ -34,7 +34,11 @@ CLI flags are passed through to `install.sh`:
 curl -sL https://oech.it/u/bmxl3a | sudo bash -s -- --post-install --host HOST -s /path/to/key
 ```
 
-To test a different branch: `BRANCH=dev curl -sL ... | sudo bash`
+To test a different branch:
+
+```bash
+BRANCH=dev curl -sL https://oech.it/u/bmxl3a | sudo bash
+```
 
 ### Manual Install
 
@@ -76,7 +80,8 @@ Steps are combinable. Without step flags, all three run. The installer reads hos
 
 ## Disk Layout
 
-All hosts use LUKS full disk encryption with btrfs subvolumes:
+The default layout uses LUKS encryption for the data partition and Btrfs
+subvolumes:
 
 ```
 /dev/nvme...
@@ -93,7 +98,8 @@ All hosts use LUKS full disk encryption with btrfs subvolumes:
 
 ## Impermanence
 
-Root (`@`) is wiped on every boot. Persistent data goes in `/persist`:
+When `features.impermanence.enable = true`, root (`@`) is wiped on every boot.
+Persistent data goes in `/persist`:
 - `/var/lib/NetworkManager`, `/var/lib/bluetooth`
 - `/var/lib/docker`
 - `/var/lib/nixos`, `/var/lib/sops`
@@ -104,7 +110,8 @@ User password is declarative in `modules/system/users.nix`.
 
 ## SOPS Secrets
 
-Secrets (WiFi, SMB credentials) are encrypted with age. The age key is derived from your SSH key.
+Secrets are encrypted with SOPS and age. The repository uses an Age identity
+derived from the user's SSH key; see [sops/README.md](../sops/README.md).
 
 After install, verify sops works:
 ```bash
@@ -125,7 +132,8 @@ nixos-enter --root /mnt
 ```
 
 ### Forgot LUKS password
-You need to reinstall. Keep backups in `/persist` or external storage.
+Recovery depends on the available LUKS slots, recovery keys, and backups. A
+reinstall is only necessary if no valid unlock method remains.
 
 ## Secure Boot Setup
 
@@ -135,7 +143,9 @@ Secure Boot is disabled by default. To enable it:
 
 In your host's `configuration.nix`:
 ```nix
-features.secureBoot.enable = true;
+features = {
+  secureBoot.enable = true;
+};
 ```
 
 ### 2. Run `secure-boot-init` after first boot

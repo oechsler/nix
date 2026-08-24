@@ -1,6 +1,8 @@
 # Authentication
 
-Two-factor authentication via TOTP and/or YubiKey. Configured in `modules/system/auth.nix`.
+This document describes boot unlock, sudo/SSH second factors, and graphical
+login credentials. These are separate authentication paths and are configured
+through the feature options.
 
 ## Overview
 
@@ -18,7 +20,9 @@ Both PAM methods work independently or combined. Password serves as a local fall
 LLDAP authentication is disabled by default and can be enabled per host:
 
 ```nix
-features.auth.ldap.enable = true;
+features = {
+  auth.ldap.enable = true;
+};
 ```
 
 When enabled, a dedicated PAM module uses LLDAP only as the password provider for the locally declared `user.name`. It binds directly as that user, so no LLDAP bind account, UID/GID attributes, groups, or NSS lookups are needed. Successful LDAP passwords are cached locally as an Argon2id verifier and used only when LDAP is unreachable; an online LDAP password failure never falls back to the cache. When disabled, the local SOPS password is used again.
@@ -39,7 +43,9 @@ Password only. TOTP is excluded because SDDM's greeter mishandles multi-prompt P
 
 ### sudo
 
-Each method is tried in order. The first success grants access, on failure the next method is tried. TOTP allows 3 attempts before falling back.
+The configured methods are an ordered fallback chain, not cumulative factors
+for every login. The first successful method grants access; TOTP allows three
+attempts before the next method is tried.
 
 | Enabled | Auth chain |
 |---------|-----------|
@@ -90,7 +96,7 @@ sudo with both:        YubiKey → OTP (3 attempts) → Password
 
 **Adding a second device**: run `sudo totp-init` again and choose "Re-enroll".
 Scan the QR code on both devices. The old secret is replaced — previous device
-codes stop working after the rebuild.
+codes stop working after the file is replaced.
 
 **Manual verification** (e.g. to check clock drift):
 ```bash
@@ -99,7 +105,9 @@ oathtool --totp -d 6 "$(sudo cat /persist/etc/users.oath | awk '{print $NF}')"
 
 **Disable** (not recommended):
 ```nix
-features.auth.totp.enable = false;
+features = {
+  auth.totp.enable = false;
+};
 ```
 
 ### YubiKey (PAM)
@@ -107,7 +115,9 @@ features.auth.totp.enable = false;
 YubiKey PAM is enabled automatically when `encryption.unlockMethod = "yubikey"`. To enable PAM independently:
 
 ```nix
-features.auth.yubikey.enable = true;
+features = {
+  auth.yubikey.enable = true;
+};
 ```
 
 Then register your key:
@@ -125,14 +135,18 @@ To register a backup key, run `sudo yubikey-init` again and choose **Add another
 Set the unlock method in your host's `configuration.nix`:
 
 ```nix
-features.encryption.unlockMethod = "yubikey";
+features = {
+  encryption.unlockMethod = "yubikey";
+};
 ```
 
 This automatically enables YubiKey PAM (`auth.yubikey.enable`) and installs everything needed. For YubiKey PAM without YubiKey LUKS:
 
 ```nix
-features.encryption.unlockMethod = "tpm2";
-features.auth.yubikey.enable = true;
+features = {
+  encryption.unlockMethod = "tpm2";
+  auth.yubikey.enable = true;
+};
 ```
 
 **Before switching from TPM to YubiKey** — wipe the TPM slot first:
@@ -158,7 +172,9 @@ sudo yubikey-luks-init
 
 ### Password
 
-Password is the fallback for local services. Stored as plain text in sops (`user/password`), hashed to yescrypt at boot by `user-passwd.service`. No per-host configuration needed.
+Password is the fallback for local services. The value is encrypted in SOPS and
+hashed to yescrypt at boot by `user-passwd.service`. LDAP can provide the
+password credential when enabled.
 
 ## Files
 
@@ -176,7 +192,9 @@ Auth files use `persistPrefix` directly (not impermanence bind-mounts) because `
 To disable TOTP (not recommended):
 
 ```nix
-features.auth.totp.enable = false;
+features = {
+  auth.totp.enable = false;
+};
 ```
 
 Without any 2FA enabled, authentication falls back to password only.

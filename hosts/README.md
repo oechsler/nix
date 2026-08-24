@@ -1,6 +1,8 @@
 # Hosts
 
-Host-specific configurations.
+Host-specific configurations. Installation and disk-layout procedures are
+documented in [docs/INSTALL.md](../docs/INSTALL.md); this file only summarizes
+the host variants.
 
 | Host | Device | Notes |
 |------|--------|-------|
@@ -10,29 +12,41 @@ Host-specific configurations.
 
 ## Installation
 
-See [docs/INSTALL.md](../docs/INSTALL.md) for full installation guide.
-
-Quick install (from NixOS ISO):
-
-```bash
-curl -sL https://raw.githubusercontent.com/oechsler/nix/main/quickstart.sh | sudo bash
-```
+Follow the authoritative [installation guide](../docs/INSTALL.md).
 
 ## Adding a New Host
 
+The local flake discovers every directory below `hosts/` and creates the
+corresponding `nixosConfigurations.<name>` and `diskoConfigurations.<name>`
+outputs automatically. No host entry needs to be added to `flake.nix`.
+
 1. Create `hosts/new-host/` with:
    - `configuration.nix` — host-specific config
-   - `disko.nix` — disk layout (copy from existing, update device ID)
+   - `disko.nix` — disk layout (copy from an existing host and update the device ID)
    - `hardware-configuration.nix` — wrapper for generated config
    - `luks.nix` — LUKS device declaration
    - `home.nix` — optional host-specific home-manager overrides (e.g. idle timeouts)
 
-2. Add to `flake.nix`:
-   ```nix
-   nixosConfigurations.new-host = mkHost "new-host";
+   `disko.nix` contains destructive partitioning assumptions. Review the
+   target device and layout before running the installer.
+
+2. Generate the hardware configuration:
+
+   ```bash
+   nixos-generate-config --show-hardware-config > hosts/new-host/hardware-configuration.nix
    ```
 
-3. Find disk ID:
+3. Find and verify the disk ID before using it in Disko:
+
    ```bash
    ls -l /dev/disk/by-id/nvme-*
    ```
+
+4. Build the new host:
+
+   ```bash
+   nix build .#nixosConfigurations.new-host.config.system.build.toplevel
+   ```
+
+When using this repository as a flake input from another repository, use the
+exported `lib.mkHost` function instead. See [docs/QUICKSTART.md](../docs/QUICKSTART.md).
