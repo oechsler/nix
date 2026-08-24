@@ -89,7 +89,7 @@ features.apps.mumble.servers = [
 ];
 ```
 
-The optional Mumble identity certificate is provided through the SOPS secret `mumble/certificate` and imported automatically when `features.apps.mumble.certificate.enable = true`. If disabled, no certificate is configured. Host configurations use `Sam` as the default Mumble username.
+Mumble can optionally use a client identity certificate managed through SOPS. When certificate support is disabled, Mumble runs without a client certificate. The default Mumble username is `Sam`.
 
 Set `features.apps.mumble.disablePublicServerList = false` to show the public server list again.
 

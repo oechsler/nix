@@ -56,17 +56,18 @@ git commit -m "Update secrets"
 
 | Secret | Purpose | Used By |
 |--------|---------|---------|
-| `user/password` | Local login password for the primary user | `modules/system/users.nix` |
-| `wifi/<name>/psk` | WiFi WPA2 pre-shared key | `modules/system/networking/wifi.nix` (NetworkManager) |
-| `smb/<name>/password` | SMB/CIFS mount credentials | `modules/system/smb.nix` (systemd mount units) |
+| `mumble/certificate` | Optional Mumble identity certificate | `modules/home-manager/programs/mumble.nix` |
 | `opencode/opencode-go/api-key` | OpenCode Go API key | `modules/home-manager/programs/opencode.nix` |
+| `smb/<name>/password` | SMB/CIFS share password | `modules/system/smb.nix` |
+| `user/password` | Local login password | `modules/system/users.nix` |
+| `wifi/<name>/psk` | WiFi pre-shared key | `modules/system/networking/wifi.nix` |
 
-### WiFi Networks
-- `wifi/home/psk` — Home WPA2 PSK
+Secret names containing `<name>` use the identifier of the corresponding
+declarative network or share configuration.
 
-### SMB Shares
-- `smb/personal-drive/password` — Personal NAS share credentials
-- `smb/pika/password` — Pika server share credentials
+The Mumble certificate is optional. When enabled in the Mumble configuration,
+the module imports it into the local Mumble profile. Without the secret,
+Mumble continues to work without a client certificate.
 
 ### Mumble
 - `mumble/certificate` — Optional PKCS#12 identity certificate, imported into Mumble's `net.certificate` setting when enabled
@@ -74,8 +75,8 @@ git commit -m "Update secrets"
 - The certificate is stored as an encrypted Base64 value in `sops.encrypted.yaml`; the private key and the original `.p12` file must never be committed.
 
 ### Why Secrets Are Encrypted
-- **Credentials**: WiFi keys, SMB passwords, API tokens must never appear in plaintext in the Git history.
-- **Reproducibility**: The same SOPS file works across all hosts — only the Age key needs to be provisioned on each machine.
+- **Credentials**: WiFi keys, SMB passwords, API tokens, and certificates must never appear in plaintext in the Git history.
+- **Reproducibility**: The same encrypted SOPS file can be used by every host with an appropriate Age key.
 - **Auditability**: Changes to secrets are tracked via Git (encrypted), with the decrypted version gitignored.
 
 
