@@ -113,6 +113,7 @@
     gaming.enable = false;
 
     # --- Applications ---
+    apps.mumble.username = "Sam";
     apps.mumble.servers = [
       {
         host = "mumble.at.oechsler.it";

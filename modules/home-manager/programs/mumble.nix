@@ -61,6 +61,16 @@ let
       ${pkgs.jq}/bin/jq '.mumble_has_quit_normally = true | .ui.theme = "" | .ui.theme_style = "" | .ui.disable_public_server_list = ${lib.boolToString cfg.disablePublicServerList}' \
         "$config_file" > "$config_file.tmp" && ${pkgs.coreutils}/bin/mv "$config_file.tmp" "$config_file"
     fi
+    if [ -r "${config.sops.secrets."mumble/certificate".path}" ] && [ -f "$config_file" ]; then
+      certificate_tmp="$(${pkgs.coreutils}/bin/mktemp)"
+      if ${pkgs.coreutils}/bin/base64 -d "${
+        config.sops.secrets."mumble/certificate".path
+      }" > "$certificate_tmp" \
+        && ${pkgs.jq}/bin/jq --rawfile certificate "$certificate_tmp" '.net.certificate = ($certificate | @base64)' "$config_file" > "$config_file.tmp"; then
+        ${pkgs.coreutils}/bin/mv "$config_file.tmp" "$config_file"
+      fi
+      ${pkgs.coreutils}/bin/rm -f "$certificate_tmp" "$config_file.tmp"
+    fi
     exec ${pkgs.mumble}/bin/mumble "$@"
   '';
   setQuitNormallyCommand = pkgs.writeShellScript "mumble-set-quit-flag" ''
@@ -87,6 +97,7 @@ in
 
   config = lib.mkIf (features.apps.enable && cfg.enable) {
     home.packages = [ pkgs.mumble ];
+    sops.secrets."mumble/certificate" = { };
     home.activation.mumbleConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       mumble_config="$HOME/.config/Mumble/Mumble/mumble_settings.json"
       if [ ! -e "$mumble_config" ]; then
@@ -105,6 +116,20 @@ in
         else
           rm -f "$mumble_tmp"
         fi
+      fi
+
+      if [ -r "${config.sops.secrets."mumble/certificate".path}" ] && [ -f "$mumble_config" ]; then
+        mumble_certificate_tmp="$(mktemp)"
+        mumble_tmp="$(mktemp "''${mumble_config}.XXXXXX")"
+        if base64 -d ${config.sops.secrets."mumble/certificate".path} > "$mumble_certificate_tmp" \
+          && ${pkgs.jq}/bin/jq --rawfile certificate "$mumble_certificate_tmp" \
+          '.net.certificate = ($certificate | @base64)' "$mumble_config" > "$mumble_tmp"; then
+          chmod --reference="$mumble_config" "$mumble_tmp"
+          mv "$mumble_tmp" "$mumble_config"
+        else
+          rm -f "$mumble_tmp"
+        fi
+        rm -f "$mumble_certificate_tmp"
       fi
 
       mumble_database="$HOME/.local/share/Mumble/Mumble/mumble.sqlite"
