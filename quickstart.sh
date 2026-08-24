@@ -120,5 +120,4 @@ echo ""
 info "Starting installer..."
 echo ""
 exec bash "$CLONE_DIR/install.sh" "$@"
-exit
 }

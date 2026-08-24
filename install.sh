@@ -50,9 +50,11 @@ fi
 STATE_DIR="/var/lib/nixos-install"
 STATE_FILE="$STATE_DIR/state.env"
 LUKS_PASSWORD_FILE=""
+INSTALL_SUCCESS=false
 
 cleanup() {
-  rm -f "$LUKS_PASSWORD_FILE" "$STATE_FILE"
+  [[ -z "$LUKS_PASSWORD_FILE" ]] || rm -f "$LUKS_PASSWORD_FILE"
+  [[ "$INSTALL_SUCCESS" == true ]] && rm -f "$STATE_FILE"
 }
 
 trap cleanup EXIT
@@ -75,6 +77,7 @@ Options:
   -p, --luks-password   LUKS disk encryption password
   --repair              Verify/repair the Nix store before rebuilding (requires root)
   --skip-totp           Skip TOTP setup (deferred to totp-init after first boot)
+  --quiet               Suppress upgrade prompts on installed systems
   -y, --yes             Skip all confirmation prompts (non-interactive mode)
   --dry-run             Show summary and exit without making changes
   --iso                 Use prebuilt system closure from the installer ISO
@@ -96,12 +99,19 @@ EOF
   exit 0
 }
 
+require_option_value() {
+  [[ $# -ge 2 && -n "${2:-}" ]] || {
+    echo "Option $1 requires a value." >&2
+    exit 1
+  }
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     -h|--help)           show_help ;;
-    --host)              HOST="$2"; shift 2 ;;
-    -s|--ssh-key)        SSH_KEY="$2"; shift 2 ;;
-    -p|--luks-password)  LUKS_PASSWORD="$2"; shift 2 ;;
+    --host)              require_option_value "$@"; HOST="$2"; shift 2 ;;
+    -s|--ssh-key)        require_option_value "$@"; SSH_KEY="$2"; shift 2 ;;
+    -p|--luks-password)  require_option_value "$@"; LUKS_PASSWORD="$2"; shift 2 ;;
     --skip-totp)         SKIP_TOTP=true; shift ;;
     --quiet)             QUIET_UPGRADE=true; shift ;;
     --repair)            REPAIR=true; shift ;;
@@ -1046,6 +1056,8 @@ phase_post_install() {
 #===========================
 
 phase_complete() {
+  INSTALL_SUCCESS=true
+
   # Collect any post-boot tasks so we can show them in one place.
   # Order matters: Secure Boot before TPM (PCR 7 seals against SB state).
   local post_boot_tasks=()
@@ -1107,7 +1119,11 @@ phase_complete() {
     fi
   fi
   if [[ "$FEAT_TOTP" == "true" ]]; then
-    echo -e "    TOTP 2FA:         ${GREEN}configured${RESET}  ${DIM}(use your authenticator app for sudo/SSH)${RESET}"
+    if [[ -f "$oath_file" ]]; then
+      echo -e "    TOTP 2FA:         ${GREEN}configured${RESET}  ${DIM}(use your authenticator app for sudo/SSH)${RESET}"
+    else
+      echo -e "    TOTP 2FA:         ${YELLOW}pending${RESET}  ${DIM}(run totp-init after first boot)${RESET}"
+    fi
   fi
   echo -e "    SSH key:          ${GREEN}installed${RESET}"
   echo -e "    SOPS age key:     ${GREEN}installed${RESET}"
@@ -1196,7 +1212,10 @@ phase_complete() {
 # Used both on the upgrade entry screen and after a successful upgrade.
 show_pending_setup() {
   local json
-  json=$(nix eval --json "$REPO_DIR#nixosConfigurations.${HOST}.config" --apply '
+  if [[ "$INSTALLER_ISO" == true ]]; then
+    json=$(jq -c --arg host "$HOST" '.hosts[$host] // empty' "$ISO_MANIFEST")
+  else
+    json=$(nix eval --json "$REPO_DIR#nixosConfigurations.${HOST}.config" --apply '
     cfg: {
       secureBoot    = cfg.features.secureBoot.enable;
       yubikey       = cfg.features.auth.yubikey.enable;
@@ -1205,7 +1224,8 @@ show_pending_setup() {
       encryption    = cfg.features.encryption.enable;
       persistPrefix = cfg.features.impermanence.persistPrefix;
     }
-  ' 2>/dev/null) || json="{}"
+    }' 2>/dev/null) || json="{}"
+  fi
 
   local feat_sb feat_yubikey feat_yubikey_luks feat_totp feat_enc persist_prefix
   feat_sb=$(echo "$json"           | jq -r '.secureBoot    // false')
