@@ -61,8 +61,8 @@ ls /.snapshots/
 # ...
 ```
 
-For the snapshot storage itself and all subvolumes, mount the Btrfs top-level at
-`/mnt/btrfs-root`. This is the technical path used by btrbk:
+The Btrfs top-level is also mounted at `/mnt/btrfs-root` as a convenience view
+of all subvolumes:
 
 ```bash
 # With LUKS encryption:

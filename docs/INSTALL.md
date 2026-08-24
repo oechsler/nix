@@ -112,9 +112,9 @@ mounts:
 When impermanence is enabled, `@` is reset on boot while `/home`, `/nix`, and
 `/persist` retain their declared state. The `@steam`, `@nextcloud`, and `@smb`
 subvolumes keep large or independently managed data outside `@home` snapshots.
-For snapshot management, btrbk mounts the Btrfs top-level at
-`/mnt/btrfs-root` and stores snapshot copies in
-`/mnt/btrfs-root/@snapshots`; `/.snapshots` is the normal mounted view.
+The Btrfs top-level is also mounted at `/mnt/btrfs-root` as a convenience view
+of all subvolumes. btrbk uses this view for snapshot operations, while
+`/.snapshots` remains the normal path for browsing snapshots.
 
 ## Impermanence
 
