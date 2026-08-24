@@ -1,4 +1,4 @@
-# :snowflake: NixOS Config
+# Nix
 
 Hello :wave:,
 
