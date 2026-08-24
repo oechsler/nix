@@ -24,6 +24,7 @@
     ./kubernetes.nix
     ./lsp.nix
     ./mangohud.nix
+    ./mumble.nix
     ./neovim.nix
     ./opencode.nix
     ./proton-pass.nix

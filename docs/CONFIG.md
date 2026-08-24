@@ -62,6 +62,15 @@ features.ssh.enable = true;
 | `features.ops.kubernetes.clusters` | `[]` | Kubernetes clusters — list of `{ name, server, caData, namespace?, user?, oidc = { issuerUrl, clientId, extraScopes? } }`. Kubeconfig is generated automatically. |
 | `features.ops.kubernetes.defaultContext` | `""` | Default Kubernetes context (empty = first cluster) |
 | `features.apps.enable` | `true` | Desktop apps (Discord, Spotify, Obsidian, LibreOffice, ...) |
+| `features.apps.mumble.enable` | `true` | Install and configure Mumble, including desktop/autostart integration |
+| `features.apps.mumble.username` | `user.name` | Default Mumble username |
+| `features.apps.mumble.servers` | `[]` | Favorite servers — list of `{ name?, host, port?, username? }`; `name` defaults to `host`, `port` defaults to `64738`, and `username` defaults to `features.apps.mumble.username` |
+| `features.apps.mumble.disablePublicServerList` | `true` | Hide Mumble's public Internet server list |
+| `features.apps.mumble.autoConnectToLastServer` | `true` | Automatically connect to the last server |
+| `features.apps.mumble.reconnectAutomatically` | `true` | Reconnect after a lost connection |
+| `features.apps.mumble.hideInTray` | `true` | Keep Mumble in the system tray instead of the taskbar |
+| `features.apps.mumble.quitBehavior` | `"AlwaysMinimize"` | Close behavior: `AlwaysAsk`, `AskWhenConnected`, `AlwaysMinimize`, `MinimizeWhenConnected`, or `AlwaysQuit` |
+| `features.apps.mumble.serverFilterMode` | `"ShowReachable"` | Favorite-list filter: `ShowPopulated`, `ShowReachable`, or `ShowAll` |
 | `features.auth.totp.enable` | `true` | TOTP for sudo, SSH (see [AUTH.md](AUTH.md)) |
 | `features.auth.yubikey.enable` | `unlockMethod == "yubikey"` | YubiKey for sudo, SSH (see [AUTH.md](AUTH.md)). Auto-enabled when `encryption.unlockMethod = "yubikey"`. |
 | `features.auth.ldap.enable` | `false` | LLDAP authentication (see [AUTH.md](AUTH.md)) |
@@ -69,6 +78,18 @@ features.ssh.enable = true;
 | `features.ssh.enable` | `false` | OpenSSH server + GitHub key sync (every 15 min) |
 | `features.snapshots.enable` | `true` | Automatic btrfs snapshots (hourly, see [SNAPSHOTS.md](SNAPSHOTS.md)) |
 | `features.kernel` | `"cachyos"` | Kernel variant: `"cachyos"` (generic, latest) / `"cachyos-v3"` (explicit x86_64-v3) / `"cachyos-v4"` (x86_64-v4, Zen 4+) / `"cachyos-lts"` / `"default"` (latest nixpkgs kernel) / `"default-lts"` (stable nixpkgs kernel) |
+
+### Mumble
+
+Mumble favorites are stored in its SQLite database; the module synchronizes the declarative `servers` list during Home-Manager activation. A minimal host configuration is:
+
+```nix
+features.apps.mumble.servers = [
+  { host = "mumble.at.oechsler.it"; }
+];
+```
+
+Set `features.apps.mumble.disablePublicServerList = false` to show the public server list again.
 
 ### Virtualisation
 

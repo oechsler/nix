@@ -48,29 +48,6 @@ let
   hasHDR = displayHelpers.hasDesktopHDR displays.monitors || displays.defaults.hdr == 2;
   isKde = features.desktop.wm == "kde";
   chromium = import ../../lib/chromium.nix { inherit pkgs; };
-  mumbleDefaults = pkgs.writeText "mumble-settings.json" (
-    builtins.toJSON {
-      audio = {
-        echo_cancel_mode = "Disabled";
-        input_system = "PulseAudio";
-        output_system = "PulseAudio";
-        play_mute_cue = false;
-      };
-      misc = {
-        audio_wizard_has_been_shown = true;
-        viewed_server_ping_consent_message = true;
-      };
-      network.auto_connect_to_last_server = true;
-      ui = {
-        channel_expansion_mode = "AllChannels";
-        disable_public_server_list = true;
-        quit_behavior = "AlwaysMinimize";
-        send_usage_statistics = false;
-        theme = "";
-        theme_style = "";
-      };
-    }
-  );
   wrapChromiumApp =
     package: binary:
     chromium.wrapHdrSdrApp {
@@ -94,7 +71,6 @@ in
         home = {
           packages = with pkgs; [
             alsa-scarlett-gui
-            mumble
             (wrapChromiumApp vesktop "vesktop")
             freecad
             libreoffice
@@ -103,14 +79,6 @@ in
             pika-backup
             prusa-slicer
           ];
-
-          activation.mumbleDefaults = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-            mumble_config="$HOME/.config/Mumble/Mumble/mumble_settings.json"
-            if [ ! -e "$mumble_config" ]; then
-              mkdir -p "$(dirname "$mumble_config")"
-              cp ${mumbleDefaults} "$mumble_config"
-            fi
-          '';
 
         };
 
@@ -136,7 +104,6 @@ in
             "Chat"
           ];
           genericName = "Internet Messenger";
-          settings.StartupWMClass = "Vesktop";
         };
 
         programs.spicetify =
