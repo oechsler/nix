@@ -100,7 +100,14 @@ in
           path = dirs.pictures;
           icon = "folder-pictures";
         }
-      ];
+      ]
+      ++ lib.optionals (features.smb.enable && features.smb.shares != [ ]) (
+        map (share: {
+          name = share.label;
+          path = "${home}/smb/${share.label}";
+          icon = "folder-remote";
+        }) features.smb.shares
+      );
 
     # GTK file portals and Nautilus use this shared bookmark format.
     xdg.configFile."gtk-3.0/bookmarks" = {
