@@ -9,6 +9,7 @@
 # - Repos (~/repos)
 # - Documents (Dokumente)
 # - Pictures (Bilder)
+# - Nextcloud
 #
 # Configuration:
 #   fileManager.bookmarks = [
@@ -17,6 +18,7 @@
 
 {
   config,
+  features,
   lib,
   ...
 }:
@@ -64,7 +66,6 @@ in
       let
         dirs = config.xdg.userDirs;
         name = builtins.baseNameOf;
-        removableMedia = "/mnt/removable";
       in
       [
         {
@@ -92,10 +93,12 @@ in
           path = dirs.pictures;
           icon = "folder-pictures";
         }
+      ]
+      ++ lib.optionals features.apps.enable [
         {
-          name = "Wechselmedien";
-          path = removableMedia;
-          icon = "drive-removable-media";
+          name = "Nextcloud";
+          path = "${home}/Nextcloud";
+          icon = "folder-cloud";
         }
       ];
 
