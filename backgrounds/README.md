@@ -2,10 +2,18 @@
 
 ## Why encrypted?
 
-Some wallpapers in this collection are copyrighted images without
-redistribution rights. Encryption keeps them out of the public repository while
-still making them available locally; it does not replace permission to use the
-images.
+Some of the wallpapers I use can be purchased from:
+
+- [kram.store](https://kram.store/collections/wallpaper)
+- [store.thaomaoh.com](https://store.thaomaoh.com/)
+
+The collection contains wallpapers from various sources, not only the stores
+listed above. For some images, the copyright and redistribution status is not
+clear. They are included only for my personal use and stored as encrypted
+binary data, so the public repository contains no usable wallpaper files and is
+not intended to redistribute the artwork. If a creator would prefer a
+wallpaper to be removed, please get in touch. I am happy to take it down or
+work out another solution.
 
 ## Archive Flow
 

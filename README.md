@@ -12,6 +12,8 @@ My personal NixOS configurations using Flakes and Home-Manager.
 
 </details>
 
+The wallpaper shown in the preview can be purchased from [kram.store](https://kram.store/collections/wallpaper).
+
 ## Structure
 
 ```
