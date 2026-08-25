@@ -8,7 +8,7 @@
 # Keybindings (leader = Space):
 #   g+1-9/0            - Open configured bookmark 1-10
 #   Space+i            - Show help
-#   y / p              - Copy / paste files via the system clipboard
+#   y / p              - Yank / paste files (y also copies to the system clipboard)
 #   Space+h/l          - Previous / next tab
 #   Space+H/L          - Move tab left / right
 #   Space+t            - New tab in the current directory
@@ -301,8 +301,8 @@ in
         }
         {
           on = "p";
-          run = "plugin wl-clipboard -- --action=paste";
-          desc = "Paste files from system clipboard";
+          run = "paste";
+          desc = "Paste yanked files";
         }
         {
           on = [
