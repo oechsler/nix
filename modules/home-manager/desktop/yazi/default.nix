@@ -17,6 +17,7 @@
 #   Space+d+m          - Open recycle bin
 #   Space+d+u          - Restore last deleted files
 #   Space+d+U          - Restore files interactively
+#   Space+.            - Toggle hidden files
 #   Space+p+m          - Toggle media metadata (when enabled)
 #   Space+p+i          - Toggle media preview image (when enabled)
 
@@ -302,6 +303,14 @@ in
           on = "p";
           run = "plugin wl-clipboard -- --action=paste";
           desc = "Paste files from system clipboard";
+        }
+        {
+          on = [
+            "<Space>"
+            "."
+          ];
+          run = "hidden toggle";
+          desc = "Toggle hidden files";
         }
         {
           on = [
