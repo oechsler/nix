@@ -6,9 +6,12 @@
 # - Cross-WM support (Hyprland and KDE)
 # - Feature-flag aware (only starts apps if features enabled)
 #
-# WM-specific implementation:
-# - Hyprland: Generates systemd user services in hyprland/default.nix
-# - KDE: See kde/autostart.nix for XDG .desktop generation
+# Window-manager-specific implementation:
+# - Hyprland: Converts the list into systemd user services in hyprland/default.nix
+# - KDE: Converts the list into XDG autostart files in kde/autostart.nix
+#
+# The application list is deliberately shared. Only the lifecycle mechanism
+# differs: Hyprland owns explicit user units, while KDE consumes XDG entries.
 #
 # Default autostart apps:
 # - Proton Pass - Password manager
@@ -93,8 +96,9 @@ in
             exec = config.programs.mumble.command;
           }
         ]
-        # Hyprland starts Steam via a dedicated delayed service below so Steam
-        # Input sees the fully initialized Wayland/uinput session.
+        # Hyprland starts Steam through the dedicated service below. Steam gets
+        # a longer delay because gamescope and Steam Input need the fully
+        # initialized Wayland/uinput session before they are started.
         ++ lib.optionals (features.gaming.enable && isKde) [
           {
             name = "Steam";

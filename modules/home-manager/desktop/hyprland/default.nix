@@ -262,9 +262,11 @@ in
   #===========================
 
   config = {
-    # All systemd user services: autostart apps + internal services.
-    # Autostart apps: proper lifecycle (start on login, stop on logout, no
-    # duplicates on re-login). Internal services: battery-warning, clipboard.
+    # Shared application autostarts become explicit user services here. This
+    # gives Hyprland the same declarative lifecycle KDE gets from XDG entries:
+    # start with the graphical session, stop with it, and restart failed apps.
+    # The short delay lets the Wayland session settle before GUI applications
+    # connect to it. Internal services are defined alongside these units below.
     systemd.user.services =
       # Generate one service per autostart app
       builtins.listToAttrs (
@@ -277,13 +279,14 @@ in
               PartOf = [ "graphical-session.target" ];
             };
             Service = {
-              # Full bash path so systemd always finds it; exec replaces the shell
-              # with the app process so systemd tracks the right PID.
+              # Use an absolute shell path and exec the app so systemd tracks
+              # the actual GUI process instead of the delay wrapper.
               ExecStart = "${pkgs.bash}/bin/sh -c 'sleep 3; exec ${app.exec}'";
               Environment = "PATH=/etc/profiles/per-user/${config.home.username}/bin:/run/current-system/sw/bin";
               Type = "exec";
               Restart = "on-failure";
-              # Exit code 1 often means another instance is already running — not a real crash.
+              # Exit code 1 commonly means another instance is already running,
+              # so do not turn that normal condition into a restart loop.
               RestartPreventExitStatus = 1;
               RestartSec = 3;
               TimeoutStopSec = 5;
@@ -324,7 +327,8 @@ in
           Install.WantedBy = [ "graphical-session.target" ];
         };
 
-        # Clipboard history services
+        # Clipboard history services are long-running session helpers, not
+        # entries in the shared application autostart list.
         cliphist-text = {
           Unit = {
             Description = "Clipboard history - text";
