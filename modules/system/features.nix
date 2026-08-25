@@ -271,6 +271,32 @@ in
       };
     };
 
+    fileManager.bookmarks = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.listOf (
+          lib.types.submodule {
+            options = {
+              name = lib.mkOption {
+                type = lib.types.str;
+                description = "Display name";
+              };
+              path = lib.mkOption {
+                type = lib.types.str;
+                description = "Absolute path";
+              };
+              icon = lib.mkOption {
+                type = lib.types.str;
+                default = "folder";
+                description = "Icon name";
+              };
+            };
+          }
+        )
+      );
+      default = null;
+      description = "File manager sidebar bookmarks (used by Nautilus and Dolphin).";
+    };
+
     dev = {
       enable = (lib.mkEnableOption "development tools") // {
         default = true;

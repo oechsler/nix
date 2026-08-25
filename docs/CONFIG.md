@@ -29,10 +29,20 @@ features = {
     };
   };
 
-  encryption.unlockMethod = "tpm2";
-  gaming.enable = false;
-  dev.enable = true;
-  virtualisation.vm.enable = false;
+  encryption = {
+    unlockMethod = "tpm2";
+  };
+  gaming = {
+    enable = false;
+  };
+  dev = {
+    enable = true;
+  };
+  virtualisation = {
+    vm = {
+      enable = false;
+    };
+  };
 };
 ```
 
@@ -42,16 +52,17 @@ These options describe the machine and the guarantees required before
 userspace configuration starts. Hardware values are normally host-specific;
 the remaining options control boot-time storage and persistence.
 
-| Option                             | Default     | Description                                                                                               |
-| ---------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------- |
-| `features.hardware.formFactor`     | `"desktop"` | Machine form factor: `"desktop"` or `"laptop"`.                                                           |
-| `features.hardware.cpu`            | `null`      | CPU vendor: `"amd"` or `"intel"`; selects microcode.                                                      |
-| `features.hardware.gpu`            | `null`      | GPU vendor: `"amd"` or `"intel"`; selects graphics and VA-API support.                                    |
-| `features.kernel`                  | `"cachyos"` | Kernel variant, such as `"cachyos-v3"`, `"cachyos-v4"`, `"cachyos-lts"`, `"default"`, or `"default-lts"`. |
-| `features.secureBoot.enable`       | `false`     | UEFI Secure Boot via lanzaboote.                                                                          |
-| `features.impermanence.enable`     | `true`      | Impermanent root with btrfs rollback on boot.                                                             |
-| `features.impermanence.extraPaths` | `[]`        | Additional paths to persist.                                                                              |
-| `features.snapshots.enable`        | `true`      | Automatic btrfs snapshots.                                                                                |
+| Option                                | Default     | Description                                                                                               |
+| ------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------- |
+| `features.hardware.formFactor`        | `"desktop"` | Machine form factor: `"desktop"` or `"laptop"`.                                                           |
+| `features.hardware.cpu`               | `null`      | CPU vendor: `"amd"` or `"intel"`; selects microcode.                                                      |
+| `features.hardware.gpu`               | `null`      | GPU vendor: `"amd"` or `"intel"`; selects graphics and VA-API support.                                    |
+| `features.kernel`                     | `"cachyos"` | Kernel variant, such as `"cachyos-v3"`, `"cachyos-v4"`, `"cachyos-lts"`, `"default"`, or `"default-lts"`. |
+| `features.secureBoot.enable`          | `false`     | UEFI Secure Boot via lanzaboote.                                                                          |
+| `features.impermanence.enable`        | `true`      | Impermanent root with btrfs rollback on boot.                                                             |
+| `features.impermanence.persistPrefix` | read-only   | Resolved persistence prefix (`/persist` when enabled).                                                    |
+| `features.impermanence.extraPaths`    | `[]`        | Additional paths to persist.                                                                              |
+| `features.snapshots.enable`           | `true`      | Automatic btrfs snapshots.                                                                                |
 
 Example for a laptop:
 
@@ -61,6 +72,35 @@ features = {
     formFactor = "laptop";
     cpu = "intel";
     gpu = "intel";
+  };
+};
+```
+
+Impermanence recreates the root filesystem on every boot. Persistent state is
+kept under `/persist` and is declared by feature modules or
+`features.impermanence.extraPaths`. Use `extraPaths` only for state that is not
+already covered by a feature module. The installation must provide the
+`/persist` Btrfs subvolume when this feature is enabled. See
+[INSTALL.md](INSTALL.md#impermanence) for the installation layout.
+
+```nix
+features = {
+  impermanence = {
+    enable = true;
+    extraPaths = [ "/var/lib/example" ];
+  };
+};
+```
+
+Snapshots are separate from impermanence. Impermanence controls what survives a
+reboot; snapshots provide historical restore points for persistent Btrfs state.
+Snapshots do not make undeclared root state persistent and are not a substitute
+for backups. See [SNAPSHOTS.md](SNAPSHOTS.md) for restore, browse, and cleanup.
+
+```nix
+features = {
+  snapshots = {
+    enable = false;
   };
 };
 ```
@@ -77,7 +117,26 @@ from the desktop session.
 | `features.auth.totp.enable`        | `true`                      | TOTP for sudo and SSH.                                      |
 | `features.auth.yubikey.enable`     | `unlockMethod == "yubikey"` | YubiKey authentication.                                     |
 | `features.auth.ldap.enable`        | `false`                     | LLDAP authentication.                                       |
+| `features.auth.ldap.uri`           | `null`                      | LDAP URI; required when LDAP is enabled.                    |
+| `features.auth.ldap.baseDn`        | `null`                      | LDAP base DN; required when LDAP is enabled.                |
 | `features.ssh.enable`              | `false`                     | OpenSSH server and GitHub key sync.                         |
+
+```nix
+features = {
+  encryption = {
+    enable = true;
+    unlockMethod = "yubikey";
+  };
+  auth = {
+    totp = {
+      enable = true;
+    };
+    yubikey = {
+      enable = true;
+    };
+  };
+};
+```
 
 ### Networking
 
@@ -119,6 +178,16 @@ features = {
 };
 ```
 
+The following implementation choices apply to the managed networking stack and
+normally do not need per-host overrides:
+
+- NetworkManager owns connection profiles, IP configuration, and routing.
+- `iwd` is used as NetworkManager's WiFi backend.
+- Docker/Tailscale interfaces are unmanaged in NetworkManager: `docker0`, `br-*`, `veth*`, `tailscale0`.
+- Desktop hosts disable IPv6 only on Docker bridge/veth interfaces to reduce local development link churn.
+- LLMNR is disabled in `systemd-resolved` to avoid resolver scopes on Docker/veth links.
+- Desktop Ethernet disables WiFi autoconnect while active.
+
 ### Desktop
 
 This layer selects the interactive session and its security integrations. The
@@ -145,7 +214,9 @@ features = {
   desktop = {
     wm = "kde";
     login = "greeter";
-    browser.type = "librewolf";
+    browser = {
+      type = "librewolf";
+    };
     kde = {
       favorites = {
         declarative = true;
@@ -166,9 +237,135 @@ features = {
       };
     };
   };
-  auth.totp.enable = true;
+  auth = {
+    totp = {
+      enable = true;
+    };
+  };
 };
 ```
+
+#### Pinned Dock/Taskbar Apps
+
+Pinned applications control desktop presentation, not package installation.
+The default list follows the enabled feature groups and the selected file
+manager.
+
+| Option                                    | Default           | Description                                         |
+| ----------------------------------------- | ----------------- | --------------------------------------------------- |
+| `features.desktop.pinnedApps.declarative` | `true`            | Enforce the pinned app list on every desktop start. |
+| `features.desktop.pinnedApps.entries`     | Feature-dependent | Desktop files pinned to the dock or taskbar.        |
+
+```nix
+features = {
+  desktop = {
+    pinnedApps = {
+      declarative = true;
+      entries = [
+        "firefox"
+        "kitty"
+      ];
+    };
+  };
+};
+```
+
+The default list is extended by feature toggles:
+
+- `features.dev.enable` adds Neovim
+- `features.apps.enable` adds Obsidian, Vesktop, Spotify
+- `features.apps.enable` plus `features.apps.mumble.enable` adds Mumble
+- `features.gaming.enable` adds Steam
+
+Each entry is a desktop file name without the `.desktop` suffix, such as
+`"firefox"`.
+
+#### KDE Desktop Options
+
+| Option                                       | Default | Description                                              |
+| -------------------------------------------- | ------- | -------------------------------------------------------- |
+| `features.desktop.kde.favorites.declarative` | `true`  | Enforce KDE Kickoff favorites on every KDE start.        |
+| `features.desktop.kde.favorites.entries`     | `null`  | KDE Kickoff favorites; KDE supplies defaults when unset. |
+| `features.desktop.kde.tray.shown`            | `null`  | KDE tray items displayed directly in the panel.          |
+| `features.desktop.kde.tray.hidden`           | `null`  | KDE tray items kept behind the tray popup.               |
+
+```nix
+features = {
+  desktop = {
+    kde = {
+      favorites = {
+        declarative = true;
+        entries = [ "librewolf" "org.kde.dolphin" "kitty" "systemsettings" ];
+      };
+      tray = {
+        shown = [ "org.kde.plasma.networkmanagement" "org.kde.plasma.volume" ];
+      };
+    };
+  };
+};
+```
+
+#### File Manager
+
+`features.desktop.fileManager` selects the primary file manager and keeps the
+desktop shortcuts, MIME associations, and pinned applications consistent.
+
+| Option                         | Default     | Description                                    |
+| ------------------------------ | ----------- | ---------------------------------------------- |
+| `features.desktop.fileManager` | `"default"` | Select the GUI or terminal-based file manager. |
+
+| Value        | Behavior                                                           |
+| ------------ | ------------------------------------------------------------------ |
+| `"default"`  | Use Nautilus on Hyprland or Dolphin on KDE.                        |
+| `"terminal"` | Use Yazi from Kitty and remove the GUI file manager from the pins. |
+
+```nix
+features = {
+  desktop = {
+    fileManager = "terminal";
+  };
+};
+```
+
+Yazi integrations follow the existing feature toggles. Heavy preview
+integrations are enabled only when their corresponding application or
+development feature is enabled.
+
+Press `Space` followed by `.` in Yazi to toggle hidden files. The shortcut is
+configured in the Yazi module and is available independently of the preview
+feature toggles.
+
+#### File Manager Bookmarks
+
+Bookmarks are shared across the supported file managers. The same declarative
+list is rendered as GTK bookmarks, KDE places, or Yazi shortcuts depending on
+the active desktop.
+
+| Option                           | Default           | Description                           |
+| -------------------------------- | ----------------- | ------------------------------------- |
+| `features.fileManager.bookmarks` | Feature-dependent | Sidebar bookmarks and Yazi shortcuts. |
+
+By default, bookmarks are generated from the XDG user directories and add the
+Nextcloud directory when `features.apps.enable` is enabled. Setting
+`features.fileManager.bookmarks` replaces this generated list.
+
+```nix
+features = {
+  fileManager = {
+    bookmarks = [
+      {
+        name = "Projects";
+        path = "/home/user/Projects";
+        icon = "folder-development";
+      }
+    ];
+  };
+};
+```
+
+Each entry has a display `name`, an absolute `path`, and an optional icon. The
+`icon` field defaults to `"folder"`. Bookmarks are managed declaratively for
+Nautilus, Dolphin, and Yazi.
 
 ### Virtualisation
 
@@ -186,8 +383,12 @@ configuration; child options can still be selected independently.
 features = {
   virtualisation = {
     enable = true;
-    container.enable = true;
-    vm.enable = false;
+    container = {
+      enable = true;
+    };
+    vm = {
+      enable = false;
+    };
   };
 };
 ```
@@ -207,7 +408,9 @@ session itself.
 features = {
   gaming = {
     enable = true;
-    steamMachine.enable = false;
+    steamMachine = {
+      enable = false;
+    };
   };
 };
 ```
@@ -228,8 +431,12 @@ IDE integrations can be disabled without removing the command-line toolchain.
 features = {
   dev = {
     enable = true;
-    jetbrains.enable = false;
-    dbeaver.enable = true;
+    jetbrains = {
+      enable = false;
+    };
+    dbeaver = {
+      enable = true;
+    };
   };
 };
 ```
@@ -240,16 +447,19 @@ Operations features provide declarative access to infrastructure. Profiles,
 clusters, and credentials are separate so the same module can be reused across
 hosts.
 
-| Option                                   | Default      | Description                          |
-| ---------------------------------------- | ------------ | ------------------------------------ |
-| `features.ops.enable`                    | `true`       | Infrastructure and operations tools. |
-| `features.ops.pvetui.enable`             | `ops.enable` | Proxmox VE terminal UI.              |
-| `features.ops.pvetui.profiles`           | `[]`         | Proxmox server profiles.             |
-| `features.ops.pvetui.defaultProfile`     | `""`         | Default Proxmox profile or group.    |
-| `features.ops.pvetui.groups`             | `{}`         | Proxmox profile groups.              |
-| `features.ops.kubernetes.enable`         | `ops.enable` | Kubernetes tools with OIDC support.  |
-| `features.ops.kubernetes.clusters`       | `[]`         | Kubernetes cluster definitions.      |
-| `features.ops.kubernetes.defaultContext` | `""`         | Default Kubernetes context.          |
+| Option                                   | Default       | Description                                                                        |
+| ---------------------------------------- | ------------- | ---------------------------------------------------------------------------------- |
+| `features.ops.enable`                    | `true`        | Infrastructure and operations tools.                                               |
+| `features.ops.pvetui.enable`             | `ops.enable`  | Proxmox VE terminal UI.                                                            |
+| `features.ops.pvetui.profiles`           | `[]`          | Proxmox server profiles.                                                           |
+| `features.ops.pvetui.defaultProfile`     | `""`          | Default Proxmox profile or group.                                                  |
+| `features.ops.pvetui.groups`             | `{}`          | Proxmox profile groups.                                                            |
+| `features.ops.pvetui.profiles.*`         | See module    | Profile fields: `name`, `addr`, `user`, `realm`, `tokenId`, SSH, and TLS settings. |
+| `features.ops.pvetui.groups.*.mode`      | `"aggregate"` | Group mode: `"aggregate"` or `"cluster"`.                                          |
+| `features.ops.kubernetes.enable`         | `ops.enable`  | Kubernetes tools with OIDC support.                                                |
+| `features.ops.kubernetes.clusters`       | `[]`          | Kubernetes cluster definitions.                                                    |
+| `features.ops.kubernetes.clusters.*`     | See module    | Cluster fields: `name`, `server`, `caData`, namespace, user, and OIDC settings.    |
+| `features.ops.kubernetes.defaultContext` | `""`          | Default Kubernetes context.                                                        |
 
 ```nix
 features = {
@@ -257,7 +467,7 @@ features = {
     enable = true;
     kubernetes = {
       enable = true;
-      defaultContext = "cluster.example.org";
+      defaultContext = "";
     };
   };
 };
@@ -325,18 +535,6 @@ sops = {
 };
 ```
 
-## Networking Policy
-
-The following implementation choices apply to the managed networking stack and
-normally do not need per-host overrides:
-
-- NetworkManager owns connection profiles, IP configuration, and routing.
-- `iwd` is used as NetworkManager's WiFi backend.
-- Docker/Tailscale interfaces are unmanaged in NetworkManager: `docker0`, `br-*`, `veth*`, `tailscale0`.
-- Desktop hosts disable IPv6 only on Docker bridge/veth interfaces to reduce local development link churn.
-- LLMNR is disabled in `systemd-resolved` to avoid resolver scopes on Docker/veth links.
-- Desktop Ethernet disables WiFi autoconnect while active.
-
 ## User Options
 
 These options describe the primary local user. Passwords and other sensitive
@@ -370,8 +568,7 @@ sessions.
 | `theme.catppuccin.flavor`                | `"mocha"`            | `"latte"` / `"frappe"` / `"macchiato"` / `"mocha"`                                                                                                                                   |
 | `theme.catppuccin.accent`                | `"mauve"`            | Accent color (14 options: blue, flamingo, green, lavender, maroon, mauve, peach, pink, red, rosewater, sapphire, sky, teal, yellow)                                                  |
 | `theme.scale`                            | `1.0`                | DPI / monitor scale factor                                                                                                                                                           |
-| `theme.backgrounds.path`                 | `"nix-black-4k.png"` | Wallpaper filename in archive, or path if `theme.backgrounds.enable = false`                                                                                                         |
-| `theme.backgrounds.enable`               | `true`               | Extract wallpapers from encrypted archive at boot                                                                                                                                    |
+| `theme.backgrounds.path`                 | `"nix-black-4k.png"` | Wallpaper filename in archive, direct path, or URL                                                                                                                                   |
 | `theme.backgrounds.catppuccinize.enable` | `true`               | Apply Catppuccin color grading to wallpapers via gowall                                                                                                                              |
 | `theme.backgrounds.catppuccinize.invert` | `false`              | Invert wallpaper colors before Catppuccin color mapping                                                                                                                              |
 | `theme.backgrounds.catppuccinize.accent` | `[<system accent>]`  | Wallpaper accent colors for gowall LUT mapping. `null` = all 14 flavour accents; `["lavender"]` = single accent shaded 14 ways; `["blue" "lavender"]` = cycled accents, each shaded. |
@@ -379,12 +576,20 @@ sessions.
 | `theme.radius.default`                   | `16`                 | Border radius for windows/panels/notifications                                                                                                                                       |
 | `theme.gaps.inner`                       | `8`                  | Gaps between windows                                                                                                                                                                 |
 | `theme.gaps.outer`                       | `16`                 | Gaps at screen edges                                                                                                                                                                 |
+| `theme.spacing.*`                        | See module           | Derived spacing values used by desktop components.                                                                                                                                   |
+| `theme.sizes.launcher`                   | See module           | Launcher and panel sizing.                                                                                                                                                           |
+| `theme.alpha.*`                          | See module           | Shared opacity values for desktop components.                                                                                                                                        |
 | `theme.border.width`                     | `2`                  | Window border width                                                                                                                                                                  |
+| `theme.border.subtle`                    | See module           | Subtle border color.                                                                                                                                                                 |
 | `theme.cursor.name`                      | auto                 | Cursor theme (`"Breeze_Light"` on latte, `"breeze_cursors"` otherwise)                                                                                                               |
 | `theme.cursor.package`                   | `kdePackages.breeze` | Cursor theme package                                                                                                                                                                 |
 | `theme.cursor.size`                      | `24`                 | Cursor size                                                                                                                                                                          |
 | `theme.icons.name`                       | auto                 | Icon theme (`"Papirus-Light"` on latte, `"Papirus-Dark"` otherwise)                                                                                                                  |
 | `theme.icons.package`                    | Catppuccin Papirus   | Icon theme package (always Catppuccin Papirus)                                                                                                                                       |
+| `theme.wallpaperPath`                    | _(read-only)_        | Resolved wallpaper path.                                                                                                                                                             |
+| `theme.blurredWallpaperPath`             | _(read-only)_        | Resolved blurred wallpaper path.                                                                                                                                                     |
+| `theme.snowflakeCatppuccinized`          | _(read-only)_        | Resolved Catppuccin snowflake asset.                                                                                                                                                 |
+| `theme.qtConfig`                         | _(read-only)_        | Resolved Qt configuration.                                                                                                                                                           |
 
 ```nix
 theme = {
@@ -456,6 +661,15 @@ Font options are set in `configuration.nix` and shared with Home Manager.
 | `fonts.defaults.size`         | `11`                        | Default font size for UI elements                                                            |
 | `fonts.defaults.terminalSize` | `fonts.defaults.size`       | Terminal (kitty) font size                                                                   |
 | `fonts.defaults.uiPixelSize`  | `floor(size * 4 / 3)`       | Resolved pixel size used by Waybar and other UI components (read-only).                      |
+
+```nix
+fonts.defaults = {
+  monospace = "JetBrainsMono Nerd Font";
+  uiStyle = "sans-serif";
+  size = 11;
+  terminalSize = 12;
+};
+```
 
 ## Locale Options
 
@@ -612,106 +826,6 @@ The default list is extended by feature toggles:
 Each entry contains a display `name` and an `exec` command. KDE writes XDG
 autostart entries; Hyprland starts the commands with `exec-once`.
 
-## File Manager
-
-`features.desktop.fileManager` selects the primary file manager and keeps the
-desktop shortcuts, MIME associations, and pinned applications consistent.
-
-| Option                         | Default     | Description                                    |
-| ------------------------------ | ----------- | ---------------------------------------------- |
-| `features.desktop.fileManager` | `"default"` | Select the GUI or terminal-based file manager. |
-
-| Value        | Behavior                                                           |
-| ------------ | ------------------------------------------------------------------ |
-| `"default"`  | Use Nautilus on Hyprland or Dolphin on KDE.                        |
-| `"terminal"` | Use Yazi from Kitty and remove the GUI file manager from the pins. |
-
-```nix
-features = {
-  desktop = {
-    fileManager = "terminal";
-  };
-};
-```
-
-Yazi integrations follow the existing feature toggles. Heavy preview
-integrations are enabled only when their corresponding application or
-development feature is enabled.
-
-Press `Space` followed by `.` in Yazi to toggle hidden files. The shortcut is
-configured in the Yazi module and is available independently of the preview
-feature toggles.
-
-## File Manager Bookmarks
-
-Bookmarks are shared across the supported file managers. The same declarative
-list is rendered as GTK bookmarks, KDE places, or Yazi shortcuts depending on
-the active desktop.
-
-| Option                  | Default           | Description                           |
-| ----------------------- | ----------------- | ------------------------------------- |
-| `fileManager.bookmarks` | Feature-dependent | Sidebar bookmarks and Yazi shortcuts. |
-
-```nix
-fileManager = {
-  bookmarks = [
-    {
-      name = "Projects";
-      path = "/home/user/Projects";
-      icon = "folder-development";
-    }
-  ];
-};
-```
-
-Each entry has a display `name`, an absolute `path`, and an optional icon. The
-`icon` field defaults to `"folder"`.
-
-Bookmarks are managed declaratively for Nautilus, Dolphin, and Yazi.
-
-## Pinned Dock/Taskbar Apps
-
-Pinned applications control desktop presentation, not package installation.
-The default list follows the enabled feature groups and the selected file
-manager.
-
-| Option                                    | Default           | Description                                         |
-| ----------------------------------------- | ----------------- | --------------------------------------------------- |
-| `features.desktop.pinnedApps.declarative` | `true`            | Enforce the pinned app list on every desktop start. |
-| `features.desktop.pinnedApps.entries`     | Feature-dependent | Desktop files pinned to the dock or taskbar.        |
-
-```nix
-features = {
-  desktop = {
-    pinnedApps = {
-    declarative = true;
-    entries = [
-      "firefox"
-      "kitty"
-    ];
-    };
-  };
-};
-```
-
-The default list is extended by feature toggles:
-
-- `features.dev.enable` adds Neovim
-- `features.apps.enable` adds Mumble, Obsidian, Vesktop, Spotify
-- `features.gaming.enable` adds Steam
-
-Each entry is a desktop file name without the `.desktop` suffix, such as
-`"firefox"`.
-
-## KDE Desktop Options
-
-| Option                                       | Default            | Description                                       |
-| -------------------------------------------- | ------------------ | ------------------------------------------------- |
-| `features.desktop.kde.favorites.declarative` | `true`             | Enforce KDE Kickoff favorites on every KDE start. |
-| `features.desktop.kde.favorites.entries`     | `kde.nix` defaults | KDE Kickoff favorites as desktop file names.      |
-| `features.desktop.kde.tray.shown`            | `kde.nix` defaults | KDE tray items displayed directly in the panel.   |
-| `features.desktop.kde.tray.hidden`           | `kde.nix` defaults | KDE tray items kept behind the tray popup.        |
-
 ## Idle / Power Management
 
 These values define the shared idle policy. Hyprland implements it with
@@ -762,40 +876,6 @@ idle = {
 };
 ```
 
-## Impermanence
-
-Impermanence recreates the root filesystem on every boot. Persistent state is
-kept under `/persist` and is declared by feature modules or
-`features.impermanence.extraPaths`. This makes the base system reproducible,
-but it also means that undeclared state is intentionally discarded.
-
-Use `extraPaths` only for state that is not already covered by a feature module.
-The installation must provide the `/persist` Btrfs subvolume when this feature
-is enabled. See [INSTALL.md](INSTALL.md#impermanence) for the installation
-layout.
-
-```nix
-features = {
-  impermanence = {
-    enable = true;
-    extraPaths = [ "/var/lib/example" ];
-  };
-};
-```
-
-## Snapshots
-
-Snapshots are separate from impermanence. Impermanence controls what survives a
-reboot; snapshots provide historical restore points for persistent Btrfs state.
-Snapshots do not make undeclared root state persistent and are not a substitute
-for backups. See [SNAPSHOTS.md](SNAPSHOTS.md) for restore, browse, and cleanup.
-
-```nix
-features = {
-  snapshots.enable = false;
-};
-```
-
 ## System Requirements
 
 The default installation expects a Btrfs layout with `@` for `/`, `@home` for
@@ -811,10 +891,14 @@ disk layout:
 ```nix
 features = {
   # Traditional persistent root (no rollback)
-  impermanence.enable = false;
+  impermanence = {
+    enable = false;
+  };
 
   # Unencrypted disk (not recommended for laptops)
-  encryption.enable = false;
+  encryption = {
+    enable = false;
+  };
 };
 ```
 
