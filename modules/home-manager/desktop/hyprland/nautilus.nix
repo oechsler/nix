@@ -37,4 +37,9 @@
     };
     Install.WantedBy = [ "default.target" ];
   };
+
+  xdg.mimeApps.defaultApplications = {
+    "inode/directory" = [ "org.gnome.Nautilus.desktop" ];
+    "inode/mount-point" = [ "org.gnome.Nautilus.desktop" ];
+  };
 }

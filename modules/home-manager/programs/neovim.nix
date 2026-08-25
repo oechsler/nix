@@ -20,6 +20,42 @@
 # Aliases:
 #   vi, vim → nvim
 #   EDITOR → nvim
+#
+# Keybindings (leader = Space):
+#   Esc                  - Clear search highlights
+#   Esc+Esc (terminal)   - Exit terminal mode
+#   <leader>ff/fg        - Find files / grep
+#   <leader>fb/fh        - Buffers / help
+#   <leader>fd/fr        - Diagnostics / resume search
+#   <leader>f./ft       - Recent files / TODOs
+#   <leader>/            - Search current buffer
+#   <leader>fs           - Search and replace (visual selection supported)
+#   <leader>gb/gp        - Toggle Git blame / preview hunk
+#   <leader>gr/gs        - Reset / stage hunk
+#   <leader>e            - Focus file explorer
+#   s / S                - Flash jump / Flash Treesitter
+#   <leader>h/j/k/l      - Focus split left/down/up/right
+#   <leader>Enter/-      - Vertical / horizontal split
+#   <leader>q/z          - Close split / zoom current split
+#   Ctrl+H/J/K/L         - Resize split left/down/up/right
+#   <leader>1-9          - Switch to buffer 1-9
+#   <leader>t/w          - New / close buffer
+#   Ctrl+Tab             - Next buffer tab
+#   Ctrl+Shift+Tab       - Previous buffer tab
+#   Alt+Left/Right       - Move buffer tab left/right
+#   <leader>bp/bc        - Pick buffer / pick buffer to close
+#   <leader>cf           - Format code
+#   <leader>ot           - Toggle OpenCode
+#   <leader>oa/os        - Ask OpenCode / select OpenCode
+#   <leader>of/or/oi     - Fix diagnostics / review / implement
+#   <leader>op           - Select OpenCode prompt
+#   <leader>on/ou        - New session / undo last session change
+#   go / goo             - Send object / line to OpenCode
+#   Ctrl+Shift+U/D       - Scroll OpenCode up/down
+#   LSP: gd/gD/gr/gi     - Definition / declaration / references / implementation
+#   LSP: K               - Hover documentation
+#   LSP: <leader>ca/rn   - Code action / rename
+#   LSP: <leader>ds      - Document symbols
 
 {
   pkgs,
