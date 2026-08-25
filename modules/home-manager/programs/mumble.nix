@@ -1,7 +1,7 @@
 # Mumble voice chat configuration
 #
 # This module installs Mumble, manages its user configuration and provides
-# desktop-specific launch commands for KDE and Hyprland.
+# desktop integration for KDE and Hyprland.
 
 {
   config,
@@ -77,13 +77,13 @@ let
       mumble_tmp="$(mktemp "''${mumble_config}.XXXXXX")"
       if ${pkgs.jq}/bin/jq \
         --arg username ${lib.escapeShellArg cfg.username} \
-        --argjson public-list ${lib.boolToString (!cfg.disablePublicServerList)} \
+        --argjson public_list ${lib.boolToString (!cfg.disablePublicServerList)} \
         '.audio.input_system = "PulseAudio"
          | .audio.output_system = "PulseAudio"
          | .ui.theme = ""
          | .ui.theme_style = ""
          | .last_connection.username = $username
-         | .ui.disable_public_server_list = ($public-list | not)
+         | .ui.disable_public_server_list = ($public_list | not)
          | .network.auto_connect_to_last_server = ${lib.boolToString cfg.autoConnectToLastServer}
          | .network.reconnect_automatically = ${lib.boolToString cfg.reconnectAutomatically}
          | .ui.hide_in_tray = ${lib.boolToString cfg.hideInTray}
@@ -123,36 +123,6 @@ let
     ${serverSql}
   '';
 
-  hyprlandCommand = pkgs.writeShellScript "mumble-launcher" ''
-    set -eu
-
-    # Mumble uses this flag to decide whether its previous session ended
-    # normally. Restore it before startup so a recreated config is accepted.
-    if [ -f "${configFile}" ]; then
-      ${pkgs.jq}/bin/jq \
-        '.mumble_has_quit_normally = true
-         | .ui.theme = ""
-         | .ui.theme_style = ""
-         | .ui.disable_public_server_list = ${lib.boolToString cfg.disablePublicServerList}' \
-        "${configFile}" > "${configFile}.tmp"
-      ${pkgs.coreutils}/bin/mv "${configFile}.tmp" "${configFile}"
-    fi
-
-    # The activation hook handles the normal case. Repeat the import here so
-    # Hyprland remains correct when the secret changes between activations.
-    if ${lib.boolToString cfg.certificate.enable} && [ -r "${certificatePath}" ] && [ -f "${configFile}" ]; then
-      if ${pkgs.jq}/bin/jq --rawfile certificate "${certificatePath}" \
-        '.net.certificate = ($certificate | gsub("\\s"; ""))' \
-        "${configFile}" > "${configFile}.tmp"; then
-        ${pkgs.coreutils}/bin/mv "${configFile}.tmp" "${configFile}"
-      else
-        ${pkgs.coreutils}/bin/rm -f "${configFile}.tmp"
-      fi
-    fi
-
-    exec ${pkgs.mumble}/bin/mumble "$@"
-  '';
-
   setQuitNormallyCommand = pkgs.writeShellScript "mumble-set-quit-flag" ''
     [ -n "''${MAINPID:-}" ] || exit 0
     kill -0 "$MAINPID" 2>/dev/null || exit 0
@@ -168,13 +138,6 @@ in
       readOnly = true;
       default = "${pkgs.mumble}/bin/mumble";
       description = "Direct Mumble command for desktop launchers.";
-    };
-
-    hyprlandCommand = lib.mkOption {
-      type = lib.types.str;
-      readOnly = true;
-      default = "${hyprlandCommand}";
-      description = "Mumble command with Hyprland-specific runtime preparation.";
     };
 
     setQuitNormallyCommand = lib.mkOption {
