@@ -196,6 +196,11 @@ in
           description = "KDE system-tray items hidden behind the tray popup.";
         };
       };
+      kde.favorites = lib.mkOption {
+        type = lib.types.nullOr (lib.types.listOf lib.types.str);
+        default = null;
+        description = "Initial KDE Kickoff favorites as desktop file names; existing favorites are preserved.";
+      };
       browser = {
         enable = (lib.mkEnableOption "default web browser") // {
           default = true;

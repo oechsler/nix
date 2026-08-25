@@ -123,6 +123,7 @@ the selected desktop session.
 | `features.desktop.wm`                      | `"hyprland"`                  | Desktop: `"hyprland"` or `"kde"`.                                  |
 | `features.desktop.login`                   | `"greeter"`                   | `"greeter"` or `"autologin"`.                                      |
 | `features.desktop.fileManager`             | `"default"`                   | `"default"` or terminal-based Yazi integration.                    |
+| `features.desktop.kde.favorites`           | `kde.nix` defaults            | Initial KDE Kickoff favorites; existing favorites are preserved.   |
 | `features.desktop.kde.tray.shown`          | `kde.nix` defaults            | KDE tray items displayed directly in the panel.                    |
 | `features.desktop.kde.tray.hidden`         | `kde.nix` defaults            | KDE tray items kept behind the tray popup.                         |
 | `features.desktop.browser.enable`          | `true`                        | Managed default browser.                                           |
@@ -143,6 +144,12 @@ features = {
   desktop = {
     wm = "kde";
     login = "greeter";
+    kde.favorites = [
+      "librewolf"
+      "org.kde.dolphin"
+      "kitty"
+      "org.kde.systemsettings"
+    ];
     kde.tray = {
       shown = [
         "org.kde.plasma.networkmanagement"

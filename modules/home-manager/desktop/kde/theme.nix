@@ -70,6 +70,10 @@ let
   );
 
   kdeTray = features.desktop.kde.tray;
+  kickoffFavorites = features.desktop.kde.favorites or [ ];
+  kickoffFavoritesStr = lib.concatStringsSep "," (
+    map (app: "applications:${app}.desktop") kickoffFavorites
+  );
 
   # Kickoff menu icon (KDE start menu)
   kickoffIcon = if isLight then "nix-snowflake" else "nix-snowflake-white";
@@ -104,11 +108,13 @@ let
 
       Usage: plasma-widget-config <config-file> <plugin> <key> <value>
       Finds the widget with the given plugin name and sets key=value
-      in its [Configuration][General] section.
+      in its [Configuration][General] section. With --if-missing, an
+      existing value is left untouched.
       """
       import sys, os
 
       config_path, plugin, key, value = sys.argv[1:5]
+      only_if_missing = len(sys.argv) > 5 and sys.argv[5] == "--if-missing"
 
       def write_atomic(content):
           temporary = config_path + ".tmp"
@@ -159,6 +165,8 @@ let
                   found = True
               in_target = (s == target)
           if in_target and s.startswith(f"{key}="):
+              if only_if_missing:
+                  sys.exit(0)
               result.append(f"{key}={value}\n")
               found = True
               continue
@@ -316,6 +324,7 @@ in
               || ${plasmaWidgetConfig} "$config" "org.kde.plasma.taskmanager" "launchers" "${pinnedLaunchersStr}" \
               || true
             ${plasmaWidgetConfig} "$config" "org.kde.plasma.kickoff" "icon" "${kickoffIcon}" 2>/dev/null || true
+            ${plasmaWidgetConfig} "$config" "org.kde.plasma.kickoff" "favorites" "${kickoffFavoritesStr}" --if-missing 2>/dev/null || true
           fi
         ''}
         X-KDE-autostart-phase=2
