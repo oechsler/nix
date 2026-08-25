@@ -25,20 +25,59 @@
 # - Desktops: ddcutil (DDC/CI monitor brightness) with hyprsunset gamma fallback
 #   for idle dimming when no DDC-capable monitor is attached
 #
-# Keybindings overview:
-#   Super+Q          - Close window
-#   Super+M          - Exit Hyprland
-#   Super+V          - Toggle floating
-#   Super+Space      - Application launcher (rofi)
-#   Super+Tab        - MRU window switcher (native Hyprland)
-#   Super+[1-9]      - Switch workspace
-#   Super+Shift+[1-9] - Move window to workspace
-#   Super+F          - Toggle maximize
-#   Super+Ctrl+H/L   - Resize window horizontally
-#   Super+Ctrl+J/K   - Resize window vertically
-#   Super+C          - Clipboard manager
-#   Super+R          - Rofi toggle
-#   Super+W          - Window list
+# Keyboard shortcuts (mainMod = Super):
+#
+# Applications and system:
+#   Super+Enter          - Open terminal (Kitty)
+#   Super+Q              - Close focused window
+#   Super+M              - Open power menu
+#   Super+Shift+Q        - Lock screen
+#   Super+E              - Open file manager
+#   Super+V              - Toggle floating window
+#   Super+R              - Open application launcher (Rofi)
+#   Super+W              - Open window list (Rofi)
+#   Super+B              - Open places (removable media, bookmarks, SMB shares)
+#   Super+C              - Open clipboard history
+#   Super+Shift+R        - Reload Waybar
+#   Alt+K                - Move selection up in Rofi
+#   Alt+J                - Move selection down in Rofi
+#   Super+P              - Toggle pseudotiling
+#   Super+Space          - Toggle split layout
+#   Super+F              - Toggle fullscreen
+#
+# Screenshots:
+#   Print                - Capture current output
+#   Shift+Print          - Capture a region
+#   Super+Shift+Print    - Capture the focused window
+#
+# Focus and window movement:
+#   Super+H/J/K/L        - Focus left/down/up/right
+#   Super+Arrow keys     - Focus left/right/up/down
+#   Super+Shift+H/J/K/L - Move window left/down/up/right
+#   Super+Ctrl+Left/Right - Focus the other monitor
+#   Super+Ctrl+H/L      - Resize window horizontally
+#   Super+Ctrl+J/K      - Resize window vertically
+#   Super+S              - Toggle special workspace "magic"
+#   Super+Shift+S        - Move window to special workspace "magic"
+#   Super+Wheel down/up  - Switch to next/previous workspace
+#
+# Workspaces:
+#   Super+[1-8]          - Switch to workspace 1-8
+#   Super+Shift+[1-8]    - Move window to workspace 1-8
+#
+# Media and hardware keys (also active while locked where noted):
+#   XF86AudioRaiseVolume / XF86AudioLowerVolume - Adjust volume (locked)
+#   XF86AudioMute        - Toggle output mute (locked)
+#   XF86AudioMicMute     - Toggle microphone mute (locked)
+#   XF86MonBrightnessUp/Down - Adjust display brightness (locked)
+#   Super+F5 / Super+F6  - Adjust display brightness down/up (locked)
+#   XF86AudioNext/Prev   - Next/previous track (locked)
+#   XF86AudioPlay/Pause  - Toggle playback (locked)
+#   XF86PowerOff         - Suspend when locked, otherwise open power menu
+#
+# Mouse:
+#   Super+Left click     - Move focused window
+#   Super+Right click    - Resize focused window
 
 {
   config,
@@ -825,6 +864,7 @@ in
           (bindCallbackWith { } (modKey "V") toggleFloating)
           (execBind (modKey "R") config.rofi.toggle)
           (execBind (modKey "W") config.rofi.windowList)
+          (execBind (modKey "B") config.rofi.places)
           (bind (modKey "P") "window.pseudo()")
           (bind (modKey "Space") ''layout("togglesplit")'')
           (bind (modKey "F") ''window.fullscreen({ mode = "maximized" })'')

@@ -6,6 +6,7 @@
 # 3. Power menu (lock, suspend, logout, reboot, shutdown)
 # 4. Clipboard manager (with image preview support)
 # 5. Power profile switcher (performance, balanced, power-saver)
+# 6. Places menu (removable media, bookmarks, SMB shares)
 #
 # Features:
 # - Toggle behavior: Press same key again to close
@@ -28,6 +29,7 @@
   fonts,
   theme,
   i18n,
+  features,
   ...
 }:
 
@@ -44,6 +46,66 @@ let
   profileSaver = "󰌪  ${translate "Power saver" "Energiesparen"}";
   profilePerformance = "󱐋  ${translate "Performance" "Leistung"}";
   profilePrompt = translate "Power profile" "Energieprofil";
+  placesPrompt = translate "Places" "Orte";
+
+  places =
+    config.fileManager.bookmarks
+    ++ map (share: {
+      name = share.label;
+      path = "${config.home.homeDirectory}/smb/${share.label}";
+      icon = "network-server";
+    }) features.smb.shares;
+
+  placesEntries = lib.concatMapStringsSep "\n" (place: ''
+    printf '%s\0icon\x1f%s\n' ${lib.escapeShellArg place.name} ${lib.escapeShellArg place.icon}
+  '') places;
+
+  placesCases = lib.concatMapStringsSep "\n" (place: ''
+    ${lib.escapeShellArg place.name}) open_path ${lib.escapeShellArg place.path} ;;
+  '') places;
+
+  openPath = ''${pkgs.xdg-utils}/bin/xdg-open "$1" >/dev/null 2>&1 &'';
+
+  placesMenu = pkgs.writeShellScript "rofi-places" ''
+    if pgrep -x rofi > /dev/null; then
+      if pgrep -fa "rofi -dmenu.*${placesPrompt}" > /dev/null; then
+        pkill -x rofi
+        exit 0
+      fi
+      pkill -x rofi
+    fi
+
+    open_path() {
+      ${openPath}
+    }
+
+    removable_mounts=$(${pkgs.util-linux}/bin/lsblk --json --output LABEL,MOUNTPOINT,RM,TYPE 2>/dev/null \
+      | ${pkgs.jq}/bin/jq -r '.blockdevices[]? | recurse(.children[]?) | select(.rm == true and .mountpoint != null) | [(.label // "Wechselmedium"), .mountpoint] | @tsv')
+
+    choice=$(
+      {
+        while IFS=$'\t' read -r label mountpoint; do
+          if [ -n "$mountpoint" ]; then
+            printf '%s\0icon\x1f%s\n' "$label" "drive-removable-media"
+          fi
+        done <<< "$removable_mounts"
+
+        ${placesEntries}
+      } | rofi -dmenu -p ${lib.escapeShellArg placesPrompt} -i -no-custom -show-icons \
+          -theme-str 'element-icon { size: 22px; }'
+    )
+
+    case "$choice" in
+      ${placesCases}
+    esac
+
+    while IFS=$'\t' read -r label mountpoint; do
+      if [ "$label" = "$choice" ] && [ -n "$mountpoint" ]; then
+        open_path "$mountpoint"
+        exit 0
+      fi
+    done <<< "$removable_mounts"
+  '';
 
   # ============================================================================
   # TOGGLE ROFI SCRIPT
@@ -249,6 +311,12 @@ in
       readOnly = true;
       description = "Script to show power profile selector in rofi";
     };
+    places = lib.mkOption {
+      type = lib.types.path;
+      default = placesMenu;
+      readOnly = true;
+      description = "Script to show file manager bookmarks and SMB shares";
+    };
   };
 
   #===========================
@@ -273,6 +341,8 @@ in
         display-window = translate "Windows" "Fenster";
         window-format = "{w}  {c}  {t}";
         window-match-fields = "title,class,role,name";
+        kb-row-up = "Up,Alt+k";
+        kb-row-down = "Down,Alt+j";
       };
       theme =
         let

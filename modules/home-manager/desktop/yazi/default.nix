@@ -4,6 +4,21 @@
 #
 # Active when:
 #   features.desktop.fileManager = "terminal"
+#
+# Keybindings (leader = Space):
+#   g+1-9/0            - Open configured bookmark 1-10
+#   Space+i            - Show help
+#   y / p              - Copy / paste files via the system clipboard
+#   Space+h/l          - Previous / next tab
+#   Space+H/L          - Move tab left / right
+#   Space+t            - New tab in the current directory
+#   Space+q            - Close tab or quit Yazi
+#   Space+1-9/0        - Switch to tab 1-10
+#   Space+d+m          - Open recycle bin
+#   Space+d+u          - Restore last deleted files
+#   Space+d+U          - Restore files interactively
+#   Space+p+m          - Toggle media metadata (when enabled)
+#   Space+p+i          - Toggle media preview image (when enabled)
 
 {
   config,
@@ -399,7 +414,10 @@ in
     mimeType = [ "inode/directory" ];
   };
 
-  xdg.mimeApps.defaultApplications."inode/directory" = [ "yazi.desktop" ];
+  xdg.mimeApps.defaultApplications = {
+    "inode/directory" = [ "yazi.desktop" ];
+    "inode/mount-point" = [ "yazi.desktop" ];
+  };
 
   programs.fish.functions.y = {
     body = ''

@@ -11,11 +11,26 @@
 # - Window/pane navigation with Alt+H/J/K/L
 # - Window creation/closing with Alt+Enter/Q
 #
-# Keybindings:
-#   Alt+H/J/K/L - Navigate between panes
-#   Alt+Enter - New window
-#   Alt+Q - Kill pane
-#   Alt+1-9 - Switch to window 1-9
+# Keybindings (no prefix; Alt is used directly):
+#   Alt+H/J/K/L       - Navigate between panes
+#   Alt+Shift+H/J/K/L - Swap pane left/down/up/right
+#   Alt+Enter         - Split horizontally
+#   Alt+-             - Split vertically
+#   Alt+Q             - Kill pane
+#   Alt+Space         - Toggle even horizontal/vertical layout
+#   Alt+F             - Zoom/unzoom pane
+#   Alt+Ctrl+H/J/K/L  - Resize pane left/down/up/right
+#   Alt+R, H/J/K/L    - Resize mode, then resize by 5 cells
+#   Alt+1-9/0          - Select or create window 1-10
+#   Alt+T             - Create window in the current directory
+#   Alt+W             - Kill window
+#   Alt+S             - Choose session/window tree
+#   Alt+Shift+S       - Create session
+#   Alt+N             - Rename session
+#   Alt+Shift+N       - Rename window
+#   Alt+Shift+W       - Kill session
+#   Alt+M, S           - Move current window to a selected session
+#   Alt+M, 1-9/0       - Move current pane to window 1-10
 
 { config, pkgs, ... }:
 

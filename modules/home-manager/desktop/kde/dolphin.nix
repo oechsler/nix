@@ -115,6 +115,11 @@ in
        <bookmark:icon name="user-trash"/>
       </metadata></info>
      </bookmark>
-    </xbel>
+     </xbel>
   '';
+
+  xdg.mimeApps.defaultApplications = {
+    "inode/directory" = [ "org.kde.dolphin.desktop" ];
+    "inode/mount-point" = [ "org.kde.dolphin.desktop" ];
+  };
 }
