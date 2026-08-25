@@ -106,8 +106,24 @@ window#waybar {
   border: border_width solid @blue;
 }
 
-/* Shared status pill: tray through clock */
-#tray,
+/* Tray pill */
+#tray {
+  background-color: alpha(@base, container_alpha);
+  padding: vertical_spacing module_spacing;
+  margin: 0;
+  margin-left: content_spacing;
+  border-radius: window_radius;
+  border: border_width solid @blue;
+  color: papirus_text;
+  font-weight: bold;
+}
+
+#tray image {
+  -gtk-icon-style: symbolic;
+  color: papirus_text;
+}
+
+/* Shared status pill */
 #network,
 #bluetooth,
 #pulseaudio,
@@ -125,19 +141,6 @@ window#waybar {
   font-weight: bold;
 }
 
-#tray {
-  margin-left: content_spacing;
-  border-left: border_width solid @blue;
-  border-top-left-radius: window_radius;
-  border-bottom-left-radius: window_radius;
-}
-
-#tray image {
-  -gtk-icon-style: symbolic;
-  color: papirus_text;
-}
-
-#tray,
 #network,
 #bluetooth,
 #pulseaudio,
@@ -150,8 +153,12 @@ window#waybar {
 }
 
 #network {
+  margin-left: content_spacing;
   padding-left: module_spacing;
   padding-right: network_right_spacing;
+  border-left: border_width solid @blue;
+  border-top-left-radius: window_radius;
+  border-bottom-left-radius: window_radius;
 }
 
 #clock {

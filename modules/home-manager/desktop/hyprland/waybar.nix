@@ -48,6 +48,7 @@ let
   # Small Waybar-specific refinement while staying tied to shared theme spacing.
   fineSpacing = theme.spacing.compact / 2;
   iconSize = fonts.uiPixelSize;
+  trayIconSize = builtins.floor (iconSize * 6 / 5);
   iconOpticalSpacing = builtins.floor (iconSize / 7);
 
   # Load and customize SCSS styling
@@ -74,7 +75,6 @@ let
         "content_spacing"
         "window_spacing"
         "network_right_spacing"
-        "icon_size"
         "launcher_width"
         "bar_height"
         "outer_spacing"
@@ -102,7 +102,6 @@ let
         "${toString theme.spacing.content}px"
         "${toString (theme.spacing.module + fineSpacing)}px"
         "${toString (theme.spacing.module + (iconOpticalSpacing * 2))}px"
-        "${toString iconSize}px"
         "${toString theme.sizes.launcher}px"
         "${toString theme.gaps.outer}px"
         "${toString theme.gaps.outer}px"
@@ -259,8 +258,8 @@ in
         };
 
         "tray" = {
-          spacing = theme.spacing.module + fineSpacing;
-          icon-size = iconSize;
+          spacing = theme.spacing.module;
+          icon-size = trayIconSize;
           icons = defaultTrayIcons // config.waybar.tray.icons;
         };
 
