@@ -41,6 +41,9 @@ in
     ]
     ++ lib.optionals features.apps.enable [
       "vesktop"
+    ]
+    ++ lib.optional (features.apps.enable && features.apps.mumble.enable) "info.mumble.Mumble"
+    ++ lib.optionals features.apps.enable [
       "spotify"
     ];
 }
