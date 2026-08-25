@@ -44,8 +44,11 @@ let
   # Theme variables
   inherit (config.catppuccin) accent;
   isLight = config.catppuccin.flavor == "latte";
+  papirusText = if isLight then "#444444" else "#dfdfdf";
   # Small Waybar-specific refinement while staying tied to shared theme spacing.
   fineSpacing = theme.spacing.compact / 2;
+  iconSize = fonts.uiPixelSize;
+  iconOpticalSpacing = builtins.floor (iconSize / 7);
 
   # Load and customize SCSS styling
   rawStyle = builtins.readFile ./waybar-style.scss;
@@ -53,6 +56,7 @@ let
     builtins.replaceStrings
       [
         "@blue"
+        "papirus_text"
         "system_font"
         "separator_alpha"
         "container_alpha"
@@ -69,9 +73,8 @@ let
         "module_spacing"
         "content_spacing"
         "window_spacing"
-        "tray_spacing"
-        "edge_spacing"
-        "clock_edge_spacing"
+        "network_right_spacing"
+        "icon_size"
         "launcher_width"
         "bar_height"
         "outer_spacing"
@@ -81,6 +84,7 @@ let
       ]
       [
         "@${accent}"
+        papirusText
         fonts.ui
         (if isLight then "0.15" else "0.5")
         (lib.strings.floatToString theme.alpha.container)
@@ -97,9 +101,8 @@ let
         "${toString theme.spacing.module}px"
         "${toString theme.spacing.content}px"
         "${toString (theme.spacing.module + fineSpacing)}px"
-        "${toString (theme.spacing.control + fineSpacing)}px"
-        "${toString (theme.spacing.content + fineSpacing)}px"
-        "${toString (theme.spacing.module + fineSpacing)}px"
+        "${toString (theme.spacing.module + (iconOpticalSpacing * 2))}px"
+        "${toString iconSize}px"
         "${toString theme.sizes.launcher}px"
         "${toString theme.gaps.outer}px"
         "${toString theme.gaps.outer}px"
@@ -257,7 +260,7 @@ in
 
         "tray" = {
           spacing = theme.spacing.module + fineSpacing;
-          icon-size = 16;
+          icon-size = iconSize;
           icons = defaultTrayIcons // config.waybar.tray.icons;
         };
 
@@ -290,7 +293,7 @@ in
         };
 
         "pulseaudio" = {
-          format = "{icon}  <span rise='1500'>{volume}%</span>";
+          format = "{icon}  <span rise='1500'>{volume:3}%</span>";
           format-muted = "<span size='large'>󰝟</span>  <span rise='1500'>${i18n.translate "Muted" "Stumm"}</span>";
           format-icons = {
             default = [

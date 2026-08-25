@@ -9,7 +9,7 @@
 
 window#waybar {
   background-color: transparent;
-  color: @text;
+  color: papirus_text;
   margin-top: outer_spacing;
   margin-left: outer_spacing;
   margin-right: outer_spacing;
@@ -21,7 +21,7 @@ window#waybar {
 /* Launcher button */
 #custom-launcher {
   background-color: alpha(@base, container_alpha);
-  color: @text;
+  color: papirus_text;
   min-width: launcher_width;
   min-height: bar_height;
   padding: 0 control_spacing 0 compact_spacing;
@@ -39,12 +39,12 @@ window#waybar {
 }
 
 #custom-launcher:hover {
-  color: @blue;
+  color: papirus_text;
   text-shadow: 0 0 0.6em alpha(@blue, highlight_alpha);
 }
 
 #custom-launcher.active {
-  color: @blue;
+  color: papirus_text;
   text-shadow: 0 0 0.9em alpha(@blue, selected_alpha);
 }
 
@@ -91,13 +91,14 @@ window#waybar {
 
 #workspaces button.active {
   background-color: alpha(@blue, selected_alpha);
+  color: papirus_text;
   box-shadow: 0 0 0.9em alpha(@blue, highlight_alpha);
 }
 
 /* Window title */
 #window {
   background-color: alpha(@base, container_alpha);
-  color: @text;
+  color: papirus_text;
   font-weight: bold;
   padding: vertical_spacing window_spacing;
   margin: 0;
@@ -105,23 +106,8 @@ window#waybar {
   border: border_width solid @blue;
 }
 
-/* Tray - separate pill, monochrome icons */
-#tray {
-  background-color: alpha(@base, container_alpha);
-  padding: vertical_spacing tray_spacing;
-  margin: 0;
-  margin-left: content_spacing;
-  border-radius: window_radius;
-  border: border_width solid @blue;
-  color: @text;
-  font-weight: bold;
-}
-
-#tray image {
-  -gtk-icon-style: symbolic;
-}
-
-/* System status group - connected pill */
+/* Shared status pill: tray through clock */
+#tray,
 #network,
 #bluetooth,
 #pulseaudio,
@@ -135,11 +121,23 @@ window#waybar {
   border: border_width solid @blue;
   border-left: none;
   border-right: none;
-  color: @text;
+  color: papirus_text;
   font-weight: bold;
 }
 
-/* Floating separator between status widgets */
+#tray {
+  margin-left: content_spacing;
+  border-left: border_width solid @blue;
+  border-top-left-radius: window_radius;
+  border-bottom-left-radius: window_radius;
+}
+
+#tray image {
+  -gtk-icon-style: symbolic;
+  color: papirus_text;
+}
+
+#tray,
 #network,
 #bluetooth,
 #pulseaudio,
@@ -152,34 +150,30 @@ window#waybar {
 }
 
 #network {
-  margin-left: edge_spacing;
-  padding-right: edge_spacing;
-  border-left: border_width solid @blue;
-  border-top-left-radius: window_radius;
-  border-bottom-left-radius: window_radius;
+  padding-left: module_spacing;
+  padding-right: network_right_spacing;
 }
 
 #clock {
-  padding-right: clock_edge_spacing;
   border-right: border_width solid @blue;
   border-top-right-radius: window_radius;
   border-bottom-right-radius: window_radius;
 }
 
 #battery.charging {
-  color: @green;
+  color: papirus_text;
 }
 
 #battery.warning:not(.charging) {
-  color: @peach;
+  color: papirus_text;
 }
 
 #battery.critical:not(.charging) {
-  color: @base;
+  color: papirus_text;
   background-color: @red;
   border-color: @red;
 }
 
 #network.disconnected {
-  color: @red;
+  color: papirus_text;
 }
