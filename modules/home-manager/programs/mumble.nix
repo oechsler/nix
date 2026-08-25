@@ -152,6 +152,11 @@ let
     ${pkgs.coreutils}/bin/mv "${configFile}.tmp" "${configFile}"
   '';
 
+  mumbleCommand = pkgs.writeShellScript "mumble-launcher" ''
+    ${updateConfig}
+    exec ${pkgs.mumble}/bin/mumble "$@"
+  '';
+
 in
 {
   options.programs.mumble = {
@@ -167,6 +172,13 @@ in
       readOnly = true;
       default = "${updateConfig}";
       description = "Command used to create and update Mumble's configuration.";
+    };
+
+    launcher = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = "${mumbleCommand}";
+      description = "Mumble launcher with declarative configuration preparation.";
     };
 
     setQuitNormallyCommand = lib.mkOption {
