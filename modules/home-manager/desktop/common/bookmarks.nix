@@ -12,7 +12,7 @@
 # - Nextcloud
 #
 # Configuration:
-#   fileManager.bookmarks = [
+#   features.fileManager.bookmarks = [
 #     { name = "My Folder"; path = "/path/to/folder"; icon = "folder"; }
 #   ];
 
@@ -54,7 +54,7 @@ in
       }
     );
     default = [ ];
-    description = "File manager sidebar bookmarks (used by Nautilus and Dolphin)";
+    description = "Internal rendered file manager bookmarks.";
   };
 
   #===========================
@@ -66,41 +66,43 @@ in
       let
         dirs = config.xdg.userDirs;
         name = builtins.baseNameOf;
+        defaults =
+          lib.optionals features.apps.enable [
+            {
+              name = "Nextcloud";
+              path = "${home}/Nextcloud";
+              icon = "folder-cloud";
+            }
+          ]
+          ++ [
+            {
+              name = name dirs.download;
+              path = dirs.download;
+              icon = "folder-download";
+            }
+            {
+              name = name dirs.desktop;
+              path = dirs.desktop;
+              icon = "folder-desktop";
+            }
+            {
+              name = "Repos";
+              path = "${home}/repos";
+              icon = "folder-git";
+            }
+            {
+              name = name dirs.documents;
+              path = dirs.documents;
+              icon = "folder-documents";
+            }
+            {
+              name = name dirs.pictures;
+              path = dirs.pictures;
+              icon = "folder-pictures";
+            }
+          ];
       in
-      lib.optionals features.apps.enable [
-        {
-          name = "Nextcloud";
-          path = "${home}/Nextcloud";
-          icon = "folder-cloud";
-        }
-      ]
-      ++ [
-        {
-          name = name dirs.download;
-          path = dirs.download;
-          icon = "folder-download";
-        }
-        {
-          name = name dirs.desktop;
-          path = dirs.desktop;
-          icon = "folder-desktop";
-        }
-        {
-          name = "Repos";
-          path = "${home}/repos";
-          icon = "folder-git";
-        }
-        {
-          name = name dirs.documents;
-          path = dirs.documents;
-          icon = "folder-documents";
-        }
-        {
-          name = name dirs.pictures;
-          path = dirs.pictures;
-          icon = "folder-pictures";
-        }
-      ];
+      lib.defaultTo defaults features.fileManager.bookmarks;
 
     # GTK file portals and Nautilus use this shared bookmark format.
     xdg.configFile."gtk-3.0/bookmarks" = {
