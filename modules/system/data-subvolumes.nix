@@ -25,7 +25,7 @@ in
       "${userHome}/.local/share/Steam" = subvolume "@steam";
       "${userHome}/smb" = subvolume "@smb";
     }
-    // lib.optionalAttrs config.features.apps.enable {
+    // lib.optionalAttrs config.features.apps.nextcloud.enable {
       "${userHome}/Nextcloud" = subvolume "@nextcloud";
     };
   };

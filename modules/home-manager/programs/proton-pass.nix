@@ -101,6 +101,7 @@ in
     #---------------------------
     {
       # SSH_AUTH_SOCK for Proton Pass SSH agent
+      home.sessionVariables.SSH_AUTH_SOCK = "${config.home.homeDirectory}/.ssh/proton-pass-agent.sock";
       programs.fish.shellInit = ''
         set -gx SSH_AUTH_SOCK "${config.home.homeDirectory}/.ssh/proton-pass-agent.sock"
       '';

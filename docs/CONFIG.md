@@ -56,7 +56,7 @@ the remaining options control boot-time storage and persistence.
 | ------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------- |
 | `features.hardware.formFactor`        | `"desktop"` | Machine form factor: `"desktop"` or `"laptop"`.                                                           |
 | `features.hardware.cpu`               | `null`      | CPU vendor: `"amd"` or `"intel"`; selects microcode.                                                      |
-| `features.hardware.gpu`               | `null`      | GPU vendor: `"amd"` or `"intel"`; selects graphics and VA-API support.                                    |
+| `features.hardware.gpu`               | `null`      | GPU vendor: `"amd"` or `"intel"`; selects graphics and VA-API support. NVIDIA is not supported.           |
 | `features.kernel`                     | `"cachyos"` | Kernel variant, such as `"cachyos-v3"`, `"cachyos-v4"`, `"cachyos-lts"`, `"default"`, or `"default-lts"`. |
 | `features.secureBoot.enable`          | `false`     | UEFI Secure Boot via lanzaboote.                                                                          |
 | `features.impermanence.enable`        | `true`      | Impermanent root with btrfs rollback on boot.                                                             |
@@ -119,7 +119,8 @@ from the desktop session.
 | `features.auth.ldap.enable`        | `false`                     | LLDAP authentication.                                       |
 | `features.auth.ldap.uri`           | `null`                      | LDAP URI; required when LDAP is enabled.                    |
 | `features.auth.ldap.baseDn`        | `null`                      | LDAP base DN; required when LDAP is enabled.                |
-| `features.ssh.enable`              | `false`                     | OpenSSH server and GitHub key sync.                         |
+| `features.ssh.enable`              | `false`                     | OpenSSH server and public key synchronization.              |
+| `features.ssh.agentKeys.enable`    | `true`                      | Accept public keys currently loaded in the SSH agent.       |
 
 ```nix
 features = {
@@ -151,9 +152,13 @@ the networks and shares.
 | `features.wifi.enterpriseNetworks`      | `[]`    | WPA2 Enterprise networks: `{ name, ssid, identity }`.                |
 | `features.wifi.preferEthernet.enable`   | `true`  | Prefer Ethernet and disable WiFi while a wired connection is active. |
 | `features.ipv6PrivacyExtensions.enable` | `true`  | IPv6 privacy extensions for NetworkManager.                          |
-| `features.tailscale.enable`             | `true`  | Tailscale VPN and desktop tray integration.                          |
+| `features.tailscale.enable`             | `true`  | Tailscale VPN; Trayscale tray app on desktop systems.                |
 | `features.smb.enable`                   | `true`  | Automatic SMB network share mounts.                                  |
 | `features.smb.shares`                   | `[]`    | Shares to mount: `{ name, label, path, username? }`.                 |
+
+PSK networks require `name` and `ssid`; enterprise networks additionally
+require `identity`. SMB shares are mounted below `~/smb/<label>/`, and their
+`username` defaults to `user.name`.
 
 ```nix
 features = {
@@ -190,24 +195,17 @@ normally do not need per-host overrides:
 
 ### Desktop
 
-This layer selects the interactive session and its security integrations. The
-browser uses `about:newtab` as its startup page and replaces the new-tab content
-with the configured dashboard. System-level power policy is supplemented by
-the selected desktop session.
+This layer selects the interactive session and shared desktop integrations.
+Desktop-specific settings are grouped below by the component they configure.
 
-| Option                                     | Default                       | Description                                                        |
-| ------------------------------------------ | ----------------------------- | ------------------------------------------------------------------ |
-| `features.desktop.enable`                  | `true`                        | Desktop environment and login manager.                             |
-| `features.desktop.wm`                      | `"hyprland"`                  | Desktop: `"hyprland"` or `"kde"`.                                  |
-| `features.desktop.login`                   | `"greeter"`                   | `"greeter"` or `"autologin"`.                                      |
-| `features.desktop.browser.enable`          | `true`                        | Managed default browser.                                           |
-| `features.desktop.browser.type`            | `"librewolf"`                 | `"librewolf"` or `"firefox"`.                                      |
-| `features.desktop.browser.newTabPage`      | `https://dash.at.oechsler.it` | Dashboard URL used by the managed new-tab page.                    |
-| `features.desktop.browser.searchEngine`    | `"ddg"`                       | Default search engine identifier.                                  |
-| `features.desktop.browser.cookieAllowlist` | `[]`                          | Additional sites allowed to keep first-party cookies and sessions. |
-| `features.audio.enable`                    | `true`                        | PipeWire audio with PulseAudio compatibility.                      |
-| `features.bluetooth.enable`                | `true`                        | Bluetooth support.                                                 |
-| `features.compat.enable`                   | `true`                        | `nix-ld` and glibc compatibility libraries.                        |
+| Option                      | Default      | Description                                   |
+| --------------------------- | ------------ | --------------------------------------------- |
+| `features.desktop.enable`   | `true`       | Desktop environment and login manager.        |
+| `features.desktop.wm`       | `"hyprland"` | Desktop: `"hyprland"` or `"kde"`.             |
+| `features.desktop.login`    | `"greeter"`  | `"greeter"` or `"autologin"`.                 |
+| `features.audio.enable`     | `true`       | PipeWire audio with PulseAudio compatibility. |
+| `features.bluetooth.enable` | `true`       | Bluetooth support.                            |
+| `features.compat.enable`    | `true`       | `nix-ld` and glibc compatibility libraries.   |
 
 ```nix
 features = {
@@ -245,6 +243,35 @@ features = {
 };
 ```
 
+#### Browser
+
+The selected browser is configured with a managed profile. The new-tab
+extension opens the configured dashboard URL; this is separate from the
+browser's normal startup behavior. The search engine and cookie allowlist are
+also applied to the selected browser.
+
+| Option                                     | Default                       | Description                                                        |
+| ------------------------------------------ | ----------------------------- | ------------------------------------------------------------------ |
+| `features.desktop.browser.enable`          | `true`                        | Enable the managed default browser.                                |
+| `features.desktop.browser.type`            | `"librewolf"`                 | Select `"librewolf"` or `"firefox"`.                               |
+| `features.desktop.browser.newTabPage`      | `https://dash.at.oechsler.it` | URL opened by the managed new-tab extension.                       |
+| `features.desktop.browser.searchEngine`    | `"ddg"`                       | Default browser search engine identifier.                          |
+| `features.desktop.browser.cookieAllowlist` | `[]`                          | Additional sites allowed to keep first-party cookies and sessions. |
+
+```nix
+features = {
+  desktop = {
+    browser = {
+      enable = true;
+      type = "librewolf";
+      newTabPage = "https://dash.example.com";
+      searchEngine = "ddg";
+      cookieAllowlist = [ "https://example.org" ];
+    };
+  };
+};
+```
+
 #### Pinned Dock/Taskbar Apps
 
 Pinned applications control desktop presentation, not package installation.
@@ -270,15 +297,17 @@ features = {
 };
 ```
 
-The default list is extended by feature toggles:
+The effective default starts with the selected browser, `yazi` or the GUI file
+manager (`org.kde.dolphin` on KDE, `org.gnome.Nautilus` otherwise), and `kitty`.
+It is extended by feature toggles:
 
 - `features.dev.enable` adds Neovim
 - `features.apps.enable` adds Obsidian, Vesktop, Spotify
 - `features.apps.enable` plus `features.apps.mumble.enable` adds Mumble
 - `features.gaming.enable` adds Steam
 
-Each entry is a desktop file name without the `.desktop` suffix, such as
-`"firefox"`.
+Mumble uses `info.mumble.Mumble`; each other entry is a desktop file name
+without the `.desktop` suffix, such as `"firefox"`.
 
 #### KDE Desktop Options
 
@@ -366,6 +395,40 @@ features = {
 Each entry has a display `name`, an absolute `path`, and an optional icon. The
 `icon` field defaults to `"folder"`. Bookmarks are managed declaratively for
 Nautilus, Dolphin, and Yazi.
+
+#### Waybar Tray Icons
+
+Waybar's system tray uses Papirus-Dark icon names for common applications. This
+option applies to Hyprland; KDE manages tray icons through Plasma.
+
+| Option                        | Default | Description                                                |
+| ----------------------------- | ------- | ---------------------------------------------------------- |
+| `features.desktop.tray.icons` | `{}`    | Custom StatusNotifierItem ID to Papirus icon name mappings |
+
+Default mappings are feature-gated and automatically applied. Custom mappings
+override entries with the same StatusNotifierItem ID.
+
+| Feature Flag                | App         | StatusNotifierItem ID       | Papirus Icon            |
+| --------------------------- | ----------- | --------------------------- | ----------------------- |
+| `features.gaming.enable`    | Steam       | `steam`                     | `steam_tray_mono`       |
+| `features.apps.enable`      | Nextcloud   | `Nextcloud`                 | `state-ok`              |
+| `features.apps.enable`      | Mumble      | `Mumble`                    | `mumble-indicator`      |
+| `features.apps.enable`      | Proton Pass | `Proton Pass_status_icon_1` | `dialog-password-panel` |
+| `features.apps.enable`      | Vesktop     | `vesktop_status_icon_1`     | `discord-tray`          |
+| `features.tailscale.enable` | Trayscale   | `dev.deedles.Trayscale`     | `network-vpn`           |
+
+```nix
+features = {
+  desktop = {
+    tray = {
+      icons = {
+        "MyApp" = "my-app-icon";
+        steam = "custom_steam_icon";
+      };
+    };
+  };
+};
+```
 
 ### Virtualisation
 
@@ -465,8 +528,29 @@ hosts.
 features = {
   ops = {
     enable = true;
+    pvetui = {
+      profiles = [
+        {
+          name = "home";
+          addr = "https://proxmox.example.org:8006";
+          groups = [ "home-lab" ];
+        }
+      ];
+      defaultProfile = "home";
+    };
     kubernetes = {
       enable = true;
+      clusters = [
+        {
+          name = "home";
+          server = "https://k3s.example.org:6443";
+          caData = "<base64-ca-data>";
+          oidc = {
+            issuerUrl = "https://auth.example.org/realms/main";
+            clientId = "kubernetes";
+          };
+        }
+      ];
       defaultContext = "";
     };
   };
@@ -482,6 +566,7 @@ under their respective feature.
 | Option                                         | Default            | Description                                                          |
 | ---------------------------------------------- | ------------------ | -------------------------------------------------------------------- |
 | `features.apps.enable`                         | `true`             | General desktop applications.                                        |
+| `features.apps.nextcloud.enable`               | `apps.enable`      | Nextcloud desktop client and synchronization.                        |
 | `features.apps.mumble.enable`                  | `true`             | Install and configure Mumble when `features.apps.enable` is enabled. |
 | `features.apps.mumble.username`                | `user.name`        | Default Mumble username.                                             |
 | `features.apps.mumble.servers`                 | `[]`               | Favorite servers; `name` defaults to `host`, `port` to `64738`.      |
@@ -540,23 +625,29 @@ sops = {
 These options describe the primary local user. Passwords and other sensitive
 values are supplied through SOPS.
 
-| Option                | Default                  | Description                                                                                                                                                                                             |
-| --------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `user.name`           | `flake.primaryUser`      | Primary username; the flake value is shared with Disko and home paths.                                                                                                                                  |
-| `user.fullName`       | `"Samuel Oechsler"`      | Full name                                                                                                                                                                                               |
-| `user.email`          | `"samuel@oechsler.it"`   | Email address                                                                                                                                                                                           |
-| `user.github`         | `"oechsler"`             | GitHub username (for SSH key import)                                                                                                                                                                    |
-| `user.icon`           | `.assets/sam-memoji.png` | Profile picture (SDDM)                                                                                                                                                                                  |
-| `user.hashedPassword` | `"!"` (locked)           | Local shadow password fallback; the runtime password is set from SOPS (`user/password`) when local password authentication is enabled. Can be overridden per-host with a hash (`mkpasswd -m yescrypt`). |
-| `user.directories`    | `[ "repos" ]`            | Extra directories to create in `~`                                                                                                                                                                      |
+| Option                | Default                                  | Description                                                                                                                                                                                             |
+| --------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user.name`           | `flake.primaryUser`                      | Primary username; the flake value is shared with Disko and home paths.                                                                                                                                  |
+| `user.fullName`       | `"Samuel Oechsler"`                      | Full name                                                                                                                                                                                               |
+| `user.email`          | `"samuel@oechsler.it"`                   | Email address                                                                                                                                                                                           |
+| `user.keys`           | `https://git.at.oechsler.it/samuel.keys` | SSH public keys source: URL or local file path                                                                                                                                                          |
+| `user.icon`           | `.assets/sam-memoji.png`                 | Profile picture (SDDM)                                                                                                                                                                                  |
+| `user.hashedPassword` | `"!"` (locked)                           | Local shadow password fallback; the runtime password is set from SOPS (`user/password`) when local password authentication is enabled. Can be overridden per-host with a hash (`mkpasswd -m yescrypt`). |
+| `user.directories`    | `[ "repos" ]`                            | Extra directories to create in `~`                                                                                                                                                                      |
 
 ```nix
 user = {
   fullName = "Example User";
   email = "user@example.org";
+  keys = "https://git.at.oechsler.it/samuel.keys";
   directories = [ "Projects" "Documents" ];
 };
 ```
+
+`user.keys` accepts either an HTTPS/HTTP URL returning OpenSSH public keys or a
+local file path. When `features.ssh.enable` is enabled, the keys are synced
+automatically. With `features.ssh.agentKeys.enable`, keys loaded in the SSH
+agent are accepted as well.
 
 ## Theme Options
 
@@ -576,20 +667,35 @@ sessions.
 | `theme.radius.default`                   | `16`                 | Border radius for windows/panels/notifications                                                                                                                                       |
 | `theme.gaps.inner`                       | `8`                  | Gaps between windows                                                                                                                                                                 |
 | `theme.gaps.outer`                       | `16`                 | Gaps at screen edges                                                                                                                                                                 |
-| `theme.spacing.*`                        | See module           | Derived spacing values used by desktop components.                                                                                                                                   |
-| `theme.sizes.launcher`                   | See module           | Launcher and panel sizing.                                                                                                                                                           |
-| `theme.alpha.*`                          | See module           | Shared opacity values for desktop components.                                                                                                                                        |
+| `theme.spacing.vertical`                 | `3`                  | Compact vertical spacing for bars and controls.                                                                                                                                      |
+| `theme.spacing.workspace`                | `1`                  | Vertical inset for compact workspace buttons.                                                                                                                                        |
+| `theme.spacing.workspaceHorizontal`      | `1.5`                | Horizontal inset for compact workspace buttons.                                                                                                                                      |
+| `theme.spacing.compact`                  | `4`                  | Compact spacing for icons and small controls.                                                                                                                                        |
+| `theme.spacing.control`                  | `8`                  | Spacing inside controls and list elements.                                                                                                                                           |
+| `theme.spacing.module`                   | `10`                 | Outer spacing for standalone bar modules.                                                                                                                                            |
+| `theme.spacing.content`                  | `16`                 | Spacing between content groups.                                                                                                                                                      |
+| `theme.spacing.panel`                    | `18`                 | Padding for standalone panels and overlays.                                                                                                                                          |
+| `theme.sizes.launcher`                   | `48`                 | Width of the Waybar launcher button.                                                                                                                                                 |
+| `theme.alpha.container`                  | `0.92`               | Alpha for top-level UI containers.                                                                                                                                                   |
+| `theme.alpha.surface`                    | `0.80`               | Alpha for secondary surfaces and previews.                                                                                                                                           |
+| `theme.alpha.inactive`                   | `0.25`               | Alpha for inactive controls.                                                                                                                                                         |
+| `theme.alpha.hover`                      | `0.15`               | Alpha for hovered controls.                                                                                                                                                          |
+| `theme.alpha.active`                     | `0.30`               | Alpha for active controls.                                                                                                                                                           |
+| `theme.alpha.border`                     | `0.50`               | Alpha for secondary borders.                                                                                                                                                         |
+| `theme.alpha.selected`                   | `0.90`               | Alpha for selected controls.                                                                                                                                                         |
+| `theme.alpha.highlight`                  | `0.40`               | Alpha for prominent hover and glow states.                                                                                                                                           |
+| `theme.alpha.subtle`                     | `0.20`               | Alpha for subtle borders and shadows.                                                                                                                                                |
 | `theme.border.width`                     | `2`                  | Window border width                                                                                                                                                                  |
-| `theme.border.subtle`                    | See module           | Subtle border color.                                                                                                                                                                 |
+| `theme.border.subtle`                    | `1`                  | Subtle border width for secondary controls.                                                                                                                                          |
 | `theme.cursor.name`                      | auto                 | Cursor theme (`"Breeze_Light"` on latte, `"breeze_cursors"` otherwise)                                                                                                               |
 | `theme.cursor.package`                   | `kdePackages.breeze` | Cursor theme package                                                                                                                                                                 |
 | `theme.cursor.size`                      | `24`                 | Cursor size                                                                                                                                                                          |
 | `theme.icons.name`                       | auto                 | Icon theme (`"Papirus-Light"` on latte, `"Papirus-Dark"` otherwise)                                                                                                                  |
 | `theme.icons.package`                    | Catppuccin Papirus   | Icon theme package (always Catppuccin Papirus)                                                                                                                                       |
-| `theme.wallpaperPath`                    | _(read-only)_        | Resolved wallpaper path.                                                                                                                                                             |
-| `theme.blurredWallpaperPath`             | _(read-only)_        | Resolved blurred wallpaper path.                                                                                                                                                     |
-| `theme.snowflakeCatppuccinized`          | _(read-only)_        | Resolved Catppuccin snowflake asset.                                                                                                                                                 |
-| `theme.qtConfig`                         | _(read-only)_        | Resolved Qt configuration.                                                                                                                                                           |
+| `theme.wallpaperPath`                    | Generated            | Resolved wallpaper path.                                                                                                                                                             |
+| `theme.blurredWallpaperPath`             | Generated            | Resolved blurred wallpaper path.                                                                                                                                                     |
+| `theme.snowflakeCatppuccinized`          | Generated            | Resolved Catppuccin snowflake asset.                                                                                                                                                 |
+| `theme.qtConfig`                         | Generated            | Resolved Qt configuration.                                                                                                                                                           |
 
 ```nix
 theme = {
@@ -598,54 +704,30 @@ theme = {
     accent = "lavender";
   };
   scale = 1.0;
-};
-```
-
-## Waybar Tray Icons
-
-Waybar's system tray uses Papirus-Dark icon names for common applications.
-This section applies to Hyprland; KDE manages tray icons through Plasma.
-
-| Option                        | Default | Description                                               |
-| ----------------------------- | ------- | --------------------------------------------------------- |
-| `features.desktop.tray.icons` | `{}`    | Custom StatusNotifierItem Id → Papirus icon name mappings |
-
-Default mappings are feature-gated and automatically applied:
-
-| Feature Flag                | App         | StatusNotifierItem Id       | Papirus Icon            |
-| --------------------------- | ----------- | --------------------------- | ----------------------- |
-| `features.gaming.enable`    | Steam       | `steam`                     | `steam_tray_mono`       |
-| `features.apps.enable`      | Nextcloud   | `Nextcloud`                 | `state-ok`              |
-| `features.apps.enable`      | Mumble      | `Mumble`                    | `mumble-indicator`      |
-| `features.apps.enable`      | Proton Pass | `Proton Pass_status_icon_1` | `dialog-password-panel` |
-| `features.apps.enable`      | Vesktop     | `vesktop_status_icon_1`     | `discord-tray`          |
-| `features.tailscale.enable` | Trayscale   | `dev.deedles.Trayscale`     | `network-vpn`           |
-
-### Customizing Tray Icons
-
-Add or override mappings in the `features.desktop` configuration:
-
-```nix
-features = {
-  desktop = {
-    tray = {
-      icons = {
-        "MyApp" = "my-app-icon";
-        steam = "custom_steam_icon";  # override default
-      };
+  backgrounds = {
+    path = "nix-black-4k.png";
+    catppuccinize = {
+      enable = true;
+      invert = false;
+      accent = [ "lavender" ];
     };
+  };
+  radius = {
+    default = 16;
+  };
+  gaps = {
+    inner = 8;
+    outer = 16;
+  };
+  border = {
+    width = 2;
+    subtle = 1;
+  };
+  cursor = {
+    size = 24;
   };
 };
 ```
-
-To find the StatusNotifierItem Id for an application:
-
-```bash
-busctl --user introspect org.kde.StatusNotifierWatcher /StatusNotifierWatcher \
-  org.kde.StatusNotifierWatcher RegisteredStatusNotifierItems
-```
-
-The Id is the last path component (e.g., `steam` from `:1.107/org/ayatana/NotificationItem/steam`).
 
 ## Font Options
 
@@ -818,7 +900,7 @@ autostart = {
 
 The default list is extended by feature toggles:
 
-- `features.apps.enable` adds Nextcloud, Proton Pass, and Vesktop
+- `features.apps.enable` adds Proton Pass and Vesktop
 - `features.apps.enable` plus `features.apps.mumble.enable` adds Mumble
 - `features.gaming.enable` adds Steam
 - `features.tailscale.enable` adds Trayscale

@@ -141,6 +141,9 @@ let
     lib.optionalAttrs features.gaming.enable {
       steam = "steam_tray_mono";
     }
+    // lib.optionalAttrs features.apps.nextcloud.enable {
+      Nextcloud = "state-ok";
+    }
     // lib.optionalAttrs features.apps.enable {
       Mumble = "mumble-indicator";
       "Proton Pass_status_icon_1" = "dialog-password-panel";

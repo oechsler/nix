@@ -1,6 +1,7 @@
 # Desktop Applications Configuration
 #
 # This module installs desktop applications when features.apps.enable = true.
+# Nextcloud can be disabled independently with features.apps.nextcloud.enable.
 #
 # Applications are organized by desktop environment:
 # - Common (all DEs): Core apps used everywhere
@@ -69,16 +70,20 @@ in
       #---------------------------
       {
         home = {
-          packages = with pkgs; [
-            alsa-scarlett-gui
-            (wrapChromiumApp vesktop "vesktop")
-            freecad
-            libreoffice
-            nextcloud-client
-            (wrapChromiumApp obsidian "obsidian")
-            pika-backup
-            prusa-slicer
-          ];
+          packages =
+            with pkgs;
+            [
+              alsa-scarlett-gui
+              (wrapChromiumApp vesktop "vesktop")
+              freecad
+              libreoffice
+            ]
+            ++ lib.optionals features.apps.nextcloud.enable [ nextcloud-client ]
+            ++ [
+              (wrapChromiumApp obsidian "obsidian")
+              pika-backup
+              prusa-slicer
+            ];
 
         };
 

@@ -34,6 +34,7 @@ in
   #===========================
 
   options.fileManager.bookmarks = lib.mkOption {
+    internal = true;
     type = lib.types.listOf (
       lib.types.submodule {
         options = {
@@ -67,7 +68,7 @@ in
         dirs = config.xdg.userDirs;
         name = builtins.baseNameOf;
         defaults =
-          lib.optionals features.apps.enable [
+          lib.optionals features.apps.nextcloud.enable [
             {
               name = "Nextcloud";
               path = "${home}/Nextcloud";
