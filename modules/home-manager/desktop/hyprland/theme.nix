@@ -48,13 +48,13 @@ in
     catppuccin.kvantum.enable = true;
 
     systemd.user.sessionVariables = {
-      QT_QPA_PLATFORM = "wayland;xcb";
+      QT_QPA_PLATFORM = "wayland";
       QT_QPA_PLATFORMTHEME = "qt6ct";
     };
 
     home = {
       sessionVariables = {
-        QT_QPA_PLATFORM = "wayland;xcb";
+        QT_QPA_PLATFORM = "wayland";
         QT_QPA_PLATFORMTHEME = "qt6ct";
         QT_STYLE_OVERRIDE = "kvantum";
       };
