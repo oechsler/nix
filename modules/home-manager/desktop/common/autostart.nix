@@ -93,7 +93,7 @@ in
         ++ lib.optionals mumbleEnabled [
           {
             name = "Mumble";
-            exec = config.programs.mumble.command;
+            exec = config.programs.mumble.launcher;
           }
         ]
         # Hyprland starts Steam through the dedicated service below. Steam gets
@@ -112,7 +112,7 @@ in
             [Desktop Entry]
             Type=Application
             Name=Mumble
-            Exec=${config.programs.mumble.command} %u
+            Exec=${config.programs.mumble.launcher} %u
             Icon=mumble
             Terminal=false
             MimeType=x-scheme-handler/mumble;
