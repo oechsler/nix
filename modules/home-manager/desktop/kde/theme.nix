@@ -18,6 +18,7 @@
   theme,
   input,
   features,
+  desktop,
   ...
 }:
 
@@ -66,14 +67,45 @@ let
   # Pinned applications for KDE taskbar
   # Format: "applications:firefox.desktop,applications:kitty.desktop,..."
   pinnedLaunchersStr = lib.concatStringsSep "," (
-    map (app: "applications:${app}.desktop") config.desktop.pinnedApps
+    map (app: "applications:${app}.desktop") config.desktop.pinnedApps.entries
   );
+  pinnedAppsDeclarative = config.desktop.pinnedApps.declarative;
 
-  kdeTray = features.desktop.kde.tray;
-  kickoffFavorites = features.desktop.kde.favorites or [ ];
-  kickoffFavoritesStr = lib.concatStringsSep "," (
-    map (app: "applications:${app}.desktop") kickoffFavorites
-  );
+  kdeTray = desktop.kde.tray;
+  kickoffFavorites = desktop.kde.favorites.entries or [ ];
+  kickoffFavoritesDeclarative = desktop.kde.favorites.declarative or false;
+  kickoffFavoriteResources = map (app: "applications:${app}.desktop") kickoffFavorites;
+  kickoffFavoriteMigrations = [
+    {
+      from = "applications:yazi.desktop";
+      to = "applications:org.kde.dolphin.desktop";
+    }
+    {
+      from = "applications:org.kde.dolphin.desktop";
+      to = "applications:yazi.desktop";
+    }
+    {
+      from = "applications:org.kde.systemsettings.desktop";
+      to = "applications:systemsettings.desktop";
+    }
+  ]
+  ++ lib.optionals features.desktop.browser.enable [
+    {
+      from = "applications:firefox.desktop";
+      to = "applications:${features.desktop.browser.type}.desktop";
+    }
+    {
+      from = "applications:librewolf.desktop";
+      to = "applications:${features.desktop.browser.type}.desktop";
+    }
+  ];
+  kdeDefaultFavoriteResources = [
+    "preferred://browser"
+    "org.kde.kontact.desktop"
+    "applications:systemsettings.desktop"
+    "applications:org.kde.dolphin.desktop"
+    "applications:org.kde.discover.desktop"
+  ];
 
   # Kickoff menu icon (KDE start menu)
   kickoffIcon = if isLight then "nix-snowflake" else "nix-snowflake-white";
@@ -247,7 +279,7 @@ in
             "org.kde.plasma.pager"
             {
               iconTasks = {
-                launchers = map (app: "applications:${app}.desktop") config.desktop.pinnedApps;
+                launchers = map (app: "applications:${app}.desktop") config.desktop.pinnedApps.entries;
               };
             }
             "org.kde.plasma.marginsseparator"
@@ -320,11 +352,77 @@ in
             config_timeout=$((config_timeout - 1))
           done
           if [ -f "$config" ]; then
-            ${plasmaWidgetConfig} "$config" "org.kde.plasma.icontasks" "launchers" "${pinnedLaunchersStr}" \
-              || ${plasmaWidgetConfig} "$config" "org.kde.plasma.taskmanager" "launchers" "${pinnedLaunchersStr}" \
+            ${plasmaWidgetConfig} "$config" "org.kde.plasma.icontasks" "launchers" "${pinnedLaunchersStr}" ${
+              lib.optionalString (!pinnedAppsDeclarative) "--if-missing"
+            } \
+              || ${plasmaWidgetConfig} "$config" "org.kde.plasma.taskmanager" "launchers" "${pinnedLaunchersStr}" ${
+                lib.optionalString (!pinnedAppsDeclarative) "--if-missing"
+              } \
               || true
             ${plasmaWidgetConfig} "$config" "org.kde.plasma.kickoff" "icon" "${kickoffIcon}" 2>/dev/null || true
-            ${plasmaWidgetConfig} "$config" "org.kde.plasma.kickoff" "favorites" "${kickoffFavoritesStr}" --if-missing 2>/dev/null || true
+            kickoff_marker="$HOME/.config/nixos-kde-kickoff-favorites-initialized"
+            for migration in ${
+              lib.escapeShellArgs (map (migration: "${migration.from}|${migration.to}") kickoffFavoriteMigrations)
+            }; do
+              from="''${migration%%|*}"
+              to="''${migration##*|}"
+              if [ "$(
+                ${pkgs.kdePackages.qttools}/bin/qdbus \
+                  org.kde.ActivityManager \
+                  /ActivityManager/Resources/Linking \
+                  org.kde.ActivityManager.ResourcesLinking.IsResourceLinkedToActivity \
+                  org.kde.plasma.favorites.applications "$from" :global 2>/dev/null
+              )" = "true" ] && [ "$(
+                ${pkgs.kdePackages.qttools}/bin/qdbus \
+                  org.kde.ActivityManager \
+                  /ActivityManager/Resources/Linking \
+                  org.kde.ActivityManager.ResourcesLinking.IsResourceLinkedToActivity \
+                  org.kde.plasma.favorites.applications "$to" :global 2>/dev/null
+              )" != "true" ]; then
+                ${pkgs.kdePackages.qttools}/bin/qdbus \
+                  org.kde.ActivityManager \
+                  /ActivityManager/Resources/Linking \
+                  org.kde.ActivityManager.ResourcesLinking.UnlinkResourceFromActivity \
+                  org.kde.plasma.favorites.applications "$from" :global 2>/dev/null || true
+                ${pkgs.kdePackages.qttools}/bin/qdbus \
+                  org.kde.ActivityManager \
+                  /ActivityManager/Resources/Linking \
+                  org.kde.ActivityManager.ResourcesLinking.LinkResourceToActivity \
+                  org.kde.plasma.favorites.applications "$to" :global 2>/dev/null || true
+              fi
+            done
+            if [ "${
+              if kickoffFavoritesDeclarative then "true" else "false"
+            }" = "true" ] || [ ! -e "$kickoff_marker" ]; then
+              if [ "${if kickoffFavoritesDeclarative then "true" else "false"}" = "true" ]; then
+                while read -r resource; do
+                  ${pkgs.kdePackages.qttools}/bin/qdbus \
+                    org.kde.ActivityManager \
+                    /ActivityManager/Resources/Linking \
+                    org.kde.ActivityManager.ResourcesLinking.UnlinkResourceFromActivity \
+                    org.kde.plasma.favorites.applications "$resource" :global 2>/dev/null || true
+                done < <(
+                  ${pkgs.sqlite}/bin/sqlite3 \
+                    "$HOME/.local/share/kactivitymanagerd/resources/database" \
+                    "select targettedResource from ResourceLink where usedActivity=':global' and initiatingAgent='org.kde.plasma.favorites.applications';"
+                )
+              fi
+              for resource in ${lib.escapeShellArgs kdeDefaultFavoriteResources}; do
+                ${pkgs.kdePackages.qttools}/bin/qdbus \
+                  org.kde.ActivityManager \
+                  /ActivityManager/Resources/Linking \
+                  org.kde.ActivityManager.ResourcesLinking.UnlinkResourceFromActivity \
+                  org.kde.plasma.favorites.applications "$resource" :global 2>/dev/null || true
+              done
+              for resource in ${lib.escapeShellArgs kickoffFavoriteResources}; do
+                ${pkgs.kdePackages.qttools}/bin/qdbus \
+                  org.kde.ActivityManager \
+                  /ActivityManager/Resources/Linking \
+                  org.kde.ActivityManager.ResourcesLinking.LinkResourceToActivity \
+                  org.kde.plasma.favorites.applications "$resource" :global 2>/dev/null || true
+              done
+              touch "$kickoff_marker"
+            fi
           fi
         ''}
         X-KDE-autostart-phase=2
