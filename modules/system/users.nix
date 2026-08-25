@@ -11,7 +11,7 @@
 #   user.name = "samuel";                  # Username (default: flake.primaryUser)
 #   user.fullName = "Samuel Oechsler";     # Full name (default: "Samuel Oechsler")
 #   user.email = "samuel@oechsler.it";     # Email (default: "samuel@oechsler.it")
-#   user.github = "oechsler";              # GitHub username (default: "oechsler")
+#   user.keys = "https://git.at.oechsler.it/samuel.keys"; # SSH public keys URL or local file
 #   user.directories = [ "repos" ];        # Extra home directories (default: ["repos"])
 #
 # Authentication:
@@ -71,10 +71,10 @@ in
       description = "User profile picture (displayed by SDDM, system settings, etc.)";
     };
 
-    github = lib.mkOption {
-      type = lib.types.str;
-      default = "oechsler";
-      description = "GitHub username (used for SSH key import)";
+    keys = lib.mkOption {
+      type = lib.types.either lib.types.path lib.types.str;
+      default = "https://git.at.oechsler.it/samuel.keys";
+      description = "SSH public keys source: URL or local file path";
     };
 
     # Home Directory
@@ -151,7 +151,7 @@ in
     # 5. Home Directory Structure
     #---------------------------
     # Create the default ~/repos directory.
-    user.directories = [ "repos" ];
+    user.directories = lib.mkDefault [ "repos" ];
 
     # When LDAP is disabled, restore the local SOPS-managed password.
     sops.secrets."user/password" = lib.mkIf (!config.features.auth.ldap.enable) { };

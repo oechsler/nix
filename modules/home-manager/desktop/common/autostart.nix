@@ -122,7 +122,7 @@ in
       # declarative. We own the file so it exists on fresh installs and the
       # systemd-xdg-autostart-generator picks it up on both Hyprland and KDE.
       # Pika Backup: the package ships its own autostart .desktop, no entry needed.
-      xdg.configFile."autostart/Nextcloud.desktop" = lib.mkIf features.apps.enable {
+      xdg.configFile."autostart/Nextcloud.desktop" = lib.mkIf features.apps.nextcloud.enable {
         text = ''
           [Desktop Entry]
           Type=Application

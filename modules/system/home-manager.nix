@@ -12,7 +12,7 @@
 # - fonts: config.fonts.defaults (UI/monospace fonts, sizes)
 # - theme: config.theme (Catppuccin, wallpaper, gaps, borders)
 # - locale: config.locale (timezone, language, keyboard)
-# - user: config.user (name, fullName, email, github)
+# - user: config.user (name, fullName, email, keys)
 # - features: config.features (desktop, development, apps, etc.)
 # - displays: config.displays (monitor configuration)
 # - input: config.input (mouse/touchpad natural scroll)

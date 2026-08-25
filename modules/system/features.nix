@@ -579,6 +579,11 @@ in
           description = "Mumble servers shown in the server list.";
         };
       };
+      nextcloud = {
+        enable = (lib.mkEnableOption "Nextcloud client") // {
+          default = config.features.apps.enable;
+        };
+      };
     };
   };
 

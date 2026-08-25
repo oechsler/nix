@@ -27,17 +27,19 @@
 {
   config = lib.mkIf (config.features.desktop.enable && config.features.desktop.wm == "kde") {
     features.desktop.kde.tray = {
-      shown = lib.mkDefault [
-        "Mumble"
-        "Nextcloud"
-        "Proton Pass_status_icon_1"
-        "dev.deedles.Trayscale"
-        "vesktop_status_icon_1"
-        "org.kde.plasma.bluetooth"
-        "org.kde.plasma.battery"
-        "org.kde.plasma.volume"
-        "org.kde.plasma.networkmanagement"
-      ];
+      shown = lib.mkDefault (
+        [ "Mumble" ]
+        ++ lib.optional config.features.apps.nextcloud.enable "Nextcloud"
+        ++ [
+          "Proton Pass_status_icon_1"
+          "dev.deedles.Trayscale"
+          "vesktop_status_icon_1"
+          "org.kde.plasma.bluetooth"
+          "org.kde.plasma.battery"
+          "org.kde.plasma.volume"
+          "org.kde.plasma.networkmanagement"
+        ]
+      );
       hidden = lib.mkDefault [
         "org.kde.kscreen"
         "org.kde.plasma.devicenotifier"
