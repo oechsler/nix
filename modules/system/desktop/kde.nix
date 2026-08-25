@@ -46,6 +46,12 @@
         "org.kde.plasma.clipboard"
       ];
     };
+    features.desktop.kde.favorites = lib.mkDefault [
+      config.features.desktop.browser.type
+      (if config.features.desktop.fileManager == "terminal" then "yazi" else "org.kde.dolphin")
+      "kitty"
+      "org.kde.systemsettings"
+    ];
 
     services = {
       desktopManager.plasma6.enable = true;
