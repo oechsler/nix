@@ -664,7 +664,7 @@ desktop = {
 The default list is extended by feature toggles:
 
 - `features.dev.enable` adds Neovim
-- `features.apps.enable` adds Obsidian, Vesktop, Spotify
+- `features.apps.enable` adds Mumble, Obsidian, Vesktop, Spotify
 - `features.gaming.enable` adds Steam
 
 Each entry is a desktop file name without the `.desktop` suffix, such as
