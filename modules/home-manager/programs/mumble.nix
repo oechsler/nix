@@ -15,8 +15,12 @@ let
   cfg = features.apps.mumble;
   configFile = "$HOME/.config/Mumble/Mumble/mumble_settings.json";
   databaseFile = "$HOME/.local/share/Mumble/Mumble/mumble.sqlite";
+  sopsLines = lib.splitString "\n" (builtins.readFile config.sops.defaultSopsFile);
+  hasCertificate =
+    builtins.any (line: line == "mumble:") sopsLines
+    && builtins.any (line: lib.hasPrefix "    certificate:" line) sopsLines;
   certificatePath =
-    if cfg.certificate.enable then config.sops.secrets."mumble/certificate".path else "/dev/null";
+    if hasCertificate then config.sops.secrets."mumble/certificate".path else "/dev/null";
 
   mumbleConfig = pkgs.writeText "mumble-settings.json" (
     builtins.toJSON {
@@ -26,7 +30,7 @@ let
         # native PipeWire backend currently crashes during audio startup.
         input_system = "PulseAudio";
         output_system = "PulseAudio";
-        play_mute_cue = false;
+        play_mute_cue = cfg.playMuteCue;
       };
       misc = {
         audio_wizard_has_been_shown = true;
@@ -35,7 +39,7 @@ let
       network.auto_connect_to_last_server = cfg.autoConnectToLastServer;
       network.reconnect_automatically = cfg.reconnectAutomatically;
       ui = {
-        channel_expansion_mode = "AllChannels";
+        channel_expansion_mode = cfg.channelExpansionMode;
         disable_public_server_list = cfg.disablePublicServerList;
         hide_in_tray = cfg.hideInTray;
         quit_behavior = cfg.quitBehavior;
@@ -52,6 +56,7 @@ let
   );
 
   serverName = server: if server.name == null then server.host else server.name;
+  serverNameValue = lib.optionalString (cfg.servers != [ ]) (serverName (builtins.head cfg.servers));
   sqlValue = value: lib.replaceStrings [ "'" ] [ "''" ] value;
   serverSql = lib.concatMapStrings (server: ''
     ${pkgs.sqlite}/bin/sqlite3 "$mumble_database" ${lib.escapeShellArg ''
@@ -77,18 +82,30 @@ let
       mumble_tmp="$(mktemp "''${mumble_config}.XXXXXX")"
       if ${pkgs.jq}/bin/jq \
         --arg username ${lib.escapeShellArg cfg.username} \
+        --arg server_name ${lib.escapeShellArg serverNameValue} \
+        --arg channel_expansion_mode ${lib.escapeShellArg cfg.channelExpansionMode} \
+        --arg quit_behavior ${lib.escapeShellArg cfg.quitBehavior} \
+        --arg server_filter_mode ${lib.escapeShellArg cfg.serverFilterMode} \
+        --argjson play_mute_cue ${lib.boolToString cfg.playMuteCue} \
         --argjson public_list ${lib.boolToString (!cfg.disablePublicServerList)} \
         '.audio.input_system = "PulseAudio"
          | .audio.output_system = "PulseAudio"
+         | .audio.echo_cancel_mode = "Disabled"
+         | .audio.play_mute_cue = $play_mute_cue
+         | .misc.audio_wizard_has_been_shown = true
+         | .misc.viewed_server_ping_consent_message = true
          | .ui.theme = ""
          | .ui.theme_style = ""
+         | .ui.channel_expansion_mode = $channel_expansion_mode
          | .last_connection.username = $username
+         | .last_connection.server_name = $server_name
          | .ui.disable_public_server_list = ($public_list | not)
          | .network.auto_connect_to_last_server = ${lib.boolToString cfg.autoConnectToLastServer}
          | .network.reconnect_automatically = ${lib.boolToString cfg.reconnectAutomatically}
          | .ui.hide_in_tray = ${lib.boolToString cfg.hideInTray}
-         | .ui.quit_behavior = "${cfg.quitBehavior}"
-         | .ui.server_filter_mode = "${cfg.serverFilterMode}"' \
+         | .ui.quit_behavior = $quit_behavior
+         | .ui.send_usage_statistics = false
+         | .ui.server_filter_mode = $server_filter_mode' \
         "$mumble_config" > "$mumble_tmp"; then
         chmod --reference="$mumble_config" "$mumble_tmp"
         mv "$mumble_tmp" "$mumble_config"
@@ -97,7 +114,7 @@ let
       fi
     fi
 
-    if ${lib.boolToString cfg.certificate.enable} && [ -r "${certificatePath}" ] && [ -f "$mumble_config" ]; then
+    if ${lib.boolToString hasCertificate} && [ -r "${certificatePath}" ] && [ -f "$mumble_config" ]; then
       mumble_tmp="$(mktemp "''${mumble_config}.XXXXXX")"
       if ${pkgs.jq}/bin/jq --rawfile certificate "${certificatePath}" \
         '.net.certificate = ($certificate | gsub("\\s"; ""))' \
@@ -107,7 +124,7 @@ let
       else
         rm -f "$mumble_tmp"
       fi
-    elif ! ${lib.boolToString cfg.certificate.enable} && [ -f "$mumble_config" ]; then
+    elif ! ${lib.boolToString hasCertificate} && [ -f "$mumble_config" ]; then
       mumble_tmp="$(mktemp "''${mumble_config}.XXXXXX")"
       if ${pkgs.jq}/bin/jq 'del(.net.certificate)' "$mumble_config" > "$mumble_tmp"; then
         chmod --reference="$mumble_config" "$mumble_tmp"
@@ -150,9 +167,10 @@ in
 
   config = lib.mkIf (features.apps.enable && cfg.enable) {
     home.packages = [ pkgs.mumble ];
-    sops.secrets."mumble/certificate" = lib.mkIf cfg.certificate.enable { };
+    sops.secrets."mumble/certificate" = lib.mkIf hasCertificate { };
 
-    home.activation.mumbleConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    # SOPS must refresh the secret file before importing the certificate.
+    home.activation.mumbleConfig = lib.hm.dag.entryAfter [ "sops-nix" ] ''
       ${updateConfig}
     '';
   };

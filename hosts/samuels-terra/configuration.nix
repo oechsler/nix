@@ -146,7 +146,6 @@
     # --- Applications ---
     apps.mumble = {
       username = "Sam";
-      certificate.enable = true;
       servers = [
         {
           host = "mumble.at.oechsler.it";

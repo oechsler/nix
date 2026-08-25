@@ -258,7 +258,8 @@ under their respective feature.
 | `features.apps.mumble.enable`                  | `true`             | Install and configure Mumble when `features.apps.enable` is enabled. |
 | `features.apps.mumble.username`                | `user.name`        | Default Mumble username.                                             |
 | `features.apps.mumble.servers`                 | `[]`               | Favorite servers; `name` defaults to `host`, `port` to `64738`.      |
-| `features.apps.mumble.certificate.enable`      | `false`            | Import the optional SOPS-managed client certificate.                 |
+| `features.apps.mumble.playMuteCue`             | `false`            | Play a cue when Mumble is muted or unmuted.                          |
+| `features.apps.mumble.channelExpansionMode`    | `AllChannels`      | Channel expansion mode in the Mumble server tree.                    |
 | `features.apps.mumble.disablePublicServerList` | `true`             | Disable Mumble's public server list.                                 |
 | `features.apps.mumble.autoConnectToLastServer` | `true`             | Connect to the last server automatically.                            |
 | `features.apps.mumble.reconnectAutomatically`  | `true`             | Reconnect after a lost connection.                                   |
@@ -286,8 +287,8 @@ features = {
 };
 ```
 
-The default username is `user.name`; hosts can override it. Client
-certificates are optional and are imported from SOPS only when enabled.
+The default username is `user.name`; hosts can override it. If the optional
+`mumble/certificate` secret exists in SOPS, it is imported automatically.
 
 Set `features.apps.mumble.disablePublicServerList = false` to show the public server list again.
 

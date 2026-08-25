@@ -67,13 +67,13 @@ git commit -m "Update secrets"
 Secret names containing `<name>` use the identifier of the corresponding
 declarative network or share configuration.
 
-The Mumble certificate is optional. When enabled in the Mumble configuration,
-the module imports it into the local Mumble profile. Without the secret,
-Mumble continues to work without a client certificate.
+The Mumble certificate is optional. When `mumble/certificate` exists in SOPS,
+the module imports it into the local Mumble profile. Without the secret, Mumble
+continues to work without a client certificate.
 
 ### Mumble
 
-- `mumble/certificate` — Optional PKCS#12 identity certificate, imported into Mumble's `net.certificate` setting when enabled
+- `mumble/certificate` — Optional PKCS#12 identity certificate, imported into Mumble's `net.certificate` setting when present
 - The certificate is stored as an encrypted Base64 value in `sops.encrypted.yaml`; the private key and the original `.p12` file must never be committed.
 
 ### Why Secrets Are Encrypted
