@@ -69,6 +69,8 @@ let
     map (app: "applications:${app}.desktop") config.desktop.pinnedApps
   );
 
+  kdeTray = features.desktop.kde.tray;
+
   # Kickoff menu icon (KDE start menu)
   kickoffIcon = if isLight then "nix-snowflake" else "nix-snowflake-white";
 
@@ -223,6 +225,35 @@ in
         edgeBarrier = 0;
         cornerBarrier = false;
       };
+
+      # Panel and system-tray layout captured from the live Plasma setup.
+      panels = [
+        {
+          location = "bottom";
+          widgets = [
+            {
+              kickoff = {
+                icon = kickoffIcon;
+              };
+            }
+            "org.kde.plasma.pager"
+            {
+              iconTasks = {
+                launchers = map (app: "applications:${app}.desktop") config.desktop.pinnedApps;
+              };
+            }
+            "org.kde.plasma.marginsseparator"
+            {
+              systemTray.items = {
+                shown = kdeTray.shown or [ ];
+                hidden = kdeTray.hidden or [ ];
+              };
+            }
+            "org.kde.plasma.digitalclock"
+            "org.kde.plasma.showdesktop"
+          ];
+        }
+      ];
 
       shortcuts = {
         # KRunner (search) on Super+Space

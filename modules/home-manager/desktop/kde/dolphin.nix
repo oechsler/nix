@@ -96,30 +96,34 @@ in
 
   # Generate Dolphin sidebar bookmarks (user-places.xbel)
   # Format: XBEL (XML Bookmark Exchange Language)
-  xdg.dataFile."user-places.xbel".force = true;
-  xdg.dataFile."user-places.xbel".text = ''
-    <?xml version="1.0" encoding="UTF-8"?>
-    <xbel xmlns:bookmark="http://www.freedesktop.org/standards/desktop-bookmarks"
-          xmlns:kdeconnect="http://www.kde.org"
-          xmlns:mime="http://www.freedesktop.org/standards/shared-mime-info">
-     <bookmark href="file://${home}">
-      <title>Startseite</title>
-      <info><metadata owner="http://freedesktop.org">
-       <bookmark:icon name="user-home"/>
-      </metadata></info>
-     </bookmark>
-    ${lib.concatMapStrings entry bookmarks}${lib.concatMapStrings hiddenEntry hiddenPlaces}
-     <bookmark href="trash:/">
-      <title>Papierkorb</title>
-      <info><metadata owner="http://freedesktop.org">
-       <bookmark:icon name="user-trash"/>
-      </metadata></info>
-     </bookmark>
-     </xbel>
-  '';
+  xdg = {
+    dataFile."user-places.xbel" = {
+      force = true;
+      text = ''
+        <?xml version="1.0" encoding="UTF-8"?>
+        <xbel xmlns:bookmark="http://www.freedesktop.org/standards/desktop-bookmarks"
+              xmlns:kdeconnect="http://www.kde.org"
+              xmlns:mime="http://www.freedesktop.org/standards/shared-mime-info">
+         <bookmark href="file://${home}">
+          <title>Startseite</title>
+          <info><metadata owner="http://freedesktop.org">
+           <bookmark:icon name="user-home"/>
+          </metadata></info>
+         </bookmark>
+        ${lib.concatMapStrings entry bookmarks}${lib.concatMapStrings hiddenEntry hiddenPlaces}
+         <bookmark href="trash:/">
+          <title>Papierkorb</title>
+          <info><metadata owner="http://freedesktop.org">
+           <bookmark:icon name="user-trash"/>
+          </metadata></info>
+         </bookmark>
+         </xbel>
+      '';
+    };
 
-  xdg.mimeApps.defaultApplications = {
-    "inode/directory" = [ "org.kde.dolphin.desktop" ];
-    "inode/mount-point" = [ "org.kde.dolphin.desktop" ];
+    mimeApps.defaultApplications = {
+      "inode/directory" = [ "org.kde.dolphin.desktop" ];
+      "inode/mount-point" = [ "org.kde.dolphin.desktop" ];
+    };
   };
 }
