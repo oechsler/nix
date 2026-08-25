@@ -193,9 +193,8 @@ in
       configPath = lib.mkIf isFirefox "${config.xdg.configHome}/mozilla/firefox";
       languagePacks = lib.optional isFirefox language;
 
-      # Force New Tab Override to use the dashboard, including on fresh
-      # profiles. The extension's managed policy takes precedence over local
-      # extension storage.
+      # Configure New Tab Override for newly opened tabs. The extension's
+      # managed policy takes precedence over local extension storage.
       policies = {
         # Keep first-party authentication data for our own services while
         # retaining strict tracking protection everywhere else.
@@ -320,10 +319,11 @@ in
           # Home Manager sets this automatically when extension settings exist.
           "extensions.autoDisableScopes" = 0;
 
-          # Start with Firefox's new-tab page. The managed extension supplies
-          # the dashboard content for that page.
-          "browser.startup.homepage" = "about:newtab";
-          "browser.startup.page" = 1; # 1 = Open homepage (about:newtab)
+          # Start new browser sessions on the configured new-tab URL. Session
+          # restore stays enabled below and takes precedence when a previous
+          # session exists.
+          "browser.startup.homepage" = features.desktop.browser.newTabPage;
+          "browser.startup.page" = 1; # 1 = Open homepage
           "browser.sessionstore.resume_from_crash" = true;
 
           # Keep cookies and active web sessions across restarts. Password
@@ -387,21 +387,6 @@ in
           "browser.formfill.enable" = false;
           "extensions.formautofill.creditCards.enabled" = false;
           "extensions.formautofill.addresses.enabled" = false;
-
-          # Keep the native entry point enabled so the managed New Tab Override
-          # extension can replace it with the dashboard, including old profiles
-          # that still carry the former false value.
-          "browser.newtabpage.enabled" = true;
-          "browser.newtabpage.activity-stream.showSponsored" = false;
-          "browser.newtabpage.activity-stream.showSponsoredTopSites" = false;
-          "browser.newtabpage.activity-stream.feeds.topsites" = false;
-          "browser.newtabpage.activity-stream.feeds.section.topstories" = false;
-          "browser.newtabpage.activity-stream.feeds.section.highlights" = false;
-          "browser.newtabpage.activity-stream.feeds.snippets" = false;
-          "browser.newtabpage.activity-stream.section.highlights.includePocket" = false;
-          "browser.newtabpage.activity-stream.showSearch" = false;
-          "browser.newtabpage.activity-stream.asrouter.userprefs.cfr.features" = false;
-          "browser.newtabpage.activity-stream.asrouter.userprefs.cfr.addons" = false;
 
           "datareporting.healthreport.uploadEnabled" = false;
           "datareporting.policy.dataSubmissionEnabled" = false;
