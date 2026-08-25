@@ -1,9 +1,7 @@
 # Mumble voice chat configuration
 #
-# This module configures:
-# - Mumble installation and declarative user settings
-# - Favorite servers and default username
-# - Desktop integration for KDE and Hyprland
+# This module installs Mumble, manages its user configuration and provides
+# desktop-specific launch commands for KDE and Hyprland.
 
 {
   config,
@@ -15,12 +13,17 @@
 
 let
   cfg = features.apps.mumble;
+  configFile = "$HOME/.config/Mumble/Mumble/mumble_settings.json";
+  databaseFile = "$HOME/.local/share/Mumble/Mumble/mumble.sqlite";
   certificatePath =
     if cfg.certificate.enable then config.sops.secrets."mumble/certificate".path else "/dev/null";
+
   mumbleConfig = pkgs.writeText "mumble-settings.json" (
     builtins.toJSON {
       audio = {
         echo_cancel_mode = "Disabled";
+        # PipeWire provides the PulseAudio compatibility server. Mumble's
+        # native PipeWire backend currently crashes during audio startup.
         input_system = "PulseAudio";
         output_system = "PulseAudio";
         play_mute_cue = false;
@@ -34,10 +37,10 @@ let
       ui = {
         channel_expansion_mode = "AllChannels";
         disable_public_server_list = cfg.disablePublicServerList;
-        quit_behavior = cfg.quitBehavior;
         hide_in_tray = cfg.hideInTray;
-        server_filter_mode = cfg.serverFilterMode;
+        quit_behavior = cfg.quitBehavior;
         send_usage_statistics = false;
+        server_filter_mode = cfg.serverFilterMode;
         theme = "";
         theme_style = "";
       };
@@ -47,6 +50,7 @@ let
       };
     }
   );
+
   serverName = server: if server.name == null then server.host else server.name;
   sqlValue = value: lib.replaceStrings [ "'" ] [ "''" ] value;
   serverSql = lib.concatMapStrings (server: ''
@@ -57,30 +61,100 @@ let
                 '${sqlValue server.username}', NULL, NULL);
     ''}
   '') cfg.servers;
-  command = pkgs.writeShellScript "mumble-launcher" ''
-    config_file="$HOME/.config/Mumble/Mumble/mumble_settings.json"
-    if [ -f "$config_file" ]; then
-      ${pkgs.jq}/bin/jq '.mumble_has_quit_normally = true | .ui.theme = "" | .ui.theme_style = "" | .ui.disable_public_server_list = ${lib.boolToString cfg.disablePublicServerList}' \
-        "$config_file" > "$config_file.tmp" && ${pkgs.coreutils}/bin/mv "$config_file.tmp" "$config_file"
+
+  updateConfig = pkgs.writeShellScript "mumble-config-update" ''
+    set -eu
+
+    mumble_config="${configFile}"
+    mumble_database="${databaseFile}"
+
+    if [ ! -e "$mumble_config" ]; then
+      mkdir -p "$(dirname "$mumble_config")"
+      cp ${mumbleConfig} "$mumble_config"
     fi
-    if ${lib.boolToString cfg.certificate.enable} && [ -r "${certificatePath}" ] && [ -f "$config_file" ]; then
-      certificate_tmp="$(${pkgs.coreutils}/bin/mktemp)"
-      if ${pkgs.coreutils}/bin/base64 -d "${
-        config.sops.secrets."mumble/certificate".path
-      }" > "$certificate_tmp" \
-        && ${pkgs.jq}/bin/jq --rawfile certificate "$certificate_tmp" '.net.certificate = ($certificate | @base64)' "$config_file" > "$config_file.tmp"; then
-        ${pkgs.coreutils}/bin/mv "$config_file.tmp" "$config_file"
+
+    if [ -f "$mumble_config" ]; then
+      mumble_tmp="$(mktemp "''${mumble_config}.XXXXXX")"
+      if ${pkgs.jq}/bin/jq \
+        --arg username ${lib.escapeShellArg cfg.username} \
+        --argjson public-list ${lib.boolToString (!cfg.disablePublicServerList)} \
+        '.audio.input_system = "PulseAudio"
+         | .audio.output_system = "PulseAudio"
+         | .ui.theme = ""
+         | .ui.theme_style = ""
+         | .last_connection.username = $username
+         | .ui.disable_public_server_list = ($public-list | not)
+         | .network.auto_connect_to_last_server = ${lib.boolToString cfg.autoConnectToLastServer}
+         | .network.reconnect_automatically = ${lib.boolToString cfg.reconnectAutomatically}
+         | .ui.hide_in_tray = ${lib.boolToString cfg.hideInTray}
+         | .ui.quit_behavior = "${cfg.quitBehavior}"
+         | .ui.server_filter_mode = "${cfg.serverFilterMode}"' \
+        "$mumble_config" > "$mumble_tmp"; then
+        chmod --reference="$mumble_config" "$mumble_tmp"
+        mv "$mumble_tmp" "$mumble_config"
+      else
+        rm -f "$mumble_tmp"
       fi
-      ${pkgs.coreutils}/bin/rm -f "$certificate_tmp" "$config_file.tmp"
     fi
+
+    if ${lib.boolToString cfg.certificate.enable} && [ -r "${certificatePath}" ] && [ -f "$mumble_config" ]; then
+      mumble_tmp="$(mktemp "''${mumble_config}.XXXXXX")"
+      if ${pkgs.jq}/bin/jq --rawfile certificate "${certificatePath}" \
+        '.net.certificate = ($certificate | gsub("\\s"; ""))' \
+        "$mumble_config" > "$mumble_tmp"; then
+        chmod --reference="$mumble_config" "$mumble_tmp"
+        mv "$mumble_tmp" "$mumble_config"
+      else
+        rm -f "$mumble_tmp"
+      fi
+    elif ! ${lib.boolToString cfg.certificate.enable} && [ -f "$mumble_config" ]; then
+      mumble_tmp="$(mktemp "''${mumble_config}.XXXXXX")"
+      if ${pkgs.jq}/bin/jq 'del(.net.certificate)' "$mumble_config" > "$mumble_tmp"; then
+        chmod --reference="$mumble_config" "$mumble_tmp"
+        mv "$mumble_tmp" "$mumble_config"
+      else
+        rm -f "$mumble_tmp"
+      fi
+    fi
+
+    mkdir -p "$(dirname "$mumble_database")"
+    ${pkgs.sqlite}/bin/sqlite3 "$mumble_database" \
+      'CREATE TABLE IF NOT EXISTS servers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, hostname TEXT, port INTEGER DEFAULT 64738, username TEXT, password TEXT, url TEXT);'
+    ${serverSql}
+  '';
+
+  hyprlandCommand = pkgs.writeShellScript "mumble-launcher" ''
+    set -eu
+
+    if [ -f "${configFile}" ]; then
+      ${pkgs.jq}/bin/jq \
+        '.mumble_has_quit_normally = true
+         | .ui.theme = ""
+         | .ui.theme_style = ""
+         | .ui.disable_public_server_list = ${lib.boolToString cfg.disablePublicServerList}' \
+        "${configFile}" > "${configFile}.tmp"
+      ${pkgs.coreutils}/bin/mv "${configFile}.tmp" "${configFile}"
+    fi
+
+    if ${lib.boolToString cfg.certificate.enable} && [ -r "${certificatePath}" ] && [ -f "${configFile}" ]; then
+      if ${pkgs.jq}/bin/jq --rawfile certificate "${certificatePath}" \
+        '.net.certificate = ($certificate | gsub("\\s"; ""))' \
+        "${configFile}" > "${configFile}.tmp"; then
+        ${pkgs.coreutils}/bin/mv "${configFile}.tmp" "${configFile}"
+      else
+        ${pkgs.coreutils}/bin/rm -f "${configFile}.tmp"
+      fi
+    fi
+
     exec ${pkgs.mumble}/bin/mumble "$@"
   '';
+
   setQuitNormallyCommand = pkgs.writeShellScript "mumble-set-quit-flag" ''
-    [ -n "''${MAINPID:-}" ] && kill -0 "$MAINPID" 2>/dev/null || exit 0
-    config_file="$HOME/.config/Mumble/Mumble/mumble_settings.json"
-    [ -f "$config_file" ] || exit 0
-    ${pkgs.jq}/bin/jq '.mumble_has_quit_normally = true' "$config_file" > "$config_file.tmp" \
-      && ${pkgs.coreutils}/bin/mv "$config_file.tmp" "$config_file"
+    [ -n "''${MAINPID:-}" ] || exit 0
+    kill -0 "$MAINPID" 2>/dev/null || exit 0
+    [ -f "${configFile}" ] || exit 0
+    ${pkgs.jq}/bin/jq '.mumble_has_quit_normally = true' "${configFile}" > "${configFile}.tmp"
+    ${pkgs.coreutils}/bin/mv "${configFile}.tmp" "${configFile}"
   '';
 in
 {
@@ -88,65 +162,31 @@ in
     command = lib.mkOption {
       type = lib.types.str;
       readOnly = true;
-      default = "${command}";
+      default = "${pkgs.mumble}/bin/mumble";
+      description = "Direct Mumble command for desktop launchers.";
     };
+
+    hyprlandCommand = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = "${hyprlandCommand}";
+      description = "Mumble command with Hyprland-specific runtime preparation.";
+    };
+
     setQuitNormallyCommand = lib.mkOption {
       type = lib.types.str;
       readOnly = true;
       default = "${setQuitNormallyCommand}";
+      description = "Command used to mark Mumble as cleanly closed.";
     };
   };
 
   config = lib.mkIf (features.apps.enable && cfg.enable) {
     home.packages = [ pkgs.mumble ];
     sops.secrets."mumble/certificate" = lib.mkIf cfg.certificate.enable { };
+
     home.activation.mumbleConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      mumble_config="$HOME/.config/Mumble/Mumble/mumble_settings.json"
-      if [ ! -e "$mumble_config" ]; then
-        mkdir -p "$(dirname "$mumble_config")"
-        cp ${mumbleConfig} "$mumble_config"
-      fi
-      if [ -f "$mumble_config" ]; then
-        mumble_tmp="$(mktemp "''${mumble_config}.XXXXXX")"
-        if ${pkgs.jq}/bin/jq \
-          --arg username ${lib.escapeShellArg cfg.username} \
-          --argjson public-list ${lib.boolToString (!cfg.disablePublicServerList)} \
-          '.ui.theme = "" | .ui.theme_style = "" | .last_connection.username = $username | .ui.disable_public_server_list = ($public-list | not) | .network.auto_connect_to_last_server = ${lib.boolToString cfg.autoConnectToLastServer} | .network.reconnect_automatically = ${lib.boolToString cfg.reconnectAutomatically} | .ui.hide_in_tray = ${lib.boolToString cfg.hideInTray} | .ui.quit_behavior = "${cfg.quitBehavior}" | .ui.server_filter_mode = "${cfg.serverFilterMode}"' \
-          "$mumble_config" > "$mumble_tmp"; then
-          chmod --reference="$mumble_config" "$mumble_tmp"
-          mv "$mumble_tmp" "$mumble_config"
-        else
-          rm -f "$mumble_tmp"
-        fi
-      fi
-
-      if ${lib.boolToString cfg.certificate.enable} && [ -r "${certificatePath}" ] && [ -f "$mumble_config" ]; then
-        mumble_certificate_tmp="$(mktemp)"
-        mumble_tmp="$(mktemp "''${mumble_config}.XXXXXX")"
-        if base64 -d ${certificatePath} > "$mumble_certificate_tmp" \
-          && ${pkgs.jq}/bin/jq --rawfile certificate "$mumble_certificate_tmp" \
-          '.net.certificate = ($certificate | @base64)' "$mumble_config" > "$mumble_tmp"; then
-          chmod --reference="$mumble_config" "$mumble_tmp"
-          mv "$mumble_tmp" "$mumble_config"
-        else
-          rm -f "$mumble_tmp"
-        fi
-        rm -f "$mumble_certificate_tmp"
-      elif ! ${lib.boolToString cfg.certificate.enable} && [ -f "$mumble_config" ]; then
-        mumble_tmp="$(mktemp "''${mumble_config}.XXXXXX")"
-        if ${pkgs.jq}/bin/jq 'del(.net.certificate)' "$mumble_config" > "$mumble_tmp"; then
-          chmod --reference="$mumble_config" "$mumble_tmp"
-          mv "$mumble_tmp" "$mumble_config"
-        else
-          rm -f "$mumble_tmp"
-        fi
-      fi
-
-      mumble_database="$HOME/.local/share/Mumble/Mumble/mumble.sqlite"
-      mkdir -p "$(dirname "$mumble_database")"
-      ${pkgs.sqlite}/bin/sqlite3 "$mumble_database" \
-        'CREATE TABLE IF NOT EXISTS servers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, hostname TEXT, port INTEGER DEFAULT 64738, username TEXT, password TEXT, url TEXT);'
-      ${serverSql}
+      ${updateConfig}
     '';
   };
 }

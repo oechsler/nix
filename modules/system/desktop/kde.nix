@@ -35,10 +35,6 @@
     # Pass the SDDM login password (local or LDAP) to KDE Wallet.
     security.pam.services.sddm.kwallet.enable = true;
 
-    # KDE's systemd app scopes currently SIGKILL Mumble shortly after launch.
-    # Keep desktop applications in the regular user session instead.
-    environment.sessionVariables.KDE_APPLICATIONS_AS_SCOPE = "0";
-
     xdg.portal = {
       enable = true;
       extraPortals = [
