@@ -117,7 +117,7 @@ let
     if ${lib.boolToString hasCertificate} && [ -r "${certificatePath}" ] && [ -f "$mumble_config" ]; then
       mumble_tmp="$(mktemp "''${mumble_config}.XXXXXX")"
       if ${pkgs.jq}/bin/jq --rawfile certificate "${certificatePath}" \
-        '.net.certificate = ($certificate | gsub("\\s"; ""))' \
+        '.certificate = ($certificate | gsub("\\s"; ""))' \
         "$mumble_config" > "$mumble_tmp"; then
         chmod --reference="$mumble_config" "$mumble_tmp"
         mv "$mumble_tmp" "$mumble_config"
@@ -126,7 +126,7 @@ let
       fi
     elif ! ${lib.boolToString hasCertificate} && [ -f "$mumble_config" ]; then
       mumble_tmp="$(mktemp "''${mumble_config}.XXXXXX")"
-      if ${pkgs.jq}/bin/jq 'del(.net.certificate)' "$mumble_config" > "$mumble_tmp"; then
+      if ${pkgs.jq}/bin/jq 'del(.certificate)' "$mumble_config" > "$mumble_tmp"; then
         chmod --reference="$mumble_config" "$mumble_tmp"
         mv "$mumble_tmp" "$mumble_config"
       else
@@ -147,6 +147,11 @@ let
     ${pkgs.jq}/bin/jq '.mumble_has_quit_normally = true' "${configFile}" > "${configFile}.tmp"
     ${pkgs.coreutils}/bin/mv "${configFile}.tmp" "${configFile}"
   '';
+
+  mumbleCommand = pkgs.writeShellScript "mumble-launcher" ''
+    ${updateConfig}
+    exec ${pkgs.mumble}/bin/mumble "$@"
+  '';
 in
 {
   options.programs.mumble = {
@@ -155,6 +160,20 @@ in
       readOnly = true;
       default = "${pkgs.mumble}/bin/mumble";
       description = "Direct Mumble command for desktop launchers.";
+    };
+
+    launcher = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = "${mumbleCommand}";
+      description = "Mumble launcher with declarative configuration preparation.";
+    };
+
+    updateConfig = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = "${updateConfig}";
+      description = "Command used to create and update Mumble's configuration.";
     };
 
     setQuitNormallyCommand = lib.mkOption {

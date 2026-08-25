@@ -73,7 +73,7 @@ continues to work without a client certificate.
 
 ### Mumble
 
-- `mumble/certificate` — Optional PKCS#12 identity certificate, imported into Mumble's `net.certificate` setting when present
+- `mumble/certificate` — Optional PKCS#12 identity certificate, imported into Mumble's `certificate` setting when present
 - The certificate is stored as an encrypted Base64 value in `sops.encrypted.yaml`; the private key and the original `.p12` file must never be committed.
 
 ### Why Secrets Are Encrypted
