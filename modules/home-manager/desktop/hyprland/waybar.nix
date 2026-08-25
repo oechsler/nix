@@ -44,6 +44,8 @@ let
   # Theme variables
   inherit (config.catppuccin) accent;
   isLight = config.catppuccin.flavor == "latte";
+  # Small Waybar-specific refinement while staying tied to shared theme spacing.
+  fineSpacing = theme.spacing.compact / 2;
 
   # Load and customize SCSS styling
   rawStyle = builtins.readFile ./waybar-style.scss;
@@ -66,6 +68,10 @@ let
         "workspace_horizontal_spacing"
         "module_spacing"
         "content_spacing"
+        "window_spacing"
+        "tray_spacing"
+        "edge_spacing"
+        "clock_edge_spacing"
         "launcher_width"
         "bar_height"
         "outer_spacing"
@@ -90,6 +96,10 @@ let
         "${toString theme.spacing.workspaceHorizontal}px"
         "${toString theme.spacing.module}px"
         "${toString theme.spacing.content}px"
+        "${toString (theme.spacing.module + fineSpacing)}px"
+        "${toString (theme.spacing.control + fineSpacing)}px"
+        "${toString (theme.spacing.content + fineSpacing)}px"
+        "${toString (theme.spacing.module + fineSpacing)}px"
         "${toString theme.sizes.launcher}px"
         "${toString theme.gaps.outer}px"
         "${toString theme.gaps.outer}px"
@@ -246,7 +256,7 @@ in
         };
 
         "tray" = {
-          spacing = 10;
+          spacing = theme.spacing.module + fineSpacing;
           icon-size = 16;
           icons = defaultTrayIcons // config.waybar.tray.icons;
         };
