@@ -615,6 +615,10 @@ Yazi integrations follow the existing feature toggles. Heavy preview
 integrations are enabled only when their corresponding application or
 development feature is enabled.
 
+Press `Space` followed by `.` in Yazi to toggle hidden files. The shortcut is
+configured in the Yazi module and is available independently of the preview
+feature toggles.
+
 ## File Manager Bookmarks
 
 Bookmarks are shared across the supported file managers. The same declarative
