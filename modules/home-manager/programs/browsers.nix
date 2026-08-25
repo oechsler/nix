@@ -388,7 +388,8 @@ in
           "extensions.formautofill.creditCards.enabled" = false;
           "extensions.formautofill.addresses.enabled" = false;
 
-          "browser.newtabpage.enabled" = false;
+          # Keep the native new-tab entry point enabled so the managed
+          # New Tab Override extension can replace it with the dashboard.
           "browser.newtabpage.activity-stream.showSponsored" = false;
           "browser.newtabpage.activity-stream.showSponsoredTopSites" = false;
           "browser.newtabpage.activity-stream.feeds.topsites" = false;

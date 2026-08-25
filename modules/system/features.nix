@@ -418,8 +418,15 @@ in
           default = config.user.name;
           description = "Default Mumble username.";
         };
-        certificate = {
-          enable = lib.mkEnableOption "Mumble identity certificate";
+        playMuteCue = lib.mkOption {
+          type = lib.types.bool;
+          default = false;
+          description = "Play a sound when Mumble is muted or unmuted.";
+        };
+        channelExpansionMode = lib.mkOption {
+          type = lib.types.str;
+          default = "AllChannels";
+          description = "Mumble channel expansion mode.";
         };
         disablePublicServerList = lib.mkOption {
           type = lib.types.bool;
