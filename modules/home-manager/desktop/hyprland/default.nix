@@ -290,9 +290,6 @@ in
               RestartPreventExitStatus = 1;
               RestartSec = 3;
               TimeoutStopSec = 5;
-            }
-            // lib.optionalAttrs (app.name == "Mumble") {
-              ExecStop = config.programs.mumble.setQuitNormallyCommand;
             };
             Install.WantedBy = [ "graphical-session.target" ];
           };
