@@ -441,7 +441,7 @@ in
           ]
           [
             "QT_QPA_PLATFORM"
-            "wayland;xcb"
+            "wayland"
           ]
           [
             "QT_QPA_PLATFORMTHEME"
