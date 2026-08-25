@@ -90,12 +90,6 @@ in
             exec = "vesktop --start-minimized";
           }
         ]
-        ++ lib.optionals mumbleEnabled [
-          {
-            name = "Mumble";
-            exec = config.programs.mumble.launcher;
-          }
-        ]
         # Hyprland starts Steam through the dedicated service below. Steam gets
         # a longer delay because gamescope and Steam Input need the fully
         # initialized Wayland/uinput session before they are started.
@@ -112,7 +106,7 @@ in
             [Desktop Entry]
             Type=Application
             Name=Mumble
-            Exec=${config.programs.mumble.launcher} %u
+            Exec=${config.programs.mumble.command} %u
             Icon=mumble
             Terminal=false
             MimeType=x-scheme-handler/mumble;
@@ -137,6 +131,28 @@ in
       };
 
     }
+
+    (lib.mkIf mumbleEnabled {
+      systemd.user.services.mumble = {
+        Unit = {
+          Description = "Mumble";
+          After = [ "graphical-session.target" ];
+          PartOf = [ "graphical-session.target" ];
+        };
+        Service = {
+          ExecStartPre = config.programs.mumble.updateConfig;
+          ExecStart = config.programs.mumble.command;
+          ExecStop = config.programs.mumble.setQuitNormallyCommand;
+          Environment = "PATH=/etc/profiles/per-user/${config.home.username}/bin:/run/current-system/sw/bin";
+          Type = "exec";
+          Restart = "on-failure";
+          RestartPreventExitStatus = 1;
+          RestartSec = 3;
+          TimeoutStopSec = 5;
+        };
+        Install.WantedBy = [ "graphical-session.target" ];
+      };
+    })
 
     #---------------------------
     # Trayscale systemd service

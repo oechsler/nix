@@ -24,6 +24,8 @@ let
 
   mumbleConfig = pkgs.writeText "mumble-settings.json" (
     builtins.toJSON {
+      mumble_has_quit_normally = true;
+      settings_version = 1;
       audio = {
         echo_cancel_mode = "Disabled";
         # PipeWire provides the PulseAudio compatibility server. Mumble's
@@ -88,7 +90,9 @@ let
         --arg server_filter_mode ${lib.escapeShellArg cfg.serverFilterMode} \
         --argjson play_mute_cue ${lib.boolToString cfg.playMuteCue} \
         --argjson public_list ${lib.boolToString (!cfg.disablePublicServerList)} \
-        '.audio.input_system = "PulseAudio"
+         '.mumble_has_quit_normally = true
+          | .settings_version = 1
+          | .audio.input_system = "PulseAudio"
          | .audio.output_system = "PulseAudio"
          | .audio.echo_cancel_mode = "Disabled"
          | .audio.play_mute_cue = $play_mute_cue
@@ -148,10 +152,6 @@ let
     ${pkgs.coreutils}/bin/mv "${configFile}.tmp" "${configFile}"
   '';
 
-  mumbleCommand = pkgs.writeShellScript "mumble-launcher" ''
-    ${updateConfig}
-    exec ${pkgs.mumble}/bin/mumble "$@"
-  '';
 in
 {
   options.programs.mumble = {
@@ -160,13 +160,6 @@ in
       readOnly = true;
       default = "${pkgs.mumble}/bin/mumble";
       description = "Direct Mumble command for desktop launchers.";
-    };
-
-    launcher = lib.mkOption {
-      type = lib.types.str;
-      readOnly = true;
-      default = "${mumbleCommand}";
-      description = "Mumble launcher with declarative configuration preparation.";
     };
 
     updateConfig = lib.mkOption {
