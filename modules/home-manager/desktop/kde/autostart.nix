@@ -4,11 +4,12 @@
 #
 # How it works:
 # - Reads autostart.apps list from common/autostart.nix
-# - Generates .desktop file for each app in ~/.config/autostart/
-# - KDE automatically launches these apps on login
+# - Generates one .desktop file per app in ~/.config/autostart/
+# - Plasma exposes these files to its session startup, usually through
+#   systemd-xdg-autostart-generator
 #
-# Hyprland handles autostart differently:
-# - Uses exec-once in hyprland/default.nix
+# Hyprland handles the same shared app list differently:
+# - hyprland/default.nix generates one systemd user service per app
 
 { config, lib, ... }:
 
@@ -25,7 +26,7 @@ in
   #===========================
 
   config = {
-    # Generate XDG autostart .desktop entries for KDE
+    # Keep KDE's app startup declarative and let Plasma manage the lifecycle.
     xdg.configFile = builtins.listToAttrs (
       map (app: {
         name = "autostart/${slug app}.desktop";
