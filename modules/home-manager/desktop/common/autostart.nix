@@ -32,8 +32,6 @@
 let
   isKde = features.desktop.wm == "kde";
   mumbleEnabled = features.apps.enable && features.apps.mumble.enable;
-  mumbleCommand =
-    if isKde then config.programs.mumble.command else config.programs.mumble.hyprlandCommand;
 
   desktopSteamCondition = pkgs.writeShellScript "steam-desktop-condition" ''
     set -eu
@@ -92,7 +90,7 @@ in
         ++ lib.optionals mumbleEnabled [
           {
             name = "Mumble";
-            exec = mumbleCommand;
+            exec = config.programs.mumble.command;
           }
         ]
         # Hyprland starts Steam via a dedicated delayed service below so Steam
@@ -112,7 +110,7 @@ in
             [Desktop Entry]
             Type=Application
             Name=Mumble
-            Exec=${mumbleCommand} %u
+            Exec=${config.programs.mumble.command} %u
             Icon=mumble
             Terminal=false
             MimeType=x-scheme-handler/mumble;
