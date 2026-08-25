@@ -35,6 +35,10 @@
 let
   isKde = features.desktop.wm == "kde";
   mumbleEnabled = features.apps.enable && features.apps.mumble.enable;
+  # KDE starts the binary directly. Hyprland uses the wrapper below because
+  # its user service may start before activation has repaired Mumble's state.
+  mumbleCommand =
+    if isKde then config.programs.mumble.command else config.programs.mumble.hyprlandCommand;
 
   desktopSteamCondition = pkgs.writeShellScript "steam-desktop-condition" ''
     set -eu
@@ -93,7 +97,7 @@ in
         ++ lib.optionals mumbleEnabled [
           {
             name = "Mumble";
-            exec = config.programs.mumble.command;
+            exec = mumbleCommand;
           }
         ]
         # Hyprland starts Steam through the dedicated service below. Steam gets
@@ -114,7 +118,7 @@ in
             [Desktop Entry]
             Type=Application
             Name=Mumble
-            Exec=${config.programs.mumble.command} %u
+            Exec=${mumbleCommand} %u
             Icon=mumble
             Terminal=false
             MimeType=x-scheme-handler/mumble;
