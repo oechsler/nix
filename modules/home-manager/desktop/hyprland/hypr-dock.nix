@@ -3,7 +3,7 @@
 # This module configures hypr-dock as the application dock for Hyprland.
 #
 # Features:
-# - Pinned applications (from desktop.pinnedApps)
+# - Pinned applications (from features.desktop.pinnedApps)
 # - Catppuccin theme integration
 # - Transparent background (alpha 0.85)
 # - Auto-start with graphical session
@@ -46,7 +46,7 @@ let
   );
   configTrigger = pkgs.writeText "hypr-dock-config-trigger" (
     builtins.toJSON {
-      pinnedApps = config.desktop.pinnedApps.entries;
+      pinnedApps = features.desktop.pinnedApps.entries;
       iconSize = 36;
       position = "bottom";
       previewMode = "live";
@@ -231,7 +231,7 @@ in
     home.activation.hyprDockPins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       _pinned_file="${config.xdg.dataHome}/hypr-dock/pinned"
       mkdir -p "$(dirname "$_pinned_file")"
-       printf '%s\n' ${lib.escapeShellArgs config.desktop.pinnedApps.entries} > "$_pinned_file"
+       printf '%s\n' ${lib.escapeShellArgs features.desktop.pinnedApps.entries} > "$_pinned_file"
       systemctl --user try-restart hypr-dock.service >/dev/null 2>&1 || true
     '';
   };

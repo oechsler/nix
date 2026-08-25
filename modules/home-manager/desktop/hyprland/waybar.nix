@@ -18,7 +18,7 @@
 # Tray Icons:
 # - Default mappings use Papirus-Dark icons for Steam, Nextcloud, Mumble, Vesktop, Trayscale
 # - Mappings are feature-gated (only active apps get their icons)
-# - Customize or add mappings via: desktop.tray.icons = { "AppId" = "icon-name"; };
+# - Customize or add mappings via: features.desktop.tray.icons = { "AppId" = "icon-name"; };
 # - This option has no effect on KDE (Plasma manages its own tray icons)
 #
 # Styling:
@@ -36,7 +36,6 @@
   i18n,
   displays,
   features,
-  desktop,
   lib,
   ...
 }:
@@ -255,7 +254,7 @@ in
         "tray" = {
           spacing = theme.spacing.module;
           icon-size = trayIconSize;
-          icons = defaultTrayIcons // desktop.tray.icons;
+          icons = defaultTrayIcons // features.desktop.tray.icons;
         };
 
         "network" = {

@@ -12,13 +12,11 @@
 # - See common/theme.nix
 
 {
-  config,
   pkgs,
   lib,
   theme,
   input,
   features,
-  desktop,
   ...
 }:
 
@@ -67,13 +65,13 @@ let
   # Pinned applications for KDE taskbar
   # Format: "applications:firefox.desktop,applications:kitty.desktop,..."
   pinnedLaunchersStr = lib.concatStringsSep "," (
-    map (app: "applications:${app}.desktop") config.desktop.pinnedApps.entries
+    map (app: "applications:${app}.desktop") features.desktop.pinnedApps.entries
   );
-  pinnedAppsDeclarative = config.desktop.pinnedApps.declarative;
+  pinnedAppsDeclarative = features.desktop.pinnedApps.declarative;
 
-  kdeTray = desktop.kde.tray;
-  kickoffFavorites = desktop.kde.favorites.entries or [ ];
-  kickoffFavoritesDeclarative = desktop.kde.favorites.declarative or false;
+  kdeTray = features.desktop.kde.tray;
+  kickoffFavorites = features.desktop.kde.favorites.entries or [ ];
+  kickoffFavoritesDeclarative = features.desktop.kde.favorites.declarative or false;
   kickoffFavoriteResources = map (app: "applications:${app}.desktop") kickoffFavorites;
   kickoffFavoriteMigrations = [
     {
@@ -279,7 +277,7 @@ in
             "org.kde.plasma.pager"
             {
               iconTasks = {
-                launchers = map (app: "applications:${app}.desktop") config.desktop.pinnedApps.entries;
+                launchers = map (app: "applications:${app}.desktop") features.desktop.pinnedApps.entries;
               };
             }
             "org.kde.plasma.marginsseparator"
