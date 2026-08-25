@@ -99,7 +99,7 @@ window#waybar {
   background-color: alpha(@base, container_alpha);
   color: @text;
   font-weight: bold;
-  padding: vertical_spacing module_spacing;
+  padding: vertical_spacing window_spacing;
   margin: 0;
   border-radius: window_radius;
   border: border_width solid @blue;
@@ -108,7 +108,7 @@ window#waybar {
 /* Tray - separate pill, monochrome icons */
 #tray {
   background-color: alpha(@base, container_alpha);
-  padding: vertical_spacing control_spacing;
+  padding: vertical_spacing tray_spacing;
   margin: 0;
   margin-left: content_spacing;
   border-radius: window_radius;
@@ -152,14 +152,15 @@ window#waybar {
 }
 
 #network {
-  margin-left: content_spacing;
-  padding-right: content_spacing;
+  margin-left: edge_spacing;
+  padding-right: edge_spacing;
   border-left: border_width solid @blue;
   border-top-left-radius: window_radius;
   border-bottom-left-radius: window_radius;
 }
 
 #clock {
+  padding-right: clock_edge_spacing;
   border-right: border_width solid @blue;
   border-top-right-radius: window_radius;
   border-bottom-right-radius: window_radius;
