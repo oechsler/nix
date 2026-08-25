@@ -184,6 +184,18 @@ in
         default = "default";
         description = "Primary file manager for the desktop environment";
       };
+      kde.tray = {
+        shown = lib.mkOption {
+          type = lib.types.nullOr (lib.types.listOf lib.types.str);
+          default = null;
+          description = "KDE system-tray items shown directly in the panel.";
+        };
+        hidden = lib.mkOption {
+          type = lib.types.nullOr (lib.types.listOf lib.types.str);
+          default = null;
+          description = "KDE system-tray items hidden behind the tray popup.";
+        };
+      };
       browser = {
         enable = (lib.mkEnableOption "default web browser") // {
           default = true;

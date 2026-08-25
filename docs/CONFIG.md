@@ -123,6 +123,8 @@ the selected desktop session.
 | `features.desktop.wm`                      | `"hyprland"`                  | Desktop: `"hyprland"` or `"kde"`.                                  |
 | `features.desktop.login`                   | `"greeter"`                   | `"greeter"` or `"autologin"`.                                      |
 | `features.desktop.fileManager`             | `"default"`                   | `"default"` or terminal-based Yazi integration.                    |
+| `features.desktop.kde.tray.shown`          | `kde.nix` defaults            | KDE tray items displayed directly in the panel.                    |
+| `features.desktop.kde.tray.hidden`         | `kde.nix` defaults            | KDE tray items kept behind the tray popup.                         |
 | `features.desktop.browser.enable`          | `true`                        | Managed default browser.                                           |
 | `features.desktop.browser.type`            | `"librewolf"`                 | `"librewolf"` or `"firefox"`.                                      |
 | `features.desktop.browser.newTabPage`      | `https://dash.at.oechsler.it` | Dashboard URL used by the managed new-tab page.                    |
@@ -141,6 +143,14 @@ features = {
   desktop = {
     wm = "kde";
     login = "greeter";
+    kde.tray = {
+      shown = [
+        "org.kde.plasma.networkmanagement"
+        "org.kde.plasma.volume"
+        "org.kde.plasma.battery"
+      ];
+      hidden = [ "org.kde.plasma.bluetooth" ];
+    };
     browser = {
       enable = true;
       type = "librewolf";
