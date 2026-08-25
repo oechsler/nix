@@ -35,6 +35,9 @@
 let
   isKde = features.desktop.wm == "kde";
   mumbleEnabled = features.apps.enable && features.apps.mumble.enable;
+  mumbleDesktopFile =
+    lib.replaceStrings [ "Exec=mumble %u" ] [ "Exec=${config.programs.mumble.launcher} %u" ]
+      (builtins.readFile "${pkgs.mumble}/share/applications/info.mumble.Mumble.desktop");
 
   desktopSteamCondition = pkgs.writeShellScript "steam-desktop-condition" ''
     set -eu
@@ -108,15 +111,7 @@ in
 
       home.file = lib.mkIf mumbleEnabled {
         ${".local/share/applications/info.mumble.Mumble.desktop"} = {
-          text = ''
-            [Desktop Entry]
-            Type=Application
-            Name=Mumble
-            Exec=${config.programs.mumble.launcher} %u
-            Icon=mumble
-            Terminal=false
-            MimeType=x-scheme-handler/mumble;
-          '';
+          text = mumbleDesktopFile;
         };
       };
 
