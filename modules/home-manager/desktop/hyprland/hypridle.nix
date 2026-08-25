@@ -8,16 +8,16 @@
 # - Automatic lock and suspend
 # - Resume actions (restore brightness, turn on screen)
 #
-# Timeouts (from config.idle.*):
+# Timeouts (from idle.timeouts.*):
 # - dimBattery: Dim screen on battery
 # - suspendBattery: Lock + suspend on battery
 # - dimAc: Dim screen on AC
 # - suspendAc: Lock + suspend on AC
 #
 # Configuration options:
-#   hypridle.dim.percent = 10;         # Target brightness percentage when dimmed (default: 10%)
-#   hypridle.dim.stepPercent = 5;      # Brightness step size for smooth dim (default: 5%)
-#   hypridle.dim.stepDelay = "0.1";    # Delay between steps (default: 0.05s)
+#   idle.hypridle.dim.percent = 10;         # Target brightness percentage when dimmed (default: 10%)
+#   idle.hypridle.dim.stepPercent = 5;      # Brightness step size for smooth dim (default: 5%)
+#   idle.hypridle.dim.stepDelay = "0.1";    # Delay between steps (default: 0.05s)
 #
 # Battery detection:
 # - Desktop without battery → always treated as AC
@@ -48,7 +48,7 @@ let
 
   brightnessController = import ./scripts/brightness-controller.nix { inherit pkgs i18n theme; };
   lockSuspend = import ./scripts/lock-suspend.nix { inherit pkgs; };
-  dimDisplay = "${brightnessController} dim ${toString config.hypridle.dim.percent} ${toString config.hypridle.dim.stepPercent} ${config.hypridle.dim.stepDelay}";
+  dimDisplay = "${brightnessController} dim ${toString idle.hypridle.dim.percent} ${toString idle.hypridle.dim.stepPercent} ${idle.hypridle.dim.stepDelay}";
   undimDisplay = "${brightnessController} restore";
 
   # ============================================================================
@@ -110,7 +110,7 @@ in
   # Options
   #===========================
 
-  options.hypridle.dim = {
+  options.idle.hypridle.dim = {
     percent = lib.mkOption {
       type = lib.types.ints.between 1 100;
       default = 10;

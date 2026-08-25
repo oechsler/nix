@@ -48,14 +48,12 @@ the remaining options control boot-time storage and persistence.
 | `features.hardware.cpu`            | `null`      | CPU vendor: `"amd"` or `"intel"`; selects microcode.                                                      |
 | `features.hardware.gpu`            | `null`      | GPU vendor: `"amd"` or `"intel"`; selects graphics and VA-API support.                                    |
 | `features.kernel`                  | `"cachyos"` | Kernel variant, such as `"cachyos-v3"`, `"cachyos-v4"`, `"cachyos-lts"`, `"default"`, or `"default-lts"`. |
-| `features.encryption.enable`       | `true`      | LUKS full disk encryption.                                                                                |
-| `features.encryption.unlockMethod` | `"tpm2"`    | LUKS unlock method: `"tpm2"`, `"yubikey"`, or `"password"`.                                               |
 | `features.secureBoot.enable`       | `false`     | UEFI Secure Boot via lanzaboote.                                                                          |
 | `features.impermanence.enable`     | `true`      | Impermanent root with btrfs rollback on boot.                                                             |
 | `features.impermanence.extraPaths` | `[]`        | Additional paths to persist.                                                                              |
 | `features.snapshots.enable`        | `true`      | Automatic btrfs snapshots.                                                                                |
 
-Example for a laptop with encrypted storage:
+Example for a laptop:
 
 ```nix
 features = {
@@ -64,11 +62,22 @@ features = {
     cpu = "intel";
     gpu = "intel";
   };
-  encryption = {
-    unlockMethod = "yubikey";
-  };
 };
 ```
+
+### Authentication & Security
+
+Authentication, encryption, and boot integrity are configured independently
+from the desktop session.
+
+| Option                             | Default                     | Description                                                 |
+| ---------------------------------- | --------------------------- | ----------------------------------------------------------- |
+| `features.encryption.enable`       | `true`                      | LUKS full disk encryption.                                  |
+| `features.encryption.unlockMethod` | `"tpm2"`                    | LUKS unlock method: `"tpm2"`, `"yubikey"`, or `"password"`. |
+| `features.auth.totp.enable`        | `true`                      | TOTP for sudo and SSH.                                      |
+| `features.auth.yubikey.enable`     | `unlockMethod == "yubikey"` | YubiKey authentication.                                     |
+| `features.auth.ldap.enable`        | `false`                     | LLDAP authentication.                                       |
+| `features.ssh.enable`              | `false`                     | OpenSSH server and GitHub key sync.                         |
 
 ### Networking
 
@@ -110,7 +119,7 @@ features = {
 };
 ```
 
-### Desktop & Security
+### Desktop
 
 This layer selects the interactive session and its security integrations. The
 browser uses `about:newtab` as its startup page and replaces the new-tab content
@@ -122,7 +131,6 @@ the selected desktop session.
 | `features.desktop.enable`                  | `true`                        | Desktop environment and login manager.                             |
 | `features.desktop.wm`                      | `"hyprland"`                  | Desktop: `"hyprland"` or `"kde"`.                                  |
 | `features.desktop.login`                   | `"greeter"`                   | `"greeter"` or `"autologin"`.                                      |
-| `features.desktop.fileManager`             | `"default"`                   | `"default"` or terminal-based Yazi integration.                    |
 | `features.desktop.browser.enable`          | `true`                        | Managed default browser.                                           |
 | `features.desktop.browser.type`            | `"librewolf"`                 | `"librewolf"` or `"firefox"`.                                      |
 | `features.desktop.browser.newTabPage`      | `https://dash.at.oechsler.it` | Dashboard URL used by the managed new-tab page.                    |
@@ -131,10 +139,6 @@ the selected desktop session.
 | `features.audio.enable`                    | `true`                        | PipeWire audio with PulseAudio compatibility.                      |
 | `features.bluetooth.enable`                | `true`                        | Bluetooth support.                                                 |
 | `features.compat.enable`                   | `true`                        | `nix-ld` and glibc compatibility libraries.                        |
-| `features.auth.totp.enable`                | `true`                        | TOTP for sudo and SSH.                                             |
-| `features.auth.yubikey.enable`             | `unlockMethod == "yubikey"`   | YubiKey authentication.                                            |
-| `features.auth.ldap.enable`                | `false`                       | LLDAP authentication.                                              |
-| `features.ssh.enable`                      | `false`                       | OpenSSH server and GitHub key sync.                                |
 
 ```nix
 features = {
@@ -142,30 +146,27 @@ features = {
     wm = "kde";
     login = "greeter";
     browser.type = "librewolf";
+    kde = {
+      favorites = {
+        declarative = true;
+        entries = [
+          "librewolf"
+          "org.kde.dolphin"
+          "kitty"
+          "systemsettings"
+        ];
+      };
+      tray = {
+        shown = [
+          "org.kde.plasma.networkmanagement"
+          "org.kde.plasma.volume"
+          "org.kde.plasma.battery"
+        ];
+        hidden = [ "org.kde.plasma.bluetooth" ];
+      };
+    };
   };
   auth.totp.enable = true;
-};
-
-desktop = {
-  kde = {
-    favorites = {
-      declarative = true;
-      entries = [
-        "librewolf"
-        "org.kde.dolphin"
-        "kitty"
-        "systemsettings"
-      ];
-    };
-    tray = {
-      shown = [
-        "org.kde.plasma.networkmanagement"
-        "org.kde.plasma.volume"
-        "org.kde.plasma.battery"
-      ];
-      hidden = [ "org.kde.plasma.bluetooth" ];
-    };
-  };
 };
 ```
 
@@ -400,9 +401,9 @@ theme = {
 Waybar's system tray uses Papirus-Dark icon names for common applications.
 This section applies to Hyprland; KDE manages tray icons through Plasma.
 
-| Option              | Default | Description                                               |
-| ------------------- | ------- | --------------------------------------------------------- |
-| `desktop.tray.icons` | `{}`    | Custom StatusNotifierItem Id → Papirus icon name mappings |
+| Option                        | Default | Description                                               |
+| ----------------------------- | ------- | --------------------------------------------------------- |
+| `features.desktop.tray.icons` | `{}`    | Custom StatusNotifierItem Id → Papirus icon name mappings |
 
 Default mappings are feature-gated and automatically applied:
 
@@ -417,14 +418,16 @@ Default mappings are feature-gated and automatically applied:
 
 ### Customizing Tray Icons
 
-Add or override mappings in the `desktop` configuration:
+Add or override mappings in the `features.desktop` configuration:
 
 ```nix
-desktop = {
-  tray = {
-    icons = {
-      "MyApp" = "my-app-icon";
-      steam = "custom_steam_icon";  # override default
+features = {
+  desktop = {
+    tray = {
+      icons = {
+        "MyApp" = "my-app-icon";
+        steam = "custom_steam_icon";  # override default
+      };
     };
   };
 };
@@ -614,6 +617,10 @@ autostart entries; Hyprland starts the commands with `exec-once`.
 `features.desktop.fileManager` selects the primary file manager and keeps the
 desktop shortcuts, MIME associations, and pinned applications consistent.
 
+| Option                         | Default     | Description                                    |
+| ------------------------------ | ----------- | ---------------------------------------------- |
+| `features.desktop.fileManager` | `"default"` | Select the GUI or terminal-based file manager. |
+
 | Value        | Behavior                                                           |
 | ------------ | ------------------------------------------------------------------ |
 | `"default"`  | Use Nautilus on Hyprland or Dolphin on KDE.                        |
@@ -668,19 +675,21 @@ Pinned applications control desktop presentation, not package installation.
 The default list follows the enabled feature groups and the selected file
 manager.
 
-| Option                           | Default           | Description                                         |
-| -------------------------------- | ----------------- | --------------------------------------------------- |
-| `desktop.pinnedApps.declarative` | `true`            | Enforce the pinned app list on every desktop start. |
-| `desktop.pinnedApps.entries`     | Feature-dependent | Desktop files pinned to the dock or taskbar.        |
+| Option                                    | Default           | Description                                         |
+| ----------------------------------------- | ----------------- | --------------------------------------------------- |
+| `features.desktop.pinnedApps.declarative` | `true`            | Enforce the pinned app list on every desktop start. |
+| `features.desktop.pinnedApps.entries`     | Feature-dependent | Desktop files pinned to the dock or taskbar.        |
 
 ```nix
-desktop = {
-  pinnedApps = {
+features = {
+  desktop = {
+    pinnedApps = {
     declarative = true;
     entries = [
       "firefox"
       "kitty"
     ];
+    };
   };
 };
 ```
@@ -696,12 +705,12 @@ Each entry is a desktop file name without the `.desktop` suffix, such as
 
 ## KDE Desktop Options
 
-| Option                              | Default            | Description                                       |
-| ----------------------------------- | ------------------ | ------------------------------------------------- |
-| `desktop.kde.favorites.declarative` | `true`             | Enforce KDE Kickoff favorites on every KDE start. |
-| `desktop.kde.favorites.entries`     | `kde.nix` defaults | KDE Kickoff favorites as desktop file names.      |
-| `desktop.kde.tray.shown`            | `kde.nix` defaults | KDE tray items displayed directly in the panel.   |
-| `desktop.kde.tray.hidden`           | `kde.nix` defaults | KDE tray items kept behind the tray popup.        |
+| Option                                       | Default            | Description                                       |
+| -------------------------------------------- | ------------------ | ------------------------------------------------- |
+| `features.desktop.kde.favorites.declarative` | `true`             | Enforce KDE Kickoff favorites on every KDE start. |
+| `features.desktop.kde.favorites.entries`     | `kde.nix` defaults | KDE Kickoff favorites as desktop file names.      |
+| `features.desktop.kde.tray.shown`            | `kde.nix` defaults | KDE tray items displayed directly in the panel.   |
+| `features.desktop.kde.tray.hidden`           | `kde.nix` defaults | KDE tray items kept behind the tray popup.        |
 
 ## Idle / Power Management
 
@@ -735,18 +744,20 @@ starts the sequence, `stepPercent` controls each brightness step, and
 PowerDevil provides its own built-in display dimming and uses the shared idle
 timeouts above.
 
-| Option                     | Default  | Description                                 |
-| -------------------------- | -------- | ------------------------------------------- |
-| `hypridle.dim.percent`     | `10`     | Target brightness when dimmed (%)           |
-| `hypridle.dim.stepPercent` | `5`      | Brightness step size for smooth dimming (%) |
-| `hypridle.dim.stepDelay`   | `"0.05"` | Delay between dim steps in seconds          |
+| Option                          | Default  | Description                                 |
+| ------------------------------- | -------- | ------------------------------------------- |
+| `idle.hypridle.dim.percent`     | `10`     | Target brightness when dimmed (%)           |
+| `idle.hypridle.dim.stepPercent` | `5`      | Brightness step size for smooth dimming (%) |
+| `idle.hypridle.dim.stepDelay`   | `"0.05"` | Delay between dim steps in seconds          |
 
 ```nix
-hypridle = {
-  dim = {
+idle = {
+  hypridle = {
+    dim = {
     percent = 10;
     stepPercent = 5;
     stepDelay = "0.05";
+    };
   };
 };
 ```
