@@ -123,32 +123,6 @@ let
     ${serverSql}
   '';
 
-  hyprlandCommand = pkgs.writeShellScript "mumble-launcher" ''
-    set -eu
-
-    if [ -f "${configFile}" ]; then
-      ${pkgs.jq}/bin/jq \
-        '.mumble_has_quit_normally = true
-         | .ui.theme = ""
-         | .ui.theme_style = ""
-         | .ui.disable_public_server_list = ${lib.boolToString cfg.disablePublicServerList}' \
-        "${configFile}" > "${configFile}.tmp"
-      ${pkgs.coreutils}/bin/mv "${configFile}.tmp" "${configFile}"
-    fi
-
-    if ${lib.boolToString cfg.certificate.enable} && [ -r "${certificatePath}" ] && [ -f "${configFile}" ]; then
-      if ${pkgs.jq}/bin/jq --rawfile certificate "${certificatePath}" \
-        '.net.certificate = ($certificate | gsub("\\s"; ""))' \
-        "${configFile}" > "${configFile}.tmp"; then
-        ${pkgs.coreutils}/bin/mv "${configFile}.tmp" "${configFile}"
-      else
-        ${pkgs.coreutils}/bin/rm -f "${configFile}.tmp"
-      fi
-    fi
-
-    exec ${pkgs.mumble}/bin/mumble "$@"
-  '';
-
   setQuitNormallyCommand = pkgs.writeShellScript "mumble-set-quit-flag" ''
     [ -n "''${MAINPID:-}" ] || exit 0
     kill -0 "$MAINPID" 2>/dev/null || exit 0
@@ -164,13 +138,6 @@ in
       readOnly = true;
       default = "${pkgs.mumble}/bin/mumble";
       description = "Direct Mumble command for desktop launchers.";
-    };
-
-    hyprlandCommand = lib.mkOption {
-      type = lib.types.str;
-      readOnly = true;
-      default = "${hyprlandCommand}";
-      description = "Mumble command with Hyprland-specific runtime preparation.";
     };
 
     setQuitNormallyCommand = lib.mkOption {
