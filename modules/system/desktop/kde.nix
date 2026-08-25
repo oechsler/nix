@@ -26,7 +26,7 @@
 
 {
   config = lib.mkIf (config.features.desktop.enable && config.features.desktop.wm == "kde") {
-    features.desktop.kde.tray = {
+    desktop.kde.tray = {
       shown = lib.mkDefault [
         "Mumble"
         "Nextcloud"
@@ -46,11 +46,11 @@
         "org.kde.plasma.clipboard"
       ];
     };
-    features.desktop.kde.favorites = lib.mkDefault [
+    desktop.kde.favorites.entries = lib.mkDefault [
       config.features.desktop.browser.type
       (if config.features.desktop.fileManager == "terminal" then "yazi" else "org.kde.dolphin")
       "kitty"
-      "org.kde.systemsettings"
+      "systemsettings"
     ];
 
     services = {

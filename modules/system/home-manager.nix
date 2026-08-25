@@ -59,6 +59,7 @@ in
         locale
         user
         features
+        desktop
         displays
         input
         ;

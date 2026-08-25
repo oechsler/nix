@@ -123,9 +123,6 @@ the selected desktop session.
 | `features.desktop.wm`                      | `"hyprland"`                  | Desktop: `"hyprland"` or `"kde"`.                                  |
 | `features.desktop.login`                   | `"greeter"`                   | `"greeter"` or `"autologin"`.                                      |
 | `features.desktop.fileManager`             | `"default"`                   | `"default"` or terminal-based Yazi integration.                    |
-| `features.desktop.kde.favorites`           | `kde.nix` defaults            | Initial KDE Kickoff favorites; existing favorites are preserved.   |
-| `features.desktop.kde.tray.shown`          | `kde.nix` defaults            | KDE tray items displayed directly in the panel.                    |
-| `features.desktop.kde.tray.hidden`         | `kde.nix` defaults            | KDE tray items kept behind the tray popup.                         |
 | `features.desktop.browser.enable`          | `true`                        | Managed default browser.                                           |
 | `features.desktop.browser.type`            | `"librewolf"`                 | `"librewolf"` or `"firefox"`.                                      |
 | `features.desktop.browser.newTabPage`      | `https://dash.at.oechsler.it` | Dashboard URL used by the managed new-tab page.                    |
@@ -144,13 +141,23 @@ features = {
   desktop = {
     wm = "kde";
     login = "greeter";
-    kde.favorites = [
-      "librewolf"
-      "org.kde.dolphin"
-      "kitty"
-      "org.kde.systemsettings"
-    ];
-    kde.tray = {
+    browser.type = "librewolf";
+  };
+  auth.totp.enable = true;
+};
+
+desktop = {
+  kde = {
+    favorites = {
+      declarative = true;
+      entries = [
+        "librewolf"
+        "org.kde.dolphin"
+        "kitty"
+        "systemsettings"
+      ];
+    };
+    tray = {
       shown = [
         "org.kde.plasma.networkmanagement"
         "org.kde.plasma.volume"
@@ -158,14 +165,6 @@ features = {
       ];
       hidden = [ "org.kde.plasma.bluetooth" ];
     };
-    browser = {
-      enable = true;
-      type = "librewolf";
-      newTabPage = "https://dashboard.example.org";
-    };
-  };
-  auth = {
-    totp.enable = true;
   };
 };
 ```
@@ -403,7 +402,7 @@ This section applies to Hyprland; KDE manages tray icons through Plasma.
 
 | Option              | Default | Description                                               |
 | ------------------- | ------- | --------------------------------------------------------- |
-| `waybar.tray.icons` | `{}`    | Custom StatusNotifierItem Id → Papirus icon name mappings |
+| `desktop.tray.icons` | `{}`    | Custom StatusNotifierItem Id → Papirus icon name mappings |
 
 Default mappings are feature-gated and automatically applied:
 
@@ -418,10 +417,10 @@ Default mappings are feature-gated and automatically applied:
 
 ### Customizing Tray Icons
 
-Add or override mappings in `home.nix`:
+Add or override mappings in the `desktop` configuration:
 
 ```nix
-waybar = {
+desktop = {
   tray = {
     icons = {
       "MyApp" = "my-app-icon";
@@ -669,16 +668,20 @@ Pinned applications control desktop presentation, not package installation.
 The default list follows the enabled feature groups and the selected file
 manager.
 
-| Option               | Default           | Description                                  |
-| -------------------- | ----------------- | -------------------------------------------- |
-| `desktop.pinnedApps` | Feature-dependent | Desktop files pinned to the dock or taskbar. |
+| Option                           | Default           | Description                                         |
+| -------------------------------- | ----------------- | --------------------------------------------------- |
+| `desktop.pinnedApps.declarative` | `true`            | Enforce the pinned app list on every desktop start. |
+| `desktop.pinnedApps.entries`     | Feature-dependent | Desktop files pinned to the dock or taskbar.        |
 
 ```nix
 desktop = {
-  pinnedApps = [
-    "firefox"
-    "kitty"
-  ];
+  pinnedApps = {
+    declarative = true;
+    entries = [
+      "firefox"
+      "kitty"
+    ];
+  };
 };
 ```
 
@@ -690,6 +693,15 @@ The default list is extended by feature toggles:
 
 Each entry is a desktop file name without the `.desktop` suffix, such as
 `"firefox"`.
+
+## KDE Desktop Options
+
+| Option                              | Default            | Description                                       |
+| ----------------------------------- | ------------------ | ------------------------------------------------- |
+| `desktop.kde.favorites.declarative` | `true`             | Enforce KDE Kickoff favorites on every KDE start. |
+| `desktop.kde.favorites.entries`     | `kde.nix` defaults | KDE Kickoff favorites as desktop file names.      |
+| `desktop.kde.tray.shown`            | `kde.nix` defaults | KDE tray items displayed directly in the panel.   |
+| `desktop.kde.tray.hidden`           | `kde.nix` defaults | KDE tray items kept behind the tray popup.        |
 
 ## Idle / Power Management
 

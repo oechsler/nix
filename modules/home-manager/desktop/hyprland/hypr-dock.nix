@@ -46,7 +46,7 @@ let
   );
   configTrigger = pkgs.writeText "hypr-dock-config-trigger" (
     builtins.toJSON {
-      inherit (config.desktop) pinnedApps;
+      pinnedApps = config.desktop.pinnedApps.entries;
       iconSize = 36;
       position = "bottom";
       previewMode = "live";
@@ -231,7 +231,7 @@ in
     home.activation.hyprDockPins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       _pinned_file="${config.xdg.dataHome}/hypr-dock/pinned"
       mkdir -p "$(dirname "$_pinned_file")"
-      printf '%s\n' ${lib.escapeShellArgs config.desktop.pinnedApps} > "$_pinned_file"
+       printf '%s\n' ${lib.escapeShellArgs config.desktop.pinnedApps.entries} > "$_pinned_file"
       systemctl --user try-restart hypr-dock.service >/dev/null 2>&1 || true
     '';
   };
