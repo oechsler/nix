@@ -102,6 +102,7 @@ in
               org.kde.Platform/*)
                 $FLATPAK override --system "$app" --env=QT_QPA_PLATFORMTHEME=kde
                 $FLATPAK override --system "$app" --env=QT_QUICK_CONTROLS_STYLE=org.kde.desktop
+                $FLATPAK override --system "$app" --env=QML2_IMPORT_PATH=/usr/lib/qml:/app/lib/qml
                 $FLATPAK override --system "$app" --env=XDG_CURRENT_DESKTOP=KDE
                 $FLATPAK override --system "$app" --env=KDE_FULL_SESSION=true
                 $FLATPAK override --system "$app" --env=KDE_SESSION_VERSION=6
@@ -109,6 +110,7 @@ in
               *)
                 $FLATPAK override --system "$app" --unset-env=QT_QPA_PLATFORMTHEME
                 $FLATPAK override --system "$app" --unset-env=QT_QUICK_CONTROLS_STYLE
+                $FLATPAK override --system "$app" --unset-env=QML2_IMPORT_PATH
                 $FLATPAK override --system "$app" --unset-env=XDG_CURRENT_DESKTOP
                 $FLATPAK override --system "$app" --unset-env=KDE_FULL_SESSION
                 $FLATPAK override --system "$app" --unset-env=KDE_SESSION_VERSION
