@@ -164,13 +164,16 @@ in
           general="${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0"
         '';
 
-        "kdeglobals".text = ''
-          [General]
-          ColorScheme=${colorSchemeId}
+        "kdeglobals" = {
+          text = ''
+            [General]
+            ColorScheme=${colorSchemeId}
 
-          [Icons]
-          Theme=${iconName}
-        '';
+            [Icons]
+            Theme=${iconName}
+          '';
+          force = true;
+        };
       };
 
       dataFile."color-schemes/${colorSchemeId}.colors".source =
