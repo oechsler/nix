@@ -24,6 +24,37 @@
 let
   displayHelpers = import ../lib/displays.nix { inherit lib; };
   hasHDR = displayHelpers.hasDesktopHDR config.displays.monitors || config.displays.defaults.hdr == 2;
+  flatpakQtThemeOverrides = lib.optionalString config.features.desktop.enable ''
+    if [ -x "$FLATPAK" ]; then
+      # Only KDE-runtime apps have the KDE platform theme plugin. Do not set
+      # this globally: freedesktop-runtime apps may not ship that plugin.
+      $FLATPAK override --system --unset-env=QT_QPA_PLATFORMTHEME
+      while IFS=$'\t' read -r app runtime; do
+        if [ -z "$app" ]; then
+          continue
+        fi
+
+        case "$runtime" in
+          org.kde.Platform/*)
+            $FLATPAK override --system "$app" --env=QT_QPA_PLATFORMTHEME=kde
+            $FLATPAK override --system "$app" --env=QT_QUICK_CONTROLS_STYLE=org.kde.desktop
+            $FLATPAK override --system "$app" --env=QML2_IMPORT_PATH=/usr/lib/qml:/app/lib/qml
+            $FLATPAK override --system "$app" --env=XDG_CURRENT_DESKTOP=KDE
+            $FLATPAK override --system "$app" --env=KDE_FULL_SESSION=true
+            $FLATPAK override --system "$app" --env=KDE_SESSION_VERSION=6
+            ;;
+          *)
+            $FLATPAK override --system "$app" --unset-env=QT_QPA_PLATFORMTHEME
+            $FLATPAK override --system "$app" --unset-env=QT_QUICK_CONTROLS_STYLE
+            $FLATPAK override --system "$app" --unset-env=QML2_IMPORT_PATH
+            $FLATPAK override --system "$app" --unset-env=XDG_CURRENT_DESKTOP
+            $FLATPAK override --system "$app" --unset-env=KDE_FULL_SESSION
+            $FLATPAK override --system "$app" --unset-env=KDE_SESSION_VERSION
+            ;;
+        esac
+      done < <($FLATPAK list --system --app --columns=application,runtime)
+    fi
+  '';
 in
 {
   #===========================
@@ -88,37 +119,6 @@ in
           $FLATPAK override --system --unset-env=QT_STYLE_OVERRIDE
         fi
       ''
-      + lib.optionalString config.features.desktop.enable ''
-        if [ -x "$FLATPAK" ]; then
-          # Only KDE-runtime apps have the KDE platform theme plugin. Do not set
-          # this globally: freedesktop-runtime apps may not ship that plugin.
-          $FLATPAK override --system --unset-env=QT_QPA_PLATFORMTHEME
-          while IFS=$'\t' read -r app runtime; do
-            if [ -z "$app" ]; then
-              continue
-            fi
-
-            case "$runtime" in
-              org.kde.Platform/*)
-                $FLATPAK override --system "$app" --env=QT_QPA_PLATFORMTHEME=kde
-                $FLATPAK override --system "$app" --env=QT_QUICK_CONTROLS_STYLE=org.kde.desktop
-                $FLATPAK override --system "$app" --env=QML2_IMPORT_PATH=/usr/lib/qml:/app/lib/qml
-                $FLATPAK override --system "$app" --env=XDG_CURRENT_DESKTOP=KDE
-                $FLATPAK override --system "$app" --env=KDE_FULL_SESSION=true
-                $FLATPAK override --system "$app" --env=KDE_SESSION_VERSION=6
-                ;;
-              *)
-                $FLATPAK override --system "$app" --unset-env=QT_QPA_PLATFORMTHEME
-                $FLATPAK override --system "$app" --unset-env=QT_QUICK_CONTROLS_STYLE
-                $FLATPAK override --system "$app" --unset-env=QML2_IMPORT_PATH
-                $FLATPAK override --system "$app" --unset-env=XDG_CURRENT_DESKTOP
-                $FLATPAK override --system "$app" --unset-env=KDE_FULL_SESSION
-                $FLATPAK override --system "$app" --unset-env=KDE_SESSION_VERSION
-                ;;
-            esac
-          done < <($FLATPAK list --system --app --columns=application,runtime)
-        fi
-      ''
       + lib.optionalString hasHDR ''
         if [ -x "$FLATPAK" ]; then
           # Best-effort for Chromium/Electron/QtWebEngine Flatpaks on HDR desktops.
@@ -136,6 +136,20 @@ in
           $FLATPAK override --system --unset-env=ELECTRON_OZONE_PLATFORM_HINT
         fi
       '';
+
+      # The managed-install service installs applications after NixOS
+      # activation. Apply runtime-specific overrides once the apps exist.
+      systemd.services.flatpak-theme-overrides = lib.mkIf config.features.desktop.enable {
+        description = "Apply runtime-specific Flatpak theme overrides";
+        wantedBy = [ "multi-user.target" ];
+        after = [ "flatpak-managed-install.service" ];
+        wants = [ "flatpak-managed-install.service" ];
+        serviceConfig.Type = "oneshot";
+        script = ''
+          FLATPAK="${pkgs.flatpak}/bin/flatpak"
+          ${flatpakQtThemeOverrides}
+        '';
+      };
 
       # Make Flatpak apps visible in application launchers
       environment.sessionVariables.XDG_DATA_DIRS = [ "/var/lib/flatpak/exports/share" ];
