@@ -607,10 +607,12 @@ services.flatpak.packages = [
 Flatpak GTK applications receive the shared Catppuccin GTK theme and icon files
 from the user profile. For Qt applications, the configuration detects the
 Flatpak runtime: KDE-runtime applications use their bundled KDE platform theme
-and Qt Quick Controls plugins under both KDE and Hyprland, while other runtimes
-keep their own defaults without being forced to load possibly missing KDE
-plugins. Sandbox permissions remain application-specific; inspect or adjust
-them with Flatseal when needed.
+and Qt Quick Controls plugins under both KDE and Hyprland. They also receive the
+KDE session markers needed by Qt Quick and Kirigami to select the KDE controls
+style, without installing the KDE desktop environment. Other runtimes keep
+their own defaults without being forced to load possibly missing KDE plugins.
+Sandbox permissions remain application-specific; inspect or adjust them with
+Flatseal when needed.
 
 Disable Flatpak when the host should only use declarative Nix packages:
 
