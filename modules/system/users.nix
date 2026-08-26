@@ -72,9 +72,9 @@ in
     };
 
     keys = lib.mkOption {
-      type = lib.types.either lib.types.path lib.types.str;
+      type = lib.types.nullOr (lib.types.either lib.types.path lib.types.str);
       default = "https://git.at.oechsler.it/samuel.keys";
-      description = "SSH public keys source: URL or local file path";
+      description = "SSH public keys source: URL or local file path; null or an empty string disables local key synchronization";
     };
 
     # Home Directory

@@ -7,7 +7,7 @@
 #
 # Features:
 # - OpenSSH server with password authentication disabled
-# - Automatic import of SSH public keys from a URL or local file
+# - Automatic import of SSH public keys from a URL or local file when configured
 # - Optional acceptance of keys currently loaded in the user's SSH agent
 # - Periodic key refresh (every 15 minutes)
 #
@@ -34,7 +34,7 @@ let
   keysFile = "${user.home}/.ssh/authorized_keys";
   agentKeysFile = "${user.home}/.ssh/authorized_keys.agent";
 
-  keySource = toString config.user.keys;
+  keySource = if config.user.keys == null then "" else toString config.user.keys;
   fetchKeys =
     if lib.hasPrefix "http://" keySource || lib.hasPrefix "https://" keySource then
       "${pkgs.curl}/bin/curl -sf ${lib.escapeShellArg keySource}"
@@ -42,6 +42,11 @@ let
       "${pkgs.coreutils}/bin/cat ${lib.escapeShellArg keySource}";
   syncKeys = pkgs.writeShellScript "sync-authorized-keys" ''
     set -euo pipefail
+    if [ -z ${lib.escapeShellArg keySource} ]; then
+      rm -f "${keysFile}"
+      exit 0
+    fi
+
     keys=$(${fetchKeys} 2>/dev/null)
     if [ -n "$keys" ]; then
       mkdir -p "${user.home}/.ssh"

@@ -686,7 +686,7 @@ values are supplied through SOPS.
 | `user.fullName`       | `"Samuel Oechsler"`                      | Full name                                                                                                                                                                                               |
 | `user.email`          | `"samuel@oechsler.it"`                   | Email address                                                                                                                                                                                           |
 | `user.icon`           | `.assets/sam-memoji.png`                 | Profile picture (SDDM)                                                                                                                                                                                  |
-| `user.keys`           | `https://git.at.oechsler.it/samuel.keys` | URL or local file containing public SSH keys.                                                                                                                                                           |
+| `user.keys`           | `https://git.at.oechsler.it/samuel.keys` | URL or local file containing public SSH keys; `null` or `""` disables local key synchronization.                                                                                                        |
 | `user.hashedPassword` | `"!"` (locked)                           | Local shadow password fallback; the runtime password is set from SOPS (`user/password`) when local password authentication is enabled. Can be overridden per-host with a hash (`mkpasswd -m yescrypt`). |
 | `user.directories`    | `[ "repos" ]`                            | Extra directories to create in `~`                                                                                                                                                                      |
 
@@ -700,7 +700,8 @@ user = {
 ```
 
 Set `user.keys` to a local public-key file when the keys should not be fetched
-over the network.
+over the network. Set it to `null` or `""` when no local SSH keys should be
+provided; agent keys can still be enabled independently.
 
 ### Theme Options
 
