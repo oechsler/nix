@@ -310,6 +310,14 @@ in
         # Breeze corner radius
         breezerc.Common.CornerRadius = theme.radius.default;
 
+        # Keep the active KDE theme in sync during `home-manager switch`.
+        # plasma-manager otherwise persists the existing values and a global
+        # theme reload can fall back to its light default.
+        kdeglobals = {
+          General.ColorScheme = colorSchemeId;
+          KDE.LookAndFeelPackage = lookAndFeelId;
+        };
+
         # Disable screen edges (hot corners for desktop grid, etc.)
         kwinrc = {
           Effect-overview.BorderActivate = 9;
