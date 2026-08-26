@@ -121,12 +121,11 @@ features = {
 SSH server access can use a synchronized URL/local key file and, optionally,
 keys currently loaded in the SSH agent.
 
-| Option                          | Default                                  | Description                                    |
-| ------------------------------- | ---------------------------------------- | ---------------------------------------------- |
-| `features.ssh.enable`           | `false`                                  | Enable the OpenSSH server.                     |
-| `features.ssh.localKeys.enable` | `true`                                   | Accept keys from `user.keys`.                  |
-| `features.ssh.agentKeys.enable` | `true`                                   | Accept keys currently loaded in the SSH agent. |
-| `user.keys`                     | `https://git.at.oechsler.it/samuel.keys` | URL or local file containing public SSH keys.  |
+| Option                          | Default | Description                                    |
+| ------------------------------- | ------- | ---------------------------------------------- |
+| `features.ssh.enable`           | `false` | Enable the OpenSSH server.                     |
+| `features.ssh.localKeys.enable` | `true`  | Accept keys from `user.keys`.                  |
+| `features.ssh.agentKeys.enable` | `true`  | Accept keys currently loaded in the SSH agent. |
 
 ```nix
 features = {
@@ -140,12 +139,11 @@ features = {
     };
   };
 };
-
-user.keys = "https://git.at.oechsler.it/samuel.keys";
 ```
 
-Set `user.keys` to a local public-key file when the keys should not be fetched
-over the network.
+The SSH server uses the `user.keys` option described in [User Options](#user-options)
+when `features.ssh.localKeys.enable` is enabled. Agent keys are controlled
+independently with `features.ssh.agentKeys.enable`.
 
 ### Networking
 
@@ -682,22 +680,27 @@ sops = {
 These options describe the primary local user. Passwords and other sensitive
 values are supplied through SOPS.
 
-| Option                | Default                  | Description                                                                                                                                                                                             |
-| --------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `user.name`           | `flake.primaryUser`      | Primary username; the flake value is shared with Disko and home paths.                                                                                                                                  |
-| `user.fullName`       | `"Samuel Oechsler"`      | Full name                                                                                                                                                                                               |
-| `user.email`          | `"samuel@oechsler.it"`   | Email address                                                                                                                                                                                           |
-| `user.icon`           | `.assets/sam-memoji.png` | Profile picture (SDDM)                                                                                                                                                                                  |
-| `user.hashedPassword` | `"!"` (locked)           | Local shadow password fallback; the runtime password is set from SOPS (`user/password`) when local password authentication is enabled. Can be overridden per-host with a hash (`mkpasswd -m yescrypt`). |
-| `user.directories`    | `[ "repos" ]`            | Extra directories to create in `~`                                                                                                                                                                      |
+| Option                | Default                                  | Description                                                                                                                                                                                             |
+| --------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user.name`           | `flake.primaryUser`                      | Primary username; the flake value is shared with Disko and home paths.                                                                                                                                  |
+| `user.fullName`       | `"Samuel Oechsler"`                      | Full name                                                                                                                                                                                               |
+| `user.email`          | `"samuel@oechsler.it"`                   | Email address                                                                                                                                                                                           |
+| `user.icon`           | `.assets/sam-memoji.png`                 | Profile picture (SDDM)                                                                                                                                                                                  |
+| `user.keys`           | `https://git.at.oechsler.it/samuel.keys` | URL or local file containing public SSH keys.                                                                                                                                                           |
+| `user.hashedPassword` | `"!"` (locked)                           | Local shadow password fallback; the runtime password is set from SOPS (`user/password`) when local password authentication is enabled. Can be overridden per-host with a hash (`mkpasswd -m yescrypt`). |
+| `user.directories`    | `[ "repos" ]`                            | Extra directories to create in `~`                                                                                                                                                                      |
 
 ```nix
 user = {
   fullName = "Example User";
   email = "user@example.org";
+  keys = "https://git.example.org/user.keys";
   directories = [ "Projects" "Documents" ];
 };
 ```
+
+Set `user.keys` to a local public-key file when the keys should not be fetched
+over the network.
 
 ### Theme Options
 
