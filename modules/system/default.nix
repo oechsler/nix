@@ -14,6 +14,7 @@
 
 {
   imports = [
+    ../lib/service-logging.nix
     ./nix.nix
     ./sops.nix
     ./boot.nix
