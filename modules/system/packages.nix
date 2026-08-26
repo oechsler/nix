@@ -101,9 +101,11 @@ in
             case "$runtime" in
               org.kde.Platform/*)
                 $FLATPAK override --system "$app" --env=QT_QPA_PLATFORMTHEME=kde
+                $FLATPAK override --system "$app" --env=QT_QUICK_CONTROLS_STYLE=org.kde.desktop
                 ;;
               *)
                 $FLATPAK override --system "$app" --unset-env=QT_QPA_PLATFORMTHEME
+                $FLATPAK override --system "$app" --unset-env=QT_QUICK_CONTROLS_STYLE
                 ;;
             esac
           done < <($FLATPAK list --system --app --columns=application,runtime)
