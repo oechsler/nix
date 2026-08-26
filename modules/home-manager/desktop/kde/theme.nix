@@ -290,7 +290,12 @@ in
                 hidden = kdeTray.hidden or [ ];
               };
             }
-            "org.kde.plasma.digitalclock"
+            {
+              digitalClock = {
+                date.enable = true;
+                date.position = "belowTime";
+              };
+            }
             "org.kde.plasma.showdesktop"
           ];
         }
