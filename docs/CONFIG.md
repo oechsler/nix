@@ -604,10 +604,18 @@ services.flatpak.packages = [
 ];
 ```
 
-Flatpak applications receive the configured GTK and Qt theme integration where
-their runtime supports it. Theme support remains runtime-dependent.
+Flatpak applications receive the configured GTK theme integration and
+runtime-specific Qt integration where their runtime supports it. KDE-runtime
+applications get the KDE Qt Quick Controls style and the generated complete
+Catppuccin palette; this is applied only to KDE runtimes and does not turn
+GNOME or Freedesktop applications into KDE applications. Theme support remains
+runtime- and application-dependent, so applications that bundle their own
+toolkit or style can still ignore the host theme.
+
 Sandbox permissions remain application-specific; inspect or adjust them with
-Flatseal when needed.
+Flatseal when needed. After changing `theme.catppuccin.flavor` or
+`theme.catppuccin.accent`, rebuild the system and restart running Flatpaks so
+they receive the regenerated palette.
 
 Disable Flatpak when the host should only use declarative Nix packages:
 
@@ -620,7 +628,11 @@ features.flatpak.enable = false;
 AppImage is a fallback for vendor binaries that are not packaged in Nixpkgs.
 It is less reproducible than a Nix package and does not provide the same
 dependency, update, or sandbox guarantees as Flatpak, so it should normally be
-the last resort.
+the last resort. AppImages bundle their own libraries and may bundle GTK,
+Qt, or a custom UI toolkit as well. The host theme is therefore not
+guaranteed to apply; particularly for bundled Qt or custom-styled interfaces,
+matching the host theme may not be possible without application-specific
+options.
 
 | Option                     | Default | Description                                |
 | -------------------------- | ------- | ------------------------------------------ |

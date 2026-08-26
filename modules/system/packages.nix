@@ -22,21 +22,49 @@
 }:
 
 let
+  userHome = config.users.users.${config.user.name}.home;
+  capitalize =
+    value: (lib.toUpper (builtins.substring 0 1 value)) + (builtins.substring 1 (builtins.stringLength value) value);
+  colorSchemeId =
+    "Catppuccin${capitalize config.theme.catppuccin.flavor}${capitalize config.theme.catppuccin.accent}";
   flatpakQtThemeOverrides = ''
     $FLATPAK override --system --unset-env=QT_QPA_PLATFORMTHEME
+    $FLATPAK override --system --unset-env=XDG_CURRENT_DESKTOP
+    $FLATPAK override --system --unset-env=KDE_FULL_SESSION
+    $FLATPAK override --system --unset-env=KDE_SESSION_VERSION
+    $FLATPAK override --system --unset-env=XDG_CONFIG_DIRS
     while IFS=$'\t' read -r app runtime; do
       [ -n "$app" ] || continue
+
+      # Remove the obsolete defaults-path mapping from earlier generations.
+      $FLATPAK override --system "$app" --unset-env=XDG_CONFIG_DIRS
+      $FLATPAK override --system "$app" --nofilesystem=xdg-config/kdedefaults
 
       case "$runtime" in
         org.kde.Platform/*)
           $FLATPAK override --system "$app" --env=QT_QPA_PLATFORMTHEME=kde
           $FLATPAK override --system "$app" --env=QT_QUICK_CONTROLS_STYLE=org.kde.desktop
           $FLATPAK override --system "$app" --env=QML2_IMPORT_PATH=/usr/lib/qml:/app/lib/qml
+          $FLATPAK override --system "$app" --env=QT_PLUGIN_PATH=/usr/lib/plugins:/app/lib/plugins:/usr/share/runtime/lib/plugins
+          $FLATPAK override --system "$app" --env=XDG_DATA_DIRS=${userHome}/.local/share:/app/share:/usr/share:/usr/share/runtime/share:/run/host/user-share:/run/host/share
+          $FLATPAK override --system "$app" --env=KDE_COLOR_SCHEME=${colorSchemeId}
+          $FLATPAK override --system "$app" --env=XDG_CURRENT_DESKTOP=KDE
+          $FLATPAK override --system "$app" --env=KDE_FULL_SESSION=true
+          $FLATPAK override --system "$app" --env=KDE_SESSION_VERSION=6
+          $FLATPAK override --system "$app" --filesystem=xdg-config/kdeglobals:ro
+          $FLATPAK override --system "$app" --filesystem=xdg-data/color-schemes:ro
+          $FLATPAK override --system "$app" --filesystem=xdg-data/icons:ro
+          $FLATPAK override --system "$app" --filesystem=xdg-data/themes:ro
           ;;
         *)
           $FLATPAK override --system "$app" --unset-env=QT_QPA_PLATFORMTHEME
           $FLATPAK override --system "$app" --unset-env=QT_QUICK_CONTROLS_STYLE
           $FLATPAK override --system "$app" --unset-env=QML2_IMPORT_PATH
+          $FLATPAK override --system "$app" --unset-env=QT_PLUGIN_PATH
+          $FLATPAK override --system "$app" --unset-env=XDG_CURRENT_DESKTOP
+          $FLATPAK override --system "$app" --unset-env=KDE_FULL_SESSION
+          $FLATPAK override --system "$app" --unset-env=KDE_SESSION_VERSION
+          $FLATPAK override --system "$app" --unset-env=KDE_COLOR_SCHEME
           ;;
       esac
     done < <($FLATPAK list --system --app --columns=application,runtime)

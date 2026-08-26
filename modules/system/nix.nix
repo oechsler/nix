@@ -166,6 +166,19 @@ in
               "${translate "Automatic system update started." "Automatische Systemaktualisierung gestartet."}"
           '';
 
+          # nixos-rebuild uses a fixed transient systemd unit name. Wait for
+          # a manually started rebuild before the automatic one invokes it.
+          waitForManualRebuild = pkgs.writeShellScript "nixos-upgrade-wait" ''
+            for attempt in $(seq 1 300); do
+              if ! ${pkgs.systemd}/bin/systemctl is-active --quiet nixos-rebuild-switch-to-configuration.service; then
+                exit 0
+              fi
+              sleep 2
+            done
+            echo "Timed out waiting for another NixOS rebuild to finish." >&2
+            exit 1
+          '';
+
           # Pre-upgrade script: Sync with remote, then apply Secure Boot override if needed.
           # lanzaboote requires /var/lib/sbctl/keys to exist at build time.
           # If secure-boot-init hasn't run yet, inject a mkForce false override so the
@@ -178,22 +191,22 @@ in
 
             # Write Secure Boot override when sbctl keys are missing.
             # Never git-added — exists only during the build window.
-            OVERRIDE="${flakeDir}/hosts/$(hostname)/secure-boot-upgrade-override.nix"
-            if grep -q 'secureBoot\.enable = true' ${flakeDir}/hosts/$(hostname)/configuration.nix 2>/dev/null \
+            OVERRIDE="${flakeDir}/hosts/${config.networking.hostName}/secure-boot-upgrade-override.nix"
+            if grep -q 'secureBoot\.enable = true' ${flakeDir}/hosts/${config.networking.hostName}/configuration.nix 2>/dev/null \
               && [ ! -f /var/lib/sbctl/keys/db/db.pem ]; then
               printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }\n' > "$OVERRIDE"
               sed -i '/imports = \[/a\    .\/secure-boot-upgrade-override.nix' \
-                ${flakeDir}/hosts/$(hostname)/configuration.nix
+                ${flakeDir}/hosts/${config.networking.hostName}/configuration.nix
             fi
           '';
 
           # Post-upgrade cleanup: remove override and restore configuration.nix.
           # Runs even on upgrade failure so the git tree stays clean.
           cleanupOverride = pkgs.writeShellScript "nixos-upgrade-cleanup-override" ''
-            OVERRIDE="${flakeDir}/hosts/$(hostname)/secure-boot-upgrade-override.nix"
+            OVERRIDE="${flakeDir}/hosts/${config.networking.hostName}/secure-boot-upgrade-override.nix"
             if [ -f "$OVERRIDE" ]; then
               sed -i '/secure-boot-upgrade-override\.nix/d' \
-                ${flakeDir}/hosts/$(hostname)/configuration.nix
+                ${flakeDir}/hosts/${config.networking.hostName}/configuration.nix
               rm -f "$OVERRIDE"
             fi
           '';
@@ -225,6 +238,7 @@ in
           ];
 
           serviceConfig.ExecStartPre = lib.mkBefore [
+            "${waitForManualRebuild}"
             "${startingNotification}"
             "${updateFlake}"
           ];
