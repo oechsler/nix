@@ -42,48 +42,10 @@ let
       --user --pipe --quiet --collect \
       ${pkgs.libnotify}/bin/notify-send "$@"
   '';
-  flatpakTransactionWait = ''
-    transaction_ready=false
-    transaction_wait_logged=false
-    previous_apps=""
-    previous_tree_mtime=""
-    stable_checks=0
-    for attempt in $(seq 1 300); do
-      current_apps=$($FLATPAK list --system --app --columns=application,runtime)
-      current_tree_mtime=$(${pkgs.coreutils}/bin/stat -c %Y /var/lib/flatpak)
-      if ! ${pkgs.procps}/bin/pgrep -x flatpak >/dev/null 2>&1 \
-        && [ "$current_apps" = "$previous_apps" ] \
-        && [ "$current_tree_mtime" = "$previous_tree_mtime" ]; then
-        stable_checks=$((stable_checks + 1))
-      else
-        stable_checks=0
-      fi
-      previous_apps="$current_apps"
-      previous_tree_mtime="$current_tree_mtime"
-      if [ "$stable_checks" -ge 3 ]; then
-        transaction_ready=true
-        log transaction ready "attempt=$attempt"
-        break
-      fi
-      if [ "$transaction_wait_logged" != true ]; then
-        log transaction waiting ""
-        transaction_wait_logged=true
-      fi
-      ${pkgs.coreutils}/bin/sleep 2
-    done
-    if [ "$transaction_ready" != true ]; then
-      log transaction error "timeout=600s"
-      exit 1
-    fi
-  '';
   flatpakQtThemeOverrides = ''
     set -euo pipefail
     ${serviceLog}
     log sync started "scheme=${colorSchemeId} config=${userHome}/.config/kdeglobals data=${userHome}/.local/share"
-    # Flatpak deploys apps and extensions in separate steps. Wait for both the
-    # client transaction and the installed state to settle before scanning.
-    ${flatpakTransactionWait}
-
     $FLATPAK override --system --unset-env=QT_QPA_PLATFORMTHEME
     $FLATPAK override --system --unset-env=XDG_CURRENT_DESKTOP
     $FLATPAK override --system --unset-env=KDE_FULL_SESSION
@@ -135,8 +97,6 @@ let
     set -euo pipefail
     ${serviceLog}
     log sync started "state=/var/lib/flatpak-watcher/apps"
-
-    ${flatpakTransactionWait}
 
     resolve_icon() {
       local app="$1"
