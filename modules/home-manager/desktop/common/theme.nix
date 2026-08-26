@@ -124,6 +124,8 @@ in
         THEME_DIR="$HOME/.local/share/themes/${themeName}"
         SOURCE_DIR="${catppuccinGtk}/share/themes/${themeName}"
         GTK4_DIR="$HOME/.config/gtk-4.0"
+        ICON_DIR="$HOME/.local/share/icons/${iconName}"
+        ICON_SOURCE_DIR="${iconPackage}/share/icons/${iconName}"
 
         if [ -d "$SOURCE_DIR" ]; then
           [ -e "$THEME_DIR" ] && chmod -R u+w "$THEME_DIR" 2>/dev/null || true
@@ -143,6 +145,14 @@ in
             fi
           fi
         done
+
+        # Flatpak cannot follow the icon theme symlink into the Nix store.
+        if [ -d "$ICON_SOURCE_DIR" ]; then
+          [ -e "$ICON_DIR" ] && chmod -R u+w "$ICON_DIR" 2>/dev/null || true
+          rm -rf "$ICON_DIR"
+          mkdir -p "$(dirname "$ICON_DIR")"
+          cp -rL "$ICON_SOURCE_DIR" "$ICON_DIR"
+        fi
       '';
 
     };
