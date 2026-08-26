@@ -119,8 +119,6 @@ from the desktop session.
 | `features.auth.ldap.enable`        | `false`                     | LLDAP authentication.                                       |
 | `features.auth.ldap.uri`           | `null`                      | LDAP URI; required when LDAP is enabled.                    |
 | `features.auth.ldap.baseDn`        | `null`                      | LDAP base DN; required when LDAP is enabled.                |
-| `features.ssh.enable`              | `false`                     | OpenSSH server and public key synchronization.              |
-| `features.ssh.agentKeys.enable`    | `true`                      | Accept public keys currently loaded in the SSH agent.       |
 
 ```nix
 features = {
@@ -138,6 +136,37 @@ features = {
   };
 };
 ```
+
+#### SSH
+
+SSH server access can use a synchronized URL/local key file and, optionally,
+keys currently loaded in the SSH agent.
+
+| Option                          | Default                                  | Description                                    |
+| ------------------------------- | ---------------------------------------- | ---------------------------------------------- |
+| `features.ssh.enable`           | `false`                                  | Enable the OpenSSH server.                     |
+| `features.ssh.localKeys.enable` | `true`                                   | Accept keys from `user.keys`.                  |
+| `features.ssh.agentKeys.enable` | `true`                                   | Accept keys currently loaded in the SSH agent. |
+| `user.keys`                     | `https://git.at.oechsler.it/samuel.keys` | URL or local file containing public SSH keys.  |
+
+```nix
+features = {
+  ssh = {
+    enable = true;
+    localKeys = {
+      enable = true;
+    };
+    agentKeys = {
+      enable = true;
+    };
+  };
+};
+
+user.keys = "https://git.at.oechsler.it/samuel.keys";
+```
+
+Set `user.keys` to a local public-key file when the keys should not be fetched
+over the network.
 
 ### Networking
 
@@ -483,19 +512,23 @@ features = {
 Development tools inherit from `features.dev.enable` by default. Individual
 IDE integrations can be disabled without removing the command-line toolchain.
 
-| Option                          | Default      | Description                             |
-| ------------------------------- | ------------ | --------------------------------------- |
-| `features.dev.enable`           | `true`       | Development languages, tools, and IDEs. |
-| `features.dev.opencode.enable`  | `dev.enable` | OpenCode AI coding agent.               |
-| `features.dev.jetbrains.enable` | `dev.enable` | JetBrains IDEs.                         |
-| `features.dev.dbeaver.enable`   | `dev.enable` | DBeaver database GUI.                   |
+| Option                           | Default                    | Description                             |
+| -------------------------------- | -------------------------- | --------------------------------------- |
+| `features.dev.enable`            | `true`                     | Development languages, tools, and IDEs. |
+| `features.dev.opencode.enable`   | `dev.enable`               | OpenCode AI coding agent.               |
+| `features.dev.jetbrains.entries` | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.              |
+| `features.dev.dbeaver.enable`    | `dev.enable`               | DBeaver database GUI.                   |
+
+Available values are `clion`, `datagrip`, `dataspell`, `gateway`, `goland`,
+`idea-oss`, `idea-ultimate`, `mps`, `phpstorm`, `pycharm`, `rider`, `rubymine`,
+`rustrover`, and `webstorm`.
 
 ```nix
 features = {
   dev = {
     enable = true;
     jetbrains = {
-      enable = false;
+      entries = [ "goland" "rustrover" ];
     };
     dbeaver = {
       enable = true;
@@ -604,7 +637,66 @@ The default username is `user.name`; hosts can override it. If the optional
 
 Set `features.apps.mumble.disablePublicServerList = false` to show the public server list again.
 
-## SOPS Options
+## Options
+
+The options in this section configure shared system and userspace behavior after
+the feature toggles have selected the system capabilities. They are ordered from
+system-wide settings toward session and application integration. Feature
+defaults remain under `features`; these options provide the lower-level values
+consumed by those features.
+
+### Idle / Power Management
+
+Idle handling is session-facing, but closely tied to display power and suspend
+behavior. Hyprland uses `hypridle`; KDE translates the same timeouts to
+PowerDevil. The session-specific implementation keeps locking, display dimming,
+and suspend behavior aligned.
+
+| Option                         | Default | Description                                       |
+| ------------------------------ | ------- | ------------------------------------------------- |
+| `idle.timeouts.dimBattery`     | `120`   | Seconds before dimming on battery.                |
+| `idle.timeouts.suspendBattery` | `300`   | Seconds before locking and suspending on battery. |
+| `idle.timeouts.dimAc`          | `300`   | Seconds before dimming on AC.                     |
+| `idle.timeouts.suspendAc`      | `1800`  | Seconds before locking and suspending on AC.      |
+
+```nix
+idle = {
+  timeouts = {
+    dimBattery = 120;
+    suspendBattery = 300;
+    dimAc = 300;
+    suspendAc = 1800;
+  };
+};
+```
+
+### Hyprland Dim Settings
+
+Hyprland uses a custom gradual dimming sequence: the configured idle timeout
+starts the sequence, `stepPercent` controls each brightness step, and
+`stepDelay` controls the transition speed. KDE does not use these options;
+PowerDevil provides its own built-in display dimming and uses the shared idle
+timeouts above.
+
+| Option                          | Default  | Description                                 |
+| ------------------------------- | -------- | ------------------------------------------- |
+| `idle.hypridle.dim.percent`     | `10`     | Target brightness when dimmed (%)           |
+| `idle.hypridle.dim.stepPercent` | `5`      | Brightness step size for smooth dimming (%) |
+| `idle.hypridle.dim.stepDelay`   | `"0.05"` | Delay between dim steps in seconds          |
+
+```nix
+idle = {
+  hypridle = {
+    dim = {
+      percent = 10;
+      stepPercent = 5;
+      stepDelay = "0.05";
+    };
+  };
+};
+```
+
+### SOPS Options
 
 SOPS provides encrypted values to system and Home-Manager modules. Keep secret
 values in the encrypted SOPS file and configure only paths and feature switches
@@ -620,36 +712,29 @@ sops = {
 };
 ```
 
-## User Options
+### User Options
 
 These options describe the primary local user. Passwords and other sensitive
 values are supplied through SOPS.
 
-| Option                | Default                                  | Description                                                                                                                                                                                             |
-| --------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `user.name`           | `flake.primaryUser`                      | Primary username; the flake value is shared with Disko and home paths.                                                                                                                                  |
-| `user.fullName`       | `"Samuel Oechsler"`                      | Full name                                                                                                                                                                                               |
-| `user.email`          | `"samuel@oechsler.it"`                   | Email address                                                                                                                                                                                           |
-| `user.keys`           | `https://git.at.oechsler.it/samuel.keys` | SSH public keys source: URL or local file path                                                                                                                                                          |
-| `user.icon`           | `.assets/sam-memoji.png`                 | Profile picture (SDDM)                                                                                                                                                                                  |
-| `user.hashedPassword` | `"!"` (locked)                           | Local shadow password fallback; the runtime password is set from SOPS (`user/password`) when local password authentication is enabled. Can be overridden per-host with a hash (`mkpasswd -m yescrypt`). |
-| `user.directories`    | `[ "repos" ]`                            | Extra directories to create in `~`                                                                                                                                                                      |
+| Option                | Default                  | Description                                                                                                                                                                                             |
+| --------------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `user.name`           | `flake.primaryUser`      | Primary username; the flake value is shared with Disko and home paths.                                                                                                                                  |
+| `user.fullName`       | `"Samuel Oechsler"`      | Full name                                                                                                                                                                                               |
+| `user.email`          | `"samuel@oechsler.it"`   | Email address                                                                                                                                                                                           |
+| `user.icon`           | `.assets/sam-memoji.png` | Profile picture (SDDM)                                                                                                                                                                                  |
+| `user.hashedPassword` | `"!"` (locked)           | Local shadow password fallback; the runtime password is set from SOPS (`user/password`) when local password authentication is enabled. Can be overridden per-host with a hash (`mkpasswd -m yescrypt`). |
+| `user.directories`    | `[ "repos" ]`            | Extra directories to create in `~`                                                                                                                                                                      |
 
 ```nix
 user = {
   fullName = "Example User";
   email = "user@example.org";
-  keys = "https://git.at.oechsler.it/samuel.keys";
   directories = [ "Projects" "Documents" ];
 };
 ```
 
-`user.keys` accepts either an HTTPS/HTTP URL returning OpenSSH public keys or a
-local file path. When `features.ssh.enable` is enabled, the keys are synced
-automatically. With `features.ssh.agentKeys.enable`, keys loaded in the SSH
-agent are accepted as well.
-
-## Theme Options
+### Theme Options
 
 Theme options provide shared visual defaults for both supported desktop
 sessions.
@@ -729,7 +814,7 @@ theme = {
 };
 ```
 
-## Font Options
+### Font Options
 
 Font options are set in `configuration.nix` and shared with Home Manager.
 
@@ -753,7 +838,7 @@ fonts.defaults = {
 };
 ```
 
-## Locale Options
+### Locale Options
 
 Locale options are set in `configuration.nix` and apply system-wide.
 
@@ -771,7 +856,7 @@ locale = {
 };
 ```
 
-## Display Options
+### Display Options
 
 Display options work on both Hyprland and KDE. When `displays.monitors` is
 empty, the system uses automatic layout detection and `theme.scale`.
@@ -852,7 +937,7 @@ Default behavior and limitations:
 
 On Hyprland, a catch-all fallback rule (`preferred, auto, theme.scale`) is always added for hotplugged/unlisted monitors. On KDE, `kscreen-doctor` is run at login via an XDG autostart entry to apply the monitor layout for known outputs.
 
-## Input Options
+### Input Options
 
 Input settings define the default pointer and touchpad behavior shared by
 Hyprland and KDE. They are intentionally small; device-specific settings are
@@ -877,7 +962,7 @@ input = {
 On KDE, touchpad settings are detected and applied per device during session
 startup.
 
-## Autostart Apps
+### Autostart Apps
 
 Autostart entries are managed by Home Manager and translated to the selected
 desktop's session mechanism. Feature modules add their own entries when enabled;
@@ -907,56 +992,6 @@ The default list is extended by feature toggles:
 
 Each entry contains a display `name` and an `exec` command. KDE writes XDG
 autostart entries; Hyprland starts the commands with `exec-once`.
-
-## Idle / Power Management
-
-These values define the shared idle policy. Hyprland implements it with
-`hypridle`; KDE translates it to PowerDevil. The session-specific implementation
-keeps the resulting lock, display, and suspend behavior aligned.
-
-| Option                         | Default | Description                                       |
-| ------------------------------ | ------- | ------------------------------------------------- |
-| `idle.timeouts.dimBattery`     | `120`   | Seconds before dimming on battery.                |
-| `idle.timeouts.suspendBattery` | `300`   | Seconds before locking and suspending on battery. |
-| `idle.timeouts.dimAc`          | `300`   | Seconds before dimming on AC.                     |
-| `idle.timeouts.suspendAc`      | `1800`  | Seconds before locking and suspending on AC.      |
-
-```nix
-idle = {
-  timeouts = {
-    dimBattery = 120;
-    suspendBattery = 300;
-    dimAc = 300;
-    suspendAc = 1800;
-  };
-};
-```
-
-### Hyprland Dim Settings
-
-Hyprland uses a custom gradual dimming sequence: the configured idle timeout
-starts the sequence, `stepPercent` controls each brightness step, and
-`stepDelay` controls the transition speed. KDE does not use these options;
-PowerDevil provides its own built-in display dimming and uses the shared idle
-timeouts above.
-
-| Option                          | Default  | Description                                 |
-| ------------------------------- | -------- | ------------------------------------------- |
-| `idle.hypridle.dim.percent`     | `10`     | Target brightness when dimmed (%)           |
-| `idle.hypridle.dim.stepPercent` | `5`      | Brightness step size for smooth dimming (%) |
-| `idle.hypridle.dim.stepDelay`   | `"0.05"` | Delay between dim steps in seconds          |
-
-```nix
-idle = {
-  hypridle = {
-    dim = {
-    percent = 10;
-    stepPercent = 5;
-    stepDelay = "0.05";
-    };
-  };
-};
-```
 
 ## System Requirements
 

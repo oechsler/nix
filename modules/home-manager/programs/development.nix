@@ -26,6 +26,26 @@
   lib,
   ...
 }:
+let
+  jetbrainsPackages = {
+    inherit (pkgs.jetbrains)
+      clion
+      datagrip
+      dataspell
+      gateway
+      goland
+      mps
+      phpstorm
+      pycharm
+      rider
+      webstorm
+      ;
+    idea-oss = pkgs.jetbrains.idea-oss;
+    idea-ultimate = pkgs.jetbrains.idea;
+    rubymine = pkgs.jetbrains.ruby-mine;
+    rustrover = pkgs.jetbrains.rust-rover;
+  };
+in
 {
   #===========================
   # Configuration
@@ -92,10 +112,7 @@
           lib.optionals features.dev.dbeaver.enable [
             dbeaver-bin # Database GUI
           ]
-          ++ lib.optionals features.dev.jetbrains.enable [
-            jetbrains.goland # Go IDE
-            jetbrains.rust-rover # Rust IDE
-          ]
+          ++ map (name: lib.getAttr name jetbrainsPackages) features.dev.jetbrains.entries
         );
     })
   ];

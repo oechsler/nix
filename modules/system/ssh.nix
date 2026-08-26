@@ -18,7 +18,7 @@
 #
 # Security:
 # - Only public key authentication allowed
-# - Keys automatically updated if changed on GitHub
+# - Keys automatically updated when the configured source changes
 # - Proper file permissions (700 for .ssh, 600 for authorized_keys)
 
 {
@@ -87,24 +87,36 @@ in
 {
   options.features.ssh = {
     enable = lib.mkEnableOption "OpenSSH server with public key synchronization";
+    localKeys.enable = (lib.mkEnableOption "URL or local-file SSH keys") // {
+      default = true;
+    };
     agentKeys.enable = (lib.mkEnableOption "SSH-agent keys as authorized keys") // {
       default = true;
     };
   };
 
   config = lib.mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = cfg.localKeys.enable || cfg.agentKeys.enable;
+        message = "features.ssh.localKeys.enable and features.ssh.agentKeys.enable cannot both be false.";
+      }
+    ];
+
     services.openssh = {
       enable = true;
       settings = {
         PasswordAuthentication = false;
-        AuthorizedKeysFile =
-          ".ssh/authorized_keys" + lib.optionalString cfg.agentKeys.enable " .ssh/authorized_keys.agent";
+        AuthorizedKeysFile = lib.concatStringsSep " " (
+          lib.optional cfg.localKeys.enable ".ssh/authorized_keys"
+          ++ lib.optional cfg.agentKeys.enable ".ssh/authorized_keys.agent"
+        );
       };
     };
 
     systemd = {
       # Synchronize public keys on boot and every 15 minutes
-      services.sync-authorized-keys = {
+      services.sync-authorized-keys = lib.mkIf cfg.localKeys.enable {
         description = "Synchronize SSH authorized keys";
         after = [ "network-online.target" ];
         wants = [ "network-online.target" ];
@@ -114,7 +126,7 @@ in
         };
       };
 
-      timers.sync-authorized-keys = {
+      timers.sync-authorized-keys = lib.mkIf cfg.localKeys.enable {
         description = "Periodically synchronize SSH keys";
         wantedBy = [ "timers.target" ];
         timerConfig = {

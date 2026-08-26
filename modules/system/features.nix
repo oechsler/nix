@@ -306,10 +306,30 @@ in
           default = config.features.dev.enable;
         };
       };
-      jetbrains = {
-        enable = (lib.mkEnableOption "JetBrains IDEs (GoLand, RustRover)") // {
-          default = config.features.dev.enable;
-        };
+      jetbrains.entries = lib.mkOption {
+        type = lib.types.listOf (
+          lib.types.enum [
+            "clion"
+            "datagrip"
+            "dataspell"
+            "gateway"
+            "goland"
+            "idea-oss"
+            "idea-ultimate"
+            "mps"
+            "phpstorm"
+            "pycharm"
+            "rider"
+            "rubymine"
+            "rustrover"
+            "webstorm"
+          ]
+        );
+        default = [
+          "goland"
+          "rustrover"
+        ];
+        description = "JetBrains IDEs to install.";
       };
       dbeaver = {
         enable = (lib.mkEnableOption "DBeaver database GUI") // {
