@@ -182,6 +182,14 @@ in
             [KDE]
             widgetStyle=Breeze
 
+            [General]
+            font=${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0
+            menuFont=${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0
+            smallestReadableFont=${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0
+            toolBarFont=${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0
+            toolTipFont=${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0
+            fixed=${fonts.monospace},${toString fonts.size},-1,5,50,0,0,0,0,0
+
             # Do not apply KDE's inactive-window tint to Qt Quick controls.
             # It makes the dark palette appear lighter when focus changes.
             [ColorEffects:Inactive]

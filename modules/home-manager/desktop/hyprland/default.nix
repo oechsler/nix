@@ -103,15 +103,123 @@ let
   surface0Color = "rgba(${stripHash palette.surface0.hex}ff)";
   screenshotSavedTitle = i18n.translate "Screenshot saved" "Screenshot gespeichert";
   screenshotSavedMessage = i18n.translate "Saved to" "Gespeichert unter";
+  mediaNowPlaying = i18n.translate "Now playing" "Wird abgespielt";
+  mediaPlaying = i18n.translate "Playback resumed" "Wiedergabe fortgesetzt";
+  mediaTrackNotify = pkgs.writeShellScript "media-track-notify" ''
+    log() {
+      printf 'event=%s status=%s detail="%s"\n' "$1" "$2" "$3"
+    }
+    declare -A last_tracks=()
+    declare -A last_statuses=()
+    declare -A initialized_players=()
+    cache_dir="''${XDG_CACHE_HOME:-$HOME/.cache}/media-track-notify"
+    fallback_icon="${theme.icons.package}/share/icons/Papirus/32x32/mimetypes/audio-x-generic.svg"
+    mkdir -p "$cache_dir"
+    player_icon() {
+      local player="$1"
+      local icon_name
+      case "$player" in
+        spotify*) icon_name=spotify ;;
+        # Spotify's CEF backend registers an instance-specific Chromium MPRIS
+        # player. Keep normal Chromium media sessions separate.
+        chromium.instance*) icon_name=spotify ;;
+        firefox*) icon_name=firefox ;;
+        chromium*) icon_name=chromium ;;
+        brave*) icon_name=brave-browser ;;
+        vlc*) icon_name=vlc ;;
+        elisa*) icon_name=elisa ;;
+        mpv*) icon_name=mpv ;;
+        *) icon_name="$player" ;;
+      esac
+      for size in 32x32 48x48 64x64 24x24; do
+        for extension in svg png; do
+          candidate="${theme.icons.package}/share/icons/Papirus/$size/apps/$icon_name.$extension"
+          if [ -f "$candidate" ]; then
+            printf '%s\n' "$candidate"
+            return 0
+          fi
+        done
+      done
+      printf '%s\n' "$fallback_icon"
+    }
+    log service started "players=all"
+    while true; do
+      while IFS='|' read -r player status title artist track_id art_url; do
+        [ -n "$player" ] || continue
+        [ -n "$title" ] || continue
+        track_key="$track_id"
+        [ -n "$track_key" ] || track_key="$artist - $title"
+        previous_track="''${last_tracks[$player]-}"
+        previous_status="''${last_statuses[$player]-}"
+        last_tracks[$player]="$track_key"
+        last_statuses[$player]="$status"
+        if [ -z "''${initialized_players[$player]-}" ]; then
+          initialized_players[$player]=1
+          log track baseline "player=$player"
+          continue
+        fi
+        if [ "$previous_track" = "$track_key" ] && [ "$previous_status" = "$status" ]; then
+          continue
+        fi
+        icon=$(player_icon "$player")
+        notification_player="$player"
+        [[ "$player" == chromium.instance* ]] && notification_player=spotify
+        if [[ "$art_url" == file://* ]]; then
+          local_art="''${art_url#file://}"
+          [ -f "$local_art" ] && icon="$local_art"
+        elif [[ "$art_url" == https://* || "$art_url" == http://* ]]; then
+          art_cache="$cache_dir/''${track_key//[^[:alnum:]]/_}.img"
+          if [ ! -s "$art_cache" ]; then
+            ${pkgs.curl}/bin/curl -fsSL --max-time 10 "$art_url" -o "$art_cache.tmp" 2>/dev/null \
+              && ${pkgs.coreutils}/bin/mv "$art_cache.tmp" "$art_cache" \
+              || ${pkgs.coreutils}/bin/rm -f "$art_cache.tmp"
+          fi
+          [ -s "$art_cache" ] && icon="$art_cache"
+        fi
+        if [ "$previous_track" != "$track_key" ]; then
+          log track changed "player=$player track=$track_key"
+          notification_title="${mediaNowPlaying}"
+          notification_body="$artist - $title"
+        elif [ "$status" = "Playing" ]; then
+          log playback resumed "player=$player"
+          notification_title="${mediaPlaying}"
+          notification_body="$artist - $title"
+        else
+          continue
+        fi
+        ${pkgs.libnotify}/bin/notify-send -a "$notification_player" -i "$icon" \
+          --replace-id=1001 \
+          "$notification_title" "$notification_body" \
+          && log notification sent "player=$player" \
+          || log notification failed "player=$player"
+      done < <(${pkgs.coreutils}/bin/stdbuf -oL ${pkgs.playerctl}/bin/playerctl --all-players --follow metadata \
+        --format '{{playerName}}|{{status}}|{{title}}|{{artist}}|{{mpris:trackid}}|{{mpris:artUrl}}' 2>/dev/null || true)
+      ${pkgs.coreutils}/bin/sleep 2
+    done
+  '';
   screenshotCommand = mode: ''
     output="${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
+    mkdir -p "${config.xdg.userDirs.pictures}"
+    saved_files=$(mktemp)
+    ${pkgs.inotify-tools}/bin/inotifywait -q -m \
+      -e close_write -e moved_to --format '%w%f' \
+      --include '\\.png$' "${config.xdg.userDirs.pictures}" > "$saved_files" &
+    watcher_pid=$!
     ${pkgs.hyprshot}/bin/hyprshot -m ${mode} --raw \
       | ${pkgs.satty}/bin/satty -f - \
         --copy-command '${pkgs.wl-clipboard}/bin/wl-copy --type image/png' \
-        --early-exit --output-filename "$output"
-    if [[ -f "$output" ]]; then
-      ${pkgs.libnotify}/bin/notify-send -u low -i "$output" \
-        "${screenshotSavedTitle}" "${screenshotSavedMessage}: $output"
+        --disable-notifications --early-exit --output-filename "$output"
+    satty_status=$?
+    kill "$watcher_pid" 2>/dev/null || true
+    wait "$watcher_pid" 2>/dev/null || true
+    saved_output=""
+    while IFS= read -r saved_file; do
+      saved_output="$saved_file"
+    done < "$saved_files"
+    rm -f "$saved_files"
+    if [[ "$satty_status" -eq 0 && -f "$saved_output" ]]; then
+      ${pkgs.libnotify}/bin/notify-send -u low -i "$saved_output" \
+        "${screenshotSavedTitle}" "${screenshotSavedMessage}: $saved_output"
     fi
   '';
   displayHelpers = import ../../../lib/displays.nix { inherit lib; };
@@ -393,6 +501,20 @@ in
             ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --type image --watch ${pkgs.cliphist}/bin/cliphist store";
             Restart = "on-failure";
             TimeoutStopSec = 2;
+          };
+          Install.WantedBy = [ "graphical-session.target" ];
+        };
+
+        media-track-notify = {
+          Unit = {
+            Description = "Media player track change notifications";
+            After = [ "graphical-session.target" ];
+            PartOf = [ "graphical-session.target" ];
+          };
+          Service = {
+            ExecStart = mediaTrackNotify;
+            Restart = "on-failure";
+            RestartSec = 3;
           };
           Install.WantedBy = [ "graphical-session.target" ];
         };

@@ -18,56 +18,189 @@
   config,
   pkgs,
   lib,
+  serviceLog,
   ...
 }:
 
 let
   userHome = config.users.users.${config.user.name}.home;
   capitalize =
-    value: (lib.toUpper (builtins.substring 0 1 value)) + (builtins.substring 1 (builtins.stringLength value) value);
-  colorSchemeId =
-    "Catppuccin${capitalize config.theme.catppuccin.flavor}${capitalize config.theme.catppuccin.accent}";
+    value:
+    (lib.toUpper (builtins.substring 0 1 value))
+    + (builtins.substring 1 (builtins.stringLength value) value);
+  colorSchemeId = "Catppuccin${capitalize config.theme.catppuccin.flavor}${capitalize config.theme.catppuccin.accent}";
+  translate = english: german: if lib.hasPrefix "de" config.locale.language then german else english;
+  appImageAddedTitle = translate "AppImage added" "AppImage hinzugefügt";
+  appImageRemovedTitle = translate "AppImage removed" "AppImage entfernt";
+  appImageWatcherName = "AppImage";
+  flatpakInstalledTitle = translate "Flatpak installed" "Flatpak installiert";
+  flatpakRemovedTitle = translate "Flatpak removed" "Flatpak entfernt";
+  flatpakWatcherName = "Flatpak";
+  packageIcon = "${config.theme.icons.package}/share/icons/Papirus/32x32/mimetypes/package-x-generic.svg";
+  flatpakNotify = pkgs.writeShellScript "flatpak-qt-theme-notify" ''
+    ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
+      --user --pipe --quiet --collect \
+      ${pkgs.libnotify}/bin/notify-send "$@"
+  '';
+  flatpakTransactionWait = ''
+    transaction_ready=false
+    transaction_wait_logged=false
+    previous_apps=""
+    previous_tree_mtime=""
+    stable_checks=0
+    for attempt in $(seq 1 300); do
+      current_apps=$($FLATPAK list --system --app --columns=application,runtime)
+      current_tree_mtime=$(${pkgs.coreutils}/bin/stat -c %Y /var/lib/flatpak)
+      if ! ${pkgs.procps}/bin/pgrep -x flatpak >/dev/null 2>&1 \
+        && [ "$current_apps" = "$previous_apps" ] \
+        && [ "$current_tree_mtime" = "$previous_tree_mtime" ]; then
+        stable_checks=$((stable_checks + 1))
+      else
+        stable_checks=0
+      fi
+      previous_apps="$current_apps"
+      previous_tree_mtime="$current_tree_mtime"
+      if [ "$stable_checks" -ge 3 ]; then
+        transaction_ready=true
+        log transaction ready "attempt=$attempt"
+        break
+      fi
+      if [ "$transaction_wait_logged" != true ]; then
+        log transaction waiting ""
+        transaction_wait_logged=true
+      fi
+      ${pkgs.coreutils}/bin/sleep 2
+    done
+    if [ "$transaction_ready" != true ]; then
+      log transaction error "timeout=600s"
+      exit 1
+    fi
+  '';
   flatpakQtThemeOverrides = ''
+    set -euo pipefail
+    ${serviceLog}
+    log sync started "scheme=${colorSchemeId} config=${userHome}/.config/kdeglobals data=${userHome}/.local/share"
+    # Flatpak deploys apps and extensions in separate steps. Wait for both the
+    # client transaction and the installed state to settle before scanning.
+    ${flatpakTransactionWait}
+
     $FLATPAK override --system --unset-env=QT_QPA_PLATFORMTHEME
     $FLATPAK override --system --unset-env=XDG_CURRENT_DESKTOP
     $FLATPAK override --system --unset-env=KDE_FULL_SESSION
     $FLATPAK override --system --unset-env=KDE_SESSION_VERSION
     $FLATPAK override --system --unset-env=XDG_CONFIG_DIRS
+    $FLATPAK override --system --unset-env=XDG_CONFIG_HOME
+    kdeApps=0
+    otherApps=0
     while IFS=$'\t' read -r app runtime; do
       [ -n "$app" ] || continue
 
-      # Remove the obsolete defaults-path mapping from earlier generations.
       $FLATPAK override --system "$app" --unset-env=XDG_CONFIG_DIRS
-      $FLATPAK override --system "$app" --nofilesystem=xdg-config/kdedefaults
+      $FLATPAK override --system "$app" --unset-env=XDG_CONFIG_HOME
+      $FLATPAK override --system "$app" --unset-env=XDG_CURRENT_DESKTOP
+      $FLATPAK override --system "$app" --unset-env=KDE_FULL_SESSION
+      $FLATPAK override --system "$app" --unset-env=KDE_SESSION_VERSION
 
       case "$runtime" in
         org.kde.Platform/*)
+          kdeApps=$((kdeApps + 1))
+          log apply started "app=$app runtime=$runtime"
           $FLATPAK override --system "$app" --env=QT_QPA_PLATFORMTHEME=kde
           $FLATPAK override --system "$app" --env=QT_QUICK_CONTROLS_STYLE=org.kde.desktop
           $FLATPAK override --system "$app" --env=QML2_IMPORT_PATH=/usr/lib/qml:/app/lib/qml
           $FLATPAK override --system "$app" --env=QT_PLUGIN_PATH=/usr/lib/plugins:/app/lib/plugins:/usr/share/runtime/lib/plugins
+          $FLATPAK override --system "$app" --env=XDG_CONFIG_DIRS=${userHome}/.config:/app/etc/xdg:/etc/xdg
           $FLATPAK override --system "$app" --env=XDG_DATA_DIRS=${userHome}/.local/share:/app/share:/usr/share:/usr/share/runtime/share:/run/host/user-share:/run/host/share
           $FLATPAK override --system "$app" --env=KDE_COLOR_SCHEME=${colorSchemeId}
-          $FLATPAK override --system "$app" --env=XDG_CURRENT_DESKTOP=KDE
-          $FLATPAK override --system "$app" --env=KDE_FULL_SESSION=true
-          $FLATPAK override --system "$app" --env=KDE_SESSION_VERSION=6
           $FLATPAK override --system "$app" --filesystem=xdg-config/kdeglobals:ro
           $FLATPAK override --system "$app" --filesystem=xdg-data/color-schemes:ro
           $FLATPAK override --system "$app" --filesystem=xdg-data/icons:ro
           $FLATPAK override --system "$app" --filesystem=xdg-data/themes:ro
           ;;
         *)
+          otherApps=$((otherApps + 1))
+          log cleanup started "app=$app runtime=$runtime"
           $FLATPAK override --system "$app" --unset-env=QT_QPA_PLATFORMTHEME
           $FLATPAK override --system "$app" --unset-env=QT_QUICK_CONTROLS_STYLE
           $FLATPAK override --system "$app" --unset-env=QML2_IMPORT_PATH
           $FLATPAK override --system "$app" --unset-env=QT_PLUGIN_PATH
-          $FLATPAK override --system "$app" --unset-env=XDG_CURRENT_DESKTOP
-          $FLATPAK override --system "$app" --unset-env=KDE_FULL_SESSION
-          $FLATPAK override --system "$app" --unset-env=KDE_SESSION_VERSION
+          $FLATPAK override --system "$app" --unset-env=XDG_CONFIG_DIRS
           $FLATPAK override --system "$app" --unset-env=KDE_COLOR_SCHEME
           ;;
       esac
     done < <($FLATPAK list --system --app --columns=application,runtime)
+    log sync ok "kde_apps=$kdeApps other_apps=$otherApps"
+  '';
+  flatpakWatcherScript = ''
+    set -euo pipefail
+    ${serviceLog}
+    log sync started "state=/var/lib/flatpak-watcher/apps"
+
+    ${flatpakTransactionWait}
+
+    resolve_icon() {
+      local app="$1"
+      local icon_name="$app"
+      local desktop_file="/var/lib/flatpak/exports/share/applications/$app.desktop"
+      if [ -f "$desktop_file" ]; then
+        icon_name=$(${pkgs.gnused}/bin/sed -n 's/^Icon=//p' "$desktop_file" | ${pkgs.coreutils}/bin/head -1)
+        icon_name=$(${pkgs.coreutils}/bin/basename "$icon_name")
+        icon_name="''${icon_name%.png}"
+        icon_name="''${icon_name%.svg}"
+        icon_name="''${icon_name%.xpm}"
+      fi
+      for icon_root in "${config.theme.icons.package}/share/icons/Papirus" "/var/lib/flatpak/exports/share/icons/hicolor"; do
+        for size in 32x32 48x48 64x64 24x24 scalable 128x128 96x96; do
+          for extension in svg png; do
+            candidate="$icon_root/$size/apps/$icon_name.$extension"
+            if [ -f "$candidate" ]; then
+              printf '%s\n' "$candidate"
+              return 0
+            fi
+            done
+          done
+        done
+      printf '%s\n' "${packageIcon}"
+    }
+    notification_id() {
+      local checksum
+      checksum=$(${pkgs.coreutils}/bin/cksum <<< "$1" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+      printf '%s\n' "$((checksum % 2000000000 + 10000))"
+    }
+
+    state_dir=/var/lib/flatpak-watcher
+    previous_state="$state_dir/apps"
+    current_state=$(mktemp)
+    install -d -m 0755 "$state_dir"
+    $FLATPAK list --system --app --columns=application,name,runtime | sort > "$current_state"
+    if [ -f "$previous_state" ]; then
+      while IFS=$'\t' read -r app name runtime; do
+        [ -n "$app" ] || continue
+        if ! cut -f1 "$previous_state" | grep -Fqx "$app"; then
+          icon=$(resolve_icon "$app")
+          log app installed "app=$app runtime=$runtime"
+          log icon resolved "app=$app path=$icon"
+          ${flatpakNotify} -a "${flatpakWatcherName}" -i "$icon" \
+            --replace-id="$(notification_id "$app")" \
+            "${flatpakInstalledTitle}" "$name" || true
+        fi
+      done < "$current_state"
+      while IFS=$'\t' read -r app name runtime; do
+        [ -n "$app" ] || continue
+        if ! cut -f1 "$current_state" | grep -Fqx "$app"; then
+          log app removed "app=$app runtime=$runtime"
+          icon=$(resolve_icon "$app")
+          log icon resolved "app=$app path=$icon"
+          ${flatpakNotify} -a "${flatpakWatcherName}" -i "$icon" \
+            --replace-id="$(notification_id "$app")" \
+            "${flatpakRemovedTitle}" "$name" || true
+        fi
+      done < "$previous_state"
+    else
+      log app baseline "apps=$(wc -l < "$current_state")"
+    fi
+    mv "$current_state" "$previous_state"
+    log sync ok "apps=$(wc -l < "$previous_state")"
   '';
 in
 {
@@ -112,18 +245,59 @@ in
       };
 
       # Apply the minimal Qt theme integration after declarative apps exist.
-      systemd.services.flatpak-qt-theme = {
-        description = "Apply runtime-specific Flatpak Qt theme overrides";
-        wantedBy = [ "graphical.target" ];
-        after = [ "flatpak-managed-install.service" ];
-        wants = [ "flatpak-managed-install.service" ];
-        serviceConfig.Type = "oneshot";
-        script = ''
-          FLATPAK="${pkgs.flatpak}/bin/flatpak"
-          if [ -x "$FLATPAK" ]; then
-            ${flatpakQtThemeOverrides}
-          fi
-        '';
+      systemd = {
+        services.flatpak-qt-theme = {
+          description = "Apply runtime-specific Flatpak Qt theme overrides";
+          wantedBy = [ "graphical.target" ];
+          after = [ "flatpak-managed-install.service" ];
+          wants = [ "flatpak-managed-install.service" ];
+          serviceConfig.Type = "oneshot";
+          script = ''
+            FLATPAK="${pkgs.flatpak}/bin/flatpak"
+            if [ -x "$FLATPAK" ]; then
+              ${flatpakQtThemeOverrides}
+            fi
+          '';
+        };
+        paths.flatpak-qt-theme = {
+          description = "Watch system Flatpak installations for theme updates";
+          wantedBy = [ "multi-user.target" ];
+          after = [ "var-lib-flatpak.mount" ];
+          pathConfig = {
+            PathChanged = [
+              "/var/lib/flatpak"
+              "/var/lib/flatpak/app"
+              "/var/lib/flatpak/runtime"
+            ];
+            Unit = "flatpak-qt-theme.service";
+          };
+        };
+        services.flatpak-watcher = {
+          description = "Notify about system Flatpak installations";
+          wantedBy = [ "graphical.target" ];
+          after = [ "flatpak-managed-install.service" ];
+          wants = [ "flatpak-managed-install.service" ];
+          serviceConfig.Type = "oneshot";
+          script = ''
+            FLATPAK="${pkgs.flatpak}/bin/flatpak"
+            if [ -x "$FLATPAK" ]; then
+              ${flatpakWatcherScript}
+            fi
+          '';
+        };
+        paths.flatpak-watcher = {
+          description = "Watch system Flatpak installations for notifications";
+          wantedBy = [ "multi-user.target" ];
+          after = [ "var-lib-flatpak.mount" ];
+          pathConfig = {
+            PathChanged = [
+              "/var/lib/flatpak"
+              "/var/lib/flatpak/app"
+              "/var/lib/flatpak/runtime"
+            ];
+            Unit = "flatpak-watcher.service";
+          };
+        };
       };
 
       # Make Flatpak apps visible in application launchers
@@ -177,11 +351,19 @@ in
         ];
 
         script = ''
+                    ${serviceLog}
+                    notification_id() {
+                      local checksum
+                      checksum=$(${pkgs.coreutils}/bin/cksum <<< "$1" | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+                      printf '%s\n' "$((checksum % 2000000000 + 10000))"
+                    }
+
                     # Directories
                     DIR="$HOME/Applications"                         # Where AppImages are stored
                     DESKTOP_DIR="$HOME/.local/share/applications"    # Desktop entries
                     ICON_DIR="$HOME/.local/share/icons/appimage"     # Extracted icons
                     mkdir -p "$DIR" "$DESKTOP_DIR" "$ICON_DIR"
+                    log watch started "directories=$DIR,$DESKTOP_DIR"
 
                     # Function: Generate desktop entry for an AppImage
                     #
@@ -196,6 +378,11 @@ in
                     #   5. Create .desktop entry in ~/.local/share/applications/
                     generate_entry() {
                       local appimage="$1"
+                      log process started "file=$appimage"
+                      if [ ! -f "$appimage" ]; then
+                        log process skipped "reason=missing file=$appimage"
+                        return
+                      fi
                       local basename_file
                       basename_file=$(basename "$appimage")
                       local slug
@@ -208,6 +395,7 @@ in
                       local existing
                       existing=$(grep -rl "$appimage" "$DESKTOP_DIR"/ 2>/dev/null | grep -v "^$DESKTOP_DIR/appimage-" | head -1)
                       if [ -n "$existing" ]; then
+                        log process skipped "reason=already-registered-by:$existing"
                         return
                       fi
 
@@ -224,24 +412,51 @@ in
                         # Extract only top-level .desktop files and icons (max-depth 1)
                         unsquashfs -offset "$offset" -dest "$tmpdir/root" -max-depth 1 \
                           "$appimage" '*.desktop' '*.png' '*.svg' '.DirIcon' &>/dev/null || true
+                      else
+                        log extract warning "reason=no-squashfs file=$appimage"
                       fi
 
                       # Extract application name from embedded .desktop file
                       local name=""
                       local embedded_desktop
                       embedded_desktop=$(find "$tmpdir/root" -maxdepth 1 -name '*.desktop' -type f 2>/dev/null | head -1)
+                      local icon_id=""
                       if [ -n "$embedded_desktop" ]; then
                         name=$(sed -n 's/^Name=//p' "$embedded_desktop" | head -1)
+                        icon_id=$(sed -n 's/^Icon=//p' "$embedded_desktop" | head -1)
+                        icon_id=$(basename "$icon_id")
+                        icon_id="''${icon_id%.png}"
+                        icon_id="''${icon_id%.svg}"
+                        icon_id="''${icon_id%.xpm}"
                       fi
                       # Fallback: Generate name from filename (e.g., "my-app-1.2.3" → "my app 1.2.3")
                       [ -z "$name" ] && name=$(echo "$slug" | sed 's/-/ /g; s/_/ /g')
 
                       # Extract and install icon
-                      local icon="application-x-executable"  # Default icon if none found
+                      local icon="${packageIcon}"  # Guaranteed host fallback icon
                       if [ -d "$tmpdir/root" ]; then
                         local icon_file
-                        # Look for PNG or SVG icons
-                        icon_file=$(find "$tmpdir/root" -maxdepth 1 \( -name '*.png' -o -name '*.svg' \) -type f | head -1)
+                        # Prefer the icon named by the embedded desktop file.
+                        if [ -n "$icon_id" ]; then
+                          local icon_path
+                          icon_path=$(unsquashfs -ll -offset "$offset" "$appimage" 2>/dev/null | while IFS= read -r line; do
+                            case "$line" in
+                              -*squashfs-root/*"$icon_id".png|-*squashfs-root/*"$icon_id".svg)
+                                path="''${line#*squashfs-root/}"
+                                path="''${path%% ->*}"
+                                printf '%s\n' "$path"
+                                break
+                                ;;
+                            esac
+                          done | head -1)
+                          if [ -n "$icon_path" ]; then
+                            local icon_ext="''${icon_path##*.}"
+                            icon_file="$tmpdir/icon.$icon_ext"
+                            unsquashfs -cat -offset "$offset" "$appimage" "$icon_path" > "$icon_file" 2>/dev/null || icon_file=""
+                          fi
+                        fi
+                        # Fallback: look for any extracted PNG or SVG icon.
+                        [ -z "$icon_file" ] && icon_file=$(find "$tmpdir/root" -type f \( -name '*.png' -o -name '*.svg' \) | head -1)
                         # Fallback: .DirIcon (common in AppImages)
                         [ -z "$icon_file" ] && icon_file=$(find "$tmpdir/root" -maxdepth 1 -name '.DirIcon' -type f | head -1)
 
@@ -252,6 +467,8 @@ in
                           # Copy icon to our icon directory
                           cp "$icon_file" "$ICON_DIR/$slug.$ext"
                           icon="$ICON_DIR/$slug.$ext"
+                        else
+                          log icon fallback "file=$basename_file icon=$icon"
                         fi
                       fi
 
@@ -270,6 +487,10 @@ in
           Categories=Utility;
           Comment=AppImage application
           EOF
+                      log register ok "file=$basename_file desktop=$desktop_file"
+                      ${pkgs.libnotify}/bin/notify-send -a "${appImageWatcherName}" -i "''${icon}" \
+                        --replace-id="$(notification_id "$basename_file")" \
+                        "${appImageAddedTitle}" "$name" || true
                     }
 
                     # Function: Remove desktop entry when AppImage is deleted
@@ -278,10 +499,21 @@ in
                     #   $1 = basename of .AppImage file (e.g., "app.AppImage")
                     remove_entry() {
                       local filename="$1"
+                      log remove started "file=$filename"
                       local icon_name
                       icon_name=$(echo "$filename" | sed 's/\.AppImage$//; s/\.appimage$//')
+                      local removed_icon="${packageIcon}"
+                      for extension in svg png; do
+                        if [ -f "$ICON_DIR/$icon_name.$extension" ]; then
+                          removed_icon="$ICON_DIR/$icon_name.$extension"
+                          break
+                        fi
+                      done
                       rm -f "$DESKTOP_DIR/appimage-$filename.desktop"
                       rm -f "$ICON_DIR/$icon_name".*
+                      ${pkgs.libnotify}/bin/notify-send -a "${appImageWatcherName}" -i "$removed_icon" \
+                        --replace-id="$(notification_id "$filename")" \
+                        "${appImageRemovedTitle}" "$icon_name" || true
                     }
 
                     # Function: Remove our auto-generated entries when app registers its own
@@ -317,6 +549,7 @@ in
                     }
 
                     # Initial scan: Generate entries for existing AppImages
+                    log scan started "directory=$DIR"
                     find "$DIR" -maxdepth 1 -iname '*.appimage' -type f | while read -r f; do
                       generate_entry "$f"
                     done
@@ -333,6 +566,7 @@ in
                     # Monitors both ~/Applications (for .AppImage files) and ~/.local/share/applications (for app-registered entries)
                     inotifywait -m -e create -e moved_to -e delete -e moved_from \
                       "$DIR" "$DESKTOP_DIR" --format '%w|%e|%f' | while IFS='|' read -r watched_dir event filename; do
+                      log event received "event=$event path=$watched_dir$filename"
 
                       if [ "$watched_dir" = "$DIR/" ]; then
                         # Event in ~/Applications

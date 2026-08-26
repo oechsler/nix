@@ -47,6 +47,11 @@ let
   profilePerformance = "󱐋  ${translate "Performance" "Leistung"}";
   profilePrompt = translate "Power profile" "Energieprofil";
   placesPrompt = translate "Places" "Orte";
+  clipboardPrompt = translate "Clipboard" "Zwischenablage";
+  searchPlaceholder = translate "Search..." "Suchen...";
+  appsLabel = translate "Apps" "Anwendungen";
+  removableMedia = translate "Removable media" "Wechselmedium";
+  clipboardIcon = "${config.home.homeDirectory}/.local/share/icons/${theme.icons.name}/24x24/actions/edit-copy.svg";
 
   places =
     config.fileManager.bookmarks
@@ -80,7 +85,7 @@ let
     }
 
     removable_mounts=$(${pkgs.util-linux}/bin/lsblk --json --output LABEL,MOUNTPOINT,RM,TYPE 2>/dev/null \
-      | ${pkgs.jq}/bin/jq -r '.blockdevices[]? | recurse(.children[]?) | select(.rm == true and .mountpoint != null) | [(.label // "Wechselmedium"), .mountpoint] | @tsv')
+      | ${pkgs.jq}/bin/jq -r '.blockdevices[]? | recurse(.children[]?) | select(.rm == true and .mountpoint != null) | [(.label // "${removableMedia}"), .mountpoint] | @tsv')
 
     choice=$(
       {
@@ -204,13 +209,15 @@ let
     preview_dir="/tmp/cliphist-previews"
     mkdir -p "$preview_dir"
 
-    cliphist list | while IFS= read -r line; do
+    selection_file=$(${pkgs.coreutils}/bin/mktemp)
+    trap '${pkgs.coreutils}/bin/rm -f "$selection_file"' EXIT
+    ${pkgs.cliphist}/bin/cliphist list | while IFS= read -r line; do
       id="''${line%%	*}"
       content="''${line#*	}"
       if printf '%s' "$line" | ${pkgs.gnugrep}/bin/grep -q '\[\[.*binary.*image'; then
         cache="$preview_dir/$id.png"
         if [ ! -s "$cache" ]; then
-          printf '%s' "$line" | cliphist decode > "$cache" 2>/dev/null
+          printf '%s' "$line" | ${pkgs.cliphist}/bin/cliphist decode > "$cache" 2>/dev/null
         fi
         if [ -s "$cache" ]; then
           printf '%s\0icon\x1f%s\n' "$line" "$cache"
@@ -228,7 +235,18 @@ let
       else
         printf '%s\0icon\x1ftext-x-generic\n' "$line"
       fi
-    done | rofi -dmenu -p "Zwischenablage" -show-icons -theme-str 'element-icon { size: 22px; }' | cliphist decode | ${pkgs.wl-clipboard}/bin/wl-copy
+    done | ${pkgs.rofi}/bin/rofi -dmenu -p "${clipboardPrompt}" -show-icons -theme-str 'element-icon { size: 22px; }' > "$selection_file"
+
+    if [ ! -s "$selection_file" ]; then
+      exit 0
+    fi
+
+    if ${pkgs.cliphist}/bin/cliphist decode < "$selection_file" | ${pkgs.wl-clipboard}/bin/wl-copy; then
+      ${pkgs.libnotify}/bin/notify-send -a "${clipboardPrompt}" -i "${clipboardIcon}" \
+        --replace-id=1002 \
+        "${translate "Clipboard copied" "Zwischenablage kopiert"}" \
+        "${translate "The selected entry was copied successfully." "Der ausgewählte Eintrag wurde erfolgreich kopiert."}"
+    fi
   '';
 
   # ============================================================================
@@ -337,7 +355,7 @@ in
         drun-display-format = "{name}";
         disable-history = false;
         sorting-method = "fzf";
-        display-drun = "Apps";
+        display-drun = "${appsLabel}";
         display-window = translate "Windows" "Fenster";
         window-format = "{w}  {c}  {t}";
         window-match-fields = "title,class,role,name";
@@ -386,7 +404,7 @@ in
             background-color = mkLiteral "transparent";
           };
           "entry" = {
-            placeholder = "Suchen...";
+            placeholder = "${searchPlaceholder}";
             placeholder-color = mkLiteral "@overlay1";
             text-color = mkLiteral "@subtext1";
             font = "${fonts.ui} Medium ${toString fonts.size}";

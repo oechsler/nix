@@ -17,6 +17,7 @@
   theme,
   input,
   features,
+  fonts,
   ...
 }:
 
@@ -61,6 +62,8 @@ let
 
   # KDE configuration tools
   kwriteconfig = "${pkgs.kdePackages.kconfig}/bin/kwriteconfig6";
+  kdeUiFont = "${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0";
+  kdeMonospaceFont = "${fonts.monospace},${toString fonts.size},-1,5,50,0,0,0,0,0";
 
   # Pinned applications for KDE taskbar
   # Format: "applications:firefox.desktop,applications:kitty.desktop,..."
@@ -445,6 +448,15 @@ in
     home.activation.applyKdeTheme = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       # Most settings are now managed by plasma-manager declaratively.
       # This activation script only handles complex/dynamic settings.
+
+      # Keep local KDE applications on the same font defaults as GTK and Qt.
+      # Update the existing Plasma-managed kdeglobals instead of replacing it.
+      run ${kwriteconfig} --file kdeglobals --group General --key font "${kdeUiFont}"
+      run ${kwriteconfig} --file kdeglobals --group General --key menuFont "${kdeUiFont}"
+      run ${kwriteconfig} --file kdeglobals --group General --key smallestReadableFont "${kdeUiFont}"
+      run ${kwriteconfig} --file kdeglobals --group General --key toolBarFont "${kdeUiFont}"
+      run ${kwriteconfig} --file kdeglobals --group General --key toolTipFont "${kdeUiFont}"
+      run ${kwriteconfig} --file kdeglobals --group General --key fixed "${kdeMonospaceFont}"
 
       # Lock screen wallpaper
       run ${kwriteconfig} --file kscreenlockerrc --group Greeter --group Wallpaper --key WallpaperPlugin "org.kde.image"
