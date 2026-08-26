@@ -7,23 +7,8 @@ modules.
 ## Feature Toggles
 
 Most desktop-oriented features default to enabled. Child features usually
-inherit their parent switch and can be overridden independently. Group related
-overrides in `configuration.nix`:
-
-```nix
-features = {
-  desktop = {
-    enable = true;
-  };
-
-  encryption.enable = true;
-  gaming = {
-    enable = false;
-  };
-  dev.enable = true;
-  virtualisation.enable = true;
-};
-```
+inherit their parent switch and can be overridden independently. Examples are
+shown in the section for each feature.
 
 ### Hardware & Boot
 
