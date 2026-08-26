@@ -604,14 +604,8 @@ services.flatpak.packages = [
 ];
 ```
 
-Flatpak GTK applications receive the shared Catppuccin GTK theme and icon files
-from the user profile. For Qt applications, the configuration detects the
-Flatpak runtime: KDE-runtime applications use their bundled KDE platform theme
-and Qt Quick Controls plugins under both KDE and Hyprland. They also receive the
-KDE QML import path and session markers needed by Qt Quick and Kirigami to load
-the KDE controls style, without installing the KDE desktop environment. Other
-runtimes keep their own defaults without being forced to load possibly missing
-KDE plugins.
+Flatpak applications receive the configured GTK and Qt theme integration where
+their runtime supports it. Theme support remains runtime-dependent.
 Sandbox permissions remain application-specific; inspect or adjust them with
 Flatseal when needed.
 
