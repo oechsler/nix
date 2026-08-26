@@ -187,6 +187,18 @@ in
       default = "${setQuitNormallyCommand}";
       description = "Command used to mark Mumble as cleanly closed.";
     };
+
+    removeLegacyMask = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = ''
+        mumble_unit="${config.xdg.configHome}/systemd/user/mumble.service"
+        if [ -L "$mumble_unit" ] && [ "$(readlink "$mumble_unit")" = "/dev/null" ]; then
+          rm -f "$mumble_unit"
+        fi
+      '';
+      description = "Command used to remove a stale masked Mumble user unit.";
+    };
   };
 
   config = lib.mkIf (features.apps.enable && cfg.enable) {
