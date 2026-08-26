@@ -27,6 +27,7 @@ let
     flavour = [ flavor ];
     accents = [ accent ];
   };
+  colorSchemeFile = builtins.readFile "${catppuccinKde}/share/color-schemes/${colorSchemeId}.colors";
 in
 {
   #===========================
@@ -164,13 +165,28 @@ in
           general="${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0"
         '';
 
-        "kdeglobals" = {
-          text = ''
-            [General]
-            ColorScheme=${colorSchemeId}
+        # KDE-runtime Flatpaks use this as a fallback when their application
+        # does not pass the Qt Quick Controls style explicitly.
+        "qtquickcontrols2.conf".text = ''
+          [Controls]
+          Style=org.kde.desktop
+        '';
 
+        "kdeglobals" = {
+          # KColorScheme reads the [Colors:*] groups from kdeglobals. Merely
+          # exposing the .colors file is not enough outside a Plasma session.
+          text = colorSchemeFile + ''
             [Icons]
             Theme=${iconName}
+
+            [KDE]
+            widgetStyle=Breeze
+
+            # Do not apply KDE's inactive-window tint to Qt Quick controls.
+            # It makes the dark palette appear lighter when focus changes.
+            [ColorEffects:Inactive]
+            Enable=false
+            ChangeSelectionColor=false
           '';
           force = true;
         };
