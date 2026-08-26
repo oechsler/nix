@@ -211,7 +211,6 @@ Desktop-specific settings are grouped below by the component they configure.
 | `features.desktop.login`    | `"greeter"`  | `"greeter"` or `"autologin"`.                 |
 | `features.audio.enable`     | `true`       | PipeWire audio with PulseAudio compatibility. |
 | `features.bluetooth.enable` | `true`       | Bluetooth support.                            |
-| `features.compat.enable`    | `true`       | `nix-ld` and glibc compatibility libraries.   |
 
 ```nix
 features = {
@@ -561,8 +560,6 @@ under their respective feature.
 | `features.apps.mumble.hideInTray`              | `true`             | Keep Mumble in the system tray.                                      |
 | `features.apps.mumble.quitBehavior`            | `"AlwaysMinimize"` | Close behavior.                                                      |
 | `features.apps.mumble.serverFilterMode`        | `"ShowAll"`        | Favorite-list filter.                                                |
-| `features.flatpak.enable`                      | `true`             | Flatpak and Flathub.                                                 |
-| `features.appimage.enable`                     | `true`             | AppImage support and watcher.                                        |
 
 ```nix
 features = {
@@ -599,6 +596,87 @@ The default username is `user.name`; hosts can override it. If the optional
 `mumble/certificate` secret exists in SOPS, it is imported automatically.
 
 Set `features.apps.mumble.disablePublicServerList = false` to show the public server list again.
+
+### Flatpak
+
+Flatpak is an escape hatch for applications that are unavailable or impractical
+as Nix packages. Prefer a native Nix package when one provides the required
+application and integration. Flatpak adds a separate runtime, sandbox policy,
+and an additional update mechanism.
+
+| Option                    | Default | Description                 |
+| ------------------------- | ------- | --------------------------- |
+| `features.flatpak.enable` | `true`  | Enable Flatpak and Flathub. |
+
+The module installs Flatseal, Warehouse, and Fedora Media Writer by default.
+Additional applications can be declared through the underlying nix-flatpak
+interface:
+
+```nix
+services.flatpak.packages = [
+  "org.gimp.GIMP"
+  "com.usebottles.bottles"
+];
+```
+
+Flatpak GTK applications receive the shared Catppuccin GTK theme and icon files
+from the user profile. For Qt applications, the configuration detects the
+Flatpak runtime: KDE-runtime applications use their bundled KDE platform theme
+plugin under both KDE and Hyprland, while other runtimes keep their own default
+without being forced to load a possibly missing KDE plugin. Sandbox permissions
+remain application-specific; inspect or adjust them with Flatseal when needed.
+
+Disable Flatpak when the host should only use declarative Nix packages:
+
+```nix
+features.flatpak.enable = false;
+```
+
+### AppImage
+
+AppImage is a fallback for vendor binaries that are not packaged in Nixpkgs.
+It is less reproducible than a Nix package and does not provide the same
+dependency, update, or sandbox guarantees as Flatpak, so it should normally be
+the last resort.
+
+| Option                     | Default | Description                                |
+| -------------------------- | ------- | ------------------------------------------ |
+| `features.appimage.enable` | `true`  | Enable AppImage execution and integration. |
+
+When enabled, put `.AppImage` files in `~/Applications`. The watcher makes them
+executable, extracts their desktop metadata and icons without running them, and
+creates launcher entries in `~/.local/share/applications`:
+
+```nix
+features.appimage.enable = true;
+```
+
+Disable AppImage support when all required applications are available as Nix
+packages or Flatpaks:
+
+```nix
+features.appimage.enable = false;
+```
+
+### Compatibility Layer
+
+The compatibility layer enables `nix-ld` for dynamically linked binaries that
+expect a traditional Linux filesystem such as `/lib64` or `/usr/lib`. It is
+useful for vendor tools, downloaded releases, and AppImages that do not work
+with their bundled libraries. It does not turn an arbitrary binary into a
+reproducible Nix package.
+
+| Option                   | Default | Description                                         |
+| ------------------------ | ------- | --------------------------------------------------- |
+| `features.compat.enable` | `true`  | Enable `nix-ld` compatibility libraries and loader. |
+
+Prefer packaging the application in Nix, or use Flatpak for a suitable desktop
+application, before relying on `nix-ld`. Disable the layer when the system does
+not need foreign dynamically linked binaries:
+
+```nix
+features.compat.enable = false;
+```
 
 ## Options
 

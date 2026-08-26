@@ -88,12 +88,25 @@ in
           $FLATPAK override --system --unset-env=QT_STYLE_OVERRIDE
         fi
       ''
-      + lib.optionalString (config.features.desktop.wm == "kde") ''
+      + lib.optionalString config.features.desktop.enable ''
         if [ -x "$FLATPAK" ]; then
-          # KDE Flatpaks otherwise get the runtime default instead of Plasma's
-          # color scheme, icon theme, and widget style.
-          $FLATPAK override --system --env=QT_QPA_PLATFORMTHEME=kde
-          $FLATPAK override --system --unset-env=QT_STYLE_OVERRIDE
+          # Only KDE-runtime apps have the KDE platform theme plugin. Do not set
+          # this globally: freedesktop-runtime apps may not ship that plugin.
+          $FLATPAK override --system --unset-env=QT_QPA_PLATFORMTHEME
+          while IFS=$'\t' read -r app runtime; do
+            if [ -z "$app" ]; then
+              continue
+            fi
+
+            case "$runtime" in
+              org.kde.Platform/*)
+                $FLATPAK override --system "$app" --env=QT_QPA_PLATFORMTHEME=kde
+                ;;
+              *)
+                $FLATPAK override --system "$app" --unset-env=QT_QPA_PLATFORMTHEME
+                ;;
+            esac
+          done < <($FLATPAK list --system --app --columns=application,runtime)
         fi
       ''
       + lib.optionalString hasHDR ''
