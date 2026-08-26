@@ -178,7 +178,6 @@ let
 
       while IFS= read -r conn; do
         ${pkgs.networkmanager}/bin/nmcli connection modify "$conn" connection.autoconnect no || true
-        ${pkgs.networkmanager}/bin/nmcli connection down "$conn" || true
       done <<< "$WIFI_CONNECTIONS"
 
       exit 0
