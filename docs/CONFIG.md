@@ -12,37 +12,16 @@ overrides in `configuration.nix`:
 
 ```nix
 features = {
-  hardware = {
-    formFactor = "laptop";
-    cpu = "intel";
-    gpu = "intel";
-  };
-
   desktop = {
-    wm = "kde";
-    login = "greeter";
-    browser = {
-      type = "firefox";
-      newTabPage = "https://dash.example.com";
-      searchEngine = "ddg";
-      cookieAllowlist = [ "https://example.org" ];
-    };
+    enable = true;
   };
 
-  encryption = {
-    unlockMethod = "tpm2";
-  };
+  encryption.enable = true;
   gaming = {
     enable = false;
   };
-  dev = {
-    enable = true;
-  };
-  virtualisation = {
-    vm = {
-      enable = false;
-    };
-  };
+  dev.enable = true;
+  virtualisation.enable = true;
 };
 ```
 
@@ -241,33 +220,6 @@ features = {
   desktop = {
     wm = "kde";
     login = "greeter";
-    browser = {
-      type = "librewolf";
-    };
-    kde = {
-      favorites = {
-        declarative = true;
-        entries = [
-          "librewolf"
-          "org.kde.dolphin"
-          "kitty"
-          "systemsettings"
-        ];
-      };
-      tray = {
-        shown = [
-          "org.kde.plasma.networkmanagement"
-          "org.kde.plasma.volume"
-          "org.kde.plasma.battery"
-        ];
-        hidden = [ "org.kde.plasma.bluetooth" ];
-      };
-    };
-  };
-  auth = {
-    totp = {
-      enable = true;
-    };
   };
 };
 ```
@@ -613,6 +565,19 @@ under their respective feature.
 | `features.apps.mumble.serverFilterMode`        | `"ShowAll"`        | Favorite-list filter.                                                |
 | `features.flatpak.enable`                      | `true`             | Flatpak and Flathub.                                                 |
 | `features.appimage.enable`                     | `true`             | AppImage support and watcher.                                        |
+
+```nix
+features = {
+  apps = {
+    enable = true;
+    nextcloud = {
+      enable = true;
+    };
+  };
+  flatpak.enable = true;
+  appimage.enable = true;
+};
+```
 
 #### Mumble
 
