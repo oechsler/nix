@@ -119,13 +119,31 @@ of all subvolumes. btrbk uses this view for snapshot operations, while
 ## Impermanence
 
 When `features.impermanence.enable = true`, root (`@`) is wiped on every boot.
-Persistent data goes in `/persist`:
+Persistent data goes in `/persist`.
 
-- `/var/lib/NetworkManager`, `/var/lib/bluetooth`
-- `/var/lib/docker`
-- `/var/lib/nixos`, `/var/lib/sops`
+Always-persistent core state:
+
+- `/var/lib/NetworkManager`
+- `/var/lib/backgrounds` (prepared wallpapers and blur cache)
+- `/var/lib/nixos`
+- `/var/lib/power-profiles-daemon`
+- `/var/lib/sops`
+- `/var/lib/systemd`
+
+Feature-dependent state:
+
+- `/var/lib/bluetooth` (Bluetooth)
+- `/var/lib/containers` and `/var/lib/docker` (containers)
+- `/etc/libvirt` and `/var/lib/libvirt` (virtual machines)
+- `/var/lib/flatpak` (Flatpak)
+- `/var/lib/iwd` (WiFi)
+- `/var/lib/pam-lldap` (LDAP authentication)
+- `/var/lib/sbctl` (Secure Boot)
+- `/var/lib/sddm` (desktop login)
+- `/var/lib/tailscale` (Tailscale)
 - `/persist/etc/ssh/*` (SSH host keys)
-- See `modules/system/impermanence.nix` for the full path list.
+
+The exact conditional list is defined in `modules/system/impermanence.nix`.
 
 User password is declarative in `modules/system/users.nix`.
 
