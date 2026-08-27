@@ -22,7 +22,7 @@ pkgs.writeShellScript "battery-warning" ''
 
     if [ -n "$capacity" ] && [ "$status" = "Discharging" ]; then
       if [ "$capacity" -le 5 ]; then
-        ${pkgs.dunst}/bin/dunstify -a "battery" -u critical -t 5000 \
+        ${pkgs.libnotify}/bin/notify-send -a "battery" -u critical -t 5000 \
           -i "${batteryIcon}" \
           -h string:x-dunst-stack-tag:battery \
           -h string:x-canonical-private-synchronous:battery \
@@ -30,7 +30,7 @@ pkgs.writeShellScript "battery-warning" ''
         sleep 5
         systemctl suspend
       elif [ "$capacity" -le 10 ] && [ -z "$warned" ]; then
-        ${pkgs.dunst}/bin/dunstify -a "battery" -u critical -t 15000 \
+        ${pkgs.libnotify}/bin/notify-send -a "battery" -u critical -t 15000 \
           -i "${batteryIcon}" \
           -h string:x-dunst-stack-tag:battery \
           -h string:x-canonical-private-synchronous:battery \

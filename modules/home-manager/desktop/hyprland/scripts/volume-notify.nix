@@ -29,9 +29,10 @@ pkgs.writeShellScript "volume-notify" ''
     text="${i18n.translate "Volume" "Lautstärke"} ''${volume}%"
   fi
 
-  ${pkgs.dunst}/bin/dunstify -a "changeVolume" -u low \
+  ${pkgs.libnotify}/bin/notify-send -a "changeVolume" -u low \
     -i "$icon" \
     -h string:x-dunst-stack-tag:volume \
+    -h string:x-canonical-private-synchronous:volume \
     -h int:value:"$volume" \
     "$text"
 ''
