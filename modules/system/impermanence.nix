@@ -32,6 +32,7 @@
 # - Flatpak apps
 # - SSH host keys
 # - SOPS secrets
+# - Prepared wallpapers and their blur cache
 # - Tailscale identity
 # - System state (nixos generations, etc.)
 
@@ -64,10 +65,10 @@ in
       hideMounts = true; # Don't show bind mounts in df/mount output
 
       directories = [
-        # Network (conditional)
-        "/var/lib/NetworkManager" # Network connections (always, needed for ethernet too)
+        # Core state
+        "/var/lib/NetworkManager" # Network connections
+        "/var/lib/backgrounds" # Prepared wallpaper and blur cache
 
-        # System State (always)
         "/var/lib/nixos" # NixOS state (users, groups, etc.)
         "/var/lib/sops" # SOPS secrets
         "/var/lib/power-profiles-daemon" # Active power profile
