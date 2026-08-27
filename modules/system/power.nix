@@ -36,7 +36,8 @@ in
     HandleSuspendKey = "suspend";
     HandleHibernateKey = "suspend";
     HandleLidSwitch = if isLaptop then "suspend" else "ignore";
-    HandleLidSwitchExternalPower = if isLaptop then "ignore" else "ignore";
+    HandleLidSwitchExternalPower = if isLaptop then "suspend" else "ignore";
+    HandleLidSwitchDocked = if isLaptop then "suspend" else "ignore";
   };
 
   systemd.sleep.settings.Sleep = {

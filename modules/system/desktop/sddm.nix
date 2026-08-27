@@ -186,6 +186,7 @@ let
   monitorsWithEdid = lib.filter (m: m.edidHash != null) monitors;
   shouldManageSddmLayout =
     monitors != [ ] && (monitorsWithEdid == [ ] || monitorsWithEdid == monitors);
+  shouldApplySddmLayout = shouldManageSddmLayout && isKde;
   configuredOutputEdids = lib.escapeShellArgs (map (m: "${m.name}:${m.edidHash}") monitorsWithEdid);
   configuredOutputEdidChecks = lib.optionalString (monitorsWithEdid != [ ]) ''
     for identity in ${configuredOutputEdids}; do
@@ -505,7 +506,7 @@ in
           };
         };
 
-        sddm-apply-display-config = lib.mkIf shouldManageSddmLayout {
+        sddm-apply-display-config = lib.mkIf shouldApplySddmLayout {
           description = "Apply SDDM monitor layout after KWin starts";
           after = [ "display-manager.service" ];
           wantedBy = [ "display-manager.service" ];
@@ -545,7 +546,7 @@ in
           };
         };
       };
-      paths.sddm-apply-display-config-watch = lib.mkIf shouldManageSddmLayout {
+      paths.sddm-apply-display-config-watch = lib.mkIf shouldApplySddmLayout {
         description = "Reapply the SDDM monitor layout when a greeter Wayland socket appears";
         wantedBy = [ "display-manager.service" ];
         partOf = [ "display-manager.service" ];

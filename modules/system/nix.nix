@@ -157,13 +157,16 @@ in
           notify = pkgs.writeShellScript "nixos-upgrade-notify" ''
             ${pkgs.systemd}/bin/systemd-run --machine=${user}@ \
                --user --pipe --quiet --collect \
-               ${pkgs.libnotify}/bin/notify-send "$@"
+               ${pkgs.libnotify}/bin/notify-send \
+                 --hint=string:x-canonical-private-synchronous:nixos-upgrade \
+                 --hint=string:x-dunst-stack-tag:nixos-upgrade \
+                 "$@"
           '';
 
           startingNotification = pkgs.writeShellScript "nixos-upgrade-starting" ''
-            ${notify} -u low -i "${updateIcon}" \
-              "${updateTitle}" \
-              "${translate "Automatic system update started." "Automatische Systemaktualisierung gestartet."}"
+            ${notify} -u low -t 5000 -i "${updateIcon}" \
+             "${updateTitle}" \
+             "${translate "Automatic system update started." "Automatische Systemaktualisierung gestartet."}"
           '';
 
           # nixos-rebuild uses a fixed transient systemd unit name. Wait for
@@ -220,12 +223,12 @@ in
             booted=$(readlink /run/booted-system)
             if [ "$current" != "$booted" ]; then
               # New system generation built, reboot needed to activate
-               ${notify} -u normal -i "${updateIcon}" \
+                ${notify} -u normal -t 7000 -i "${updateIcon}" \
                  "${updateTitle}" \
                  "${translate "Update completed. A reboot is recommended." "Aktualisierung abgeschlossen. Ein Neustart wird empfohlen."}"
             else
               # No changes, system already up-to-date
-               ${notify} -u low -i "${currentIcon}" \
+                ${notify} -u low -t 5000 -i "${currentIcon}" \
                  "${updateTitle}" \
                  "${translate "The system is already up to date." "Das System ist bereits auf dem neuesten Stand."}"
             fi
@@ -265,7 +268,10 @@ in
             # Send critical notification to user session
             ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
               --user --pipe --quiet --collect \
-              ${pkgs.libnotify}/bin/notify-send -u critical -i "${errorIcon}" \
+               ${pkgs.libnotify}/bin/notify-send \
+                 --hint=string:x-canonical-private-synchronous:nixos-upgrade \
+                 --hint=string:x-dunst-stack-tag:nixos-upgrade \
+                 -u critical -i "${errorIcon}" \
                 "${updateTitle}" \
                 "${translate "The automatic update could not be completed." "Die automatische Aktualisierung konnte nicht durchgeführt werden."}\n\n$error"
           '';
