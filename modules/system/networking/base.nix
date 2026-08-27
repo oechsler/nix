@@ -12,7 +12,6 @@
 #   features.wifi.enterpriseNetworks = [            # WPA2 Enterprise (EAP-PEAP) networks
 #     { name = "uni"; ssid = "Eduroam"; identity = "user@uni.de"; } # password in sops: wifi/<name>/password
 #   ];
-#   features.wifi.preferEthernet.enable = true;     # Disable WiFi when Ethernet is active (default: true, non-KDE desktops)
 #   features.tailscale.enable = true;               # Tailscale VPN (default: true)
 
 {
@@ -24,6 +23,7 @@
 
 let
   ip6Privacy = if config.features.ipv6PrivacyExtensions.enable then 2 else 0;
+  isHyprland = config.features.desktop.enable && config.features.desktop.wm == "hyprland";
 in
 {
   options.features = {
@@ -76,11 +76,6 @@ in
         default = [ ];
         description = "WPA2 Enterprise (EAP-PEAP/MSCHAPv2) networks. Only wifi/<name>/password needs a SOPS secret.";
       };
-      preferEthernet.enable =
-        (lib.mkEnableOption "disable WiFi while Ethernet is connected on non-KDE desktops")
-        // {
-          default = true;
-        };
     };
     tailscale.enable = (lib.mkEnableOption "Tailscale VPN") // {
       default = true;
@@ -88,17 +83,23 @@ in
   };
 
   config = {
+    networking.useDHCP = false;
+    # Network availability must not block boot. Network services can start
+    # and retry in the background after the desktop is available.
+    systemd.network.wait-online.enable = false;
+    systemd.services.NetworkManager-wait-online.enable = false;
     networking = {
       networkmanager = {
-        enable = true;
+        enable = !isHyprland;
         wifi.backend = "iwd";
         unmanaged = [
           "interface-name:docker*"
           "interface-name:br-*"
           "interface-name:veth*"
           "interface-name:tailscale*"
-        ];
-        ensureProfiles.profiles.ethernet-default = {
+        ]
+        ++ lib.optional isHyprland "type:wifi";
+        ensureProfiles.profiles.ethernet-default = lib.mkIf (!isHyprland) {
           connection = {
             id = "Ethernet";
             type = "ethernet";
@@ -122,7 +123,12 @@ in
       };
       wireless.iwd = {
         enable = true;
-        settings.General.EnableNetworkConfiguration = false;
+        settings = {
+          General.EnableNetworkConfiguration = isHyprland;
+          # systemd-networkd's DHCP default route metric is 1024; Ethernet
+          # must remain preferred while iwd still provides a WiFi fallback.
+          Network.RoutePriorityOffset = 2048;
+        };
       };
     };
 
@@ -142,10 +148,16 @@ in
 
     systemd.services.resolved.serviceConfig.Environment = [ "SYSTEMD_RESOLVED_FALLBACK_DNS=" ];
 
-    networking.networkmanager.settings = {
+    networking.networkmanager.settings = lib.mkIf (!isHyprland) {
       main = {
         dns = "systemd-resolved";
       };
+    };
+
+    networking.useNetworkd = isHyprland;
+    systemd.network.networks."10-ethernet-dhcp" = lib.mkIf isHyprland {
+      matchConfig.Type = "ether";
+      networkConfig.DHCP = "yes";
     };
 
     services.avahi = {

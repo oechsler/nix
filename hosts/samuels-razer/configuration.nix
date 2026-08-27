@@ -105,7 +105,7 @@
 
     # --- Desktop & UI ---
     desktop = {
-      wm = "kde";
+      #wm = "kde";
       login = "greeter";
       fileManager = "terminal";
     };

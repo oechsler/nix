@@ -231,6 +231,16 @@ let
     in
     "${invertStep}${pkgs.gowall}/bin/gowall convert \"$CURRENT\" --theme ${wallpaperThemeJSON} --output \"$CURRENT\" --yes";
 
+  wallpaperCacheKey = builtins.hashString "sha256" (
+    builtins.toJSON {
+      archive = toString archiveFile;
+      source = toString wallpaperPath;
+      accent = wallpaperAccents;
+      enable = config.theme.backgrounds.catppuccinize.enable;
+      invert = config.theme.backgrounds.catppuccinize.invert;
+    }
+  );
+
   # ============================================================================
   # WALLPAPER PREPARATION SCRIPT
   # ============================================================================
@@ -245,6 +255,14 @@ let
     OUTPUT_DIR="${outputDir}"
     CURRENT="${outputDir}/${currentFile}"
     BLURRED="${outputDir}/${blurredFile}"
+    STAMP="${outputDir}/.wallpaper-stamp"
+    CACHE_KEY="${wallpaperCacheKey}"
+
+    if [[ -s "$CURRENT" && -s "$BLURRED" && -f "$STAMP" ]] \
+      && [[ "$(cat "$STAMP")" == "$CACHE_KEY" ]]; then
+      echo "Wallpaper already prepared, using cached files"
+      exit 0
+    fi
 
     mkdir -p "$OUTPUT_DIR"
 
@@ -290,6 +308,7 @@ let
 
     # Set world-readable permissions
     chmod 644 "$CURRENT" "$BLURRED"
+    printf '%s\n' "$CACHE_KEY" > "$STAMP"
 
     # Signal user-level awww to reload (see awww.nix path unit)
     touch "/var/lib/backgrounds/.reload"

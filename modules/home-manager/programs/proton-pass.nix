@@ -124,6 +124,7 @@ in
       systemd.user.services.proton-pass-ssh-agent = {
         Unit = {
           Description = "Proton Pass SSH Agent";
+          ConditionPathExists = "%h/.local/share/proton-pass-cli";
           # Keep this service on default.target: the agent is also used on
           # servers, and SSH must not silently fall back to a stale key while
           # waiting for a graphical session. The service retries until the

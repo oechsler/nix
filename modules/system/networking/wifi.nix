@@ -1,7 +1,6 @@
 # WiFi Configuration
 #
-# WiFi connection profiles (PSK + Enterprise) with SOPS credentials,
-# optional ethernet/WiFi autoconnect switching for non-KDE desktops, and iwd profiles.
+# WiFi connection profiles (PSK + Enterprise) with SOPS credentials.
 #
 # SSID and identity are declared inline in features.wifi.networks.
 # Only the password/psk needs a SOPS secret:
@@ -17,17 +16,8 @@
 
 let
   cfg = config.features.wifi;
+  nmManagedWifi = !(config.features.desktop.enable && config.features.desktop.wm == "hyprland");
   ip6Privacy = if config.features.ipv6PrivacyExtensions.enable then 2 else 0;
-  wifiResume = pkgs.writeShellScript "networkmanager-wifi-resume" ''
-    ${pkgs.coreutils}/bin/sleep 3
-    wifi_device="$(${pkgs.networkmanager}/bin/nmcli -t -f DEVICE,TYPE device status | ${pkgs.gawk}/bin/awk -F: '$2 == "wifi" { print $1; exit }')"
-    [ -n "$wifi_device" ] || exit 0
-    for _ in $(${pkgs.coreutils}/bin/seq 1 30); do
-      ${pkgs.networkmanager}/bin/nmcli device connect "$wifi_device" >/dev/null 2>&1 && exit 0
-      ${pkgs.coreutils}/bin/sleep 1
-    done
-    exit 1
-  '';
   stableUuid =
     profileName:
     let
@@ -146,109 +136,9 @@ let
       }) cfg.enterpriseNetworks
     );
 
-  ethernetWifiSwitch = pkgs.writeShellScript "ethernet-wifi-switch" ''
-    INTERFACE=''${1:-}
-    ACTION=''${2:-up}
-
-    if [ -z "$INTERFACE" ] && [ $# -gt 0 ]; then
-      exit 0
-    fi
-
-    case "$ACTION" in
-      up|down|connectivity-change|dhcp4-change|dhcp6-change) ;;
-      *) exit 0 ;;
-    esac
-
-    if [ -n "$INTERFACE" ] && [ ! -d "/sys/class/net/$INTERFACE/device" ]; then
-      exit 0
-    fi
-
-    # Use UUIDs instead of connection names: NetworkManager permits duplicate
-    # SSIDs/names and name-based operations can then target the wrong profile.
-    WIFI_CONNECTIONS=$(${pkgs.networkmanager}/bin/nmcli -t -f UUID,TYPE connection show | ${pkgs.gnugrep}/bin/grep ':802-11-wireless$' | ${pkgs.uutils-coreutils-noprefix}/bin/cut -d: -f1)
-
-    if [ -z "$WIFI_CONNECTIONS" ]; then
-      exit 0
-    fi
-
-    ACTIVE_ETHERNET=$(${pkgs.networkmanager}/bin/nmcli -t -f TYPE,DEVICE connection show --active | ${pkgs.gnugrep}/bin/grep '^802-3-ethernet:' | ${pkgs.uutils-coreutils-noprefix}/bin/cut -d: -f2 || true)
-
-    if [ -n "$ACTIVE_ETHERNET" ]; then
-      ${pkgs.util-linux}/bin/logger "NetworkManager dispatcher: active Ethernet found ($ACTIVE_ETHERNET), disabling WiFi autoconnect"
-
-      while IFS= read -r conn; do
-        ${pkgs.networkmanager}/bin/nmcli connection modify "$conn" connection.autoconnect no || true
-      done <<< "$WIFI_CONNECTIONS"
-
-      exit 0
-    fi
-
-    ${pkgs.util-linux}/bin/logger "NetworkManager dispatcher: no active Ethernet found, enabling WiFi autoconnect"
-
-    while IFS= read -r conn; do
-      ${pkgs.networkmanager}/bin/nmcli connection modify "$conn" connection.autoconnect yes || true
-    done <<< "$WIFI_CONNECTIONS"
-
-    WIFI_DEVICE=$(${pkgs.networkmanager}/bin/nmcli -t -f DEVICE,TYPE device status | ${pkgs.gnugrep}/bin/grep ':wifi$' | ${pkgs.uutils-coreutils-noprefix}/bin/cut -d: -f1 | ${pkgs.uutils-coreutils-noprefix}/bin/head -n1)
-
-    if [ -n "$WIFI_DEVICE" ]; then
-      ${pkgs.networkmanager}/bin/nmcli radio wifi on || true
-      ${pkgs.networkmanager}/bin/nmcli device connect "$WIFI_DEVICE" || true
-    fi
-  '';
 in
 {
   config = lib.mkMerge [
-
-    # Ethernet/WiFi switching for desktops without NetworkManager UI policy.
-    (lib.mkIf
-      (
-        config.features.desktop.enable
-        && config.features.desktop.wm != "kde"
-        && cfg.enable
-        && cfg.preferEthernet.enable
-      )
-      {
-        networking.networkmanager.dispatcherScripts = [
-          {
-            source = ethernetWifiSwitch;
-            type = "basic";
-          }
-        ];
-
-        systemd.services.ethernet-wifi-switch = {
-          description = "Apply Ethernet/WiFi autoconnect policy";
-          wantedBy = [ "multi-user.target" ];
-          after = [ "NetworkManager.service" ];
-          serviceConfig = {
-            Type = "oneshot";
-            ExecStart = ethernetWifiSwitch;
-          };
-        };
-
-        systemd.services.networkmanager-cleanup-ethernet-profiles = {
-          description = "Remove unmanaged Ethernet connection profiles";
-          wantedBy = [ "multi-user.target" ];
-          after = [
-            "NetworkManager.service"
-            "NetworkManager-ensure-profiles.service"
-          ];
-          serviceConfig = {
-            Type = "oneshot";
-          };
-          script = ''
-            ${pkgs.networkmanager}/bin/nmcli -t -f NAME,TYPE connection show \
-              | while IFS=: read -r name type; do
-                  if [ "$type" = "802-3-ethernet" ] && [ "$name" != "Ethernet" ]; then
-                    ${pkgs.util-linux}/bin/logger "NetworkManager cleanup: deleting unmanaged Ethernet profile '$name'"
-                    ${pkgs.networkmanager}/bin/nmcli connection delete "$name" || true
-                  fi
-                done
-          '';
-        };
-      }
-    )
-
     # WiFi disabled
     (lib.mkIf (!cfg.enable) {
       networking.networkmanager.wifi.powersave = false;
@@ -257,20 +147,21 @@ in
 
     # WiFi profiles + iwd
     (lib.mkIf cfg.enable {
-      networking.networkmanager.ensureProfiles = {
+      networking.networkmanager.ensureProfiles = lib.mkIf nmManagedWifi {
         environmentFiles = [ config.sops.templates."wifi-env".path ];
         profiles = wifiProfiles // enterpriseWifiProfiles;
       };
 
-      # ensureProfiles writes declarative profiles but deliberately does not
-      # garbage-collect old profiles from /etc or profiles created manually.
-      # Reconcile only managed SSIDs and preserve their stable UUIDs.
+      # Remove stale duplicate profiles for declaratively managed SSIDs.
       systemd.services = {
-        NetworkManager-reconcile-wifi-profiles = {
+        NetworkManager-reconcile-wifi-profiles = lib.mkIf nmManagedWifi {
           description = "Reconcile declarative NetworkManager WiFi profiles";
           wantedBy = [ "multi-user.target" ];
-          after = [ "NetworkManager.service" ];
-          before = [ "NetworkManager-ensure-profiles.service" ];
+          wants = [ "NetworkManager-ensure-profiles.service" ];
+          after = [
+            "NetworkManager.service"
+            "NetworkManager-ensure-profiles.service"
+          ];
           serviceConfig.Type = "oneshot";
           script = ''
             set -u
@@ -291,22 +182,12 @@ in
           '';
         };
 
-        NetworkManager-resume-wifi = {
-          description = "Reconnect WiFi after suspend/resume";
-          after = [ "NetworkManager.service" ];
-          wants = [ "NetworkManager.service" ];
-          serviceConfig = {
-            Type = "oneshot";
-            ExecStart = wifiResume;
-          };
-        };
-
-        NetworkManager-ensure-profiles = {
+        NetworkManager-ensure-profiles = lib.mkIf nmManagedWifi {
           after = [ "sops-install-secrets.service" ];
           unitConfig.ConditionPathExists = config.sops.age.keyFile;
         };
 
-        iwd-profiles = {
+        iwd-profiles = lib.mkIf (!nmManagedWifi) {
           wantedBy = [ "network-pre.target" ];
           after = [ "sops-install-secrets.service" ];
           before = [ "iwd.service" ];
@@ -346,12 +227,6 @@ in
             ) cfg.enterpriseNetworks;
         };
       };
-
-      environment.etc."systemd/system-sleep/networkmanager-wifi-resume".source =
-        pkgs.writeShellScript "networkmanager-wifi-resume-hook" ''
-          [ "$1" = post ] || exit 0
-          ${pkgs.systemd}/bin/systemctl --no-block start NetworkManager-resume-wifi.service
-        '';
 
       sops = {
         templates."wifi-env".content = wifiEnvContent;
