@@ -48,7 +48,7 @@ let
   # Small Waybar-specific refinement while staying tied to shared theme spacing.
   fineSpacing = theme.spacing.compact / 2;
   iconSize = fonts.uiPixelSize;
-  trayIconSize = iconSize + 4;
+  trayIconSize = iconSize + theme.spacing.control;
   iconOpticalSpacing = builtins.floor (iconSize / 7);
 
   # Load and customize SCSS styling
@@ -145,7 +145,10 @@ let
         ${pkgs.imagemagick}/bin/magick \
           -background none \
           "${theme.icons.package}/share/icons/Papirus/24x24/panel/${name}.svg" \
-          -resize 48x48 \
+          -trim +repage \
+          -resize 32x32 \
+          -gravity center \
+          -extent 48x48 \
           "$out/${name}.png"
       '';
     in
