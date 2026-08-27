@@ -137,23 +137,25 @@ let
     }) displays.monitors
   );
 
+  papirusPanelIcon = name: "${theme.icons.package}/share/icons/Papirus/24x24/panel/${name}.svg";
+
   defaultTrayIcons =
     lib.optionalAttrs features.gaming.enable {
-      steam = "steam_tray_mono";
+      steam = papirusPanelIcon "steam_tray_mono";
     }
     // lib.optionalAttrs features.apps.nextcloud.enable {
-      Nextcloud = "state-ok";
+      Nextcloud = papirusPanelIcon "state-ok";
     }
     // lib.optionalAttrs features.apps.enable {
-      Mumble = "mumble-indicator";
-      "Proton Pass_status_icon_1" = "dialog-password-panel";
-      vesktop_status_icon_1 = "discord-tray";
+      Mumble = papirusPanelIcon "mumble-indicator";
+      "Proton Pass_status_icon_1" = papirusPanelIcon "dialog-password-panel";
+      vesktop_status_icon_1 = papirusPanelIcon "discord-tray";
     }
     // lib.optionalAttrs features.tailscale.enable (
       lib.listToAttrs [
         {
           name = "dev.deedles.Trayscale";
-          value = "network-vpn";
+          value = papirusPanelIcon "network-vpn";
         }
       ]
     );
