@@ -208,7 +208,7 @@ in
           "${pkgs.systemd}/bin/systemctl stop smb-mount.service"
         ];
         ExecStop = lib.mkAfter [
-          "${pkgs.systemd}/bin/systemctl start smb-mount.service"
+          "${pkgs.systemd}/bin/systemctl start --no-block smb-mount.service"
         ];
       };
     };
