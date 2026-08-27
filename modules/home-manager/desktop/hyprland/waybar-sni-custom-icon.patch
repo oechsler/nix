@@ -38,19 +38,25 @@ diff --git a/src/modules/sni/item.cpp b/src/modules/sni/item.cpp
      } else if (name == "OverlayIconName") {
        overlay_icon_name = get_variant<std::string>(value);
      } else if (name == "OverlayIconPixmap") {
-@@ -239,13 +247,15 @@ void Item::setCustomIcon(const std::string& id) {
-     if (std::filesystem::exists(custom_icon)) {
+@@ -237,5 +237,14 @@ void Item::setCustomIcon(const std::string& id) {
        try {
-         Glib::RefPtr<Gdk::Pixbuf> custom_pixbuf = Gdk::Pixbuf::create_from_file(custom_icon);
+-        Glib::RefPtr<Gdk::Pixbuf> custom_pixbuf = Gdk::Pixbuf::create_from_file(custom_icon);
++        GError* error = nullptr;
++        auto custom_pixbuf = Glib::wrap(gdk_pixbuf_new_from_file_at_scale(
++            custom_icon.c_str(), static_cast<int>(getScaledIconSize()),
++            static_cast<int>(getScaledIconSize()), true, &error));
++        if (error != nullptr) {
++          spdlog::error("Failed to load custom icon {}: {}", custom_icon, error->message);
++          g_error_free(error);
++        } else {
          icon_name = "";  // icon_name has priority over pixmap
          icon_pixmap = custom_pixbuf;
-+        has_custom_icon_ = true;
++          has_custom_icon_ = true;
++        }
        } catch (const Glib::Error& e) {
-         spdlog::error("Failed to load custom icon {}: {}", custom_icon, e.what());
-       }
-     } else {  // if file doesn't exist it's most likely an icon_name
-       icon_name = custom_icon;
+@@ -246,4 +256,5 @@ void Item::setCustomIcon(const std::string& id) {
+      } else {  // if file doesn't exist it's most likely an icon_name
+        icon_name = custom_icon;
 +      has_custom_icon_ = true;
-     }
-   }
+      }
  }

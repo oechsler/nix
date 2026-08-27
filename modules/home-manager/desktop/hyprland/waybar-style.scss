@@ -172,13 +172,11 @@ window#waybar {
 }
 
 #battery.warning:not(.charging) {
-  color: papirus_text;
+  color: @yellow;
 }
 
 #battery.critical:not(.charging) {
-  color: papirus_text;
-  background-color: @red;
-  border-color: @red;
+  color: @red;
 }
 
 #network.disconnected {
