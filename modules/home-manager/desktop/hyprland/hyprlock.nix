@@ -114,7 +114,6 @@ in
           placeholder_text = "${i18n.translate "Password" "Passwort"}";
           fail_text = "$FAIL ($ATTEMPTS)";
           font_family = "${fonts.ui}";
-          font_size = scale fonts.uiPixelSize;
         }
       ];
 
