@@ -11,7 +11,7 @@
   theme,
 }:
 let
-  lowBattery = i18n.translate "Low battery" "Niedriger Akkustand";
+  lowBattery = i18n.translate "Low battery" "Niedriger Akkuzustand";
   batteryIcon = "${theme.icons.package}/share/icons/Papirus/32x32/devices/battery.svg";
 in
 pkgs.writeShellScript "battery-warning" ''
@@ -25,14 +25,16 @@ pkgs.writeShellScript "battery-warning" ''
         ${pkgs.dunst}/bin/dunstify -a "battery" -u critical -t 5000 \
           -i "${batteryIcon}" \
           -h string:x-dunst-stack-tag:battery \
-          "${i18n.translate "Battery critical" "Akku kritisch"}" "${i18n.translate "The device will suspend." "Gerät wird in den Ruhezustand versetzt."}"
+          -h string:x-canonical-private-synchronous:battery \
+          "${i18n.translate "Critical battery level" "Kritischer Akkuzustand"}" "${i18n.translate "Please connect the charger." "Bitte das Ladegerät anschließen."}"
         sleep 5
         systemctl suspend
       elif [ "$capacity" -le 10 ] && [ -z "$warned" ]; then
         ${pkgs.dunst}/bin/dunstify -a "battery" -u critical -t 15000 \
           -i "${batteryIcon}" \
           -h string:x-dunst-stack-tag:battery \
-          "${lowBattery} (''${capacity}%)" "${i18n.translate "Please connect a charger." "Bitte Ladegerät anschließen."}"
+          -h string:x-canonical-private-synchronous:battery \
+          "${lowBattery} (''${capacity}%)" "${i18n.translate "Please connect the charger." "Bitte das Ladegerät anschließen."}"
         warned="1"
       fi
     fi

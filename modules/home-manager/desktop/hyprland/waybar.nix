@@ -137,22 +137,7 @@ let
     }) displays.monitors
   );
 
-  papirusPanelIcon =
-    name:
-    let
-      icon = pkgs.runCommand "waybar-${name}-icon" { } ''
-        mkdir -p "$out"
-        ${pkgs.imagemagick}/bin/magick \
-          -background none \
-          "${theme.icons.package}/share/icons/Papirus/24x24/panel/${name}.svg" \
-          -trim +repage \
-          -resize 32x32 \
-          -gravity center \
-          -extent 48x48 \
-          "$out/${name}.png"
-      '';
-    in
-    "${icon}/${name}.png";
+  papirusPanelIcon = name: "${theme.icons.package}/share/icons/Papirus/24x24/panel/${name}.svg";
 
   defaultTrayIcons =
     lib.optionalAttrs features.gaming.enable {
