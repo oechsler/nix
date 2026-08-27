@@ -83,15 +83,17 @@ in
   };
 
   config = {
-    networking.useDHCP = false;
     # Network availability must not block boot. Network services can start
     # and retry in the background after the desktop is available.
-    systemd.network.wait-online.enable = false;
-    systemd.services.NetworkManager-wait-online.enable = false;
     networking = {
+      useDHCP = false;
+      useNetworkd = isHyprland;
       networkmanager = {
         enable = !isHyprland;
         wifi.backend = "iwd";
+        settings = lib.mkIf (!isHyprland) {
+          main.dns = "systemd-resolved";
+        };
         unmanaged = [
           "interface-name:docker*"
           "interface-name:br-*"
@@ -146,18 +148,16 @@ in
       };
     };
 
-    systemd.services.resolved.serviceConfig.Environment = [ "SYSTEMD_RESOLVED_FALLBACK_DNS=" ];
-
-    networking.networkmanager.settings = lib.mkIf (!isHyprland) {
-      main = {
-        dns = "systemd-resolved";
+    systemd = {
+      network.wait-online.enable = false;
+      network.networks."10-ethernet-dhcp" = lib.mkIf isHyprland {
+        matchConfig.Type = "ether";
+        networkConfig.DHCP = "yes";
       };
-    };
-
-    networking.useNetworkd = isHyprland;
-    systemd.network.networks."10-ethernet-dhcp" = lib.mkIf isHyprland {
-      matchConfig.Type = "ether";
-      networkConfig.DHCP = "yes";
+      services = {
+        NetworkManager-wait-online.enable = false;
+        resolved.serviceConfig.Environment = [ "SYSTEMD_RESOLVED_FALLBACK_DNS=" ];
+      };
     };
 
     services.avahi = {
