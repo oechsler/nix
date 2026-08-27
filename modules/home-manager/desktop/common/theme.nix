@@ -131,7 +131,7 @@ in
           [ -e "$THEME_DIR" ] && chmod -R u+w "$THEME_DIR" 2>/dev/null || true
           rm -rf "$THEME_DIR"
           mkdir -p "$(dirname "$THEME_DIR")"
-          cp -rL "$SOURCE_DIR" "$THEME_DIR"
+          cp -rL --reflink=auto "$SOURCE_DIR" "$THEME_DIR"
         fi
 
         # Replace gtk-4.0 CSS symlinks with real files (flatpak can't follow Nix store symlinks)
@@ -151,7 +151,7 @@ in
           [ -e "$ICON_DIR" ] && chmod -R u+w "$ICON_DIR" 2>/dev/null || true
           rm -rf "$ICON_DIR"
           mkdir -p "$(dirname "$ICON_DIR")"
-          cp -rL "$ICON_SOURCE_DIR" "$ICON_DIR"
+          cp -rL --reflink=auto "$ICON_SOURCE_DIR" "$ICON_DIR"
         fi
       '';
 

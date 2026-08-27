@@ -93,7 +93,7 @@ in
             SRC=$(readlink -f "$KVANTUM_DIR")
             if [ -d "$SRC" ]; then
               rm -f "$KVANTUM_DIR"
-              cp -rL "$SRC" "$KVANTUM_DIR"
+              cp -rL --reflink=auto "$SRC" "$KVANTUM_DIR"
             fi
           fi
 

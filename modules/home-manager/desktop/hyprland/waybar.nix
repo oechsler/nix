@@ -48,7 +48,7 @@ let
   # Small Waybar-specific refinement while staying tied to shared theme spacing.
   fineSpacing = theme.spacing.compact / 2;
   iconSize = fonts.uiPixelSize;
-  trayIconSize = builtins.floor (iconSize * 6 / 5);
+  trayIconSize = iconSize + 4;
   iconOpticalSpacing = builtins.floor (iconSize / 7);
 
   # Load and customize SCSS styling
@@ -137,7 +137,19 @@ let
     }) displays.monitors
   );
 
-  papirusPanelIcon = name: "${theme.icons.package}/share/icons/Papirus/24x24/panel/${name}.svg";
+  papirusPanelIcon =
+    name:
+    let
+      icon = pkgs.runCommand "waybar-${name}-icon" { } ''
+        mkdir -p "$out"
+        ${pkgs.imagemagick}/bin/magick \
+          -background none \
+          "${theme.icons.package}/share/icons/Papirus/24x24/panel/${name}.svg" \
+          -resize 48x48 \
+          "$out/${name}.png"
+      '';
+    in
+    "${icon}/${name}.png";
 
   defaultTrayIcons =
     lib.optionalAttrs features.gaming.enable {
@@ -257,7 +269,7 @@ in
         };
 
         "tray" = {
-          spacing = theme.spacing.module;
+          spacing = theme.spacing.control;
           icon-size = trayIconSize;
           icons = defaultTrayIcons // features.desktop.tray.icons;
         };
