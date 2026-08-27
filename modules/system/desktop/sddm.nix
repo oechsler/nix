@@ -6,8 +6,7 @@
 # - Wayland session support
 # - Catppuccin theming (matches desktop theme)
 # - KWin Wayland greeter with monitor fallback
-# - DPI scaling for Hyprland (calculated from primary monitor)
-# - Cursor theme and size (scaled for HiDPI)
+# - Cursor theme and size (KWin/Qt applies monitor scaling)
 # - Login mode (features.desktop.login: "greeter" shows login, "autologin" skips it)
 #
 # Why SDDM:
@@ -20,8 +19,8 @@
 # - Falls back to SDDM/KWin auto-detection for unknown or partial monitor setups
 #
 # HiDPI handling:
-# - KDE: Uses cursor size as-is
-# - Hyprland: Scales cursor and DPI based on primary monitor scale
+# - SDDM always uses the KWin Wayland greeter, regardless of the selected session.
+# - KWin/Qt applies the monitor scale; SDDM values must not be scaled again.
 #
 # Active when: features.desktop.enable = true
 
@@ -106,21 +105,12 @@ let
     cp "$kdeglobals_src" /var/lib/sddm/.config/kdeglobals
     chown -R sddm:sddm /var/lib/sddm/.config /var/lib/sddm/.local/share
   '';
-  sddmGreeterEnvironment = lib.concatStringsSep "," (
-    [
-      "QT_WAYLAND_SHELL_INTEGRATION=layer-shell"
-    ]
-    ++ lib.optionals (!isKde) [ "QT_FONT_DPI=${toString scaledDpi}" ]
-    ++ [
-      "XCURSOR_THEME=${cursorTheme}"
-      "XCURSOR_SIZE=${toString (if isKde then cursorSize else scaledCursorSize)}"
-    ]
-  );
+  sddmGreeterEnvironment = lib.concatStringsSep "," [
+    "QT_WAYLAND_SHELL_INTEGRATION=layer-shell"
+    "XCURSOR_THEME=${cursorTheme}"
+    "XCURSOR_SIZE=${toString cursorSize}"
+  ];
 
-  displayHelpers = import ../../lib/displays.nix { inherit lib; };
-  primaryScale = displayHelpers.primaryScale config.theme.scale monitors;
-  scaledDpi = builtins.floor (96 * primaryScale);
-  scaledCursorSize = builtins.floor (cursorSize * primaryScale);
   kscreen = import ../../lib/kscreen.nix { inherit lib; };
 
   kdeTransform =
@@ -478,7 +468,7 @@ in
             General.GreeterEnvironment = sddmGreeterEnvironment;
             Theme = {
               CursorTheme = cursorTheme;
-              CursorSize = if isKde then cursorSize else scaledCursorSize;
+              CursorSize = cursorSize;
             };
           };
         };
