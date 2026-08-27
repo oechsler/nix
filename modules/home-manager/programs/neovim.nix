@@ -45,6 +45,7 @@
 #   Alt+Left/Right       - Move buffer tab left/right
 #   <leader>bp/bc        - Pick buffer / pick buffer to close
 #   <leader>cf           - Format code
+#   <leader>mp           - Toggle Markdown preview (Markdown buffers)
 #   <leader>ot           - Toggle OpenCode
 #   <leader>oa/os        - Ask OpenCode / select OpenCode
 #   <leader>of/or/oi     - Fix diagnostics / review / implement
@@ -135,6 +136,7 @@
 
       # Tools
       grug-far-nvim
+      markdown-preview-nvim
       opencode-nvim
     ];
 
@@ -332,7 +334,15 @@
       -- Editing
       --------------------------------------------------------
       vim.api.nvim_create_autocmd("FileType", {
-        callback = function() pcall(vim.treesitter.start) end,
+        callback = function(args)
+          pcall(vim.treesitter.start)
+          if vim.bo[args.buf].filetype == "markdown" then
+            vim.keymap.set("n", "<leader>mp", "<cmd>MarkdownPreviewToggle<cr>", {
+              buffer = args.buf,
+              desc = "Toggle Markdown preview",
+            })
+          end
+        end,
       })
 
       vim.api.nvim_create_autocmd("TextYankPost", {
@@ -371,6 +381,7 @@
         { "<leader>c", group = "Code" },
         { "<leader>f", group = "Find" },
         { "<leader>g", group = "Git" },
+        { "<leader>m", group = "Markdown" },
       })
 
       --------------------------------------------------------
