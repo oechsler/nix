@@ -50,6 +50,7 @@ let
         theme = "";
         theme_style = "";
       };
+      talkingui.display_talkingui = false;
       last_connection = {
         inherit (cfg) username;
         server_name = lib.optionalString (cfg.servers != [ ]) (serverName (builtins.head cfg.servers));
@@ -98,9 +99,10 @@ let
          | .audio.play_mute_cue = $play_mute_cue
          | .misc.audio_wizard_has_been_shown = true
          | .misc.viewed_server_ping_consent_message = true
-         | .ui.theme = ""
-         | .ui.theme_style = ""
-         | .ui.channel_expansion_mode = $channel_expansion_mode
+           | .ui.theme = ""
+           | .ui.theme_style = ""
+           | .talkingui.display_talkingui = false
+           | .ui.channel_expansion_mode = $channel_expansion_mode
          | .last_connection.username = $username
          | .last_connection.server_name = $server_name
          | .ui.disable_public_server_list = ($public_list | not)

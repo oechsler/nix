@@ -70,7 +70,9 @@ let
   );
 
   # Lock + suspend on battery
-  suspendBattery = "${onBattery} && ${lockSuspend}";
+  # Charger transitions can make the battery listener fire while its idle
+  # timeout is already elapsed. Require stable battery operation first.
+  suspendBattery = "${onBattery} && sleep 10 && ${onBattery} && ${lockSuspend}";
 
   # Lock + suspend on AC
   suspendAc = "${onAC} && ${lockSuspend}";
