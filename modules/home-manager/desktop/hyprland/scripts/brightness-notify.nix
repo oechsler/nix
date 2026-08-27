@@ -13,9 +13,10 @@ in
 pkgs.writeShellScript "brightness-notify" ''
   brightness="$1"
 
-  ${pkgs.dunst}/bin/dunstify -a "changeBrightness" -u low \
+  ${pkgs.libnotify}/bin/notify-send -a "changeBrightness" -u low \
     -i "${icon}" \
     -h string:x-dunst-stack-tag:brightness \
+    -h string:x-canonical-private-synchronous:brightness \
     -h int:value:"$brightness" \
     "${i18n.translate "Brightness" "Helligkeit"} ''${brightness}%"
 ''
