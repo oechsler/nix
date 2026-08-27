@@ -262,15 +262,15 @@ in
 
         "network" = {
           format-wifi = "{icon}";
-          format-ethernet = "<span size='large'>󰈀</span>";
-          format-linked = "<span size='large'>󰈀</span>";
-          format-disconnected = "<span size='large'>󰤭</span>";
+          format-ethernet = "<span size='large'>&#x200A;󰈀&#x2009;</span>";
+          format-linked = "<span size='large'>&#x200A;󰈀&#x2009;</span>";
+          format-disconnected = "<span size='large'>󰤭&#x2009;</span>";
           format-icons = [
-            "<span size='large'>󰤯</span>"
-            "<span size='large'>󰤟</span>"
-            "<span size='large'>󰤢</span>"
-            "<span size='large'>󰤥</span>"
-            "<span size='large'>󰤨</span>"
+            "<span size='large'>󰤯&#x2009;</span>"
+            "<span size='large'>󰤟&#x2009;</span>"
+            "<span size='large'>󰤢&#x2009;</span>"
+            "<span size='large'>󰤥&#x2009;</span>"
+            "<span size='large'>󰤨&#x2009;</span>"
           ];
           tooltip-format = "{gwaddr}";
           tooltip-format-wifi = "{essid} ({signalStrength}%)";
@@ -278,10 +278,10 @@ in
         };
 
         "bluetooth" = {
-          format = "<span size='large'>󰂯</span>";
-          format-connected = "<span size='large'>󰂱</span>";
-          format-connected-battery = "<span size='large'>󰂱</span>";
-          format-off = "<span size='large'>󰂲</span>";
+          format = "<span size='large'>&#x2009;󰂯&#x2009;</span>";
+          format-connected = "<span size='large'>&#x2009;󰂱&#x2009;</span>";
+          format-connected-battery = "<span size='large'>&#x2009;󰂱&#x2009;</span>";
+          format-off = "<span size='large'>&#x2009;󰂲&#x2009;</span>";
           tooltip-format = "{controller_alias}\t{controller_address}";
           tooltip-format-connected = "{controller_alias}\t{controller_address}\n\n{device_enumerate}";
           tooltip-format-enumerate-connected = "{device_alias}\t{device_address}";
@@ -308,9 +308,9 @@ in
           exec = pkgs.writeShellScript "waybar-power-profile" ''
             profile=$(${pkgs.power-profiles-daemon}/bin/powerprofilesctl get)
             case "$profile" in
-               performance) echo '{"text": "<span size=\"large\">󱐋</span>", "tooltip": "${i18n.translate "Performance" "Leistung"}"}' ;;
-              power-saver)  echo '{"text": "<span size=\"large\">󰌪</span>", "tooltip": "${i18n.translate "Power saver" "Energiesparen"}"}' ;;
-               *)             echo '{"text": "<span size=\"large\">󰾆</span>", "tooltip": "${i18n.translate "Balanced" "Ausgewogen"}"}' ;;
+               performance) echo '{"text": "<span size=\"large\">&#x2009;󱐋&#x2009;</span>", "tooltip": "${i18n.translate "Performance" "Leistung"}"}' ;;
+              power-saver)  echo '{"text": "<span size=\"large\">󰌪&#x2009;</span>", "tooltip": "${i18n.translate "Power saver" "Energiesparen"}"}' ;;
+               *)             echo '{"text": "<span size=\"large\">󰾆&#x2009;</span>", "tooltip": "${i18n.translate "Balanced" "Ausgewogen"}"}' ;;
             esac
           '';
           exec-if = "command -v powerprofilesctl";

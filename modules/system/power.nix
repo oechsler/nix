@@ -38,6 +38,7 @@ in
     HandleLidSwitch = if isLaptop then "suspend" else "ignore";
     HandleLidSwitchExternalPower = if isLaptop then "suspend" else "ignore";
     HandleLidSwitchDocked = "ignore";
+    LidSwitchIgnoreInhibited = if isLaptop then "yes" else "no";
   };
 
   systemd.sleep.settings.Sleep = {
