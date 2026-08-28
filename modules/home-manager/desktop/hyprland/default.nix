@@ -314,7 +314,7 @@ let
   disableInternalDisplay = pkgs.writeShellScript "disable-internal-display" ''
     internal=$(${pkgs.hyprland}/bin/hyprctl monitors -j | ${pkgs.jq}/bin/jq -r '[.[] | .name | select(test("^(eDP|LVDS|DPI)-"))][0] // empty')
     if [ -n "$internal" ]; then
-      ${pkgs.hyprland}/bin/hyprctl dispatch dpms "$1" "$internal"
+      ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.dpms({ mode = \"$1\", monitor = \"$internal\" })"
     fi
   '';
   lidBinds = lib.optionals (features.hardware.formFactor == "laptop") [
