@@ -314,7 +314,7 @@ let
   disableInternalDisplay = pkgs.writeShellScript "disable-internal-display" ''
     internal=$(${pkgs.hyprland}/bin/hyprctl monitors -j | ${pkgs.jq}/bin/jq -r '[.[] | .name | select(test("^(eDP|LVDS|DPI)-"))][0] // empty')
     if [ -n "$internal" ]; then
-      ${pkgs.hyprland}/bin/hyprctl eval "monitor = $internal, disable"
+      ${pkgs.hyprland}/bin/hyprctl dispatch dpms "$1" "$internal"
     fi
   '';
   lidBinds = lib.optionals (features.hardware.formFactor == "laptop") [
@@ -322,10 +322,10 @@ let
     # Reloading on lid open restores the declarative monitor layout.
     (bindWith {
       locked = true;
-    } "switch:on:Lid Switch" "exec_cmd(${builtins.toJSON "${disableInternalDisplay}"})")
+    } "switch:on:Lid Switch" "exec_cmd(${builtins.toJSON "${disableInternalDisplay} off"})")
     (bindWith {
       locked = true;
-    } "switch:off:Lid Switch" "exec_cmd(${builtins.toJSON "hyprctl reload"})")
+    } "switch:off:Lid Switch" "exec_cmd(${builtins.toJSON "${disableInternalDisplay} on"})")
   ];
 
   toggleFloating = luaInline ''
