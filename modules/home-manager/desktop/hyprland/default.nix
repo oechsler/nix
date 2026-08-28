@@ -311,6 +311,38 @@ let
   brightnessController = import ./scripts/brightness-controller.nix { inherit pkgs i18n theme; };
   displayBrightnessInit = "${brightnessController} init";
   displayBrightness = "${brightnessController} adjust";
+  configuredExternalMonitor = lib.findFirst (
+    monitor: !(builtins.match "^(eDP|LVDS|DPI)-.*" monitor.name != null)
+  ) null displays.monitors;
+  lidDisplayMonitor = pkgs.writeShellScript "hyprland-lid-display-monitor" ''
+    state_file=$(printf '%s\n' /proc/acpi/button/lid/*/state | ${pkgs.coreutils}/bin/head -n 1)
+    [ -f "$state_file" ] || exit 0
+    previous=""
+
+    while ${pkgs.coreutils}/bin/sleep 1; do
+      state=$(${pkgs.coreutils}/bin/cat "$state_file" | ${pkgs.coreutils}/bin/awk '{ print $2 }')
+      [ "$state" = "$previous" ] && continue
+      previous="$state"
+
+      monitors=$(${pkgs.hyprland}/bin/hyprctl monitors -j) || continue
+      internal=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r '[.[] | .name | select(test("^(eDP|LVDS|DPI)-"))][0] // empty')
+      external=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r --arg internal "$internal" --arg configured "${
+        if configuredExternalMonitor == null then "" else configuredExternalMonitor.name
+      }" '[.[] | select(if $configured != "" then .name == $configured else .name != $internal end)][0].name // empty')
+      [ -n "$internal" ] && [ -n "$external" ] || continue
+
+      if [ "$state" = "closed" ]; then
+        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.workspace.move({ monitor = \"$external\" })"
+        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.dpms({ mode = \"off\", monitor = \"$internal\" })"
+        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$external\" })"
+      elif [ "$state" = "open" ]; then
+        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.dpms({ mode = \"on\", monitor = \"$internal\" })"
+        ${pkgs.coreutils}/bin/sleep 1
+        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.workspace.move({ monitor = \"$internal\" })"
+        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$internal\" })"
+      fi
+    done
+  '';
   toggleFloating = luaInline ''
     function()
       local window = hl.get_active_window()
@@ -535,6 +567,21 @@ in
           Install.WantedBy = [ "graphical-session.target" ];
         };
 
+      }
+      // lib.optionalAttrs (features.hardware.formFactor == "laptop") {
+        lid-display-monitor = {
+          Unit = {
+            Description = "Handle laptop lid display switching";
+            After = [ "graphical-session.target" ];
+            PartOf = [ "graphical-session.target" ];
+          };
+          Service = {
+            ExecStart = lidDisplayMonitor;
+            Restart = "on-failure";
+            RestartSec = 2;
+          };
+          Install.WantedBy = [ "graphical-session.target" ];
+        };
       };
 
     # Reduce default stop timeout for user session

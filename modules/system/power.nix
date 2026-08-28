@@ -16,60 +16,16 @@
 {
   config,
   lib,
-  pkgs,
   ...
 }:
 
 let
   cfg = config.features.hardware;
   isLaptop = cfg.formFactor == "laptop";
-  isHyprlandLaptop = isLaptop && config.features.desktop.wm == "hyprland";
   hasAmdGpu = cfg.gpu == "amd";
-  configuredExternalMonitor = lib.findFirst (
-    monitor: !(builtins.match "^(eDP|LVDS|DPI)-.*" monitor.name != null)
-  ) null config.displays.monitors;
 in
 {
   services.power-profiles-daemon.enable = true;
-
-  services.acpid = lib.mkIf isHyprlandLaptop {
-    enable = true;
-    handlers.lid = {
-      event = "button/lid.*";
-      action = ''
-        case "$1" in
-          *close*) mode=off ;;
-          *open*) mode=on ;;
-          *) exit 0 ;;
-        esac
-
-        uid=$(id -u ${config.user.name})
-        for socket in /run/user/$uid/hypr/*/.socket.sock; do
-          [ -S "$socket" ] || continue
-          instance=$(basename "$(dirname "$socket")")
-          hyprctl() {
-            runuser -u ${config.user.name} -- env XDG_RUNTIME_DIR=/run/user/$uid HYPRLAND_INSTANCE_SIGNATURE="$instance" ${pkgs.hyprland}/bin/hyprctl "$@"
-          }
-          monitors=$(hyprctl monitors -j)
-          internal=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r '[.[] | .name | select(test("^(eDP|LVDS|DPI)-"))][0] // empty')
-          external=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r --arg internal "$internal" --arg configured "${
-            if configuredExternalMonitor == null then "" else configuredExternalMonitor.name
-          }" '[.[] | select(if $configured != "" then .name == $configured else .name != $internal end)][0].name // empty')
-          [ -n "$internal" ] && [ -n "$external" ] || continue
-          if [ "$mode" = on ]; then
-            hyprctl dispatch "hl.dsp.dpms({ mode = \"on\", monitor = \"$internal\" })"
-            sleep 1
-            hyprctl dispatch "hl.dsp.workspace.move({ monitor = \"$internal\" })"
-            hyprctl dispatch "hl.dsp.focus({ monitor = \"$internal\" })"
-          else
-            hyprctl dispatch "hl.dsp.workspace.move({ monitor = \"$external\" })"
-            hyprctl dispatch "hl.dsp.dpms({ mode = \"off\", monitor = \"$internal\" })"
-            hyprctl dispatch "hl.dsp.focus({ monitor = \"$external\" })"
-          fi
-        done
-      '';
-    };
-  };
 
   services.logind.settings.Login = {
     InhibitDelayMaxSec = "2s";
