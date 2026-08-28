@@ -326,9 +326,10 @@ let
     previous=$(${pkgs.gawk}/bin/awk '{ print $2 }' "$state_file")
 
     while ${pkgs.coreutils}/bin/sleep 1; do
-      state=$(${pkgs.coreutils}/bin/cat "$state_file" | ${pkgs.gawk}/bin/awk '{ print $2 }')
+      state=$(${pkgs.gawk}/bin/awk '{ print $2 }' "$state_file")
       [ "$state" = "$previous" ] && continue
       previous="$state"
+      printf 'lid state changed to %s\n' "$state"
 
       monitors=$(${pkgs.hyprland}/bin/hyprctl monitors -j) || continue
       internal=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r '[.[] | .name | select(test("^(eDP|LVDS|DPI)-"))][0] // empty')
