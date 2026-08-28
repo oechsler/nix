@@ -204,18 +204,16 @@ in
                       [ -d "$wireless" ] || continue
                       iface="''${wireless%/wireless}"
                       iface="''${iface##*/}"
-                      ${pkgs.iwd}/bin/iwctl station "$iface" set-property AutoConnect off || true
-                      ${pkgs.iwd}/bin/iwctl station "$iface" disconnect || true
+                    ${pkgs.iwd}/bin/iwctl station "$iface" disconnect || true
                     done
                   else
                             for wireless in /sys/class/net/*/wireless; do
                       [ -d "$wireless" ] || continue
                       iface="''${wireless%/wireless}"
                       iface="''${iface##*/}"
-                      ${pkgs.iwd}/bin/iwctl station "$iface" set-property AutoConnect on || true
-                      ${lib.concatMapStringsSep "\n" (
-                        net: "${pkgs.iwd}/bin/iwctl station \"$iface\" connect ${lib.escapeShellArg net.ssid} || true"
-                      ) (config.features.wifi.networks ++ config.features.wifi.enterpriseNetworks)}
+                    ${lib.concatMapStringsSep "\n" (
+                      net: "${pkgs.iwd}/bin/iwctl station \"$iface\" connect ${lib.escapeShellArg net.ssid} || true"
+                    ) (config.features.wifi.networks ++ config.features.wifi.enterpriseNetworks)}
                             done
                           fi
                 '';
