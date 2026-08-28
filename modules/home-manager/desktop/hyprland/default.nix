@@ -311,10 +311,18 @@ let
   brightnessController = import ./scripts/brightness-controller.nix { inherit pkgs i18n theme; };
   displayBrightnessInit = "${brightnessController} init";
   displayBrightness = "${brightnessController} adjust";
+  configuredExternalMonitor = lib.findFirst (
+    monitor: !(builtins.match "^(eDP|LVDS|DPI)-.*" monitor.name != null)
+  ) null displays.monitors;
   disableInternalDisplay = pkgs.writeShellScript "disable-internal-display" ''
     monitors=$(${pkgs.hyprland}/bin/hyprctl monitors -j)
     internal=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r '[.[] | .name | select(test("^(eDP|LVDS|DPI)-"))][0] // empty')
-    external=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r --arg internal "$internal" '[.[] | select(.name != $internal)][0].name // empty')
+    external=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r \
+      --arg internal "$internal" \
+      --arg configured "${
+        if configuredExternalMonitor == null then "" else configuredExternalMonitor.name
+      }" \
+      '[.[] | select(if $configured != "" then .name == $configured else .name != $internal end)][0].name // empty')
     if [ -n "$internal" ] && [ -n "$external" ]; then
       if [ "$1" = "on" ]; then
         # The panel may still be waking up when the lid switch event arrives.
