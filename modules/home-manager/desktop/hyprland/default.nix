@@ -315,12 +315,18 @@ let
     monitor: !(builtins.match "^(eDP|LVDS|DPI)-.*" monitor.name != null)
   ) null displays.monitors;
   lidDisplayMonitor = pkgs.writeShellScript "hyprland-lid-display-monitor" ''
-    state_file=$(printf '%s\n' /proc/acpi/button/lid/*/state | ${pkgs.coreutils}/bin/head -n 1)
-    [ -f "$state_file" ] || exit 0
+    state_file=""
+    for candidate in /proc/acpi/button/lid/*/state; do
+      if [ -f "$candidate" ]; then
+        state_file="$candidate"
+        break
+      fi
+    done
+    [ -n "$state_file" ] || exit 0
     previous=""
 
     while ${pkgs.coreutils}/bin/sleep 1; do
-      state=$(${pkgs.coreutils}/bin/cat "$state_file" | ${pkgs.coreutils}/bin/awk '{ print $2 }')
+      state=$(${pkgs.coreutils}/bin/cat "$state_file" | ${pkgs.gawk}/bin/awk '{ print $2 }')
       [ "$state" = "$previous" ] && continue
       previous="$state"
 
