@@ -317,6 +317,16 @@ let
       ${pkgs.hyprland}/bin/hyprctl keyword monitor "$internal,disable"
     fi
   '';
+  lidBinds = lib.optionals (features.hardware.formFactor == "laptop") [
+    # Use the external monitor as the only active output while docked.
+    # Reloading on lid open restores the declarative monitor layout.
+    (bindWith {
+      locked = true;
+    } "switch:on:Lid Switch" "exec_cmd(${builtins.toJSON "${disableInternalDisplay}"})")
+    (bindWith {
+      locked = true;
+    } "switch:off:Lid Switch" "exec_cmd(${builtins.toJSON "hyprctl reload"})")
+  ];
 
   toggleFloating = luaInline ''
     function()
@@ -1096,31 +1106,11 @@ in
           (bindWith { mouse = true; } (modKey "mouse:272") "window.drag()")
           (bindWith { mouse = true; } (modKey "mouse:273") "window.resize()")
         ]
+        ++ lidBinds
         ++ map (ws: bind (modKey (toString ws)) "focus({ workspace = ${toString ws} })") (lib.range 1 8)
         ++ map (ws: bind (modKey "SHIFT + ${toString ws}") "window.move({ workspace = ${toString ws} })") (
           lib.range 1 8
         );
-
-        # Use the external monitor as the only active output while docked.
-        # Reloading on lid open restores the declarative monitor layout.
-        bindl = [
-          {
-            _args = [
-              ""
-              "switch:on:Lid Switch"
-              "exec"
-              disableInternalDisplay
-            ];
-          }
-          {
-            _args = [
-              ""
-              "switch:off:Lid Switch"
-              "exec"
-              "hyprctl reload"
-            ];
-          }
-        ];
 
       };
 
