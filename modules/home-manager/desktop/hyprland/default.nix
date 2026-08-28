@@ -311,45 +311,6 @@ let
   brightnessController = import ./scripts/brightness-controller.nix { inherit pkgs i18n theme; };
   displayBrightnessInit = "${brightnessController} init";
   displayBrightness = "${brightnessController} adjust";
-  configuredExternalMonitor = lib.findFirst (
-    monitor: !(builtins.match "^(eDP|LVDS|DPI)-.*" monitor.name != null)
-  ) null displays.monitors;
-  disableInternalDisplay = pkgs.writeShellScript "disable-internal-display" ''
-    monitors=$(${pkgs.hyprland}/bin/hyprctl monitors -j)
-    internal=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r '[.[] | .name | select(test("^(eDP|LVDS|DPI)-"))][0] // empty')
-    external=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r \
-      --arg internal "$internal" \
-      --arg configured "${
-        if configuredExternalMonitor == null then "" else configuredExternalMonitor.name
-      }" \
-      '[.[] | select(if $configured != "" then .name == $configured else .name != $internal end)][0].name // empty')
-    if [ -n "$internal" ] && [ -n "$external" ]; then
-      if [ "$1" = "on" ]; then
-        # The panel may still be waking up when the lid switch event arrives.
-        for _ in 1 2 3; do
-          ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.dpms({ mode = \"on\", monitor = \"$internal\" })"
-          sleep 1
-        done
-        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.workspace.move({ monitor = \"$internal\" })"
-        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$internal\" })"
-      else
-        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.workspace.move({ monitor = \"$external\" })"
-        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.dpms({ mode = \"off\", monitor = \"$internal\" })"
-        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$external\" })"
-      fi
-    fi
-  '';
-  lidBinds = lib.optionals (features.hardware.formFactor == "laptop") [
-    # Use the external monitor as the only active output while docked.
-    # Reloading on lid open restores the declarative monitor layout.
-    (bindWith {
-      locked = true;
-    } "switch:on:Lid Switch" "exec_cmd(${builtins.toJSON "${disableInternalDisplay} off"})")
-    (bindWith {
-      locked = true;
-    } "switch:off:Lid Switch" "exec_cmd(${builtins.toJSON "${disableInternalDisplay} on"})")
-  ];
-
   toggleFloating = luaInline ''
     function()
       local window = hl.get_active_window()
@@ -1128,7 +1089,6 @@ in
           (bindWith { mouse = true; } (modKey "mouse:272") "window.drag()")
           (bindWith { mouse = true; } (modKey "mouse:273") "window.resize()")
         ]
-        ++ lidBinds
         ++ map (ws: bind (modKey (toString ws)) "focus({ workspace = ${toString ws} })") (lib.range 1 8)
         ++ map (ws: bind (modKey "SHIFT + ${toString ws}") "window.move({ workspace = ${toString ws} })") (
           lib.range 1 8
