@@ -1104,8 +1104,22 @@ in
         # Use the external monitor as the only active output while docked.
         # Reloading on lid open restores the declarative monitor layout.
         bindl = [
-          ", switch:on:Lid Switch, exec, ${disableInternalDisplay}"
-          ", switch:off:Lid Switch, exec, hyprctl reload"
+          {
+            _args = [
+              ""
+              "switch:on:Lid Switch"
+              "exec"
+              disableInternalDisplay
+            ];
+          }
+          {
+            _args = [
+              ""
+              "switch:off:Lid Switch"
+              "exec"
+              "hyprctl reload"
+            ];
+          }
         ];
 
       };
