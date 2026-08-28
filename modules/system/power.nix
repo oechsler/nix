@@ -36,7 +36,6 @@ in
     HandleSuspendKey = "suspend";
     HandleHibernateKey = "suspend";
     HandleLidSwitch = if isLaptop then "suspend" else "ignore";
-    # Docking supplies external power; closing the lid must not suspend then.
     HandleLidSwitchExternalPower = "ignore";
     HandleLidSwitchDocked = "ignore";
     LidSwitchIgnoreInhibited = if isLaptop then "yes" else "no";
