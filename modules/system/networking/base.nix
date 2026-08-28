@@ -178,6 +178,9 @@ in
                 script = ''
                   # iwd's roaming setting is global, so use the wired link state to
                   # avoid mesh roaming while Ethernet is available.
+                  event_iface="''${IFACE:-}"
+                  administrative_state="''${AdministrativeState:-}"
+
                   is_wireless() {
                     [ -d "/sys/class/net/$1/wireless" ]
                   }
@@ -185,34 +188,34 @@ in
                   ethernet_is_up() {
                     for net in /sys/class/net/*; do
                       iface="''${net##*/}"
-                      [ "$iface" = "$IFACE" ] && continue
-                      is_wireless "$iface" && continue
-                      [ -r "$net/type" ] && [ "$(cat "$net/type")" = 1 ] || continue
-                      [ -r "$net/carrier" ] && [ "$(cat "$net/carrier")" = 1 ] && return 0
-                    done
-                    return 1
+                      [ "$iface" = "$event_iface" ] && continue
+                            is_wireless "$iface" && continue
+                            [ -r "$net/type" ] && [ "$(cat "$net/type")" = 1 ] || continue
+                            [ -r "$net/carrier" ] && [ "$(cat "$net/carrier")" = 1 ] && return 0
+                          done
+                          return 1
                   }
 
                   # Ignore WiFi state changes; only wired interfaces drive failover.
-                  is_wireless "$IFACE" && exit 0
+                  is_wireless "$event_iface" && exit 0
 
-                  if [ "$AdministrativeState" = "routable" ] || ethernet_is_up; then
-                    for wireless in /sys/class/net/*/wireless; do
-                      [ -d "$wireless" ] || continue
-                      iface="''${wireless%/wireless}"
-                      iface="''${iface##*/}"
-                      ${pkgs.iwd}/bin/iwctl station "$iface" disconnect || true
-                    done
-                  else
-                    for wireless in /sys/class/net/*/wireless; do
-                      [ -d "$wireless" ] || continue
-                      iface="''${wireless%/wireless}"
-                      iface="''${iface##*/}"
-                      ${lib.concatMapStringsSep "\n" (
-                        net: "${pkgs.iwd}/bin/iwctl station \"$iface\" connect ${lib.escapeShellArg net.ssid} || true"
-                      ) (config.features.wifi.networks ++ config.features.wifi.enterpriseNetworks)}
-                    done
-                  fi
+                  if [ "$administrative_state" = "routable" ] || ethernet_is_up; then
+                          for wireless in /sys/class/net/*/wireless; do
+                            [ -d "$wireless" ] || continue
+                            iface="''${wireless%/wireless}"
+                            iface="''${iface##*/}"
+                            ${pkgs.iwd}/bin/iwctl station "$iface" disconnect || true
+                          done
+                        else
+                          for wireless in /sys/class/net/*/wireless; do
+                            [ -d "$wireless" ] || continue
+                            iface="''${wireless%/wireless}"
+                            iface="''${iface##*/}"
+                            ${lib.concatMapStringsSep "\n" (
+                              net: "${pkgs.iwd}/bin/iwctl station \"$iface\" connect ${lib.escapeShellArg net.ssid} || true"
+                            ) (config.features.wifi.networks ++ config.features.wifi.enterpriseNetworks)}
+                          done
+                        fi
                 '';
               };
             };
