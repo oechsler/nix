@@ -128,7 +128,7 @@ in
         settings = {
           General.EnableNetworkConfiguration = isHyprland;
           # Keep WiFi behind Ethernet for both IPv4 and IPv6 routes.
-          Network.RoutePriorityOffset = 500;
+          Network.RoutePriorityOffset = 2048;
         };
       };
     };
