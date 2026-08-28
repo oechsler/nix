@@ -323,7 +323,7 @@ let
       fi
     done
     [ -n "$state_file" ] || exit 0
-    previous=""
+    previous=$(${pkgs.gawk}/bin/awk '{ print $2 }' "$state_file")
 
     while ${pkgs.coreutils}/bin/sleep 1; do
       state=$(${pkgs.coreutils}/bin/cat "$state_file" | ${pkgs.gawk}/bin/awk '{ print $2 }')
