@@ -316,8 +316,14 @@ let
     internal=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r '[.[] | .name | select(test("^(eDP|LVDS|DPI)-"))][0] // empty')
     external=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r --arg internal "$internal" '[.[] | select(.name != $internal)][0].name // empty')
     if [ -n "$internal" ] && [ -n "$external" ]; then
-      ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.dpms({ mode = \"$1\", monitor = \"$internal\" })"
-      if [ "$1" = "off" ]; then
+      if [ "$1" = "on" ]; then
+        # The panel may still be waking up when the lid switch event arrives.
+        for _ in 1 2 3; do
+          ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.dpms({ mode = \"on\", monitor = \"$internal\" })"
+          sleep 1
+        done
+      else
+        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.dpms({ mode = \"off\", monitor = \"$internal\" })"
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$external\" })"
       fi
     fi
