@@ -311,6 +311,12 @@ let
   brightnessController = import ./scripts/brightness-controller.nix { inherit pkgs i18n theme; };
   displayBrightnessInit = "${brightnessController} init";
   displayBrightness = "${brightnessController} adjust";
+  disableInternalDisplay = pkgs.writeShellScript "disable-internal-display" ''
+    internal=$(${pkgs.hyprland}/bin/hyprctl monitors -j | ${pkgs.jq}/bin/jq -r '[.[] | .name | select(test("^(eDP|LVDS|DPI)-"))][0] // empty')
+    if [ -n "$internal" ]; then
+      ${pkgs.hyprland}/bin/hyprctl keyword monitor "$internal,disable"
+    fi
+  '';
 
   toggleFloating = luaInline ''
     function()
@@ -1094,6 +1100,13 @@ in
         ++ map (ws: bind (modKey "SHIFT + ${toString ws}") "window.move({ workspace = ${toString ws} })") (
           lib.range 1 8
         );
+
+        # Use the external monitor as the only active output while docked.
+        # Reloading on lid open restores the declarative monitor layout.
+        bindl = [
+          ", switch:on:Lid Switch, exec, ${disableInternalDisplay}"
+          ", switch:off:Lid Switch, exec, hyprctl reload"
+        ];
 
       };
 

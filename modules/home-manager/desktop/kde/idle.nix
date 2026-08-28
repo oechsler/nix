@@ -35,8 +35,10 @@ in
         # Behavior when plugged in
         AC = {
           powerButtonAction = "showLogoutScreen";
-          whenLaptopLidClosed = "sleep";
-          inhibitLidActionWhenExternalMonitorConnected = true;
+          # Keep the laptop awake while docked, but switch the internal panel
+          # off when the lid closes. The external output remains available.
+          whenLaptopLidClosed = "turnOffScreen";
+          inhibitLidActionWhenExternalMonitorConnected = false;
           dimDisplay = {
             enable = true;
             idleTimeout = cfg.timeouts.dimAc;
