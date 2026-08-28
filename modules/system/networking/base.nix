@@ -127,9 +127,8 @@ in
         enable = true;
         settings = {
           General.EnableNetworkConfiguration = isHyprland;
-          # systemd-networkd's DHCP default route metric is 1024; Ethernet
-          # must remain preferred while iwd still provides a WiFi fallback.
-          Network.RoutePriorityOffset = 2048;
+          # Keep WiFi behind Ethernet for both IPv4 and IPv6 routes.
+          Network.RoutePriorityOffset = 500;
         };
       };
     };
@@ -153,6 +152,7 @@ in
       network.networks."10-ethernet-dhcp" = lib.mkIf isHyprland {
         matchConfig.Type = "ether";
         networkConfig.DHCP = "yes";
+        ipv6AcceptRAConfig.RouteMetric = 100;
       };
       services = {
         NetworkManager-wait-online.enable = false;
