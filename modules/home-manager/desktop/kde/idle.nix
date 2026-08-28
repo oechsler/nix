@@ -15,10 +15,16 @@
 # Hyprland uses these same timeouts:
 # - See hyprland/hypridle.nix
 
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  features,
+  ...
+}:
 
 let
   cfg = config.idle;
+  isLaptop = features.hardware.formFactor == "laptop";
 in
 {
   #===========================
@@ -37,8 +43,8 @@ in
           powerButtonAction = "showLogoutScreen";
           # Keep the laptop awake while docked, but switch the internal panel
           # off when the lid closes. The external output remains available.
-          whenLaptopLidClosed = "turnOffScreen";
-          inhibitLidActionWhenExternalMonitorConnected = false;
+          whenLaptopLidClosed = if isLaptop then "turnOffScreen" else "sleep";
+          inhibitLidActionWhenExternalMonitorConnected = !isLaptop;
           dimDisplay = {
             enable = true;
             idleTimeout = cfg.timeouts.dimAc;
