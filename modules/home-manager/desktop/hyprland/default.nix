@@ -312,9 +312,14 @@ let
   displayBrightnessInit = "${brightnessController} init";
   displayBrightness = "${brightnessController} adjust";
   disableInternalDisplay = pkgs.writeShellScript "disable-internal-display" ''
-    internal=$(${pkgs.hyprland}/bin/hyprctl monitors -j | ${pkgs.jq}/bin/jq -r '[.[] | .name | select(test("^(eDP|LVDS|DPI)-"))][0] // empty')
-    if [ -n "$internal" ]; then
+    monitors=$(${pkgs.hyprland}/bin/hyprctl monitors -j)
+    internal=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r '[.[] | .name | select(test("^(eDP|LVDS|DPI)-"))][0] // empty')
+    external=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r --arg internal "$internal" '[.[] | select(.name != $internal)][0].name // empty')
+    if [ -n "$internal" ] && [ -n "$external" ]; then
       ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.dpms({ mode = \"$1\", monitor = \"$internal\" })"
+      if [ "$1" = "off" ]; then
+        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$external\" })"
+      fi
     fi
   '';
   lidBinds = lib.optionals (features.hardware.formFactor == "laptop") [
