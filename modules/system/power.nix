@@ -22,10 +22,13 @@
 let
   cfg = config.features.hardware;
   isLaptop = cfg.formFactor == "laptop";
+  isHyprlandLaptop = isLaptop && config.features.desktop.wm == "hyprland";
   hasAmdGpu = cfg.gpu == "amd";
 in
 {
   services.power-profiles-daemon.enable = true;
+
+  users.users.${config.user.name}.extraGroups = lib.mkIf isHyprlandLaptop [ "input" ];
 
   services.logind.settings.Login = {
     InhibitDelayMaxSec = "2s";

@@ -315,20 +315,22 @@ let
     monitor: !(builtins.match "^(eDP|LVDS|DPI)-.*" monitor.name != null)
   ) null displays.monitors;
   lidDisplayMonitor = pkgs.writeShellScript "hyprland-lid-display-monitor" ''
-    state_file=""
-    for candidate in /proc/acpi/button/lid/*/state; do
-      if [ -f "$candidate" ]; then
-        state_file="$candidate"
+    lid_device=""
+    for name_file in /sys/class/input/event*/device/name; do
+      if [ -f "$name_file" ] && [ "$(${pkgs.coreutils}/bin/cat "$name_file")" = "Lid Switch" ]; then
+        event=$(basename "$(dirname "$name_file")")
+        lid_device="/dev/input/$event"
         break
       fi
     done
-    [ -n "$state_file" ] || exit 0
-    previous=$(${pkgs.gawk}/bin/awk '{ print $2 }' "$state_file")
+    [ -n "$lid_device" ] || exit 0
 
-    while ${pkgs.coreutils}/bin/sleep 1; do
-      state=$(${pkgs.gawk}/bin/awk '{ print $2 }' "$state_file")
-      [ "$state" = "$previous" ] && continue
-      previous="$state"
+    ${pkgs.evtest}/bin/evtest "$lid_device" 2>/dev/null | while read -r line; do
+      case "$line" in
+        *"code 0 (SW_LID), value 1"*) state=closed ;;
+        *"code 0 (SW_LID), value 0"*) state=open ;;
+        *) continue ;;
+      esac
       printf 'lid state changed to %s\n' "$state"
 
       monitors=$(${pkgs.hyprland}/bin/hyprctl monitors -j) || continue
