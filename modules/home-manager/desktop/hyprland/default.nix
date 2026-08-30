@@ -325,7 +325,7 @@ let
     done
     [ -n "$lid_device" ] || exit 0
 
-    ${pkgs.evtest}/bin/evtest "$lid_device" 2>/dev/null | while read -r line; do
+    ${pkgs.coreutils}/bin/stdbuf -oL ${pkgs.evtest}/bin/evtest "$lid_device" 2>/dev/null | while read -r line; do
       case "$line" in
         *"code 0 (SW_LID), value 1"*) state=closed ;;
         *"code 0 (SW_LID), value 0"*) state=open ;;
