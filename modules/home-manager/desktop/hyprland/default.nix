@@ -344,11 +344,13 @@ let
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.workspace.move({ monitor = \"$external\" })"
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.dpms({ mode = \"off\", monitor = \"$internal\" })"
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$external\" })"
+        ${pkgs.systemd}/bin/systemctl --user try-restart hypr-dock.service
       elif [ "$state" = "open" ]; then
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.dpms({ mode = \"on\", monitor = \"$internal\" })"
         ${pkgs.coreutils}/bin/sleep 1
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.workspace.move({ monitor = \"$internal\" })"
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$internal\" })"
+        ${pkgs.systemd}/bin/systemctl --user try-restart hypr-dock.service
       fi
     done
   '';
