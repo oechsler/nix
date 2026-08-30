@@ -353,7 +353,10 @@ let
         ${pkgs.coreutils}/bin/stdbuf -o0 ${pkgs.evtest}/bin/evtest "$input_device" 2>/dev/null | while read -r line; do
           case "$line" in
             *"type 1 (EV_KEY),"*|*"type 2 (EV_REL),"*)
-              [ -f "$workspace_state" ] && printf 'open\n'
+              if [ -f "$workspace_state" ]; then
+                printf 'open\n'
+                exit 0
+              fi
               ;;
           esac
         done &
