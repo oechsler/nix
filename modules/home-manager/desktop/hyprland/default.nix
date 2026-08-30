@@ -318,7 +318,7 @@ let
     lid_device=""
     for name_file in /sys/class/input/event*/device/name; do
       if [ -f "$name_file" ] && [ "$(${pkgs.coreutils}/bin/cat "$name_file")" = "Lid Switch" ]; then
-        event=$(basename "$(dirname "$name_file")")
+        event=$(basename "$(dirname "$(dirname "$name_file")")")
         lid_device="/dev/input/$event"
         break
       fi
