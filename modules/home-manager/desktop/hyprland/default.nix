@@ -324,6 +324,7 @@ let
       fi
     done
     [ -n "$lid_device" ] || exit 0
+    workspace_state="''${XDG_RUNTIME_DIR}/hyprland-lid-workspaces"
 
     state_file=""
     for candidate in /proc/acpi/button/lid/*/state; do
@@ -367,17 +368,28 @@ let
       [ -n "$internal" ] && [ -n "$external" ] || continue
 
       if [ "$state" = "closed" ]; then
-        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.workspace.move({ monitor = \"$external\" })"
-        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.dpms({ mode = \"off\", monitor = \"$internal\" })"
+        ${pkgs.hyprland}/bin/hyprctl workspaces -j | ${pkgs.jq}/bin/jq -r --arg internal "$internal" '.[] | select(.monitor == $internal) | .name' > "$workspace_state"
+        while read -r workspace; do
+          [ -n "$workspace" ] || continue
+          ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.workspace.move({ workspace = \"$workspace\", monitor = \"$external\" })"
+        done < "$workspace_state"
+        ${pkgs.hyprland}/bin/hyprctl eval "hl.monitor({ output = \"$internal\", disabled = true })"
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$external\" })"
         ${pkgs.systemd}/bin/systemctl --user try-restart hypr-dock.service
       elif [ "$state" = "open" ]; then
+        ${pkgs.hyprland}/bin/hyprctl eval "hl.monitor({ output = \"$internal\", disabled = false })"
         for _ in 1 2 3; do
           ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.dpms({ mode = \"on\", monitor = \"$internal\" })"
           ${pkgs.coreutils}/bin/sleep 1
         done
         ${brightnessController} restore
-        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.workspace.move({ monitor = \"$internal\" })"
+        if [ -f "$workspace_state" ]; then
+          while read -r workspace; do
+            [ -n "$workspace" ] || continue
+            ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.workspace.move({ workspace = \"$workspace\", monitor = \"$internal\" })"
+          done < "$workspace_state"
+          rm -f "$workspace_state"
+        fi
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$internal\" })"
         ${pkgs.systemd}/bin/systemctl --user try-restart hypr-dock.service
       fi
