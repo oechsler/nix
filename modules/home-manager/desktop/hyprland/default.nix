@@ -316,16 +316,12 @@ let
   ) null displays.monitors;
   lidDisplayMonitor = pkgs.writeShellScript "hyprland-lid-display-monitor" ''
     lid_devices=()
-    input_devices=()
     for name_file in /sys/class/input/event*/device/name; do
       [ -f "$name_file" ] || continue
       name=$(${pkgs.coreutils}/bin/cat "$name_file")
       if [ "$name" = "Lid Switch" ]; then
         event=$(basename "$(dirname "$(dirname "$name_file")")")
         lid_devices+=("/dev/input/$event")
-      elif printf '%s' "$name" | ${pkgs.gnugrep}/bin/grep -Eiq 'touchpad|trackpad|at translated|internal.*keyboard|laptop.*keyboard|notebook.*keyboard|razer.*keyboard'; then
-        event=$(basename "$(dirname "$(dirname "$name_file")")")
-        input_devices+=("/dev/input/$event")
       fi
     done
     workspace_state="''${XDG_RUNTIME_DIR}/hyprland-lid-workspaces"
@@ -348,16 +344,6 @@ let
           esac
         done &
       done
-      for input_device in "''${input_devices[@]}"; do
-        ${pkgs.coreutils}/bin/stdbuf -o0 ${pkgs.evtest}/bin/evtest "$input_device" 2>/dev/null | while read -r line; do
-          case "$line" in
-            *"type 1 (EV_KEY),"*|*"type 2 (EV_REL),"*)
-              [ -f "$workspace_state" ] && printf 'open\n'
-              ;;
-          esac
-        done &
-      done
-
       previous=open
       for state_file in "''${state_files[@]}"; do
         [ "$(${pkgs.gawk}/bin/awk '{ print $2 }' "$state_file")" = "closed" ] && previous=closed
