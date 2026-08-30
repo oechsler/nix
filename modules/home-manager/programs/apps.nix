@@ -49,6 +49,17 @@ let
   hasHDR = displayHelpers.hasDesktopHDR displays.monitors || displays.defaults.hdr == 2;
   isKde = features.desktop.wm == "kde";
   chromium = import ../../lib/chromium.nix { inherit pkgs; };
+  # Electron 43.3+ has a regression that prevents Vesktop's
+  # StatusNotifierItem from being registered. Keep Vesktop on Electron 42
+  # until the upstream Electron fix is available.
+  vesktop = (pkgs.vesktop.override { electron_43 = pkgs.electron_42; }).overrideAttrs (_: {
+    # The package's version check expects Electron 43, although the older
+    # runtime is intentionally used here for the tray workaround.
+    preBuild = ''
+      cp -r ${pkgs.electron_42.dist} electron-dist
+      chmod -R u+w electron-dist
+    '';
+  });
   wrapChromiumApp =
     package: binary:
     chromium.wrapHdrSdrApp {
