@@ -22,6 +22,7 @@
 }:
 
 let
+  cfg = config.features.wifi;
   ip6Privacy = if config.features.ipv6PrivacyExtensions.enable then 2 else 0;
   isHyprland = config.features.desktop.enable && config.features.desktop.wm == "hyprland";
 in
@@ -35,6 +36,11 @@ in
     wifi = {
       enable = (lib.mkEnableOption "WiFi with managed network profiles") // {
         default = true;
+      };
+      disconnectOnEthernet = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = "Disconnect WiFi when a wired Ethernet connection is active.";
       };
       networks = lib.mkOption {
         type = lib.types.listOf (
@@ -164,8 +170,7 @@ in
 
     services = {
       networkd-dispatcher =
-        lib.mkIf
-          (isHyprland && config.features.wifi.enable && config.features.hardware.formFactor != "laptop")
+        lib.mkIf (isHyprland && config.features.wifi.enable && cfg.disconnectOnEthernet)
           {
             enable = true;
             extraArgs = [ "--run-startup-triggers" ];

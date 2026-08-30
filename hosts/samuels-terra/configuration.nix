@@ -114,6 +114,7 @@
 
     # --- Networking ---
     wifi = {
+      disconnectOnEthernet = true;
       networks = [
         {
           name = "home";

@@ -136,16 +136,16 @@ Networking options describe connectivity rather than individual applications.
 WiFi and SMB credentials are kept in SOPS; the host configuration only names
 the networks and shares.
 
-| Option                                  | Default | Description                                                          |
-| --------------------------------------- | ------- | -------------------------------------------------------------------- |
-| `features.wifi.enable`                  | `true`  | WiFi profiles via SOPS secrets.                                      |
-| `features.wifi.networks`                | `[]`    | WPA2-PSK networks: `{ name, ssid }`.                                 |
-| `features.wifi.enterpriseNetworks`      | `[]`    | WPA2 Enterprise networks: `{ name, ssid, identity }`.                |
-| `features.wifi.preferEthernet.enable`   | `true`  | Prefer Ethernet and disable WiFi while a wired connection is active. |
-| `features.ipv6PrivacyExtensions.enable` | `true`  | IPv6 privacy extensions for NetworkManager.                          |
-| `features.tailscale.enable`             | `true`  | Tailscale VPN; Trayscale tray app on desktop systems.                |
-| `features.smb.enable`                   | `true`  | Automatic SMB network share mounts.                                  |
-| `features.smb.shares`                   | `[]`    | Shares to mount: `{ name, label, path, username? }`.                 |
+| Option                                  | Default | Description                                                  |
+| --------------------------------------- | ------- | ------------------------------------------------------------ |
+| `features.wifi.enable`                  | `true`  | WiFi profiles via SOPS secrets.                              |
+| `features.wifi.disconnectOnEthernet`    | `false` | Disconnect WiFi while a wired Ethernet connection is active. |
+| `features.wifi.networks`                | `[]`    | WPA2-PSK networks: `{ name, ssid }`.                         |
+| `features.wifi.enterpriseNetworks`      | `[]`    | WPA2 Enterprise networks: `{ name, ssid, identity }`.        |
+| `features.ipv6PrivacyExtensions.enable` | `true`  | IPv6 privacy extensions for NetworkManager.                  |
+| `features.tailscale.enable`             | `true`  | Tailscale VPN; Trayscale tray app on desktop systems.        |
+| `features.smb.enable`                   | `true`  | Automatic SMB network share mounts.                          |
+| `features.smb.shares`                   | `[]`    | Shares to mount: `{ name, label, path, username? }`.         |
 
 PSK networks require `name` and `ssid`; enterprise networks additionally
 require `identity`. SMB shares are mounted below `~/smb/<label>/`, and their
