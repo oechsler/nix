@@ -53,46 +53,11 @@
       height = 1800;
       refreshRate = 60;
       scale = 1.6;
-      x = 5120;
       workspaces = [
         1
         2
         3
         4
-      ];
-    }
-    {
-      name = "DP-2";
-      make = "LG Electronics";
-      model = "LG ULTRAGEAR";
-      serial = "312NTBKE2229";
-      width = 2560;
-      height = 1440;
-      refreshRate = 60;
-      x = 2560;
-      y = 0;
-      workspaces = [
-        5
-        6
-        7
-        8
-      ];
-    }
-    {
-      name = "DP-3";
-      make = "LG Electronics";
-      model = "LG ULTRAGEAR";
-      serial = "312NTVSE2231";
-      width = 2560;
-      height = 1440;
-      refreshRate = 60;
-      x = 0;
-      y = 0;
-      workspaces = [
-        9
-        10
-        11
-        12
       ];
     }
   ];
