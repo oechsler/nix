@@ -312,43 +312,45 @@ let
   displayBrightnessInit = "${brightnessController} init";
   displayBrightness = "${brightnessController} adjust";
   configuredExternalMonitor = lib.findFirst (
-    monitor: !(builtins.match "^(eDP|LVDS|DPI)-.*" monitor.name != null)
+    monitor: !(builtins.match "^(eDP|LVDS|DPI|DSI)-.*" monitor.name != null)
   ) null displays.monitors;
   lidDisplayMonitor = pkgs.writeShellScript "hyprland-lid-display-monitor" ''
-    lid_device=""
+    lid_devices=()
     for name_file in /sys/class/input/event*/device/name; do
       if [ -f "$name_file" ] && [ "$(${pkgs.coreutils}/bin/cat "$name_file")" = "Lid Switch" ]; then
         event=$(basename "$(dirname "$(dirname "$name_file")")")
-        lid_device="/dev/input/$event"
-        break
+        lid_devices+=("/dev/input/$event")
       fi
     done
-    [ -n "$lid_device" ] || exit 0
     workspace_state="''${XDG_RUNTIME_DIR}/hyprland-lid-workspaces"
 
-    state_file=""
+    state_files=()
     for candidate in /proc/acpi/button/lid/*/state; do
       if [ -f "$candidate" ]; then
-        state_file="$candidate"
-        break
+        state_files+=("$candidate")
       fi
     done
+    [ ''${#lid_devices[@]} -gt 0 ] || [ ''${#state_files[@]} -gt 0 ] || exit 0
 
     (
-      ${pkgs.coreutils}/bin/stdbuf -o0 ${pkgs.evtest}/bin/evtest "$lid_device" 2>/dev/null | while read -r line; do
-        case "$line" in
-          *"code 0 (SW_LID), value 1"*) printf 'closed\n' ;;
-          *"code 0 (SW_LID), value 0"*) printf 'open\n' ;;
-        esac
-      done &
+      for lid_device in "''${lid_devices[@]}"; do
+        ${pkgs.coreutils}/bin/stdbuf -o0 ${pkgs.evtest}/bin/evtest "$lid_device" 2>/dev/null | while read -r line; do
+          case "$line" in
+            *"code 0 (SW_LID), value 1"*) printf 'closed\n' ;;
+            *"code 0 (SW_LID), value 0"*) printf 'open\n' ;;
+          esac
+        done &
+      done
 
-      previous=""
-      if [ -n "$state_file" ]; then
-        previous=$(${pkgs.gawk}/bin/awk '{ print $2 }' "$state_file")
-      fi
+      previous=open
+      for state_file in "''${state_files[@]}"; do
+        [ "$(${pkgs.gawk}/bin/awk '{ print $2 }' "$state_file")" = "closed" ] && previous=closed
+      done
       while ${pkgs.coreutils}/bin/sleep 0.25; do
-        [ -n "$state_file" ] || continue
-        state=$(${pkgs.gawk}/bin/awk '{ print $2 }' "$state_file")
+        state=open
+        for state_file in "''${state_files[@]}"; do
+          [ "$(${pkgs.gawk}/bin/awk '{ print $2 }' "$state_file")" = "closed" ] && state=closed
+        done
         [ "$state" = "$previous" ] && continue
         previous="$state"
         printf '%s\n' "$state"
@@ -361,7 +363,7 @@ let
       printf 'lid state changed to %s\n' "$state"
 
       monitors=$(${pkgs.hyprland}/bin/hyprctl monitors -j) || continue
-      internal=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r '[.[] | .name | select(test("^(eDP|LVDS|DPI)-"))][0] // empty')
+       internal=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r '[.[] | .name | select(test("^(eDP|LVDS|DPI|DSI)-"))][0] // empty')
       external=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r --arg internal "$internal" --arg configured "${
         if configuredExternalMonitor == null then "" else configuredExternalMonitor.name
       }" '[.[] | select(if $configured != "" then .name == $configured else .name != $internal end)][0].name // empty')
