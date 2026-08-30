@@ -325,6 +325,14 @@ let
     done
     [ -n "$lid_device" ] || exit 0
 
+    state_file=""
+    for candidate in /proc/acpi/button/lid/*/state; do
+      if [ -f "$candidate" ]; then
+        state_file="$candidate"
+        break
+      fi
+    done
+
     (
       ${pkgs.coreutils}/bin/stdbuf -o0 ${pkgs.evtest}/bin/evtest "$lid_device" 2>/dev/null | while read -r line; do
         case "$line" in
@@ -333,23 +341,16 @@ let
         esac
       done &
 
-      poll_state=""
+      previous=""
+      if [ -n "$state_file" ]; then
+        previous=$(${pkgs.gawk}/bin/awk '{ print $2 }' "$state_file")
+      fi
       while ${pkgs.coreutils}/bin/sleep 0.25; do
-        result=0
-        ${pkgs.evtest}/bin/evtest --query "$lid_device" EV_SW SW_LID >/dev/null 2>&1 || result=$?
-        case "$result" in
-          10) state=closed ;;
-          0) state=open ;;
-          *) continue ;;
-        esac
-        if [ -z "$poll_state" ]; then
-          poll_state="$state"
-          continue
-        fi
-        if [ "$state" != "$poll_state" ]; then
-          poll_state="$state"
-          printf '%s\n' "$state"
-        fi
+        [ -n "$state_file" ] || continue
+        state=$(${pkgs.gawk}/bin/awk '{ print $2 }' "$state_file")
+        [ "$state" = "$previous" ] && continue
+        previous="$state"
+        printf '%s\n' "$state"
       done
     ) | {
       handled_state=""
@@ -379,7 +380,7 @@ let
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.workspace.move({ monitor = \"$internal\" })"
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$internal\" })"
         ${pkgs.systemd}/bin/systemctl --user try-restart hypr-dock.service
-        fi
+      fi
       done
     }
   '';
