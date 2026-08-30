@@ -251,7 +251,7 @@ let
     m:
     {
       output = m.name;
-      mode = "preferred";
+      mode = "${toString m.width}x${toString m.height}@${toString m.refreshRate}";
       position = "${toString m.x}x${toString m.y}";
       inherit (m) scale vrr;
       transform = hyprTransform m.rotation;
