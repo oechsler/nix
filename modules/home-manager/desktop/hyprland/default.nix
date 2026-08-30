@@ -323,7 +323,7 @@ let
       if [ "$name" = "Lid Switch" ]; then
         event=$(basename "$(dirname "$(dirname "$name_file")")")
         lid_devices+=("/dev/input/$event")
-      elif printf '%s' "$name" | ${pkgs.gnugrep}/bin/grep -Eiq 'keyboard|mouse|touchpad'; then
+      elif printf '%s' "$name" | ${pkgs.gnugrep}/bin/grep -Eiq 'touchpad|trackpad|at translated|internal.*keyboard|laptop.*keyboard|notebook.*keyboard|razer.*keyboard'; then
         event=$(basename "$(dirname "$(dirname "$name_file")")")
         input_devices+=("/dev/input/$event")
       fi
