@@ -351,7 +351,11 @@ let
           printf '%s\n' "$state"
         fi
       done
-    ) | while read -r state; do
+    ) | {
+      handled_state=""
+      while read -r state; do
+        [ "$state" = "$handled_state" ] && continue
+        handled_state="$state"
       printf 'lid state changed to %s\n' "$state"
 
       monitors=$(${pkgs.hyprland}/bin/hyprctl monitors -j) || continue
@@ -375,8 +379,9 @@ let
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.workspace.move({ monitor = \"$internal\" })"
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$internal\" })"
         ${pkgs.systemd}/bin/systemctl --user try-restart hypr-dock.service
-      fi
-    done
+        fi
+      done
+    }
   '';
   toggleFloating = luaInline ''
     function()
