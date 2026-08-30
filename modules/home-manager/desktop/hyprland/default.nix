@@ -325,6 +325,7 @@ let
       fi
     done
     workspace_state="''${XDG_RUNTIME_DIR}/hyprland-lid-workspaces"
+    monitor_state="''${XDG_RUNTIME_DIR}/hyprland-lid-monitors"
 
     state_files=()
     for candidate in /proc/acpi/button/lid/*/state; do
@@ -369,12 +370,16 @@ let
 
       monitors=$(${pkgs.hyprland}/bin/hyprctl monitors -j) || continue
         internal=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r '[.[] | .name | select(test("^(eDP|LVDS|DPI|DSI)-"))][0] // empty')
+        if [ -z "$internal" ] && [ -f "$monitor_state" ]; then
+          internal=$(${pkgs.gawk}/bin/awk 'NR == 1 { print; exit }' "$monitor_state")
+        fi
       external=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r --arg internal "$internal" --arg configured "${
         if configuredExternalMonitor == null then "" else configuredExternalMonitor.name
       }" '[.[] | select(if $configured != "" then .name == $configured else .name != $internal end)][0].name // empty')
       [ -n "$internal" ] && [ -n "$external" ] || continue
 
       if [ "$state" = "closed" ]; then
+        printf '%s\n%s\n' "$internal" "$external" > "$monitor_state"
         ${pkgs.hyprland}/bin/hyprctl workspaces -j | ${pkgs.jq}/bin/jq -r --arg internal "$internal" '.[] | select(.monitor == $internal) | .name' > "$workspace_state"
         while read -r workspace; do
           [ -n "$workspace" ] || continue
@@ -384,13 +389,16 @@ let
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$external\" })"
         ${pkgs.systemd}/bin/systemctl --user try-restart hypr-dock.service
       elif [ "$state" = "open" ]; then
+        ${pkgs.hyprland}/bin/hyprctl eval "hl.monitor({ output = \"$internal\", disabled = false })"
+        ${pkgs.coreutils}/bin/sleep 1
         if [ -f "$workspace_state" ]; then
           while read -r workspace; do
             [ -n "$workspace" ] || continue
             ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.workspace.move({ workspace = \"$workspace\", monitor = \"$internal\" })"
           done < "$workspace_state"
-          rm -f "$workspace_state"
+           rm -f "$workspace_state"
         fi
+        rm -f "$monitor_state"
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$internal\" })"
         ${pkgs.systemd}/bin/systemctl --user try-restart hypr-dock.service
       fi
