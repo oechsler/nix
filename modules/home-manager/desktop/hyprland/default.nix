@@ -316,20 +316,15 @@ let
   ) null displays.monitors;
   lidDisplayMonitor = pkgs.writeShellScript "hyprland-lid-display-monitor" ''
     lid_devices=()
-    internal_input_devices=()
     for name_file in /sys/class/input/event*/device/name; do
       [ -f "$name_file" ] || continue
       name=$(${pkgs.coreutils}/bin/cat "$name_file")
       if [ "$name" = "Lid Switch" ]; then
         event=$(basename "$(dirname "$(dirname "$name_file")")")
         lid_devices+=("/dev/input/$event")
-      elif printf '%s' "$name" | ${pkgs.gnugrep}/bin/grep -Eiq 'touchpad|trackpad|at translated|internal.*keyboard|laptop.*keyboard|notebook.*keyboard|razer.*keyboard'; then
-        event=$(basename "$(dirname "$(dirname "$name_file")")")
-        internal_input_devices+=("/dev/input/$event")
       fi
     done
     workspace_state="''${XDG_RUNTIME_DIR}/hyprland-lid-workspaces"
-    monitor_state="''${XDG_RUNTIME_DIR}/hyprland-lid-monitors"
 
     state_files=()
     for candidate in /proc/acpi/button/lid/*/state; do
@@ -347,18 +342,6 @@ let
               *"code 0 (SW_LID), value 1"*) printf 'closed\n' ;;
               *"code 0 (SW_LID), value 0"*) printf 'open\n' ;;
             esac
-        done &
-      done
-      for input_device in "''${internal_input_devices[@]}"; do
-        ${pkgs.coreutils}/bin/stdbuf -o0 ${pkgs.evtest}/bin/evtest "$input_device" 2>/dev/null | while read -r line; do
-          case "$line" in
-            *"type 1 (EV_KEY),"*|*"type 2 (EV_REL),"*)
-              if [ -f "$workspace_state" ]; then
-                printf 'open\n'
-                exit 0
-              fi
-              ;;
-          esac
         done &
       done
         while ${pkgs.coreutils}/bin/sleep 3600; do :; done
@@ -386,16 +369,12 @@ let
 
       monitors=$(${pkgs.hyprland}/bin/hyprctl monitors -j) || continue
         internal=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r '[.[] | .name | select(test("^(eDP|LVDS|DPI|DSI)-"))][0] // empty')
-        if [ -z "$internal" ] && [ -f "$monitor_state" ]; then
-          internal=$(${pkgs.gawk}/bin/awk 'NR == 1 { print; exit }' "$monitor_state")
-        fi
       external=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r --arg internal "$internal" --arg configured "${
         if configuredExternalMonitor == null then "" else configuredExternalMonitor.name
       }" '[.[] | select(if $configured != "" then .name == $configured else .name != $internal end)][0].name // empty')
       [ -n "$internal" ] && [ -n "$external" ] || continue
 
       if [ "$state" = "closed" ]; then
-        printf '%s\n%s\n' "$internal" "$external" > "$monitor_state"
         ${pkgs.hyprland}/bin/hyprctl workspaces -j | ${pkgs.jq}/bin/jq -r --arg internal "$internal" '.[] | select(.monitor == $internal) | .name' > "$workspace_state"
         while read -r workspace; do
           [ -n "$workspace" ] || continue
@@ -405,12 +384,6 @@ let
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$external\" })"
         ${pkgs.systemd}/bin/systemctl --user try-restart hypr-dock.service
       elif [ "$state" = "open" ]; then
-        ${pkgs.hyprland}/bin/hyprctl eval "hl.monitor({ output = \"$internal\", disabled = false })"
-        for _ in 1 2 3; do
-          ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.dpms({ mode = \"on\", monitor = \"$internal\" })"
-          ${pkgs.coreutils}/bin/sleep 1
-        done
-        ${brightnessController} restore
         if [ -f "$workspace_state" ]; then
           while read -r workspace; do
             [ -n "$workspace" ] || continue
@@ -418,7 +391,6 @@ let
           done < "$workspace_state"
           rm -f "$workspace_state"
         fi
-        rm -f "$monitor_state"
         ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$internal\" })"
         ${pkgs.systemd}/bin/systemctl --user try-restart hypr-dock.service
       fi
