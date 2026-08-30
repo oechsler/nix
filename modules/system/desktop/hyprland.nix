@@ -7,7 +7,7 @@
 # - Hyprland with UWSM (Universal Wayland Session Manager)
 # - XDG Desktop Portals (Hyprland + GTK for file dialogs, screenshots)
 # - Dunst notification daemon
-# - GParted partition manager (themed)
+# - GNOME Disks disk utility
 # - Hyprpolkitagent for authentication dialogs
 #
 # Services:
@@ -38,14 +38,7 @@
   config = lib.mkIf (config.features.desktop.enable && config.features.desktop.wm == "hyprland") {
     environment.systemPackages = with pkgs; [
       dunst
-      (gparted.overrideAttrs (old: {
-        postFixup = (old.postFixup or "") + ''
-          wrapProgram $out/libexec/gpartedbin \
-            --set GTK_THEME "${
-              if config.theme.catppuccin.flavor == "latte" then "Adwaita" else "Adwaita:dark"
-            }"
-        '';
-      }))
+      gnome-disk-utility
       hyprpolkitagent
     ];
 
