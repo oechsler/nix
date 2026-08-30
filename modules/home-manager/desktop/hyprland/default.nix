@@ -325,21 +325,12 @@ let
     done
     [ -n "$lid_device" ] || exit 0
 
-    read_lid_state() {
-      result=0
-      ${pkgs.evtest}/bin/evtest --query "$lid_device" EV_SW SW_LID >/dev/null 2>&1 || result=$?
-      case "$result" in
-        10) printf 'closed\n' ;;
-        0) printf 'open\n' ;;
-        *) printf 'unknown\n' ;;
+    ${pkgs.coreutils}/bin/stdbuf -o0 ${pkgs.evtest}/bin/evtest "$lid_device" 2>/dev/null | while read -r line; do
+      case "$line" in
+        *"code 0 (SW_LID), value 1"*) state=closed ;;
+        *"code 0 (SW_LID), value 0"*) state=open ;;
+        *) continue ;;
       esac
-    }
-
-    previous=$(read_lid_state)
-    while ${pkgs.coreutils}/bin/sleep 0.25; do
-      state=$(read_lid_state)
-      [ "$state" = "$previous" ] || [ "$state" = unknown ] && continue
-      previous="$state"
       printf 'lid state changed to %s\n' "$state"
 
       monitors=$(${pkgs.hyprland}/bin/hyprctl monitors -j) || continue
