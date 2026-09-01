@@ -3,7 +3,7 @@
 # This module configures awww as the wallpaper manager for Hyprland.
 #
 # Features:
-# - Per-monitor wallpaper support
+# - Theme wallpaper from the shared backgrounds module
 # - Fade transition (1 second duration)
 # - Automatic wallpaper reload on home-manager activation
 # - Parallel startup with the graphical session
@@ -13,30 +13,12 @@
   pkgs,
   lib,
   theme,
-  displays,
   ...
 }:
 
 let
   awwwPkg = pkgs.awww;
-  displayHelpers = import ../../../lib/displays.nix { inherit lib; };
-
-  # Generate wallpaper commands. Set the theme wallpaper first, then override
-  # it for outputs with an explicit per-monitor wallpaper.
-  wallpaperCommands = lib.concatStringsSep "\n" (
-    [
-      "${awwwPkg}/bin/awww img ${theme.wallpaperPath} --transition-type fade --transition-duration 0.6"
-    ]
-    ++ lib.optionals (displays.monitors != [ ]) (
-      map (
-        m:
-        let
-          wp = displayHelpers.monitorWallpaper theme m;
-        in
-        "${awwwPkg}/bin/awww img ${wp} --outputs ${m.name} --transition-type fade --transition-duration 0.6"
-      ) displays.monitors
-    )
-  );
+  wallpaperCommands = "${awwwPkg}/bin/awww img ${theme.wallpaperPath} --transition-type fade --transition-duration 0.6";
 
   startScript = pkgs.writeShellScript "awww-start" ''
     ${awwwPkg}/bin/awww-daemon &
