@@ -112,20 +112,32 @@ in
       };
     };
 
-    home.packages = [ pkgs.hyprmoncfg ];
+    home = {
+      packages = [ pkgs.hyprmoncfg ];
 
-    home.activation.ensureHyprmoncfgDefaultProfile = lib.mkIf (displays.monitors != [ ]) (
-      lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-        default_profile="${config.xdg.configHome}/hyprmoncfg/profiles/default.json"
-        if [ -L "$default_profile" ] && [ ! -e "$default_profile" ]; then
-          run rm -- "$default_profile"
-        fi
-        if [ ! -e "$default_profile" ]; then
-          run mkdir -p "$(dirname "$default_profile")"
-          run ln -s "${profileSource}" "$default_profile"
-        fi
-      ''
-    );
+      activation.ensureHyprmoncfgDefaultProfile = lib.mkIf (displays.monitors != [ ]) (
+        lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+          default_profile="${config.xdg.configHome}/hyprmoncfg/profiles/default.json"
+          if [ -L "$default_profile" ] && [ ! -e "$default_profile" ]; then
+            run rm -- "$default_profile"
+          fi
+          if [ ! -e "$default_profile" ]; then
+            run mkdir -p "$(dirname "$default_profile")"
+            run ln -s "${profileSource}" "$default_profile"
+          fi
+        ''
+      );
+
+      # Reload the daemon after Home Manager has linked a new profile. The
+      # service unit itself is unchanged when only monitor data changes.
+      activation.reloadHyprmoncfg = lib.mkIf (displays.monitors != [ ]) (
+        lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+          if ${pkgs.systemd}/bin/systemctl --user is-active --quiet hyprmoncfgd.service; then
+            run ${pkgs.systemd}/bin/systemctl --user restart hyprmoncfgd.service
+          fi
+        ''
+      );
+    };
 
     xdg.configFile."hyprmoncfg/profiles/default.json" = lib.mkIf (displays.monitors != [ ]) {
       source = profileSource;
