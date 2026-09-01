@@ -1,27 +1,14 @@
-# Hyprland Desktop Environment (System-level)
+# Hyprland System Configuration
 #
-# This module enables Hyprland window manager at the system level.
-# User-level Hyprland configuration is in home-manager/desktop/hyprland/
+# System packages and services for Hyprland. User-level configuration lives in
+# home-manager/desktop/hyprland/.
 #
-# Installed:
-# - Hyprland with UWSM (Universal Wayland Session Manager)
-# - XDG Desktop Portals (Hyprland + GTK for file dialogs, screenshots)
-# - Dunst notification daemon
-# - GNOME Disks disk utility
-# - Hyprpolkitagent for authentication dialogs
+# Provides Hyprland/UWSM, the Hyprland and GTK portals, authentication dialogs,
+# and the shared keyring, filesystem, and removable-media services needed by
+# the session.
 #
-# Services:
-# - GNOME Keyring for secret storage (passwords, SSH keys)
-# - GVFS for virtual filesystems (trash, network shares)
-# - udisks2 for automatic disk mounting
-#
-# Autologin keyring unlock:
-#   When features.desktop.login = "autologin", SDDM uses a separate PAM
-#   service (sddm-autologin) that does NOT run the normal sddm auth stack.
-#   This module adds pam_systemd_loadkey + pam_gnome_keyring to that stack,
-#   plus KeyringMode=inherit on the display-manager service, so the keyring
-#   can be unlocked from a LUKS passphrase cached during boot. This only
-#   works with features.encryption.unlockMethod = "password".
+# When autologin uses a cached password unlock, extend the separate SDDM
+# autologin PAM stack so GNOME Keyring can be unlocked with the session.
 #
 # Active when:
 #   features.desktop.enable = true

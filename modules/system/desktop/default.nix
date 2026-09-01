@@ -1,11 +1,10 @@
-# Desktop Environment Modules
+# System Desktop Modules
 #
-# This module imports system-level desktop configuration:
-# - sddm.nix - SDDM display manager (login screen)
-# - hyprland.nix - Hyprland system packages and services
-# - kde.nix - KDE Plasma system packages and services
+# Imports the system-level pieces shared by, or specific to, the selected
+# desktop session. Each child module guards its own configuration with the
+# corresponding desktop feature flag.
 #
-# User-level desktop config is in home-manager/desktop/
+# User-level configuration lives in home-manager/desktop/.
 
 { config, lib, ... }:
 
