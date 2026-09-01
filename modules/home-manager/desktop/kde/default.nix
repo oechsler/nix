@@ -5,7 +5,7 @@
 # - autostart.nix - XDG .desktop file generation
 # - idle.nix - PowerDevil power profiles
 # - dolphin.nix - File manager sidebar configuration
-# - displays.nix - Monitor configuration via kscreen-doctor
+# - kscreen.nix - Monitor configuration via kscreen-doctor
 
 { ... }:
 
@@ -14,7 +14,7 @@
     ./theme.nix
     ./autostart.nix
     ./idle.nix
-    ./displays.nix
+    ./kscreen.nix
     ./dolphin.nix
   ];
 }

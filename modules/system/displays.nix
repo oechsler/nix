@@ -5,7 +5,7 @@
 #
 # Configuration example:
 #   displays.defaultWorkspaceCount = 4;
-#   displays.defaults.vrr = 2;        # Default for hotplugged/unlisted monitors where supported
+#   displays.defaults.vrr = 2;        # Global fallback where the consumer supports it
 #   displays.defaults.hdr = 1;        # 0=off, 1=Steam/Gamescope HDR, 2=full desktop HDR
 #   displays.monitors = [
 #     {
@@ -45,7 +45,7 @@
           2
         ];
         default = 2;
-        description = "Default Variable Refresh Rate mode for hotplugged/unlisted monitors where the compositor can apply output-independent defaults: 0=off, 1=always, 2=fullscreen/automatic";
+        description = "Global Variable Refresh Rate fallback where supported: 0=off, 1=always, 2=fullscreen/automatic";
       };
       hdr = lib.mkOption {
         type = lib.types.enum [
@@ -54,7 +54,7 @@
           2
         ];
         default = 1;
-        description = "Default HDR mode for hotplugged/unlisted monitors where supported: 0=off, 1=Steam/Gamescope HDR, 2=full desktop HDR";
+        description = "Global HDR fallback where supported: 0=off, 1=Steam/Gamescope HDR, 2=full desktop HDR";
       };
     };
 

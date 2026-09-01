@@ -17,7 +17,7 @@
 # - Keybindings (Super key based)
 # - Volume/brightness notifications
 # - Battery warnings
-# - Window rules and workspace rules
+# - Window rules and workspace bindings
 # - Animations and visual effects
 #
 # Brightness control:
@@ -86,7 +86,6 @@
   theme,
   locale,
   i18n,
-  displays,
   input,
   features,
   ...
@@ -222,67 +221,6 @@ let
         "${screenshotSavedTitle}" "${screenshotSavedMessage}: $saved_output"
     fi
   '';
-  displayHelpers = import ../../../lib/displays.nix { inherit lib; };
-
-  # ============================================================================
-  # MONITOR CONFIGURATION
-  # ============================================================================
-  # Convert rotation enum to Hyprland transform number
-  hyprTransform =
-    rot:
-    {
-      "normal" = 0;
-      "90" = 1;
-      "180" = 2;
-      "270" = 3;
-    }
-    .${rot};
-
-  monitorSpecs = [
-    {
-      output = "";
-      mode = "preferred";
-      position = "auto";
-      inherit (theme) scale;
-
-    }
-  ]
-  ++ map (
-    m:
-    {
-      output = m.name;
-      mode = "${toString m.width}x${toString m.height}@${toString m.refreshRate}";
-      position = "${toString m.x}x${toString m.y}";
-      inherit (m) scale vrr;
-      transform = hyprTransform m.rotation;
-    }
-    // lib.optionalAttrs (m.hdr == 2) {
-      bitdepth = 10;
-      cm = "hdredid";
-      sdr_max_luminance = m.hdrSdrMaxLuminance;
-    }
-  ) displays.monitors;
-
-  vrrMode = lib.foldl' (
-    mode: monitor: lib.max mode monitor.vrr
-  ) displays.defaults.vrr displays.monitors;
-  hasHDR = displayHelpers.hasDesktopHDR displays.monitors || displays.defaults.hdr == 2;
-
-  workspaceRules = lib.flatten (
-    map (
-      m:
-      (map (ws: {
-        workspace = toString ws;
-        monitor = m.name;
-      }) m.workspaces)
-      ++ lib.optional (m.workspaces != [ ]) {
-        workspace = toString (builtins.head m.workspaces);
-        monitor = m.name;
-        default = true;
-      }
-    ) displays.monitors
-  );
-
   luaInline = lib.generators.mkLuaInline;
   modKey = key: luaInline ''mainMod .. " + ${key}"'';
   dispatcher = expression: luaInline "hl.dsp.${expression}";
@@ -311,116 +249,6 @@ let
   brightnessController = import ./scripts/brightness-controller.nix { inherit pkgs i18n theme; };
   displayBrightnessInit = "${brightnessController} init";
   displayBrightness = "${brightnessController} adjust";
-  configuredExternalMonitor = lib.findFirst (
-    monitor: !(builtins.match "^(eDP|LVDS|DPI|DSI)-.*" monitor.name != null)
-  ) null displays.monitors;
-  lidDisplayMonitor = pkgs.writeShellScript "hyprland-lid-display-monitor" ''
-    lid_devices=()
-    internal_input_devices=()
-    for name_file in /sys/class/input/event*/device/name; do
-      [ -f "$name_file" ] || continue
-      name=$(${pkgs.coreutils}/bin/cat "$name_file")
-      if [ "$name" = "Lid Switch" ]; then
-        event=$(basename "$(dirname "$(dirname "$name_file")")")
-        lid_devices+=("/dev/input/$event")
-      elif printf '%s' "$name" | ${pkgs.gnugrep}/bin/grep -Eiq 'touchpad|trackpad|at translated|internal.*keyboard|laptop.*keyboard|notebook.*keyboard|razer.*keyboard'; then
-        event=$(basename "$(dirname "$(dirname "$name_file")")")
-        internal_input_devices+=("/dev/input/$event")
-      fi
-    done
-    workspace_state="''${XDG_RUNTIME_DIR}/hyprland-lid-workspaces"
-    monitor_state="''${XDG_RUNTIME_DIR}/hyprland-lid-monitors"
-
-    state_files=()
-    for candidate in /proc/acpi/button/lid/*/state; do
-      if [ -f "$candidate" ]; then
-        state_files+=("$candidate")
-      fi
-    done
-    [ ''${#lid_devices[@]} -gt 0 ] || [ ''${#state_files[@]} -gt 0 ] || exit 0
-
-    (
-      if [ ''${#lid_devices[@]} -gt 0 ]; then
-      for lid_device in "''${lid_devices[@]}"; do
-          ${pkgs.coreutils}/bin/stdbuf -o0 ${pkgs.evtest}/bin/evtest "$lid_device" 2>/dev/null | while read -r line; do
-            case "$line" in
-              *"code 0 (SW_LID), value 1"*) printf 'closed\n' ;;
-              *"code 0 (SW_LID), value 0"*) printf 'open\n' ;;
-            esac
-        done &
-      done
-      for input_device in "''${internal_input_devices[@]}"; do
-        ${pkgs.coreutils}/bin/stdbuf -o0 ${pkgs.evtest}/bin/evtest "$input_device" 2>/dev/null | while read -r line; do
-          case "$line" in
-            *"type 1 (EV_KEY),"*|*"type 2 (EV_REL),"*)
-              if [ -f "$workspace_state" ]; then
-                printf 'open\n'
-                exit 0
-              fi
-              ;;
-          esac
-        done &
-      done
-        while ${pkgs.coreutils}/bin/sleep 3600; do :; done
-      else
-        previous=open
-        for state_file in "''${state_files[@]}"; do
-          [ "$(${pkgs.gawk}/bin/awk '{ print $2 }' "$state_file")" = "closed" ] && previous=closed
-        done
-        while ${pkgs.coreutils}/bin/sleep 0.25; do
-          state=open
-          for state_file in "''${state_files[@]}"; do
-            [ "$(${pkgs.gawk}/bin/awk '{ print $2 }' "$state_file")" = "closed" ] && state=closed
-          done
-          [ "$state" = "$previous" ] && continue
-          previous="$state"
-          printf '%s\n' "$state"
-        done
-      fi
-    ) | {
-      handled_state=""
-      while read -r state; do
-        [ "$state" = "$handled_state" ] && continue
-        handled_state="$state"
-      printf 'lid state changed to %s\n' "$state"
-
-      monitors=$(${pkgs.hyprland}/bin/hyprctl monitors -j) || continue
-        internal=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r '[.[] | .name | select(test("^(eDP|LVDS|DPI|DSI)-"))][0] // empty')
-        if [ -z "$internal" ] && [ -f "$monitor_state" ]; then
-          internal=$(${pkgs.gawk}/bin/awk 'NR == 1 { print; exit }' "$monitor_state")
-        fi
-      external=$(printf '%s' "$monitors" | ${pkgs.jq}/bin/jq -r --arg internal "$internal" --arg configured "${
-        if configuredExternalMonitor == null then "" else configuredExternalMonitor.name
-      }" '[.[] | select(if $configured != "" then .name == $configured else .name != $internal end)][0].name // empty')
-      [ -n "$internal" ] && [ -n "$external" ] || continue
-
-      if [ "$state" = "closed" ]; then
-        printf '%s\n%s\n' "$internal" "$external" > "$monitor_state"
-        ${pkgs.hyprland}/bin/hyprctl workspaces -j | ${pkgs.jq}/bin/jq -r --arg internal "$internal" '.[] | select(.monitor == $internal) | .name' > "$workspace_state"
-        while read -r workspace; do
-          [ -n "$workspace" ] || continue
-          ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.workspace.move({ workspace = \"$workspace\", monitor = \"$external\" })"
-        done < "$workspace_state"
-        ${pkgs.hyprland}/bin/hyprctl eval "hl.monitor({ output = \"$internal\", disabled = true })"
-        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$external\" })"
-        ${pkgs.systemd}/bin/systemctl --user try-restart hypr-dock.service
-      elif [ "$state" = "open" ]; then
-        ${pkgs.hyprland}/bin/hyprctl eval "hl.monitor({ output = \"$internal\", disabled = false })"
-        ${pkgs.coreutils}/bin/sleep 1
-        if [ -f "$workspace_state" ]; then
-          while read -r workspace; do
-            [ -n "$workspace" ] || continue
-            ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.workspace.move({ workspace = \"$workspace\", monitor = \"$internal\" })"
-          done < "$workspace_state"
-           rm -f "$workspace_state"
-        fi
-        rm -f "$monitor_state"
-        ${pkgs.hyprland}/bin/hyprctl dispatch "hl.dsp.focus({ monitor = \"$internal\" })"
-        ${pkgs.systemd}/bin/systemctl --user try-restart hypr-dock.service
-      fi
-      done
-    }
-  '';
   toggleFloating = luaInline ''
     function()
       local window = hl.get_active_window()
@@ -500,6 +328,7 @@ in
   #===========================
   # Hyprland-specific modules
   imports = [
+    ./hyprmoncfg.nix # Declarative profiles and hotplug/lid handling
     ./automount.nix # GVFS removable media automount
     ./hyprshell.nix # Rust/GTK4 workspace-aware window switcher
     ./theme.nix # Qt/Kvantum theming, hidden window buttons
@@ -645,21 +474,6 @@ in
           Install.WantedBy = [ "graphical-session.target" ];
         };
 
-      }
-      // lib.optionalAttrs (features.hardware.formFactor == "laptop") {
-        lid-display-monitor = {
-          Unit = {
-            Description = "Handle laptop lid display switching";
-            After = [ "graphical-session.target" ];
-            PartOf = [ "graphical-session.target" ];
-          };
-          Service = {
-            ExecStart = lidDisplayMonitor;
-            Restart = "on-failure";
-            RestartSec = 2;
-          };
-          Install.WantedBy = [ "graphical-session.target" ];
-        };
       };
 
     # Reduce default stop timeout for user session
@@ -706,9 +520,6 @@ in
         accent._var = accentColor;
         surface0._var = surface0Color;
         mainMod._var = "SUPER";
-
-        monitor = monitorSpecs;
-        workspace_rule = workspaceRules;
 
         on._args = [
           "hyprland.start"
@@ -767,6 +578,13 @@ in
         config = {
           cursor.no_hardware_cursors = true;
 
+          misc = {
+            force_default_wallpaper = 0;
+            disable_hyprland_logo = true;
+          };
+
+          ecosystem.no_update_news = true;
+
           input = {
             kb_layout = locale.keyboard;
             kb_variant = "";
@@ -820,22 +638,6 @@ in
 
           master.new_status = "master";
 
-          misc = {
-            force_default_wallpaper = 0;
-            disable_hyprland_logo = true;
-            vrr = vrrMode;
-          };
-
-          ecosystem.no_update_news = true;
-
-          render = {
-            direct_scanout = 0;
-            non_shader_cm = 0;
-          }
-          // lib.optionalAttrs hasHDR {
-            cm_enabled = true;
-            cm_sdr_eotf = "gamma22";
-          };
         };
 
         curve = map (curve: { _args = curve; }) [

@@ -68,8 +68,8 @@ in
       #---------------------------
       # Background
       #---------------------------
-      # Default wallpaper for all outputs (covers unknown monitors),
-      # overridden per-monitor for explicitly configured displays.
+      # Default wallpaper for every active output, overridden per monitor for
+      # outputs with an explicit wallpaper in displays.monitors.
       background = [
         {
           path = "";
