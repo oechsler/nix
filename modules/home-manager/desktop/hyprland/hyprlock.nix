@@ -3,7 +3,7 @@
 # This module configures hyprlock as the screen locker for Hyprland.
 #
 # Features:
-# - Blurred wallpaper background (per-monitor support)
+# - Blurred wallpaper background from the shared backgrounds module
 # - Time and date display
 # - Password input field with Catppuccin colors
 # - Grace period (3 seconds before lock activates)
@@ -68,8 +68,8 @@ in
       #---------------------------
       # Background
       #---------------------------
-      # Default wallpaper for every active output, overridden per monitor for
-      # outputs with an explicit wallpaper in displays.monitors.
+      # Use the processed wallpaper from the shared backgrounds module on every
+      # active output.
       background = [
         {
           path = "";
@@ -78,15 +78,7 @@ in
           blur_passes = 3;
           blur_size = 8;
         }
-      ]
-      ++ map (m: {
-        monitor = m.name;
-        path = "";
-        reload_cmd = "${pkgs.coreutils}/bin/cp -- ${displayHelpers.monitorWallpaper theme m} \"$XDG_RUNTIME_DIR/hyprlock-background-${m.name}\" && printf '%s' \"$XDG_RUNTIME_DIR/hyprlock-background-${m.name}\"";
-        reload_time = 0;
-        blur_passes = 3;
-        blur_size = 8;
-      }) displays.monitors;
+      ];
 
       #---------------------------
       # Input Field

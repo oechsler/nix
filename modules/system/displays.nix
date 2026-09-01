@@ -126,11 +126,6 @@
               default = "normal";
               description = "Display rotation";
             };
-            wallpaper = lib.mkOption {
-              type = lib.types.nullOr lib.types.path;
-              default = null;
-              description = "Per-monitor wallpaper (null = use the processed theme.backgrounds.path wallpaper)";
-            };
             workspaces = lib.mkOption {
               type = lib.types.listOf lib.types.int;
               default = [ ];
