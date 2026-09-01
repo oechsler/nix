@@ -107,6 +107,9 @@
     };
     gaming.enable = false;
 
+    # --- Virtualisation ---
+    virtualisation.vm.enable = false;
+
     # --- Applications ---
     apps.mumble = {
       username = "Sam";
