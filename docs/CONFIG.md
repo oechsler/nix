@@ -959,11 +959,11 @@ displays = {
 | `displays.monitors.*.vrr`                | `0`           | Output VRR mode                                                  |
 | `displays.monitors.*.hdr`                | `0`           | Output HDR mode                                                  |
 | `displays.monitors.*.hdrSdrMaxLuminance` | `450`         | SDR white level in nits for HDR output conversion                |
-| `displays.monitors.*.workspaces`         | `[]`          | Optional workspace list shown by Waybar                          |
+| `displays.monitors.*.workspaces`         | `[]`          | Optional Hyprland workspace assignment for this monitor          |
 
-`workspaces` is an optional Waybar addition that controls which workspaces are
-shown on a monitor. `defaultWorkspaceCount` supplies the default workspace
-group size for Waybar and for Hyprland's automatic workspace planner.
+`workspaces` assigns workspaces to a monitor in Hyprland; Waybar reflects that
+assignment. `defaultWorkspaceCount` supplies the default workspace group size
+for monitors without an explicit list.
 
 KDE and SDDM apply the shared layout through KScreen. On Hyprland, the same
 declaration is used for the Nix-managed `default` profile. Its monitor order is

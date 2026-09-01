@@ -64,13 +64,22 @@ let
   profileWorkspaceRules = lib.flatten (
     lib.imap0 (
       monitorIndex: m:
-      map (workspaceOffset: {
-        workspace = toString (monitorIndex * workspacesPerMonitor + workspaceOffset);
+      let
+        workspaces =
+          if m.workspaces != [ ] then
+            m.workspaces
+          else
+            map (workspaceOffset: monitorIndex * workspacesPerMonitor + workspaceOffset) (
+              lib.range 1 workspacesPerMonitor
+            );
+      in
+      map (workspace: {
+        workspace = toString workspace;
         output_key = profileKey m;
         output_name = m.name;
-        default = workspaceOffset == 1;
+        default = workspace == builtins.head workspaces;
         persistent = true;
-      }) (lib.range 1 workspacesPerMonitor)
+      }) workspaces
     ) displays.monitors
   );
   profileJson = builtins.toJSON {
@@ -80,10 +89,7 @@ let
     outputs = map profileOutput displays.monitors;
     workspaces = {
       enabled = profileWorkspaceRules != [ ];
-      strategy = "sequential";
-      max_workspaces = workspacesPerMonitor * (builtins.length displays.monitors);
-      group_size = workspacesPerMonitor;
-      monitor_order = map profileKey displays.monitors;
+      strategy = "manual";
       rules = profileWorkspaceRules;
     };
     exec = "";
