@@ -942,6 +942,7 @@ displays = {
 | ---------------------------------------- | ------------- | ---------------------------------------------------------------- |
 | `displays.defaults.vrr`                  | `2`           | Default VRR mode: `0` off, `1` always, `2` fullscreen/automatic  |
 | `displays.defaults.hdr`                  | `1`           | Default HDR mode: `0` off, `1` Gamescope HDR, `2` desktop HDR    |
+| `displays.defaultWorkspaceCount`         | `4`           | Default workspace group size for the Hyprland planner and Waybar |
 | `displays.monitors`                      | `[]`          | Known outputs and their shared layout                            |
 | `displays.monitors.*.name`               | required      | Connector name, for example `DP-1`, `HDMI-A-1`, or `eDP-1`       |
 | `displays.monitors.*.make`               | `null`        | Optional manufacturer, used for stable output identification     |
@@ -958,22 +959,25 @@ displays = {
 | `displays.monitors.*.vrr`                | `0`           | Output VRR mode                                                  |
 | `displays.monitors.*.hdr`                | `0`           | Output HDR mode                                                  |
 | `displays.monitors.*.hdrSdrMaxLuminance` | `450`         | SDR white level in nits for HDR output conversion                |
+| `displays.monitors.*.wallpaper`          | `null`        | Optional per-monitor wallpaper for Hyprland                      |
+| `displays.monitors.*.workspaces`         | `[]`          | Optional workspace list shown by Waybar                          |
 
-`wallpaper` and `workspaces` are optional desktop-specific additions. The
-former is used by Hyprland's wallpaper and lock screen; the latter assigns
-workspaces in Hyprland and Waybar. `defaultWorkspaceCount` controls Waybar's
-fallback when no per-monitor workspace list is given.
+`wallpaper` and `workspaces` are optional Hyprland/Waybar additions. `wallpaper`
+sets the per-monitor wallpaper used by Hyprland's wallpaper and lock-screen
+configuration. `workspaces` controls which workspaces Waybar shows on a
+monitor. `defaultWorkspaceCount` supplies the default workspace group size for
+Waybar and for Hyprland's automatic workspace planner.
 
 KDE and SDDM apply the shared layout through KScreen. On Hyprland, the same
 declaration is used for the Nix-managed `default` profile. Its monitor order is
 preserved, so the default four-workspaces-per-monitor setup assigns 1-4 to the
 first monitor, 5-8 to the second, and so on.
 
-Additional monitor profiles can be created and changed at runtime. The
-`default` profile is managed by Nix and should not be edited manually. When
-automatic matching is used, profiles for the same set of connected monitors
-cannot be distinguished by layout alone; use a different hardware setup or
-apply a profile explicitly for such tests.
+On Hyprland, additional hyprmoncfg profiles can be created and changed at
+runtime. The `default` profile is managed by Nix and should not be edited
+manually. When automatic matching is used, profiles for the same set of
+connected monitors cannot be distinguished by layout alone; use a different
+hardware setup or apply a profile explicitly for such tests.
 
 ### Input Options
 
