@@ -82,7 +82,9 @@ in
         ];
       };
       Service = {
-        ExecStart = "${pkgs.hypr-dock}/bin/hypr-dock";
+        # Let Hyprland finish applying its config before the dock reads gaps
+        # and creates its layer-shell surface.
+        ExecStart = "${pkgs.bash}/bin/sh -c 'sleep 3; exec ${pkgs.hypr-dock}/bin/hypr-dock'";
         Restart = "on-failure";
         RestartSec = 2;
         # Only kill the dock process, not apps launched from it
@@ -107,13 +109,20 @@ in
         IconSize = 36
         Layer = bottom
         Exclusive = true
+        SmartView = false
         Position = bottom
+        AutoHideDelay = 400
         SystemGapUsed = true
         Margin = ${toString theme.gaps.outer}
         ContextPos = 5
 
         [General.preview]
         Mode = live
+        FPS = 30
+        BufferSize = 5
+        ShowDelay = 500
+        HideDelay = 350
+        MoveDelay = 100
       '';
 
       #---------------------------
@@ -124,12 +133,12 @@ in
       "hypr-dock/themes/catppuccin/theme.conf".text = ''
         [Theme]
         Blur = true
-         Spacing = ${toString theme.spacing.compact}
+        Spacing = ${toString theme.spacing.compact}
 
         [Theme.preview]
         Size = 120
         BorderRadius = ${toString theme.radius.small}
-         Padding = ${toString theme.spacing.control}
+        Padding = ${toString theme.spacing.control}
       '';
       "hypr-dock/themes/catppuccin/style.css".text = ''
         window {
