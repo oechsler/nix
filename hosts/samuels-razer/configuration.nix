@@ -49,6 +49,8 @@
   displays.monitors = [
     {
       name = "eDP-1";
+      make = "Sharp Corporation";
+      model = "LQ133Z1JW26";
       width = 3200;
       height = 1800;
       refreshRate = 60;
