@@ -13,6 +13,9 @@
 #   rust-analyzer          -> .rs (provided by the Nix Rust toolchain)
 #   typescript-language-server -> .ts, .js (typescript)
 #   jdt-language-server    -> .java (jdtls)
+#   marksman               -> .md (markdown)
+#   vscode-json-language-server -> .json, .jsonc (jsonls)
+#   taplo                  -> .toml (taplo)
 
 {
   pkgs,
@@ -31,6 +34,9 @@
       # Shell & Config
       bash-language-server
       yaml-language-server
+      marksman
+      vscode-json-languageserver
+      taplo
 
       # Python
       pyright

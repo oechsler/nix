@@ -46,7 +46,34 @@ in
       package = opencodeWithSecrets;
 
       settings = {
-        lsp = true;
+        lsp = {
+          # Add locally managed servers for formats not covered by the built-ins.
+          markdown = {
+            command = [
+              "${pkgs.marksman}/bin/marksman"
+              "server"
+            ];
+            extensions = [ ".md" ];
+          };
+          json = {
+            command = [
+              "${pkgs.vscode-json-languageserver}/bin/vscode-json-language-server"
+              "--stdio"
+            ];
+            extensions = [
+              ".json"
+              ".jsonc"
+            ];
+          };
+          toml = {
+            command = [
+              "${pkgs.taplo}/bin/taplo"
+              "lsp"
+              "stdio"
+            ];
+            extensions = [ ".toml" ];
+          };
+        };
         model = "openai/gpt-5.6-luna";
 
         compaction = {
