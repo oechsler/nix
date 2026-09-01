@@ -319,11 +319,10 @@ in
           # Home Manager sets this automatically when extension settings exist.
           "extensions.autoDisableScopes" = 0;
 
-          # Start new browser sessions on the configured new-tab URL. Session
-          # restore stays enabled below and takes precedence when a previous
-          # session exists.
+          # Restore the previous session, including open tabs and windows.
+          # The configured new-tab URL is used when no previous session exists.
           "browser.startup.homepage" = features.desktop.browser.newTabPage;
-          "browser.startup.page" = 1; # 1 = Open homepage
+          "browser.startup.page" = 3; # 3 = Restore previous session
           "browser.sessionstore.resume_from_crash" = true;
 
           # Keep cookies and active web sessions across restarts. Password
