@@ -176,7 +176,9 @@ let
   monitorsWithEdid = lib.filter (m: m.edidHash != null) monitors;
   shouldManageSddmLayout =
     monitors != [ ] && (monitorsWithEdid == [ ] || monitorsWithEdid == monitors);
-  shouldApplySddmLayout = shouldManageSddmLayout && isKde;
+  # The SDDM greeter always runs on KWin, even when the selected user session
+  # is Hyprland. Apply the connector-specific layout in both cases.
+  shouldApplySddmLayout = shouldManageSddmLayout;
   configuredOutputEdids = lib.escapeShellArgs (map (m: "${m.name}:${m.edidHash}") monitorsWithEdid);
   configuredOutputEdidChecks = lib.optionalString (monitorsWithEdid != [ ]) ''
     for identity in ${configuredOutputEdids}; do
