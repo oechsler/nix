@@ -19,7 +19,7 @@
 #       vrr = 2;                      # VRR/FreeSync: 0=off, 1=always, 2=fullscreen/automatic
 #       hdr = 1;                      # 0=off, 1=Steam/Gamescope HDR, 2=full desktop HDR
 #       hdrSdrMaxLuminance = 450;     # SDR white level in nits for HDR output conversion
-#       workspaces = [ 1 2 3 4 5 ];  # Waybar: explicitly show these workspaces on this monitor
+#       workspaces = [ 1 2 3 4 5 ];  # Hyprland: assign these workspaces to this monitor
 #     }
 #   ];
 
@@ -34,7 +34,7 @@
     defaultWorkspaceCount = lib.mkOption {
       type = lib.types.int;
       default = 4;
-      description = "Default workspaces per monitor for the Hyprland planner and Waybar";
+      description = "Default workspaces per monitor for Hyprland and Waybar";
     };
 
     defaults = {
@@ -129,7 +129,7 @@
             workspaces = lib.mkOption {
               type = lib.types.listOf lib.types.int;
               default = [ ];
-              description = "Workspace IDs to show on this monitor in Waybar (e.g. [1 2 3 4 5])";
+              description = "Workspace IDs assigned to this monitor in Hyprland (Waybar reflects the assignment)";
             };
             vrr = lib.mkOption {
               type = lib.types.enum [
