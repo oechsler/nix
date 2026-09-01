@@ -4,7 +4,7 @@
 #
 # Hardware:
 # - Ryzen 9 9950X3D2 (Zen 5) + RX 9070 XT (RDNA4)
-# - Dual 1440p 165Hz monitors (DP-1, DP-2)
+# - Dual 1440p 165Hz monitors (DP-2, DP-3)
 # - Samsung 9100 Pro 2TB NVMe (single disk, no separate games partition)
 #
 # Features:

@@ -1,7 +1,7 @@
-# Display Configuration (KDE)
+# Monitor Configuration (KDE / KScreen)
 #
 # This module applies display configuration for KDE Plasma.
-# Hyprland uses displays.monitors directly in hyprland.nix.
+# Hyprland exports the same declaration through hyprmoncfg.nix.
 #
 # Features:
 # - Applies display configuration at KDE startup

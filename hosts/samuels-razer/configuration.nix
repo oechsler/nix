@@ -53,12 +53,6 @@
       height = 1800;
       refreshRate = 60;
       scale = 1.6;
-      workspaces = [
-        1
-        2
-        3
-        4
-      ];
     }
   ];
   displays.defaults = {

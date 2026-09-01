@@ -17,7 +17,7 @@
 # Configuration options:
 #   idle.hypridle.dim.percent = 10;         # Target brightness percentage when dimmed (default: 10%)
 #   idle.hypridle.dim.stepPercent = 5;      # Brightness step size for smooth dim (default: 5%)
-#   idle.hypridle.dim.stepDelay = "0.1";    # Delay between steps (default: 0.05s)
+#   idle.hypridle.dim.stepDelay = "0.05";   # Delay between steps (default: 0.05s)
 #
 # Battery detection:
 # - Desktop without battery → always treated as AC

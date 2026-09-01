@@ -21,9 +21,8 @@ let
   awwwPkg = pkgs.awww;
   displayHelpers = import ../../../lib/displays.nix { inherit lib; };
 
-  # Generate wallpaper set commands.
-  # Set the default wallpaper on all outputs first so unknown monitors are covered,
-  # then override explicitly configured monitors with their per-monitor wallpaper.
+  # Generate wallpaper commands. Set the theme wallpaper first, then override
+  # it for outputs with an explicit per-monitor wallpaper.
   wallpaperCommands = lib.concatStringsSep "\n" (
     [
       "${awwwPkg}/bin/awww img ${theme.wallpaperPath} --transition-type fade --transition-duration 0.6"

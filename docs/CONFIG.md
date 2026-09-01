@@ -898,12 +898,14 @@ locale = {
 };
 ```
 
-### Display Options
+### Display and Monitor Options
 
-Display options work on both Hyprland and KDE. When `displays.monitors` is
-empty, the system uses automatic layout detection and `theme.scale`.
+`displays` is the shared display abstraction for Hyprland, KDE, and SDDM. It
+describes known outputs and their layout independently of the selected desktop.
+When `displays.monitors` is empty, desktop sessions use automatic layout
+detection and `theme.scale`.
 
-To find your connector names, resolution and refresh rate:
+To inspect the current layout:
 
 ```bash
 # Hyprland
@@ -927,16 +929,8 @@ displays = {
       refreshRate = 165;
       x = 0;
       y = 0;
-      vrr = 2;
-      hdr = 1;
-    }
-    {
-      name = "DP-2";
-      width = 2560;
-      height = 1440;
-      refreshRate = 165;
-      x = 2560;
-      y = 0;
+      scale = 1.0;
+      rotation = "normal";
       vrr = 2;
       hdr = 1;
     }
@@ -944,40 +938,42 @@ displays = {
 };
 ```
 
-| Option                                   | Default       | Description                                                                                                                                      |
-| ---------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `displays.defaults.vrr`                  | `2`           | Default VRR mode for hotplugged/unlisted monitors where output-independent defaults are supported: `0` off, `1` always, `2` fullscreen/automatic |
-| `displays.defaults.hdr`                  | `1`           | Default HDR mode for hotplugged/unlisted monitors where supported: `0` off, `1` Steam/Gamescope HDR, `2` full desktop HDR                        |
-| `displays.defaultWorkspaceCount`         | `4`           | Number of workspaces created by default.                                                                                                         |
-| `displays.monitors`                      | `[]`          | List of monitor configurations                                                                                                                   |
-| `displays.monitors.*.name`               | —             | Connector name (`"DP-1"`, `"HDMI-A-1"`, `"eDP-1"`)                                                                                               |
-| `displays.monitors.*.edidHash`           | `null`        | Optional stable EDID identifier for display matching.                                                                                            |
-| `displays.monitors.*.make`               | `null`        | Optional monitor manufacturer for display matching.                                                                                              |
-| `displays.monitors.*.model`              | `null`        | Optional monitor model for display matching.                                                                                                     |
-| `displays.monitors.*.serial`             | `null`        | Optional monitor serial number for display matching.                                                                                             |
-| `displays.monitors.*.width`              | `1920`        | Horizontal resolution                                                                                                                            |
-| `displays.monitors.*.height`             | `1080`        | Vertical resolution                                                                                                                              |
-| `displays.monitors.*.refreshRate`        | `60`          | Refresh rate in Hz                                                                                                                               |
-| `displays.monitors.*.x`                  | `0`           | Horizontal position offset                                                                                                                       |
-| `displays.monitors.*.y`                  | `0`           | Vertical position offset                                                                                                                         |
-| `displays.monitors.*.scale`              | `theme.scale` | Scale factor                                                                                                                                     |
-| `displays.monitors.*.rotation`           | `"normal"`    | Rotation (`"normal"`, `"90"`, `"180"`, or `"270"`)                                                                                               |
-| `displays.monitors.*.wallpaper`          | `null`        | Per-monitor wallpaper; `null` uses the processed default                                                                                         |
-| `displays.monitors.*.workspaces`         | `[]`          | Workspace IDs to bind to this monitor (Hyprland only)                                                                                            |
-| `displays.monitors.*.vrr`                | `0`           | VRR mode: `0` off, `1` always, `2` fullscreen/automatic                                                                                          |
-| `displays.monitors.*.hdr`                | `0`           | HDR mode: `0` off, `1` Steam/Gamescope, `2` full desktop HDR                                                                                     |
-| `displays.monitors.*.hdrSdrMaxLuminance` | `450`         | SDR white level in nits for HDR conversion                                                                                                       |
+| Option                                   | Default       | Description                                                      |
+| ---------------------------------------- | ------------- | ---------------------------------------------------------------- |
+| `displays.defaults.vrr`                  | `2`           | Default VRR mode: `0` off, `1` always, `2` fullscreen/automatic  |
+| `displays.defaults.hdr`                  | `1`           | Default HDR mode: `0` off, `1` Gamescope HDR, `2` desktop HDR    |
+| `displays.monitors`                      | `[]`          | Known outputs and their shared layout                            |
+| `displays.monitors.*.name`               | required      | Connector name, for example `DP-1`, `HDMI-A-1`, or `eDP-1`       |
+| `displays.monitors.*.make`               | `null`        | Optional manufacturer, used for stable output identification     |
+| `displays.monitors.*.model`              | `null`        | Optional model, used for stable output identification            |
+| `displays.monitors.*.serial`             | `null`        | Optional serial number, used for stable output identification    |
+| `displays.monitors.*.edidHash`           | `null`        | Optional EDID identifier, used by SDDM for exact output matching |
+| `displays.monitors.*.width`              | `1920`        | Horizontal resolution                                            |
+| `displays.monitors.*.height`             | `1080`        | Vertical resolution                                              |
+| `displays.monitors.*.refreshRate`        | `60`          | Refresh rate in Hz                                               |
+| `displays.monitors.*.x`                  | `0`           | Horizontal position                                              |
+| `displays.monitors.*.y`                  | `0`           | Vertical position                                                |
+| `displays.monitors.*.scale`              | `theme.scale` | Output scale factor                                              |
+| `displays.monitors.*.rotation`           | `"normal"`    | Rotation: `"normal"`, `"90"`, `"180"`, or `"270"`                |
+| `displays.monitors.*.vrr`                | `0`           | Output VRR mode                                                  |
+| `displays.monitors.*.hdr`                | `0`           | Output HDR mode                                                  |
+| `displays.monitors.*.hdrSdrMaxLuminance` | `450`         | SDR white level in nits for HDR output conversion                |
 
-Default behavior and limitations:
+`wallpaper` and `workspaces` are optional desktop-specific additions. The
+former is used by Hyprland's wallpaper and lock screen; the latter assigns
+workspaces in Hyprland and Waybar. `defaultWorkspaceCount` controls Waybar's
+fallback when no per-monitor workspace list is given.
 
-- Steam Machine/Gamescope uses `displays.defaults.vrr` and `displays.defaults.hdr != 0` as session-wide fallbacks, so a Steam session can enable adaptive sync and HDR even when the connected output is not listed in `displays.monitors`. It does not override Gamescope color management, virtual white, SDR brightness, or gamut behavior.
-- Hyprland uses `displays.defaults.vrr` for its global VRR mode, so hotplugged/unlisted monitors get VRR behavior by default.
-- Hyprland applies full desktop HDR only for monitors with `hdr = 2` or unknown outputs when `displays.defaults.hdr = 2`. `hdr = 1` keeps desktop HDR off to avoid flicker while still allowing Steam/Gamescope HDR.
-- KDE applies HDR/VRR through `kscreen-doctor`, which needs concrete output names. HDR is enabled only for monitors with `hdr = 2`, with the configured SDR brightness but without overriding color profile or wide-gamut behavior.
-- SDDM applies layout and VRR only; HDR is intentionally left off in the greeter so Game Mode and desktop sessions initialize HDR themselves.
-- Set `displays.defaults.hdr = 0` on hosts that commonly connect SDR-only projectors/TVs and should not advertise HDR by default.
+KDE and SDDM apply the shared layout through KScreen. On Hyprland, the same
+declaration is used for the Nix-managed `default` profile. Its monitor order is
+preserved, so the default four-workspaces-per-monitor setup assigns 1-4 to the
+first monitor, 5-8 to the second, and so on.
 
-On Hyprland, a catch-all fallback rule (`preferred, auto, theme.scale`) is always added for hotplugged/unlisted monitors. On KDE, `kscreen-doctor` is run at login via an XDG autostart entry to apply the monitor layout for known outputs.
+Additional monitor profiles can be created and changed at runtime. The
+`default` profile is managed by Nix and should not be edited manually. When
+automatic matching is used, profiles for the same set of connected monitors
+cannot be distinguished by layout alone; use a different hardware setup or
+apply a profile explicitly for such tests.
 
 ### Input Options
 
