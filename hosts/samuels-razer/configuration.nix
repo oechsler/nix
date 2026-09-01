@@ -8,13 +8,13 @@
 # - 13.3" QHD+ display (3200x1800 @ 60Hz, 1.6x scaling, eDP-1)
 #
 # Features:
-# - KDE Plasma desktop (better for laptop/battery management)
+# - Hyprland desktop with laptop/battery-aware defaults
 # - Gaming disabled (not primary gaming machine)
 # - Smaller terminal font (10pt for high DPI screen)
 #
 # Differences from samuels-terra:
 # - Single internal display vs dual external
-# - KDE instead of Hyprland
+# - Hyprland with a single internal display
 # - No gaming support
 # - Default idle timeouts (shorter, battery-aware)
 #
@@ -101,7 +101,6 @@
 
     # --- Desktop & UI ---
     desktop = {
-      #wm = "kde";
       login = "greeter";
       fileManager = "terminal";
     };
