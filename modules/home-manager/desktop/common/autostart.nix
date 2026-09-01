@@ -141,11 +141,16 @@ in
       systemd.user.services.trayscale = {
         Unit = {
           Description = "Trayscale - Tailscale tray applet";
-          After = [ "graphical-session.target" ];
+          After = [
+            "graphical-session.target"
+            "waybar.service"
+          ];
           PartOf = [ "graphical-session.target" ];
         };
         Service = {
-          ExecStart = "${pkgs.trayscale}/bin/trayscale --hide-window";
+          # Waybar provides the StatusNotifierWatcher; wait for it before
+          # registering the tray item.
+          ExecStart = "${pkgs.bash}/bin/sh -c 'sleep 3; exec ${pkgs.trayscale}/bin/trayscale --hide-window'";
           Restart = "on-failure";
           RestartSec = 3;
         };
