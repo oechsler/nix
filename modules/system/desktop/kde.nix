@@ -1,17 +1,10 @@
-# KDE Plasma Desktop Environment (System-level)
+# KDE Plasma System Configuration
 #
-# This module enables KDE Plasma 6 desktop at the system level.
-# User-level KDE configuration is in home-manager/desktop/kde/
+# System packages and services for KDE Plasma. User-level configuration lives
+# in home-manager/desktop/kde/.
 #
-# Installed:
-# - KDE Plasma 6 desktop environment
-# - XDG Desktop Portal (KDE for file dialogs, screenshots)
-# - KDE Partition Manager
-# - Plasma Browser Integration
-#
-# Services:
-# - GVFS for virtual filesystems (trash, network shares)
-# - udisks2 for automatic disk mounting
+# Provides Plasma 6, the KDE portal, KDE-specific utilities, and the shared
+# filesystem and removable-media services needed by the session.
 #
 # Active when:
 #   features.desktop.enable = true

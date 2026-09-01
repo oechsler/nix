@@ -1,28 +1,11 @@
-# SDDM Display Manager Configuration
+# SDDM System Configuration
 #
-# This module configures SDDM (Simple Desktop Display Manager) as the login screen.
+# Configures SDDM as the login screen for both KDE Plasma and Hyprland.
 #
-# Features:
-# - Wayland session support
-# - Catppuccin theming (matches desktop theme)
-# - KWin Wayland greeter with monitor fallback
-# - Cursor theme and size (KWin/Qt applies monitor scaling)
-# - Login mode (features.desktop.login: "greeter" shows login, "autologin" skips it)
-#
-# Why SDDM:
-# - Native Wayland support
-# - Works with both Hyprland and KDE Plasma
-# - Themeable with Catppuccin
-#
-# Multi-monitor setup:
-# - Uses the configured layout only when all configured outputs have matching EDIDs
-# - Falls back to SDDM/KWin auto-detection for unknown or partial monitor setups
-#
-# HiDPI handling:
-# - SDDM always uses the KWin Wayland greeter, regardless of the selected session.
-# - KWin/Qt applies the monitor scale; SDDM values must not be scaled again.
-#
-# Active when: features.desktop.enable = true
+# It provides the KWin Wayland greeter, shared theming, login mode, monitor
+# layout, and the on-screen keyboard. KWin applies output scaling directly.
+# A complete known monitor setup receives the declared layout; incomplete or
+# unknown setups use KWin's automatic detection.
 
 {
   config,

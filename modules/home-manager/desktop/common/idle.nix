@@ -4,7 +4,7 @@
 #
 # WM-specific implementation:
 # - Hyprland: See hyprland/hypridle.nix (battery-aware idle management)
-# - KDE: See kde/idle.nix (PowerDevil power profiles)
+# - KDE: See kde/powerdevil.nix (PowerDevil power profiles)
 #
 # Timeout options:
 #   idle.timeouts.dimBattery = 120;     # Dim screen on battery (default: 120s = 2min)
