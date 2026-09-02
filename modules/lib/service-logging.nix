@@ -2,7 +2,7 @@
 #
 # Shared shell logging for services owned by this configuration.
 
-{ lib, ... }:
+_:
 
 {
   # Shared shell logging for services owned by this configuration.
