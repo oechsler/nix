@@ -126,17 +126,8 @@
       login = "greeter";
       fileManager = "terminal";
     };
+    # --- Gaming ---
     gaming.steamMachine.enable = true;
-
-    # --- Applications ---
-    apps.mumble = {
-      username = "Sam";
-      servers = [
-        {
-          host = "mumble.at.oechsler.it";
-        }
-      ];
-    };
 
     # --- Operations Tools ---
     ops = {
@@ -178,6 +169,16 @@
           }
         ];
       };
+    };
+
+    # --- Applications ---
+    apps.mumble = {
+      username = "Sam";
+      servers = [
+        {
+          host = "mumble.at.oechsler.it";
+        }
+      ];
     };
   };
 

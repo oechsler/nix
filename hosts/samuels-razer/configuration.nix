@@ -104,20 +104,11 @@
       login = "greeter";
       fileManager = "terminal";
     };
-    gaming.enable = false;
-
     # --- Virtualisation ---
     virtualisation.vm.enable = false;
 
-    # --- Applications ---
-    apps.mumble = {
-      username = "Sam";
-      servers = [
-        {
-          host = "mumble.at.oechsler.it";
-        }
-      ];
-    };
+    # --- Gaming ---
+    gaming.enable = false;
 
     # --- Operations Tools ---
     ops = {
@@ -159,6 +150,16 @@
           }
         ];
       };
+    };
+
+    # --- Applications ---
+    apps.mumble = {
+      username = "Sam";
+      servers = [
+        {
+          host = "mumble.at.oechsler.it";
+        }
+      ];
     };
   };
 

@@ -96,6 +96,30 @@ Do not treat the current paths in the encrypted file as a complete contract.
 When adding or removing a feature, update the encrypted document and the
 module that consumes the path together.
 
+### Module Path Contract
+
+The top-level namespaces and credential keys used by feature modules are stable
+interfaces. The identifiers between them are often host-specific and are
+derived from the corresponding Nix configuration.
+
+| Path pattern                              | Meaning                       | Variable part |
+| ----------------------------------------- | ----------------------------- | ------------- |
+| `user/password`                           | Local user credential         | none          |
+| `wifi/<name>/psk`                         | WiFi network credential       | network name  |
+| `smb/<name>/password`                     | SMB share credential          | share name    |
+| `backgrounds/password`                    | Background archive credential | none          |
+| `opencode/provider/<name>/api-key`        | Model provider API key        | provider name |
+| `opencode/mcp/<name>/token`               | MCP bearer token              | MCP name      |
+| `opencode/mcp/<name>/oauth-client-secret` | MCP OAuth client secret       | MCP name      |
+| `pvetui/<name>/token-secret`              | Proxmox API token             | profile name  |
+| `mumble/certificate`                      | Optional Mumble identity      | none          |
+
+The fixed parts of these paths must match the consuming module. Variable names
+must match the identifier used by the host configuration. A host may use only a
+subset of the available namespaces, and modules may introduce additional
+stable paths as new features are added. Optional credentials are only consumed
+when the related feature is configured or enabled.
+
 ### Why Secrets Are Encrypted
 
 - **Credentials**: WiFi keys, SMB passwords, API tokens, and certificates must never appear in plaintext in the Git history.

@@ -142,6 +142,8 @@
       login = "greeter";
       fileManager = "terminal";
     };
+
+    # --- Gaming ---
     gaming.steamMachine.enable = true;
 
     # --- Development ---
@@ -150,16 +152,6 @@
       enable = false;
       url = "https://homeassistant.at.oechsler.it/api/mcp";
       tokenSecret = "opencode/mcp/homeassistant/token";
-    };
-
-    # --- Applications ---
-    apps.mumble = {
-      username = "Sam";
-      servers = [
-        {
-          host = "mumble.at.oechsler.it";
-        }
-      ];
     };
 
     # --- Operations Tools ---
@@ -202,6 +194,16 @@
           }
         ];
       };
+    };
+
+    # --- Applications ---
+    apps.mumble = {
+      username = "Sam";
+      servers = [
+        {
+          host = "mumble.at.oechsler.it";
+        }
+      ];
     };
   };
 
