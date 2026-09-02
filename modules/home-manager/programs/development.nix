@@ -105,7 +105,7 @@ in
     })
 
     # GUI Development Tools (only for desktop)
-    (lib.mkIf (features.dev.enable && features.desktop.enable) {
+    (lib.mkIf (features.dev.enable && features.desktop.enable && features.dev.jetbrains.enable) {
       home.packages =
         with pkgs;
         (
