@@ -54,28 +54,47 @@ git add sops.encrypted.yaml
 git commit -m "Update secrets"
 ```
 
-## Managed Secrets
+## Secret Structure
 
-| Secret                                  | Purpose                              | Used By                                      |
-| --------------------------------------- | ------------------------------------ | -------------------------------------------- |
-| `mumble/certificate`                    | Optional Mumble identity certificate | `modules/home-manager/programs/mumble.nix`   |
-| `opencode/mcp/homeassistant/token`      | Home Assistant MCP token             | `modules/home-manager/programs/opencode.nix` |
-| `opencode/provider/opencode-go/api-key` | OpenCode Go API key                  | `modules/home-manager/programs/opencode.nix` |
-| `smb/<name>/password`                   | SMB/CIFS share password              | `modules/system/smb.nix`                     |
-| `user/password`                         | Local login password                 | `modules/system/users.nix`                   |
-| `wifi/<name>/psk`                       | WiFi pre-shared key                  | `modules/system/networking/wifi.nix`         |
+The SOPS document is a shared encrypted data source, not a fixed inventory of
+secrets. It contains common foundations as well as credentials required by
+individual hosts. Modules define which paths they consume, while host
+configuration decides which features and therefore which paths are relevant.
 
-Secret names containing `<name>` use the identifier of the corresponding
-declarative network or share configuration.
+The hierarchy is intentionally flexible. Group secrets by feature, service,
+provider, host, or another stable identifier that makes their use clear:
 
-The Mumble certificate is optional. When `mumble/certificate` exists in SOPS,
-the module imports it into the local Mumble profile. Without the secret, Mumble
-continues to work without a client certificate.
+```yaml
+service:
+  instance:
+    credential: value
+```
 
-### Mumble
+Names and nesting should match the corresponding module configuration whenever
+possible. Dynamic entries use the identifier from the host configuration, for
+example a network, share, provider, or MCP name. Add a short comment before
+each section and individual entry describing its purpose and consumer.
 
-- `mumble/certificate` — Optional PKCS#12 identity certificate, imported into Mumble's `certificate` setting when present
-- The certificate is stored as an encrypted Base64 value in `sops.encrypted.yaml`; the private key and the original `.p12` file must never be committed.
+OpenCode follows this pattern for example:
+
+```yaml
+opencode:
+  provider:
+    provider-name:
+      api-key: "encrypted-value"
+  mcp:
+    mcp-name:
+      token: "encrypted-value"
+```
+
+The Nix module references these values by path. A credential can be optional
+or required depending on the feature using it. For example, a client
+certificate may be imported when present, while a provider API key is checked
+when that provider is enabled.
+
+Do not treat the current paths in the encrypted file as a complete contract.
+When adding or removing a feature, update the encrypted document and the
+module that consumes the path together.
 
 ### Why Secrets Are Encrypted
 
