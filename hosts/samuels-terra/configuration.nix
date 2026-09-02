@@ -146,7 +146,8 @@
 
     # --- Development ---
     dev.opencode.mcp.homeassistant = {
-      enable = true;
+      # Keep configured, but let OpenCode enable it at runtime when needed.
+      enable = false;
       url = "https://homeassistant.at.oechsler.it/api/mcp";
       tokenSecret = "opencode/mcp/homeassistant/token";
     };

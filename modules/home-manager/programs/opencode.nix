@@ -30,7 +30,11 @@ let
   providersWithSecrets = lib.filterAttrs (
     _: provider: provider.apiKeySecret != null
   ) enabledProviders;
-  mcpWithSecrets = lib.filterAttrs (_: server: server.enable && server.tokenSecret != null) cfg.mcp;
+  mcpWithSecrets = lib.filterAttrs (_: server: server.tokenSecret != null) cfg.mcp;
+  mcpWithOAuthSecrets = lib.filterAttrs (
+    _: server:
+    server.type == "remote" && server.oauth != null && server.oauth.clientSecretSecret != null
+  ) cfg.mcp;
   envName =
     prefix: name:
     "OPENCODE_${prefix}_${
@@ -39,8 +43,10 @@ let
   providerEnvName = name: envName "PROVIDER" name;
   mcpEnvName =
     name: "OPENCODE_MCP_${lib.toUpper (lib.replaceStrings [ "-" "." " " ] [ "_" "_" "_" ] name)}";
+  mcpOAuthEnvName = name: "${mcpEnvName name}_OAUTH_CLIENT_SECRET";
   providerSecretPath = provider: config.sops.secrets.${provider.apiKeySecret}.path;
   mcpSecretPath = server: config.sops.secrets.${server.tokenSecret}.path;
+  mcpOAuthSecretPath = server: config.sops.secrets.${server.oauth.clientSecretSecret}.path;
   providerSecretChecks = lib.concatStringsSep "\n" (
     lib.mapAttrsToList (name: provider: ''
       if ! test -r ${providerSecretPath provider}; then
@@ -57,6 +63,14 @@ let
       fi
     '') mcpWithSecrets
   );
+  mcpOAuthSecretChecks = lib.concatStringsSep "\n" (
+    lib.mapAttrsToList (name: server: ''
+      if ! test -r ${mcpOAuthSecretPath server}; then
+        echo "OpenCode MCP OAuth client secret is missing for ${name}: run sops-install-secrets.service and check the SOPS age key" >&2
+        exit 1
+      fi
+    '') mcpWithOAuthSecrets
+  );
   providerEnvAssignments = lib.concatStringsSep "" (
     lib.mapAttrsToList (name: provider: ''
       ${providerEnvName name}="$(< ${providerSecretPath provider})" \
@@ -66,6 +80,11 @@ let
     lib.mapAttrsToList (name: server: ''
       ${mcpEnvName name}="$(< ${mcpSecretPath server})" \
     '') mcpWithSecrets
+  );
+  mcpOAuthEnvAssignments = lib.concatStringsSep "" (
+    lib.mapAttrsToList (name: server: ''
+      ${mcpOAuthEnvName name}="$(< ${mcpOAuthSecretPath server})" \
+    '') mcpWithOAuthSecrets
   );
   providerSettings = lib.mapAttrs (
     name: provider:
@@ -105,21 +124,41 @@ let
           "${server.tokenHeader}" = "${server.tokenPrefix}{env:${mcpEnvName name}}";
         };
     }
+    // lib.optionalAttrs (server.type == "remote" && server.oauth != null) {
+      oauth =
+        lib.optionalAttrs (server.oauth.clientId != null) {
+          clientId = server.oauth.clientId;
+        }
+        // lib.optionalAttrs (server.oauth.clientSecretSecret != null) {
+          clientSecret = "{env:${mcpOAuthEnvName name}}";
+        }
+        // lib.optionalAttrs (server.oauth.scope != null) { scope = server.oauth.scope; }
+        // lib.optionalAttrs (server.oauth.callbackPort != null) {
+          callbackPort = server.oauth.callbackPort;
+        }
+        // lib.optionalAttrs (server.oauth.redirectUri != null) {
+          redirectUri = server.oauth.redirectUri;
+        };
+    }
   ) cfg.mcp;
   mcpSopsSecrets = lib.mapAttrs' (
     _name: server: lib.nameValuePair server.tokenSecret { }
   ) mcpWithSecrets;
+  mcpOAuthSopsSecrets = lib.mapAttrs' (
+    _name: server: lib.nameValuePair server.oauth.clientSecretSecret { }
+  ) mcpWithOAuthSecrets;
   opencodeWithSecrets = pkgs.writeShellScriptBin "opencode" ''
     ${providerSecretChecks}
     ${mcpSecretChecks}
+    ${mcpOAuthSecretChecks}
     exec env \
-      ${providerEnvAssignments}${mcpEnvAssignments}
+      ${providerEnvAssignments}${mcpEnvAssignments}${mcpOAuthEnvAssignments}
       ${pkgs.opencode}/bin/opencode "$@"
   '';
 in
 {
   config = lib.mkIf (features.dev.enable && features.dev.opencode.enable) {
-    sops.secrets = providerSopsSecrets // mcpSopsSecrets;
+    sops.secrets = providerSopsSecrets // mcpSopsSecrets // mcpOAuthSopsSecrets;
 
     programs.opencode = {
       enable = true;
