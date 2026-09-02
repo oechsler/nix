@@ -56,14 +56,14 @@ git commit -m "Update secrets"
 
 ## Managed Secrets
 
-| Secret                         | Purpose                              | Used By                                      |
-| ------------------------------ | ------------------------------------ | -------------------------------------------- |
-| `mumble/certificate`           | Optional Mumble identity certificate | `modules/home-manager/programs/mumble.nix`   |
-| `opencode/mcp/homeassistant/token` | Home Assistant MCP token        | `modules/home-manager/programs/opencode.nix` |
-| `opencode/provider/opencode-go/api-key` | OpenCode Go API key         | `modules/home-manager/programs/opencode.nix` |
-| `smb/<name>/password`          | SMB/CIFS share password              | `modules/system/smb.nix`                     |
-| `user/password`                | Local login password                 | `modules/system/users.nix`                   |
-| `wifi/<name>/psk`              | WiFi pre-shared key                  | `modules/system/networking/wifi.nix`         |
+| Secret                                  | Purpose                              | Used By                                      |
+| --------------------------------------- | ------------------------------------ | -------------------------------------------- |
+| `mumble/certificate`                    | Optional Mumble identity certificate | `modules/home-manager/programs/mumble.nix`   |
+| `opencode/mcp/homeassistant/token`      | Home Assistant MCP token             | `modules/home-manager/programs/opencode.nix` |
+| `opencode/provider/opencode-go/api-key` | OpenCode Go API key                  | `modules/home-manager/programs/opencode.nix` |
+| `smb/<name>/password`                   | SMB/CIFS share password              | `modules/system/smb.nix`                     |
+| `user/password`                         | Local login password                 | `modules/system/users.nix`                   |
+| `wifi/<name>/psk`                       | WiFi pre-shared key                  | `modules/system/networking/wifi.nix`         |
 
 Secret names containing `<name>` use the identifier of the corresponding
 declarative network or share configuration.

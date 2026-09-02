@@ -447,15 +447,17 @@ Development tools inherit from `features.dev.enable` by default. OpenCode is
 ready to use with the shared model defaults; hosts only need to add services
 that are specific to them.
 
-| Option                                | Default                    | Description                                      |
-| ------------------------------------- | -------------------------- | ------------------------------------------------ |
-| `features.dev.enable`                 | `true`                     | Development languages, tools, and IDEs.          |
-| `features.dev.opencode.enable`        | `dev.enable`               | OpenCode AI coding agent.                        |
-| `features.dev.opencode.defaultModel`  | `openai/gpt-5.6-luna`      | Model used when no other model is selected.      |
-| `features.dev.opencode.provider`       | shared defaults            | Available model providers and models.            |
-| `features.dev.opencode.mcp`            | none enabled               | Additional OpenCode integrations.                |
-| `features.dev.jetbrains.entries`       | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.                     |
-| `features.dev.dbeaver.enable`          | `dev.enable`               | DBeaver database GUI.                            |
+| Option                               | Default                    | Description                                 |
+| ------------------------------------ | -------------------------- | ------------------------------------------- |
+| `features.dev.enable`                | `true`                     | Development languages, tools, and IDEs.     |
+| `features.dev.opencode.enable`       | `dev.enable`               | OpenCode AI coding agent.                   |
+| `features.dev.opencode.defaultModel` | `openai/gpt-5.6-luna`      | Model used when no other model is selected. |
+| `features.dev.opencode.provider`     | shared defaults            | Available model providers and models.       |
+| `features.dev.opencode.mcp`          | none enabled               | Additional OpenCode integrations.           |
+| `features.dev.jetbrains.entries`     | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.                  |
+| `features.dev.dbeaver.enable`        | `dev.enable`               | DBeaver database GUI.                       |
+
+#### JetBrains IDEs
 
 Available values are `clion`, `datagrip`, `dataspell`, `gateway`, `goland`,
 `idea-oss`, `idea-ultimate`, `mps`, `phpstorm`, `pycharm`, `rider`, `rubymine`,
@@ -463,35 +465,72 @@ Available values are `clion`, `datagrip`, `dataspell`, `gateway`, `goland`,
 
 ```nix
 features = {
-  dev = {
-    enable = true;
-    opencode = {
-      mcp.homeassistant = {
-        enable = true;
-        url = "https://ha.example/api/mcp";
-        tokenSecret = "opencode/mcp/homeassistant/token";
-      };
-    };
-    jetbrains = {
-      entries = [ "goland" "rustrover" ];
-    };
-    dbeaver = {
-      enable = true;
-    };
-  };
+  dev.jetbrains.entries = [ "goland" "rustrover" ];
+};
+```
+
+#### OpenCode
+
+OpenCode uses the shared model and provider defaults. A host normally only
+needs to add its own MCP servers:
+
+```nix
+features.dev.opencode.mcp.homeassistant = {
+  # The MCP remains configured and can be enabled from OpenCode.
+  enable = false;
+  url = "https://ha.example/api/mcp";
+  tokenSecret = "opencode/mcp/homeassistant/token";
 };
 ```
 
 The default providers are OpenAI, without a credential, with the models
 `gpt-5.6-luna`, `gpt-5.6-terra`, and `gpt-5.6-sol`, plus OpenCode Go with its
 DeepSeek and Qwen models. These defaults remain active unless a host overrides
-the relevant provider or model setting. MCP entries are disabled by default
-and must be enabled explicitly with `enable = true`.
+the relevant provider or model setting. Assigning a provider or model with the
+same name changes that entry while unrelated defaults remain available. Set
+`enable = false` on a default provider when it should not be offered.
 
-Provider API keys and MCP tokens are stored in SOPS. Reference an existing
-secret with `apiKeySecret` or `tokenSecret`; never put the credential directly
-in the host configuration. The SOPS layout and editing workflow are described
-in [sops/README.md](../sops/README.md).
+For example, a host can keep the defaults, change the OpenCode Go endpoint, add
+another provider, and select its model as the default:
+
+```nix
+features.dev.opencode = {
+  provider = {
+    "opencode-go".baseURL = "https://gateway.example/v1";
+    "company-ai" = {
+      name = "Company AI";
+      npm = "@ai-sdk/openai-compatible";
+      baseURL = "https://ai.example/v1";
+      apiKeySecret = "opencode/provider/company-ai/api-key";
+      models."coding-large".name = "Coding Large";
+    };
+  };
+  defaultModel = "company-ai/coding-large";
+};
+```
+
+MCP entries are disabled by default, but a configured entry remains visible to
+OpenCode and can be enabled at runtime. Set `enable = true` only when the MCP
+should start enabled. Provider API keys and MCP tokens are stored in SOPS.
+Reference an existing secret with `apiKeySecret` or `tokenSecret`; never put the
+credential directly in the host configuration. The SOPS layout and editing
+workflow are described in [sops/README.md](../sops/README.md).
+
+Remote MCPs can use OAuth 2.0, including OIDC-compatible authorization servers.
+Configure `oauth` with an optional `clientId`, `scope`, `callbackPort`, or
+`redirectUri`. Store a confidential client secret in SOPS and reference it with
+`clientSecretSecret`. If the server supports dynamic client registration, the
+client ID and secret can be omitted.
+
+```nix
+features.dev.opencode.mcp.company = {
+  url = "https://ai.example/mcp";
+  oauth = {
+    scope = "openid profile";
+    clientSecretSecret = "opencode/mcp/company/oauth-client-secret";
+  };
+};
+```
 
 ### Operations
 

@@ -421,6 +421,41 @@ in
                   default = "Bearer ";
                   description = "Prefix prepended to the configured token.";
                 };
+                oauth = lib.mkOption {
+                  type = lib.types.nullOr (
+                    lib.types.submodule {
+                      options = {
+                        clientId = lib.mkOption {
+                          type = lib.types.nullOr lib.types.str;
+                          default = null;
+                          description = "OAuth client ID.";
+                        };
+                        clientSecretSecret = lib.mkOption {
+                          type = lib.types.nullOr lib.types.str;
+                          default = null;
+                          description = "SOPS secret path for the OAuth client secret.";
+                        };
+                        scope = lib.mkOption {
+                          type = lib.types.nullOr lib.types.str;
+                          default = null;
+                          description = "OAuth scopes to request.";
+                        };
+                        callbackPort = lib.mkOption {
+                          type = lib.types.nullOr (lib.types.ints.between 1 65535);
+                          default = null;
+                          description = "Local OAuth callback port.";
+                        };
+                        redirectUri = lib.mkOption {
+                          type = lib.types.nullOr lib.types.str;
+                          default = null;
+                          description = "OAuth redirect URI.";
+                        };
+                      };
+                    }
+                  );
+                  default = null;
+                  description = "OAuth/OIDC configuration for a remote MCP server.";
+                };
                 timeout = lib.mkOption {
                   type = lib.types.ints.positive;
                   default = 30000;
