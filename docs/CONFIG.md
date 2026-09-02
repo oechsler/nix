@@ -443,15 +443,19 @@ features = {
 
 ### Development
 
-Development tools inherit from `features.dev.enable` by default. Individual
-IDE integrations can be disabled without removing the command-line toolchain.
+Development tools inherit from `features.dev.enable` by default. OpenCode is
+ready to use with the shared model defaults; hosts only need to add services
+that are specific to them.
 
-| Option                           | Default                    | Description                             |
-| -------------------------------- | -------------------------- | --------------------------------------- |
-| `features.dev.enable`            | `true`                     | Development languages, tools, and IDEs. |
-| `features.dev.opencode.enable`   | `dev.enable`               | OpenCode AI coding agent.               |
-| `features.dev.jetbrains.entries` | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.              |
-| `features.dev.dbeaver.enable`    | `dev.enable`               | DBeaver database GUI.                   |
+| Option                                | Default                    | Description                                      |
+| ------------------------------------- | -------------------------- | ------------------------------------------------ |
+| `features.dev.enable`                 | `true`                     | Development languages, tools, and IDEs.          |
+| `features.dev.opencode.enable`        | `dev.enable`               | OpenCode AI coding agent.                        |
+| `features.dev.opencode.defaultModel`  | `openai/gpt-5.6-luna`      | Model used when no other model is selected.      |
+| `features.dev.opencode.provider`       | shared defaults            | Available model providers and models.            |
+| `features.dev.opencode.mcp`            | none enabled               | Additional OpenCode integrations.                |
+| `features.dev.jetbrains.entries`       | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.                     |
+| `features.dev.dbeaver.enable`          | `dev.enable`               | DBeaver database GUI.                            |
 
 Available values are `clion`, `datagrip`, `dataspell`, `gateway`, `goland`,
 `idea-oss`, `idea-ultimate`, `mps`, `phpstorm`, `pycharm`, `rider`, `rubymine`,
@@ -461,6 +465,13 @@ Available values are `clion`, `datagrip`, `dataspell`, `gateway`, `goland`,
 features = {
   dev = {
     enable = true;
+    opencode = {
+      mcp.homeassistant = {
+        enable = true;
+        url = "https://ha.example/api/mcp";
+        tokenSecret = "opencode/mcp/homeassistant/token";
+      };
+    };
     jetbrains = {
       entries = [ "goland" "rustrover" ];
     };
@@ -470,6 +481,17 @@ features = {
   };
 };
 ```
+
+The default providers are OpenAI, without a credential, with the models
+`gpt-5.6-luna`, `gpt-5.6-terra`, and `gpt-5.6-sol`, plus OpenCode Go with its
+DeepSeek and Qwen models. These defaults remain active unless a host overrides
+the relevant provider or model setting. MCP entries are disabled by default
+and must be enabled explicitly with `enable = true`.
+
+Provider API keys and MCP tokens are stored in SOPS. Reference an existing
+secret with `apiKeySecret` or `tokenSecret`; never put the credential directly
+in the host configuration. The SOPS layout and editing workflow are described
+in [sops/README.md](../sops/README.md).
 
 ### Operations
 

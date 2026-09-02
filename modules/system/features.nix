@@ -305,6 +305,133 @@ in
         enable = (lib.mkEnableOption "OpenCode AI coding agent") // {
           default = config.features.dev.enable;
         };
+        defaultModel = lib.mkOption {
+          type = lib.types.str;
+          default = "openai/gpt-5.6-luna";
+          description = "Default OpenCode model in provider/model format.";
+        };
+        provider = lib.mkOption {
+          type = lib.types.attrsOf (
+            lib.types.submodule {
+              options = {
+                enable = lib.mkEnableOption "this OpenCode provider" // {
+                  default = true;
+                };
+                name = lib.mkOption {
+                  type = lib.types.nullOr lib.types.str;
+                  default = null;
+                  description = "Provider display name.";
+                };
+                npm = lib.mkOption {
+                  type = lib.types.nullOr lib.types.str;
+                  default = null;
+                  description = "AI SDK provider package.";
+                };
+                baseURL = lib.mkOption {
+                  type = lib.types.nullOr lib.types.str;
+                  default = null;
+                  description = "OpenAI-compatible provider base URL.";
+                };
+                apiKeySecret = lib.mkOption {
+                  type = lib.types.nullOr lib.types.str;
+                  default = null;
+                  description = "SOPS secret path for the provider API key.";
+                };
+                models = lib.mkOption {
+                  type = lib.types.attrsOf (
+                    lib.types.submodule {
+                      options.name = lib.mkOption {
+                        type = lib.types.str;
+                        description = "Model display name.";
+                      };
+                    }
+                  );
+                  default = { };
+                  description = "Models exposed by this provider.";
+                };
+              };
+            }
+          );
+          default = {
+            openai = {
+              models = {
+                "gpt-5.6-luna".name = "GPT-5.6 Luna";
+                "gpt-5.6-terra".name = "GPT-5.6 Terra";
+                "gpt-5.6-sol".name = "GPT-5.6 Sol";
+              };
+            };
+            "opencode-go" = {
+              name = "OpenCode Go";
+              npm = "@ai-sdk/openai-compatible";
+              baseURL = "https://opencode.ai/zen/go/v1";
+              apiKeySecret = "opencode/provider/opencode-go/api-key";
+              models = {
+                "deepseek-v4-flash".name = "DeepSeek V4 Flash";
+                "deepseek-v4-pro".name = "DeepSeek V4 Pro";
+                "qwen3.7-plus".name = "Qwen3.7 Plus";
+                "qwen3.7-max".name = "Qwen3.7 Max";
+                "qwen3.8-max".name = "Qwen3.8 Max";
+              };
+            };
+          };
+          description = "OpenCode model providers configured per host.";
+        };
+        mcp = lib.mkOption {
+          type = lib.types.attrsOf (
+            lib.types.submodule {
+              options = {
+                enable = lib.mkEnableOption "this OpenCode MCP server" // {
+                  default = false;
+                };
+                type = lib.mkOption {
+                  type = lib.types.enum [
+                    "local"
+                    "remote"
+                  ];
+                  default = "remote";
+                  description = "MCP connection type.";
+                };
+                url = lib.mkOption {
+                  type = lib.types.nullOr lib.types.str;
+                  default = null;
+                  description = "Remote MCP server URL.";
+                };
+                command = lib.mkOption {
+                  type = lib.types.listOf lib.types.str;
+                  default = [ ];
+                  description = "Command and arguments for a local MCP server.";
+                };
+                headers = lib.mkOption {
+                  type = lib.types.attrsOf lib.types.str;
+                  default = { };
+                  description = "Additional static MCP request headers.";
+                };
+                tokenSecret = lib.mkOption {
+                  type = lib.types.nullOr lib.types.str;
+                  default = null;
+                  description = "SOPS secret path for a bearer token.";
+                };
+                tokenHeader = lib.mkOption {
+                  type = lib.types.str;
+                  default = "Authorization";
+                  description = "Header receiving the configured token.";
+                };
+                tokenPrefix = lib.mkOption {
+                  type = lib.types.str;
+                  default = "Bearer ";
+                  description = "Prefix prepended to the configured token.";
+                };
+                timeout = lib.mkOption {
+                  type = lib.types.ints.positive;
+                  default = 30000;
+                  description = "MCP request timeout in milliseconds.";
+                };
+              };
+            }
+          );
+          default = { };
+          description = "OpenCode MCP servers configured per host.";
+        };
       };
       jetbrains.entries = lib.mkOption {
         type = lib.types.listOf (

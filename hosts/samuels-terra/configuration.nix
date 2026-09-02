@@ -144,6 +144,13 @@
     };
     gaming.steamMachine.enable = true;
 
+    # --- Development ---
+    dev.opencode.mcp.homeassistant = {
+      enable = true;
+      url = "https://homeassistant.at.oechsler.it/api/mcp";
+      tokenSecret = "opencode/mcp/homeassistant/token";
+    };
+
     # --- Applications ---
     apps.mumble = {
       username = "Sam";
