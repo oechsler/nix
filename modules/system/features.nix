@@ -310,6 +310,44 @@ in
           default = "openai/gpt-5.6-luna";
           description = "Default OpenCode model in provider/model format.";
         };
+        settings = lib.mkOption {
+          type = lib.types.attrs;
+          default = { };
+          description = "Additional OpenCode settings, excluding generated model, provider, MCP, and LSP settings.";
+        };
+        lsp = lib.mkOption {
+          type = lib.types.attrsOf (
+            lib.types.submodule {
+              options = {
+                enable = lib.mkEnableOption "this OpenCode LSP server" // {
+                  default = true;
+                };
+                command = lib.mkOption {
+                  type = lib.types.listOf lib.types.str;
+                  default = [ ];
+                  description = "Command and arguments for the LSP server.";
+                };
+                extensions = lib.mkOption {
+                  type = lib.types.listOf lib.types.str;
+                  default = [ ];
+                  description = "File extensions handled by the LSP server.";
+                };
+                env = lib.mkOption {
+                  type = lib.types.attrsOf lib.types.str;
+                  default = { };
+                  description = "Environment variables for the LSP server.";
+                };
+                initialization = lib.mkOption {
+                  type = lib.types.attrs;
+                  default = { };
+                  description = "Initialization options for the LSP server.";
+                };
+              };
+            }
+          );
+          default = { };
+          description = "Additional OpenCode LSP servers and overrides.";
+        };
         provider = lib.mkOption {
           type = lib.types.attrsOf (
             lib.types.submodule {
@@ -468,30 +506,35 @@ in
           description = "OpenCode MCP servers configured per host.";
         };
       };
-      jetbrains.entries = lib.mkOption {
-        type = lib.types.listOf (
-          lib.types.enum [
-            "clion"
-            "datagrip"
-            "dataspell"
-            "gateway"
+      jetbrains = {
+        enable = (lib.mkEnableOption "JetBrains IDEs") // {
+          default = config.features.dev.enable;
+        };
+        entries = lib.mkOption {
+          type = lib.types.listOf (
+            lib.types.enum [
+              "clion"
+              "datagrip"
+              "dataspell"
+              "gateway"
+              "goland"
+              "idea-oss"
+              "idea-ultimate"
+              "mps"
+              "phpstorm"
+              "pycharm"
+              "rider"
+              "rubymine"
+              "rustrover"
+              "webstorm"
+            ]
+          );
+          default = [
             "goland"
-            "idea-oss"
-            "idea-ultimate"
-            "mps"
-            "phpstorm"
-            "pycharm"
-            "rider"
-            "rubymine"
             "rustrover"
-            "webstorm"
-          ]
-        );
-        default = [
-          "goland"
-          "rustrover"
-        ];
-        description = "JetBrains IDEs to install.";
+          ];
+          description = "JetBrains IDEs to install.";
+        };
       };
       dbeaver = {
         enable = (lib.mkEnableOption "DBeaver database GUI") // {

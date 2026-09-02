@@ -104,6 +104,16 @@ let
   providerSopsSecrets = lib.mapAttrs' (
     _name: provider: lib.nameValuePair provider.apiKeySecret { }
   ) providersWithSecrets;
+  lspSettings = lib.mapAttrs (
+    _name: server:
+    {
+      disabled = !server.enable;
+    }
+    // lib.optionalAttrs (server.command != [ ]) { command = server.command; }
+    // lib.optionalAttrs (server.extensions != [ ]) { extensions = server.extensions; }
+    // lib.optionalAttrs (server.env != { }) { env = server.env; }
+    // lib.optionalAttrs (server.initialization != { }) { initialization = server.initialization; }
+  ) cfg.lsp;
   mcpSettings = lib.mapAttrs (
     name: server:
     {
@@ -164,7 +174,7 @@ in
       enable = true;
       package = opencodeWithSecrets;
 
-      settings = {
+      settings = cfg.settings // {
         lsp = {
           # Add locally managed servers for formats not covered by the built-ins.
           markdown = {
@@ -192,16 +202,19 @@ in
             ];
             extensions = [ ".toml" ];
           };
-        };
+        }
+        // lspSettings;
         model = cfg.defaultModel;
+        small_model = cfg.settings.small_model or cfg.defaultModel;
 
         mcp = mcpSettings;
 
-        compaction = {
-          auto = true;
-          prune = true;
-          reserved = 20000;
-        };
+        compaction =
+          cfg.settings.compaction or {
+            auto = true;
+            prune = true;
+            reserved = 20000;
+          };
 
         provider = providerSettings;
       };

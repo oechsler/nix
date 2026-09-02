@@ -452,8 +452,10 @@ that are specific to them.
 | `features.dev.enable`                | `true`                     | Development languages, tools, and IDEs.     |
 | `features.dev.opencode.enable`       | `dev.enable`               | OpenCode AI coding agent.                   |
 | `features.dev.opencode.defaultModel` | `openai/gpt-5.6-luna`      | Model used when no other model is selected. |
+| `features.dev.opencode.settings`     | `{}`                       | Additional OpenCode settings.               |
 | `features.dev.opencode.provider`     | shared defaults            | Available model providers and models.       |
 | `features.dev.opencode.mcp`          | none enabled               | Additional OpenCode integrations.           |
+| `features.dev.jetbrains.enable`      | `dev.enable`               | JetBrains IDEs as a group.                  |
 | `features.dev.jetbrains.entries`     | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.                  |
 | `features.dev.dbeaver.enable`        | `dev.enable`               | DBeaver database GUI.                       |
 
@@ -471,32 +473,25 @@ features = {
 
 #### OpenCode
 
-OpenCode uses the shared model and provider defaults. A host normally only
-needs to add its own MCP servers:
+OpenCode uses shared model and provider defaults. The default model is
+`openai/gpt-5.6-luna`. OpenAI provides `gpt-5.6-luna`, `gpt-5.6-terra`, and
+`gpt-5.6-sol`; OpenCode Go provides the configured DeepSeek and Qwen models.
 
-```nix
-features.dev.opencode.mcp.homeassistant = {
-  # The MCP remains configured and can be enabled from OpenCode.
-  enable = false;
-  url = "https://ha.example/api/mcp";
-  tokenSecret = "opencode/mcp/homeassistant/token";
-};
-```
+A host normally only adds its own MCP servers. MCPs are present but disabled by
+default, and can be enabled from OpenCode. Set `enable = true` when an MCP
+should start enabled. MCPs can use no authentication, a SOPS-backed token, or
+OAuth/OIDC. Provider credentials and MCP credentials are always kept in SOPS.
 
-The default providers are OpenAI, without a credential, with the models
-`gpt-5.6-luna`, `gpt-5.6-terra`, and `gpt-5.6-sol`, plus OpenCode Go with its
-DeepSeek and Qwen models. These defaults remain active unless a host overrides
-the relevant provider or model setting. Assigning a provider or model with the
-same name changes that entry while unrelated defaults remain available. Set
-`enable = false` on a default provider when it should not be offered.
+Existing providers and models can be adjusted by using the same name; unrelated
+defaults remain available. Providers can be enabled or disabled individually.
+Additional OpenCode settings can be placed in `settings`. Built-in LSP servers
+remain enabled by default; additional servers and overrides belong in `lsp`.
 
-For example, a host can keep the defaults, change the OpenCode Go endpoint, add
-another provider, and select its model as the default:
+For example, a host can add a provider and an MCP while keeping the defaults:
 
 ```nix
 features.dev.opencode = {
   provider = {
-    "opencode-go".baseURL = "https://gateway.example/v1";
     "company-ai" = {
       name = "Company AI";
       npm = "@ai-sdk/openai-compatible";
@@ -505,22 +500,17 @@ features.dev.opencode = {
       models."coding-large".name = "Coding Large";
     };
   };
-  defaultModel = "company-ai/coding-large";
+  mcp.homeassistant = {
+    url = "https://ha.example/api/mcp";
+    tokenSecret = "opencode/mcp/homeassistant/token";
+  };
 };
 ```
 
-MCP entries are disabled by default, but a configured entry remains visible to
-OpenCode and can be enabled at runtime. Set `enable = true` only when the MCP
-should start enabled. Provider API keys and MCP tokens are stored in SOPS.
-Reference an existing secret with `apiKeySecret` or `tokenSecret`; never put the
-credential directly in the host configuration. The SOPS layout and editing
-workflow are described in [sops/README.md](../sops/README.md).
-
-Remote MCPs can use OAuth 2.0, including OIDC-compatible authorization servers.
-Configure `oauth` with an optional `clientId`, `scope`, `callbackPort`, or
-`redirectUri`. Store a confidential client secret in SOPS and reference it with
-`clientSecretSecret`. If the server supports dynamic client registration, the
-client ID and secret can be omitted.
+Use `settings.small_model` to choose a separate small model, or `lsp` to add
+servers and disable built-in ones. Remote MCPs can configure OAuth/OIDC with
+`oauth`; its client secret is referenced through `clientSecretSecret`. See
+[sops/README.md](../sops/README.md) for the credential layout and workflow.
 
 ```nix
 features.dev.opencode.mcp.company = {
