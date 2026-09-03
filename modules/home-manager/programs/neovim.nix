@@ -6,7 +6,7 @@
 # - LazyVim-based configuration (loaded from ~/.config/nvim)
 # - Comprehensive plugin suite (UI, navigation, editing, LSP)
 # - Treesitter syntax highlighting for all configured language environments
-# - LSP servers for Nix, shell, YAML, Python, Go, Rust, JS/TS, Java, JSON, TOML, and C/C++
+# - LSP servers for Nix, shell, Fish, YAML, Python, Go, Rust, JS/TS, Java, Kotlin, JSON, TOML, and C/C++
 # - Formatters for Nix, shell, Python, Go, Rust, JS/TS, Java, JSON, YAML, Markdown, and C/C++
 # - Clipboard integration (wl-clipboard for Wayland)
 #
@@ -124,6 +124,7 @@
           json
           yaml
           toml
+          fish
           python
           c
           cpp
@@ -448,6 +449,11 @@
          filetypes = { "sh", "bash", "zsh" },
          root_markers = { ".git" },
        })
+       vim.lsp.config("fish_lsp", {
+         cmd = { "fish-lsp", "start" },
+         filetypes = { "fish" },
+         root_markers = { ".git" },
+       })
        vim.lsp.config("yamlls", {
          cmd = { "yaml-language-server", "--stdio" },
          filetypes = { "yaml" },
@@ -480,7 +486,7 @@
        })
        vim.lsp.enable({
          "nil_ls", "gopls", "rust_analyzer", "ts_ls", "jdtls", "kotlin_language_server", "bashls", "yamlls", "pyright",
-         "marksman", "jsonls", "taplo", "clangd",
+         "fish_lsp", "marksman", "jsonls", "taplo", "clangd",
        })
 
        require("conform").setup({
@@ -488,6 +494,7 @@
            bash = { "shfmt" },
            c = { "clang_format" },
            cpp = { "clang_format" },
+           fish = { "fish_indent" },
            go = { "gofumpt" },
            java = { "google-java-format" },
            javascript = { "prettierd" },

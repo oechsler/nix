@@ -61,6 +61,13 @@ let
         ".zsh"
       ];
     };
+    fish-lsp = {
+      command = [
+        "${pkgs.fish-lsp}/bin/fish-lsp"
+        "start"
+      ];
+      extensions = [ ".fish" ];
+    };
     yaml-language-server = {
       command = [
         "${pkgs.yaml-language-server}/bin/yaml-language-server"
@@ -221,6 +228,14 @@ let
         ".bash"
         ".zsh"
       ];
+    };
+    fish_indent = {
+      command = [
+        "${pkgs.fish}/bin/fish_indent"
+        "-w"
+        "$FILE"
+      ];
+      extensions = [ ".fish" ];
     };
     ruff = {
       command = [
