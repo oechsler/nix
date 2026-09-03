@@ -313,15 +313,22 @@ in
     systemd.user.services.opencode-server = lib.mkIf cfg.server.enable {
       Unit = {
         Description = "OpenCode background server";
-        After = [ "sops-install-secrets.service" ];
+        After = [ "sops-nix.service" ];
       };
       Service = {
         Type = "exec";
         ExecStart = "${opencodeServer}/bin/opencode-server";
         WorkingDirectory = cfg.server.directory;
         ProtectHome = "tmpfs";
-        BindPaths = [ cfg.server.directory ];
-        BindReadOnlyPaths = [ "${config.xdg.configHome}/opencode" ];
+        BindPaths = [
+          cfg.server.directory
+          "${config.home.homeDirectory}/.local"
+          "${config.home.homeDirectory}/.cache"
+        ];
+        BindReadOnlyPaths = [
+          "${config.xdg.configHome}/opencode"
+          "${config.xdg.configHome}/sops-nix/secrets"
+        ];
         Restart = "on-failure";
         RestartSec = 5;
       };
