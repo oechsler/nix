@@ -1,10 +1,20 @@
 # Quickstart
 
-Use this flake as a reusable NixOS configuration base. Start with the
-configuration reference, then override only the features that differ for your
-host.
+Use this guide to create a small host configuration based on the reusable NixOS
+flake. It is for users who already have a NixOS environment and want to define
+a new host. For a fresh machine, use the [installation guide](INSTALL.md).
 
-## 1. Create Flake
+## Before You Start
+
+- A working Nix installation with flakes enabled
+- This repository or a repository that imports it as a flake input
+- A host directory containing the generated hardware configuration
+- An encrypted SOPS file when WiFi, SMB, or authentication secrets are enabled
+
+Read [CONFIG.md](CONFIG.md) when you need to change defaults or select optional
+features.
+
+## Create Flake
 
 ```nix
 # flake.nix
@@ -21,7 +31,7 @@ host.
 }
 ```
 
-## 2. Create Host Config
+## Create Host Config
 
 ```bash
 mkdir -p hosts/my-host
@@ -45,24 +55,27 @@ mkdir -p hosts/my-host
 }
 ```
 
-## 3. Generate Hardware Config
+## Generate Hardware Config
 
 ```bash
 nixos-generate-config --show-hardware-config > hosts/my-host/hardware-configuration.nix
 ```
 
-## 4. Build
+## Build and Apply
 
 ```bash
 nix build .#nixosConfigurations.my-host.config.system.build.toplevel
+
+# Apply the evaluated configuration
+sudo nixos-rebuild switch --flake .#my-host
 ```
 
-## Modes
+## Host Modes
 
 - Desktop: Hyprland/KDE, LibreWolf, audio, development tools, Podman, and QEMU/KVM VMs.
 - Laptop: Desktop features with laptop-specific lid and power behavior.
 
-## SOPS Secrets
+## Secrets
 
 WiFi and SMB need SOPS secrets. Point the host at your encrypted file:
 
@@ -85,7 +98,7 @@ features = {
 };
 ```
 
-## Defaults To Review
+## Important Defaults
 
 - Impermanence: `features.impermanence.enable = true`
 - LUKS encryption: `features.encryption.enable = true`

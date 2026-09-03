@@ -1,7 +1,16 @@
 # Btrfs Snapshots
 
 Automatic hourly Btrfs snapshots via btrbk. The feature is enabled by default
-when the expected Btrfs layout is present.
+when the expected Btrfs layout is present. This guide covers browsing, restoring,
+and cleaning snapshots. For the required disk layout, see
+[INSTALL.md](INSTALL.md#disk-layout).
+
+## Before You Restore
+
+- Prefer restoring a single file or directory over a full rollback.
+- Verify the snapshot timestamp and target path before copying data.
+- Run full subvolume rollback only from a recovery environment.
+- Snapshots are not backups; keep an independent copy of important data.
 
 ## What Gets Snapshotted
 
@@ -30,7 +39,7 @@ Snapshots are taken hourly and automatically cleaned up:
 | 2    | Weekly (last 2 weeks)   |
 | 6    | Monthly (last 6 months) |
 
-## Commands
+## Manage Snapshots
 
 ```bash
 # Create snapshot now
@@ -76,7 +85,7 @@ ls /mnt/btrfs-root/
 ls /mnt/btrfs-root/@snapshots/
 ```
 
-## Restore Files
+## Restore Data
 
 ### Single File
 
