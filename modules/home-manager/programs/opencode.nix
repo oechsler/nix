@@ -173,6 +173,7 @@ let
     name: provider:
     {
       inherit (provider) models;
+      whitelist = builtins.attrNames provider.models;
     }
     // lib.optionalAttrs (provider.name != null) { inherit (provider) name; }
     // lib.optionalAttrs (provider.npm != null) { inherit (provider) npm; }
@@ -292,6 +293,7 @@ in
         }
         // lspSettings;
         formatter = formatterSettings;
+        enabled_providers = builtins.attrNames enabledProviders;
         model = cfg.defaultModel;
         small_model = cfg.settings.small_model or cfg.defaultModel;
 
@@ -317,6 +319,9 @@ in
         Type = "exec";
         ExecStart = "${opencodeServer}/bin/opencode-server";
         WorkingDirectory = cfg.server.directory;
+        ProtectHome = "tmpfs";
+        BindPaths = [ cfg.server.directory ];
+        BindReadOnlyPaths = [ "${config.xdg.configHome}/opencode" ];
         Restart = "on-failure";
         RestartSec = 5;
       };

@@ -490,6 +490,8 @@ OAuth/OIDC. Provider credentials and MCP credentials are always kept in SOPS.
 
 Existing providers and models can be adjusted by using the same name; unrelated
 defaults remain available. Providers can be enabled or disabled individually.
+The generated configuration allowlists enabled providers and configured models,
+so models from other providers or from the remote model registry are not shown.
 Additional OpenCode settings can be placed in `settings`. The `lsp` and
 `formatter` attributes have shared defaults and can be extended or overridden
 by name. Set `enable = false` to disable an individual entry.
