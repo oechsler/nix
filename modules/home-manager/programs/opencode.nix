@@ -89,13 +89,13 @@ let
   providerSettings = lib.mapAttrs (
     name: provider:
     {
-      models = provider.models;
+      inherit (provider) models;
     }
-    // lib.optionalAttrs (provider.name != null) { name = provider.name; }
-    // lib.optionalAttrs (provider.npm != null) { npm = provider.npm; }
+    // lib.optionalAttrs (provider.name != null) { inherit (provider) name; }
+    // lib.optionalAttrs (provider.npm != null) { inherit (provider) npm; }
     // lib.optionalAttrs (provider.baseURL != null || provider.apiKeySecret != null) {
       options =
-        lib.optionalAttrs (provider.baseURL != null) { baseURL = provider.baseURL; }
+        lib.optionalAttrs (provider.baseURL != null) { inherit (provider) baseURL; }
         // lib.optionalAttrs (provider.apiKeySecret != null) {
           apiKey = "{env:${providerEnvName name}}";
         };
@@ -109,23 +109,23 @@ let
     {
       disabled = !server.enable;
     }
-    // lib.optionalAttrs (server.command != [ ]) { command = server.command; }
-    // lib.optionalAttrs (server.extensions != [ ]) { extensions = server.extensions; }
-    // lib.optionalAttrs (server.env != { }) { env = server.env; }
-    // lib.optionalAttrs (server.initialization != { }) { initialization = server.initialization; }
+    // lib.optionalAttrs (server.command != [ ]) { inherit (server) command; }
+    // lib.optionalAttrs (server.extensions != [ ]) { inherit (server) extensions; }
+    // lib.optionalAttrs (server.env != { }) { inherit (server) env; }
+    // lib.optionalAttrs (server.initialization != { }) { inherit (server) initialization; }
   ) cfg.lsp;
   mcpSettings = lib.mapAttrs (
     name: server:
     {
-      type = server.type;
+      inherit (server) type;
       enabled = server.enable;
-      timeout = server.timeout;
+      inherit (server) timeout;
     }
     // lib.optionalAttrs (server.type == "remote") {
-      url = server.url;
+      inherit (server) url;
     }
     // lib.optionalAttrs (server.type == "local") {
-      command = server.command;
+      inherit (server) command;
     }
     // lib.optionalAttrs (server.headers != { } || server.tokenSecret != null) {
       headers =
