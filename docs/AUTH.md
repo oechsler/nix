@@ -2,7 +2,17 @@
 
 This document describes boot unlock, sudo/SSH second factors, and graphical
 login credentials. These are separate authentication paths and are configured
-through the feature options.
+through the feature options. Use [SECURITY.md](SECURITY.md) for the overall
+security model and [INSTALL.md](INSTALL.md) for first-boot enrollment.
+
+## Choose an Authentication Path
+
+- Use TPM2, YubiKey, or a password for disk unlock at boot.
+- Use TOTP and/or a YubiKey as a second factor for sudo and SSH.
+- Use the local SOPS password or optional LDAP for graphical login and polkit.
+
+The paths are intentionally different: graphical login remains password-only so
+the GNOME Keyring can unlock normally.
 
 ## Overview
 
@@ -29,7 +39,7 @@ When enabled, a dedicated PAM module uses LLDAP only as the password provider fo
 
 > **Note:** SDDM, polkit, and hyprlock always use **password only**, regardless of which 2FA method is enabled. This is required so that `pam_gnome_keyring` can capture the login password at SDDM and auto-unlock the GNOME Keyring. YubiKey login skips `pam_gnome_keyring`'s auth phase, leaving the keyring locked.
 
-## Auth Flow
+## Authentication Flows
 
 ### Login / SDDM
 
@@ -80,7 +90,7 @@ This is enforced by `AuthenticationMethods = "publickey,keyboard-interactive"` â
 
 Requires `features.ssh.enable = true` on the host for the SSH server to run.
 
-## Setup
+## Enrollment and Setup
 
 ### TOTP
 

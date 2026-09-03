@@ -1,8 +1,44 @@
-# Configuration Reference
+# Configuration Guide
 
-This document describes the commonly used public configuration interface. It
-focuses on reusable options and defaults; host-specific values belong in host
-modules.
+This is the user guide for configuring the NixOS setup. It describes the public
+options, their defaults, and the usual patterns for adapting a host. Host-
+specific values belong in host modules; implementation details that are not
+options are intentionally omitted.
+
+## How to Use This Guide
+
+Configuration is applied in three steps:
+
+1. Choose the capabilities a host should provide in `features`.
+2. Adjust shared values such as the user, theme, displays, or idle timeouts.
+3. Add host-specific services and secrets in the host module.
+
+Most defaults are enabled for a desktop host. Child features inherit the state
+of their parent unless they are explicitly overridden. A minimal host override
+can therefore be small:
+
+```nix
+features = {
+  desktop.wm = "hyprland";
+  dev.enable = true;
+  gaming.enable = false;
+};
+```
+
+After changing a host configuration, apply it with the repository's normal
+flake command, for example `sudo nixos-rebuild switch --flake .#samuels-terra`.
+
+## Guide Map
+
+- [Feature Toggles](#feature-toggles): select system capabilities and applications.
+- [Shared Options](#shared-options): customize behavior after capabilities are selected.
+- [System Requirements](#system-requirements): installation constraints and required storage layout.
+
+The feature section follows the order in which a host is usually designed:
+hardware and security, networking, desktop, virtualization, gaming,
+development, operations, and applications. The shared options section then
+covers session behavior, identity, appearance, locale, displays, input, and
+autostart.
 
 ## Feature Toggles
 
@@ -789,7 +825,7 @@ not need foreign dynamically linked binaries:
 features.compat.enable = false;
 ```
 
-## Options
+## Shared Options
 
 The options in this section configure shared system and userspace behavior after
 the feature toggles have selected the system capabilities. They are ordered from

@@ -2,7 +2,21 @@
 
 This document summarizes the security boundaries and trade-offs in the
 configuration. It is a guide to the defaults, not a guarantee against every
-class of compromise.
+class of compromise. Use [AUTH.md](AUTH.md) for authentication enrollment and
+[INSTALL.md](INSTALL.md) for first-boot security setup.
+
+## Security Model
+
+The configuration separates protection by the stage it covers:
+
+- Boot integrity: Secure Boot
+- Data at rest: LUKS2 and Btrfs persistence boundaries
+- User authentication: TOTP, YubiKey, passwords, and optional LDAP
+- Network exposure: firewall and SSH hardening
+- Secret storage: SOPS and age
+
+No layer replaces backups, software updates, least privilege, or a trusted
+running system.
 
 ## Layers
 

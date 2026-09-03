@@ -1,6 +1,18 @@
 # NixOS Installation
 
-## Quickstart
+This guide covers installing a host from the repository's interactive installer,
+the prebuilt graphical ISO, or the installer script directly. It also explains
+the storage layout and the post-install steps required for security features.
+
+## Choose an Installation Path
+
+- [Interactive installer](#interactive-installer): recommended for most installations.
+- [Graphical offline ISO](#graphical-offline-iso): use when the target should install from prebuilt closures.
+- [Manual install](#manual-install): run the installer from a cloned checkout.
+
+All paths read the selected host's feature flags and use the same disk layout.
+
+## Interactive Installer
 
 Boot the NixOS ISO and run:
 
@@ -116,7 +128,9 @@ The Btrfs top-level is also mounted at `/mnt/btrfs-root` as a convenience view
 of all subvolumes. btrbk uses this view for snapshot operations, while
 `/.snapshots` remains the normal path for browsing snapshots.
 
-## Impermanence
+## Post-Install State
+
+### Impermanence
 
 When `features.impermanence.enable = true`, root (`@`) is wiped on every boot.
 Persistent data goes in `/persist`.
@@ -147,7 +161,7 @@ The exact conditional list is defined in `modules/system/impermanence.nix`.
 
 User password is declarative in `modules/system/users.nix`.
 
-## SOPS Secrets
+### SOPS Secrets
 
 Secrets are encrypted with SOPS and age. The repository uses an Age identity
 derived from the user's SSH key; see [sops/README.md](../sops/README.md).
