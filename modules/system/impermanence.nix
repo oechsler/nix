@@ -102,6 +102,9 @@ in
       ++ lib.optionals config.features.desktop.enable [
         "/var/lib/sddm" # SDDM state
       ]
+      ++ lib.optionals (config.services.localEndpoints != { }) [
+        "/var/lib/caddy" # Caddy local CA and certificate state
+      ]
       ++ lib.optionals config.features.auth.ldap.enable [
         "/var/lib/pam-lldap" # Cached LDAP password verifier
       ]
