@@ -74,9 +74,9 @@ phase_complete() {
     tpm_deferred=true
     post_boot_tasks+=("tpm-luks-init       — enroll TPM2 for automatic LUKS unlock at boot")
   fi
-  local board_vendor sys_vendor is_asus=false
-  board_vendor="$(cat /sys/class/dmi/id/board_vendor 2>/dev/null || true)"
-  sys_vendor="$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)"
+  local board_vendor="" sys_vendor="" is_asus=false board_vendor_file=/sys/class/dmi/id/board_vendor sys_vendor_file=/sys/class/dmi/id/sys_vendor
+  [[ -r "$board_vendor_file" ]] && board_vendor=$(<"$board_vendor_file")
+  [[ -r "$sys_vendor_file" ]] && sys_vendor=$(<"$sys_vendor_file")
   if [[ "$board_vendor" == *"ASUSTeK"* || "$board_vendor" == *"ASUS"* || "$sys_vendor" == *"ASUSTeK"* || "$sys_vendor" == *"ASUS"* ]]; then
     is_asus=true
   fi

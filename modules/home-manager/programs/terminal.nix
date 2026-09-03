@@ -80,7 +80,7 @@ in
 
   options.terminal.exec = lib.mkOption {
     type = lib.types.str;
-    default = "kitty -e";
+    default = "${pkgs.kitty}/bin/kitty -e";
     readOnly = true;
     description = "Command prefix to launch a TUI app in the terminal (usage: exec <command>)";
   };

@@ -27,6 +27,7 @@ main() {
   apply_keyboard_layout
   phase_collect_inputs
   phase_summary
+  command -v mountpoint &>/dev/null || error "Required command not found: mountpoint"
   if [[ "$DO_FORMAT" != true && ("$DO_INSTALL" == true || "$DO_POST_INSTALL" == true) ]] && ! mountpoint -q /mnt 2>/dev/null; then
     DO_MOUNT=true
   fi

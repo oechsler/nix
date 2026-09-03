@@ -96,7 +96,7 @@ let
         done <<< "$removable_mounts"
 
         ${placesEntries}
-      } | rofi -dmenu -p ${lib.escapeShellArg placesPrompt} -i -no-custom -show-icons \
+         } | ${pkgs.rofi}/bin/rofi -dmenu -p ${lib.escapeShellArg placesPrompt} -i -no-custom -show-icons \
           -theme-str 'element-icon { size: 22px; }'
     )
 
@@ -175,12 +175,12 @@ let
     ${pkgs.procps}/bin/pgrep -x rofi > /dev/null && exit 0
     choice="$(printf '%s\n' "${powerLock}" "${powerSuspend}" "${powerLogout}" "${powerReboot}" "${powerOff}" "${powerFirmware}" | ${pkgs.rofi}/bin/rofi -dmenu -p "${powerPrompt}" -i -no-custom -no-show-icons -lines 6)"
     case "$choice" in
-      "${powerLock}")     hyprlock ;;
+       "${powerLock}")     exec ${pkgs.hyprlock}/bin/hyprlock ;;
       "${powerSuspend}")  suspend ;;
       "${powerLogout}")   ${pkgs.uwsm}/bin/uwsm stop ;;
-      "${powerReboot}")   systemctl reboot ;;
-      "${powerOff}")      systemctl poweroff ;;
-      "${powerFirmware}") systemctl reboot --firmware-setup ;;
+       "${powerReboot}")   ${pkgs.systemd}/bin/systemctl reboot ;;
+       "${powerOff}")      ${pkgs.systemd}/bin/systemctl poweroff ;;
+       "${powerFirmware}") ${pkgs.systemd}/bin/systemctl reboot --firmware-setup ;;
     esac
   '';
 
@@ -292,7 +292,7 @@ let
         ;;
     esac
 
-    choice=$(printf '%b' "$profiles" | rofi -dmenu -p "${profilePrompt}" -i -no-custom -no-show-icons)
+     choice=$(printf '%b' "$profiles" | ${pkgs.rofi}/bin/rofi -dmenu -p "${profilePrompt}" -i -no-custom -no-show-icons)
     case "$choice" in
       "${profileBalanced}")   ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set balanced ;;
       "${profileSaver}")      ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set power-saver ;;
@@ -485,49 +485,49 @@ in
         [Desktop Entry]
         Type=Application
         Name=Rofi
-        Exec=rofi
+         Exec=${pkgs.rofi}/bin/rofi
         Hidden=true
       '';
       ".local/share/applications/rofi-theme-selector.desktop".text = ''
         [Desktop Entry]
         Type=Application
         Name=Rofi Theme Selector
-        Exec=rofi-theme-selector
+         Exec=${pkgs.rofi}/bin/rofi-theme-selector
         Hidden=true
       '';
       ".local/share/applications/gvim.desktop".text = ''
         [Desktop Entry]
         Type=Application
         Name=GVim
-        Exec=gvim
+         Exec=${pkgs.neovim}/bin/gvim
         Hidden=true
       '';
       ".local/share/applications/uurecord.desktop".text = ''
         [Desktop Entry]
         Type=Application
         Name=uurecord
-        Exec=uurecord
+         Exec=${pkgs.uutils-coreutils-noprefix}/bin/uurecord
         Hidden=true
       '';
       ".local/share/applications/uuctl.desktop".text = ''
         [Desktop Entry]
         Type=Application
         Name=uuctl
-        Exec=uuctl
+         Exec=${pkgs.uutils-coreutils-noprefix}/bin/uuctl
         Hidden=true
       '';
       ".local/share/applications/qt5ct.desktop".text = ''
         [Desktop Entry]
         Type=Application
         Name=Qt5 Settings
-        Exec=qt5ct
+         Exec=${pkgs.libsForQt5.qt5ct}/bin/qt5ct
         Hidden=true
       '';
       ".local/share/applications/qt6ct.desktop".text = ''
         [Desktop Entry]
         Type=Application
         Name=Qt6 Settings
-        Exec=qt6ct
+         Exec=${pkgs.qt6Packages.qt6ct}/bin/qt6ct
         Hidden=true
       '';
     };
@@ -535,7 +535,7 @@ in
       [Desktop Entry]
       Type=Application
       Name=Kvantum Manager
-      Exec=kvantummanager
+       Exec=${pkgs.kdePackages.qtstyleplugin-kvantum}/bin/kvantummanager
       Hidden=true
     '';
   };

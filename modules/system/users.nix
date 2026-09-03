@@ -145,8 +145,8 @@ in
     # Icons must be in /var/lib/AccountsService/icons/<username>
     # Used by desktop account settings (SDDM, system settings)
     system.activationScripts.userIcon = ''
-      mkdir -p /var/lib/AccountsService/icons
-      cp ${lib.escapeShellArg cfg.icon} ${lib.escapeShellArg "/var/lib/AccountsService/icons/${cfg.name}"}
+      ${pkgs.coreutils}/bin/mkdir -p /var/lib/AccountsService/icons
+      ${pkgs.coreutils}/bin/cp ${lib.escapeShellArg cfg.icon} ${lib.escapeShellArg "/var/lib/AccountsService/icons/${cfg.name}"}
     '';
 
     #---------------------------
@@ -163,7 +163,7 @@ in
       text = ''
         password_file=${lib.escapeShellArg config.sops.secrets."user/password".path}
         if [ -f "$password_file" ]; then
-          printf '%s:%s\n' ${lib.escapeShellArg cfg.name} "$(cat "$password_file")" \
+            printf '%s:%s\n' ${lib.escapeShellArg cfg.name} "$(${pkgs.coreutils}/bin/cat "$password_file")" \
             | ${pkgs.shadow}/bin/chpasswd
         fi
       '';
@@ -180,7 +180,7 @@ in
       };
       script = ''
         password_file=${lib.escapeShellArg config.sops.secrets."user/password".path}
-        printf '%s:%s\n' ${lib.escapeShellArg cfg.name} "$(cat "$password_file")" \
+        printf '%s:%s\n' ${lib.escapeShellArg cfg.name} "$(${pkgs.coreutils}/bin/cat "$password_file")" \
           | ${pkgs.shadow}/bin/chpasswd
       '';
     };

@@ -74,6 +74,9 @@ show_pending_setup() {
 
 phase_upgrade() {
   local invoking_user="${SUDO_USER:-$USER}"
+  for command_name in git sudo systemctl awk sed nixos-rebuild; do
+    command -v "$command_name" &>/dev/null || error "Required command not found: $command_name"
+  done
   info "Syncing repository..."
   echo ""
   if git -C "$REPO_DIR" remote get-url origin &>/dev/null; then

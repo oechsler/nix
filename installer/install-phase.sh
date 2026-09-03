@@ -8,6 +8,9 @@ phase_state_version() {
     success "Using prebuilt NixOS version"
     return
   fi
+  command -v grep &>/dev/null || error "Required command not found: grep"
+  command -v sed &>/dev/null || error "Required command not found: sed"
+  command -v nix &>/dev/null || error "Required command not found: nix"
   local version
   version="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.pkgs.lib.version" | grep -o '^[0-9]*\.[0-9]*')"
   echo ""
@@ -44,6 +47,15 @@ PYEOF
 
 phase_install() {
   local host_dir="$REPO_DIR/hosts/$HOST" avail_gb max_jobs
+  for command_name in awk mkdir; do
+    command -v "$command_name" &>/dev/null || error "Required command not found: $command_name"
+  done
+  if [[ "$INSTALLER_ISO" != true ]]; then
+    for command_name in git nixos-generate-config; do
+      command -v "$command_name" &>/dev/null || error "Required command not found: $command_name"
+    done
+  fi
+  command -v nixos-install &>/dev/null || error "Required command not found: nixos-install"
   avail_gb=$(awk '/^MemAvailable:/{printf "%d", $2/1024/1024}' /proc/meminfo)
   max_jobs=$((avail_gb / 4))
   ((max_jobs < 1)) && max_jobs=1

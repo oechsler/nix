@@ -43,23 +43,23 @@ let
   syncKeys = pkgs.writeShellScript "sync-authorized-keys" ''
     set -euo pipefail
     if [ -z ${lib.escapeShellArg keySource} ]; then
-      rm -f "${keysFile}"
+       ${pkgs.coreutils}/bin/rm -f "${keysFile}"
       exit 0
     fi
 
     keys=$(${fetchKeys} 2>/dev/null)
     if [ -n "$keys" ]; then
-      mkdir -p "${user.home}/.ssh"
-      temporary=$(mktemp "${keysFile}.XXXXXX")
-      trap 'rm -f "$temporary"' EXIT
+       ${pkgs.coreutils}/bin/mkdir -p "${user.home}/.ssh"
+       temporary=$(${pkgs.coreutils}/bin/mktemp "${keysFile}.XXXXXX")
+       trap '${pkgs.coreutils}/bin/rm -f "$temporary"' EXIT
       {
         printf '# Source: user.keys; last synchronized: %s\n' "$(${pkgs.coreutils}/bin/date -u +%Y-%m-%dT%H:%M:%SZ)"
         printf '%s\n' "$keys"
       } > "$temporary"
-      chown ${lib.escapeShellArg "${config.user.name}:${user.group}"} "${user.home}/.ssh" "$temporary"
-      chmod 700 "${user.home}/.ssh"
-      chmod 600 "$temporary"
-      mv "$temporary" "${keysFile}"
+       ${pkgs.coreutils}/bin/chown ${lib.escapeShellArg "${config.user.name}:${user.group}"} "${user.home}/.ssh" "$temporary"
+       ${pkgs.coreutils}/bin/chmod 700 "${user.home}/.ssh"
+       ${pkgs.coreutils}/bin/chmod 600 "$temporary"
+       ${pkgs.coreutils}/bin/mv "$temporary" "${keysFile}"
       trap - EXIT
     fi
   '';
@@ -72,20 +72,20 @@ let
 
     keys=$(SSH_AUTH_SOCK="$socket" ${pkgs.openssh}/bin/ssh-add -L 2>/dev/null || true)
     if [ -z "$keys" ] || [ "$keys" = "The agent has no identities." ]; then
-      rm -f "${agentKeysFile}"
+       ${pkgs.coreutils}/bin/rm -f "${agentKeysFile}"
       exit 0
     fi
 
-    mkdir -p "${user.home}/.ssh"
-    temporary=$(mktemp "${agentKeysFile}.XXXXXX")
-    trap 'rm -f "$temporary"' EXIT
+     ${pkgs.coreutils}/bin/mkdir -p "${user.home}/.ssh"
+     temporary=$(${pkgs.coreutils}/bin/mktemp "${agentKeysFile}.XXXXXX")
+     trap '${pkgs.coreutils}/bin/rm -f "$temporary"' EXIT
     {
       printf '# Source: SSH agent; last synchronized: %s\n' "$(${pkgs.coreutils}/bin/date -u +%Y-%m-%dT%H:%M:%SZ)"
       printf '%s\n' "$keys"
     } > "$temporary"
-    chown ${lib.escapeShellArg "${config.user.name}:${user.group}"} "$temporary"
-    chmod 600 "$temporary"
-    mv "$temporary" "${agentKeysFile}"
+     ${pkgs.coreutils}/bin/chown ${lib.escapeShellArg "${config.user.name}:${user.group}"} "$temporary"
+     ${pkgs.coreutils}/bin/chmod 600 "$temporary"
+     ${pkgs.coreutils}/bin/mv "$temporary" "${agentKeysFile}"
     trap - EXIT
   '';
 in

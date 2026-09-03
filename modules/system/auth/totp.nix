@@ -14,8 +14,11 @@ let
     name = "totp-init";
     runtimeInputs = with pkgs; [
       uutils-coreutils-noprefix
+      gnugrep
+      gnused
       oath-toolkit
       qrencode
+      sudo
     ];
     text = ''
       if [[ $EUID -ne 0 ]]; then exec sudo "$0" "$@"; fi
@@ -27,20 +30,20 @@ let
       error() { echo -e "''${RED}Error:''${RESET} $*" >&2; exit 1; }
       echo ""; echo -e "''${BOLD}TOTP Setup''${RESET}"
       echo -e "''${DIM}Configure time-based one-time password (2FA) for sudo and SSH''${RESET}"; echo ""
-      OATH_FILE="${oathFile}"; USERNAME="''${SUDO_USER:-$USER}"; HOSTNAME="$(hostname)"
-      if [[ -f "$OATH_FILE" ]] && grep -q "HOTP/T30/6 $USERNAME " "$OATH_FILE" 2>/dev/null; then
+       OATH_FILE="${oathFile}"; USERNAME="''${SUDO_USER:-$USER}"; HOSTNAME="$(${pkgs.coreutils}/bin/hostname)"
+       if [[ -f "$OATH_FILE" ]] && ${pkgs.gnugrep}/bin/grep -q "HOTP/T30/6 $USERNAME " "$OATH_FILE" 2>/dev/null; then
         info "Current status: enrolled"; echo ""; echo "  [r] Re-enroll (generate new secret)"; echo "  [q] Quit"
       else
         info "Current status: not enrolled"; echo ""; echo "  [e] Enroll (generate secret)"; echo "  [q] Quit"
       fi
       echo ""; read -rp "Choice: " CHOICE
       case "$CHOICE" in e|E|r|R) ;; *) echo "Aborted."; exit 0 ;; esac
-      SECRET_HEX=$(od -An -tx1 -N20 /dev/urandom | tr -d ' \n')
-      SECRET_B32=$(printf '%s' "$SECRET_HEX" | sed 's/../\\x&/g' | xargs -0 printf '%b' | base32 | tr -d '\n')
-      install -m 600 /dev/null "$OATH_FILE"
+       SECRET_HEX=$(${pkgs.coreutils}/bin/od -An -tx1 -N20 /dev/urandom | ${pkgs.coreutils}/bin/tr -d ' \n')
+       SECRET_B32=$(printf '%s' "$SECRET_HEX" | ${pkgs.gnused}/bin/sed 's/../\\x&/g' | ${pkgs.findutils}/bin/xargs -0 printf '%b' | ${pkgs.coreutils}/bin/base32 | ${pkgs.coreutils}/bin/tr -d '\n')
+       ${pkgs.coreutils}/bin/install -m 600 /dev/null "$OATH_FILE"
       echo "HOTP/T30/6 $USERNAME - $SECRET_HEX" > "$OATH_FILE"
       echo ""; info "Scan this QR code with your authenticator app:"; echo ""
-      qrencode -t ANSIUTF8 "otpauth://totp/NixOS:''${USERNAME}@''${HOSTNAME}?secret=''${SECRET_B32}&issuer=NixOS"
+       ${pkgs.qrencode}/bin/qrencode -t ANSIUTF8 "otpauth://totp/NixOS:''${USERNAME}@''${HOSTNAME}?secret=''${SECRET_B32}&issuer=NixOS"
       echo ""; echo -e "  ''${BOLD}Backup secret (base32):''${RESET} $SECRET_B32"; echo ""
       VERIFIED=false
       for _ in 1 2 3; do

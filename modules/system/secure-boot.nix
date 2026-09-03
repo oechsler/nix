@@ -46,7 +46,7 @@ let
       REPO_DIR=${lib.escapeShellArg "${config.users.users.${config.user.name}.home}/repos/nix"}
 
       sb_in_config=false
-      grep -q 'secureBoot\.enable\s*=\s*true' "$REPO_DIR/hosts/$(hostname)/configuration.nix" 2>/dev/null \
+       ${pkgs.gnugrep}/bin/grep -q 'secureBoot\.enable\s*=\s*true' "$REPO_DIR/hosts/$(${pkgs.coreutils}/bin/hostname)/configuration.nix" 2>/dev/null \
         && sb_in_config=true
       if [[ "$sb_in_config" != "true" ]]; then
         warn "features.secureBoot.enable is not set for this host."
@@ -65,7 +65,7 @@ let
         echo ""
         read -rp "    Reboot into UEFI firmware setup now? [Y/n]: " confirm
         if [[ ! "$confirm" =~ ^[nN]$ ]]; then
-          systemctl reboot --firmware-setup
+         ${pkgs.systemd}/bin/systemctl reboot --firmware-setup
         fi
       }
 
@@ -73,8 +73,8 @@ let
       # ASUS firmware clears keys → Secure Boot disabled instead of entering Setup Mode.
       # Workaround: set OS Type = Other OS + Secure Boot Mode = Custom in UEFI,
       # which allows sbctl to enroll keys without requiring explicit Setup Mode.
-      board_vendor="$(cat /sys/class/dmi/id/board_vendor 2>/dev/null || true)"
-      sys_vendor="$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)"
+       board_vendor="$(${pkgs.coreutils}/bin/cat /sys/class/dmi/id/board_vendor 2>/dev/null || true)"
+       sys_vendor="$(${pkgs.coreutils}/bin/cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)"
       ASUS_BOARD=false
       if [[ "$board_vendor" == *"ASUSTeK"* || "$board_vendor" == *"ASUS"* || \
             "$sys_vendor" == *"ASUSTeK"* || "$sys_vendor" == *"ASUS"* ]]; then
@@ -82,16 +82,16 @@ let
       fi
 
       #--- Read current state ---
-      bootctl_out=$(bootctl status 2>/dev/null || true)
-      sb_enabled=$(printf '%s\n' "$bootctl_out" | awk '/Secure Boot:/{print $3}')
-      setup_mode=$(printf '%s\n' "$bootctl_out" | awk '/Setup Mode:/{print $3}')
+       bootctl_out=$(${pkgs.systemd}/bin/bootctl status 2>/dev/null || true)
+       sb_enabled=$(printf '%s\n' "$bootctl_out" | ${pkgs.gawk}/bin/awk '/Secure Boot:/{print $3}')
+       setup_mode=$(printf '%s\n' "$bootctl_out" | ${pkgs.gawk}/bin/awk '/Setup Mode:/{print $3}')
       keys_exist=false
       [[ -f /var/lib/sbctl/keys/db/db.pem && -f /var/lib/sbctl/keys/db/db.key ]] && keys_exist=true
       keys_enrolled=false
-      if command -v sbctl &>/dev/null; then
-        sbctl_json=$(sbctl status --json 2>/dev/null || true)
+       if [ -x ${pkgs.sbctl}/bin/sbctl ]; then
+         sbctl_json=$(${pkgs.sbctl}/bin/sbctl status --json 2>/dev/null || true)
         if [[ -n "$sbctl_json" ]]; then
-          vendor_count=$(echo "$sbctl_json" | jq '.vendors | length' 2>/dev/null || echo "0")
+           vendor_count=$(echo "$sbctl_json" | ${pkgs.jq}/bin/jq '.vendors | length' 2>/dev/null || echo "0")
           [[ "$vendor_count" != "0" ]] && keys_enrolled=true
         fi
       fi
@@ -108,7 +108,7 @@ let
       if [[ "$sb_enabled" == "enabled" ]] && [[ "$keys_enrolled" == true ]]; then
         info "Verifying boot files..."
         echo ""
-        sbctl verify
+         ${pkgs.sbctl}/bin/sbctl verify
         echo ""
         success "Secure Boot is active. lanzaboote UKIs are signed."
         warn "Unsigned entries above are old systemd-boot EFI files — expected, never booted directly."
@@ -127,21 +127,21 @@ let
         # Unmount the impermanence bind-mount first if active, then wipe both
         # sides. If we only rm -rf the mount point, the mount stub survives and
         # sbctl cannot mkdir keys/ inside it.
-        if mountpoint -q /var/lib/sbctl 2>/dev/null; then
-          umount /var/lib/sbctl
+         if ${pkgs.util-linux}/bin/mountpoint -q /var/lib/sbctl 2>/dev/null; then
+           ${pkgs.util-linux}/bin/umount /var/lib/sbctl
         fi
-        rm -rf /var/lib/sbctl /persist/var/lib/sbctl 2>/dev/null || true
-        mkdir -p /var/lib/sbctl
-        if command -v sbctl &>/dev/null; then
-          sbctl create-keys 2>&1 | sed 's/^/    /'
+         ${pkgs.coreutils}/bin/rm -rf /var/lib/sbctl /persist/var/lib/sbctl 2>/dev/null || true
+         ${pkgs.coreutils}/bin/mkdir -p /var/lib/sbctl
+        if [ -x ${pkgs.sbctl}/bin/sbctl ]; then
+           ${pkgs.sbctl}/bin/sbctl create-keys 2>&1 | ${pkgs.gnused}/bin/sed 's/^/    /'
         else
-          nix run nixpkgs#sbctl -- create-keys 2>&1 | sed 's/^/    /'
+           ${pkgs.nix}/bin/nix run nixpkgs#sbctl -- create-keys 2>&1 | ${pkgs.gnused}/bin/sed 's/^/    /'
         fi
         # Copy entire sbctl dir (keys/ + GUID) to /persist so it survives
         # the next rebuild (which re-activates the impermanence bind-mount).
         if [[ -d /persist ]]; then
-          mkdir -p /persist/var/lib
-          cp -a /var/lib/sbctl /persist/var/lib/
+           ${pkgs.coreutils}/bin/mkdir -p /persist/var/lib
+           ${pkgs.coreutils}/bin/cp -a /var/lib/sbctl /persist/var/lib/
         fi
         echo ""
       fi
@@ -151,18 +151,18 @@ let
       # interfere. lanzaboote in the config produces a different derivation than
       # the previous build (which had mkForce false), so Nix will build fresh and
       # lanzaboote will generate signed EFI images.
-      avail_gb=$(awk '/^MemAvailable:/{printf "%d", $2/1024/1024}' /proc/meminfo)
+       avail_gb=$(${pkgs.gawk}/bin/awk '/^MemAvailable:/{printf "%d", $2/1024/1024}' /proc/meminfo)
       max_jobs=$(( avail_gb / 4 ))
       (( max_jobs < 1 )) && max_jobs=1
 
       step 2 3 "Rebuilding system with Secure Boot active..."
       echo ""
-      nixos-rebuild switch --flake "$REPO_DIR#$(hostname)" --max-jobs "$max_jobs"
+       ${pkgs.nixos-rebuild}/bin/nixos-rebuild switch --flake "$REPO_DIR#$(${pkgs.coreutils}/bin/hostname)" --max-jobs "$max_jobs"
       echo ""
       # sbctl sign-all signs lanzaboote's UKI images.
       # Do NOT sign raw kernel EFI files from previous systemd-boot generations —
       # manually signing them produces invalid boot entries (lanzaboote requires UKIs).
-      sbctl sign-all
+       ${pkgs.sbctl}/bin/sbctl sign-all
       echo ""
 
       #--- Step 3: enroll keys ---
@@ -183,9 +183,9 @@ let
           echo ""
           read -rp "    Confirm keys are cleared and you are back in NixOS, then press Enter..." _
           echo ""
-          sbctl enroll-keys --partial db  --microsoft --firmware-builtin --ignore-immutable --yes-this-might-brick-my-machine
-          sbctl enroll-keys --partial KEK --microsoft --firmware-builtin --ignore-immutable --yes-this-might-brick-my-machine
-          sbctl enroll-keys --partial PK  --ignore-immutable --yes-this-might-brick-my-machine
+           ${pkgs.sbctl}/bin/sbctl enroll-keys --partial db  --microsoft --firmware-builtin --ignore-immutable --yes-this-might-brick-my-machine
+           ${pkgs.sbctl}/bin/sbctl enroll-keys --partial KEK --microsoft --firmware-builtin --ignore-immutable --yes-this-might-brick-my-machine
+           ${pkgs.sbctl}/bin/sbctl enroll-keys --partial PK  --ignore-immutable --yes-this-might-brick-my-machine
           echo ""
           success "Keys enrolled."
           echo ""
@@ -214,7 +214,7 @@ let
         else
           step 3 3 "Enrolling keys into firmware..."
           echo ""
-          sbctl enroll-keys --microsoft --firmware-builtin
+           ${pkgs.sbctl}/bin/sbctl enroll-keys --microsoft --firmware-builtin
           echo ""
           success "Keys enrolled."
           echo ""

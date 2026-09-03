@@ -3,6 +3,9 @@
 # Post-install provisioning.
 
 setup_ssh() {
+  for command_name in cp chmod ssh-keygen; do
+    command -v "$command_name" &>/dev/null || error "Required command not found: $command_name"
+  done
   AGE_KEY="$(nix-shell -p ssh-to-age --run "ssh-to-age -private-key -i $(printf '%q' "$SSH_KEY_FILE")")"
   local ssh_dir="/mnt/home/$CONFIG_USERNAME/.ssh"
   mkdir -p "$ssh_dir"
@@ -27,6 +30,9 @@ setup_sops() {
 
 setup_totp() {
   local secret_hex secret_b32 oath_file
+  for command_name in od tr sed xargs base32 dirname install; do
+    command -v "$command_name" &>/dev/null || error "Required command not found: $command_name"
+  done
   secret_hex=$(od -An -tx1 -N20 /dev/urandom | tr -d ' \n')
   secret_b32=$(printf '%s' "$secret_hex" | sed 's/../\\x&/g' | xargs -0 printf '%b' | base32 | tr -d '\n')
   oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"

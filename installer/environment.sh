@@ -30,6 +30,7 @@ phase_validate() {
     warn "Dry-run mode: no changes will be made"
     echo ""
   fi
+  command -v findmnt &>/dev/null || error "Required command not found: findmnt"
   local root_fstype
   root_fstype="$(findmnt -n -o FSTYPE /)"
   IS_LIVE=false

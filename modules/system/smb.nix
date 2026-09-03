@@ -58,7 +58,7 @@ let
         fi
       fi
       echo "Waiting for network... Attempt $i/30"
-      sleep 2
+      ${pkgs.coreutils}/bin/sleep 2
     done
     echo "Warning: Network not ready after 60 seconds, continuing anyway..."
     exit 0
@@ -74,33 +74,33 @@ let
     in
     ''
       LABEL=${lib.escapeShellArg share.label}
-      MOUNT_UID=$(id -u ${lib.escapeShellArg user.name})
-      MOUNT_GID=$(id -g ${lib.escapeShellArg user.name})
+      MOUNT_UID=$(${pkgs.coreutils}/bin/id -u ${lib.escapeShellArg user.name})
+      MOUNT_GID=$(${pkgs.coreutils}/bin/id -g ${lib.escapeShellArg user.name})
 
-      mkdir -p ${lib.escapeShellArg "${user.home}/smb"}/"$LABEL"
-      chown ${lib.escapeShellArg "${user.name}:${user.group}"} ${lib.escapeShellArg "${user.home}/smb"}/"$LABEL"
+      ${pkgs.coreutils}/bin/mkdir -p ${lib.escapeShellArg "${user.home}/smb"}/"$LABEL"
+      ${pkgs.coreutils}/bin/chown ${lib.escapeShellArg "${user.name}:${user.group}"} ${lib.escapeShellArg "${user.home}/smb"}/"$LABEL"
 
-      if mountpoint -q "${user.home}/smb/$LABEL"; then
+      if ${pkgs.util-linux}/bin/mountpoint -q "${user.home}/smb/$LABEL"; then
         echo "SMB already mounted: $LABEL"
       else
         MOUNTED=false
         for i in $(${pkgs.coreutils}/bin/seq 1 5); do
-          if timeout 10 mount -t cifs ${lib.escapeShellArg share.path} ${lib.escapeShellArg user.home}/"smb/$LABEL" \
+          if ${pkgs.coreutils}/bin/timeout 10 ${pkgs.util-linux}/bin/mount -t cifs ${lib.escapeShellArg share.path} ${lib.escapeShellArg user.home}/"smb/$LABEL" \
             -o credentials=${lib.escapeShellArg creds},uid="$MOUNT_UID",gid="$MOUNT_GID",forceuid,forcegid,soft,file_mode=0644,dir_mode=0755; then
             MOUNTED=true
             break
           fi
           echo "Mount attempt $i/5 failed: $LABEL"
-          sleep 5
+          ${pkgs.coreutils}/bin/sleep 5
         done
 
         if [ "$MOUNTED" = true ]; then
           echo "SMB mount successful: $LABEL"
-          sudo -u ${lib.escapeShellArg user.name} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$MOUNT_UID/bus" \
+          ${pkgs.sudo}/bin/sudo -u ${lib.escapeShellArg user.name} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$MOUNT_UID/bus" \
             ${pkgs.libnotify}/bin/notify-send -a "SMB Mount" -i network-server "${translate "SMB mount successful" "SMB-Mount erfolgreich"}" "${translate "$LABEL was connected" "$LABEL wurde verbunden"}" || true
         else
           echo "Mount failed after 5 attempts: $LABEL"
-          sudo -u ${lib.escapeShellArg user.name} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$MOUNT_UID/bus" \
+          ${pkgs.sudo}/bin/sudo -u ${lib.escapeShellArg user.name} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$MOUNT_UID/bus" \
             ${pkgs.libnotify}/bin/notify-send -a "SMB Mount" -u critical -i dialog-error "${translate "SMB mount failed" "SMB-Mount fehlgeschlagen"}" "${translate "$LABEL could not be connected" "$LABEL konnte nicht verbunden werden"}" || true
         fi
       fi
@@ -111,7 +111,7 @@ let
   # UNMOUNT SCRIPT
   # ============================================================================
   umountContent = lib.concatMapStringsSep "\n" (share: ''
-    timeout 1s umount -l "${user.home}/smb/${share.label}" || true
+    ${pkgs.coreutils}/bin/timeout 1s ${pkgs.util-linux}/bin/umount -l "${user.home}/smb/${share.label}" || true
   '') cfg.shares;
 in
 {

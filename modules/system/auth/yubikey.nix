@@ -12,7 +12,13 @@ let
   u2fFile = "${config.features.impermanence.persistPrefix}/etc/u2f_mappings";
   yubikey-init = pkgs.writeShellApplication {
     name = "yubikey-init";
-    runtimeInputs = with pkgs; [ pam_u2f ];
+    runtimeInputs = with pkgs; [
+      pam_u2f
+      gnugrep
+      gnused
+      uutils-coreutils-noprefix
+      sudo
+    ];
     text = ''
       if [[ $EUID -ne 0 ]]; then exec sudo "$0" "$@"; fi
       RED='\033[0;31m' GREEN='\033[0;32m'
