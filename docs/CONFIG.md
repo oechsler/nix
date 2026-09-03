@@ -490,33 +490,29 @@ OAuth/OIDC. Provider credentials and MCP credentials are always kept in SOPS.
 
 Existing providers and models can be adjusted by using the same name; unrelated
 defaults remain available. Providers can be enabled or disabled individually.
-Additional OpenCode settings can be placed in `settings`. Built-in LSP servers
-remain enabled by default; additional servers and overrides belong in `lsp`.
-Formatters are configured declaratively in `formatter`; the shared defaults cover
-Nix, JavaScript/TypeScript, JSON, YAML, Markdown, shell, Python, Go, Rust, and
-Java. They run after OpenCode writes or edits a matching file. The optional
-background server is disabled by default; enable it with
-`features.dev.opencode.server.enable = true` and customize its directory,
-listen address, or port as needed. It can be reached over the local network or
-VPN and used with `opencode attach`.
+Additional OpenCode settings can be placed in `settings`. The `lsp` and
+`formatter` attributes have shared defaults and can be extended or overridden
+by name. Set `enable = false` to disable an individual entry.
 
 The LSP defaults cover Nix, shell, YAML, Python, Go, Rust, JavaScript/TypeScript,
-Java, Markdown, JSON, and TOML. A host can add an LSP server or override a
-default by using its name. Set `enable = false` to disable one:
+Java, Markdown, JSON, and TOML. The formatter defaults cover Nix,
+JavaScript/TypeScript, JSON, YAML, Markdown, shell, Python, Go, Rust, and Java.
+Formatters run after OpenCode writes or edits a matching file.
+
+For example, a host can override an LSP, disable a formatter, and add a custom
+formatter while keeping all unrelated defaults:
 
 ```nix
-features.dev.opencode.lsp = {
-  markdown = {
+features.dev.opencode = {
+  lsp.markdown = {
     command = [ "marksman" "server" ];
     extensions = [ ".md" ];
   };
-  custom = {
-    command = [ "my-language-server" "--stdio" ];
+  formatter.prettier.enable = false;
+  formatter.custom = {
+    command = [ "my-formatter" "$FILE" ];
     extensions = [ ".custom" ];
-    env = { PROJECT_ROOT = "/workspace"; };
-    initialization = { setting = true; };
   };
-  json.enable = false;
 };
 ```
 
@@ -540,23 +536,10 @@ features.dev.opencode = {
 };
 ```
 
-Use `settings.small_model` to choose a separate small model, or `lsp` to add
-servers and disable built-in ones. Remote MCPs can configure OAuth/OIDC with
-`oauth`; its client secret is referenced through `clientSecretSecret`. See
+Use `settings.small_model` to choose a separate small model. Remote MCPs can
+configure OAuth/OIDC with `oauth`; its client secret is referenced through
+`clientSecretSecret`. See
 [sops/README.md](../sops/README.md) for the credential layout and workflow.
-
-Formatter defaults can be disabled or overridden by name. Custom formatters use
-`$FILE` as the file placeholder in their command:
-
-```nix
-features.dev.opencode.formatter = {
-  prettier.enable = false;
-  custom-nix = {
-    command = [ "my-nix-formatter" "$FILE" ];
-    extensions = [ ".nix" ];
-  };
-};
-```
 
 ```nix
 features.dev.opencode.mcp.company = {
