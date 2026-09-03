@@ -410,6 +410,8 @@ in
       ++ lib.optionals enableAppPreviews mediaKeymaps;
   };
 
+  home.packages = lib.optionals enableAppPreviews [ pkgs.mediainfo ];
+
   xdg.desktopEntries.yazi = {
     name = "Yazi";
     genericName = "File Manager";
