@@ -115,6 +115,7 @@ in
           overrideStrategy = "asDropin";
           after = [ "fido2-yubikey-wait.service" ];
           wants = [ "fido2-yubikey-wait.service" ];
+          serviceConfig.TimeoutStartSec = "infinity";
         }
       ) devices;
     };
