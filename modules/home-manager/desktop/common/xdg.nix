@@ -33,9 +33,10 @@ in
       nvim = {
         name = "Neovim";
         genericName = "Text Editor";
-        exec = "kitty nvim %F";
+        exec = "kitty --class nvim nvim %F";
         icon = "nvim";
         terminal = false;
+        settings.StartupWMClass = "nvim";
         categories = [
           "Utility"
           "TextEditor"
@@ -62,6 +63,7 @@ in
           "application/toml"
         ];
       };
+
     };
 
     mimeApps = {
