@@ -10,7 +10,6 @@
 let
   cfg = config.features.dev.opencode;
   endpoints = config.services.localEndpoints;
-  caddyRootCertificate = "${config.services.caddy.dataDir}/.local/share/caddy/pki/authorities/local/root.crt";
   caddyRootCertificateExport = "${config.services.caddy.dataDir}/root.crt";
   caBundle = "${config.services.caddy.dataDir}/ca-bundle.crt";
   browser = config.features.desktop.browser.type;
@@ -69,28 +68,40 @@ in
       wantedBy = [ "multi-user.target" ];
       after = [ "caddy.service" ];
       requires = [ "caddy.service" ];
-      path = [ pkgs.p11-kit ];
+      path = [
+        pkgs.coreutils
+        pkgs.curl
+        pkgs.jq
+      ];
       serviceConfig = {
         Type = "oneshot";
         Environment = [
           "HOME=${config.services.caddy.dataDir}"
           "XDG_CONFIG_HOME=${config.services.caddy.dataDir}/.config"
         ];
-        ExecStart = "${lib.getExe config.services.caddy.package} trust --address 127.0.0.1:2019";
-        ExecStartPost = "${lib.getExe pkgs.bash} -c 'cp ${caddyRootCertificate} ${caddyRootCertificateExport} && chmod 644 ${caddyRootCertificateExport} && cat ${config.security.pki.caBundle} ${caddyRootCertificateExport} > ${caBundle} && chmod 644 ${caBundle}'";
       };
-    };
+      script = ''
+        attempts=0
+        while [ "$attempts" -lt 30 ]; do
+          if curl --fail --silent --show-error http://127.0.0.1:2019/pki/ca/local \
+            | jq --exit-status --raw-output .root_certificate > "${caddyRootCertificateExport}.tmp" \
+            && [ -s "${caddyRootCertificateExport}.tmp" ]; then
+            break
+          fi
+          attempts=$((attempts + 1))
+          sleep 1
+        done
 
-    systemd.paths.caddy-trust = lib.mkIf (endpoints != { }) {
-      description = "Watch Caddy's local CA for rotation";
-      wantedBy = [ "multi-user.target" ];
-      after = [ "caddy.service" ];
-      pathConfig = {
-        PathChanged = [
-          caddyRootCertificate
-        ];
-        Unit = "caddy-trust.service";
-      };
+        if [ ! -s "${caddyRootCertificateExport}.tmp" ]; then
+          echo "Caddy local root certificate was not available through the admin API" >&2
+          exit 1
+        fi
+
+        mv -f "${caddyRootCertificateExport}.tmp" "${caddyRootCertificateExport}"
+        cat "${config.security.pki.caBundle}" "${caddyRootCertificateExport}" > "${caBundle}.tmp"
+        chmod 0644 "${caBundle}.tmp"
+        mv -f "${caBundle}.tmp" "${caBundle}"
+      '';
     };
 
     environment.variables = lib.mkIf (endpoints != { }) {
