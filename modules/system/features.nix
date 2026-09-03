@@ -377,6 +377,7 @@ in
           description = "Additional OpenCode formatters and overrides.";
         };
         server = {
+          # The server is private; the central Caddy endpoint is https://opencode.local.
           enable = (lib.mkEnableOption "OpenCode background server") // {
             default = false;
           };
@@ -384,16 +385,6 @@ in
             type = lib.types.path;
             default = "/home/${config.user.name}/repos";
             description = "Working directory exposed by the OpenCode server.";
-          };
-          hostname = lib.mkOption {
-            type = lib.types.str;
-            default = "0.0.0.0";
-            description = "Hostname or address on which the OpenCode server listens.";
-          };
-          port = lib.mkOption {
-            type = lib.types.port;
-            default = 4096;
-            description = "TCP port for the OpenCode server.";
           };
         };
         provider = lib.mkOption {

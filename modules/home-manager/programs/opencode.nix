@@ -1,20 +1,5 @@
-# OpenCode AI Coding Agent Configuration
-#
-# This module configures OpenCode, an AI coding agent.
-#
-# Configuration:
-# - Default model: openai/gpt-5.6-luna
-# - Providers: OpenAI (browser login), OpenCode Go
-# - API keys managed via SOPS secrets
-# - Environment variables sourced in Fish shell
-#
-# Providers:
-# - openai: OpenAI models (browser login, no API key needed)
-# - opencode-go: OpenCode Go proxy models (API key from sops)
-#   - DeepSeek V4 Flash/Pro
-#   - GPT-5.6 Luna
-#   - Qwen3.7 Plus/Max
-#   - Qwen3.8 Max
+# OpenCode AI coding agent configuration.
+# Provider credentials and MCP secrets are injected at runtime from SOPS.
 
 {
   config,
@@ -259,8 +244,8 @@ let
   '';
   opencodeServer = pkgs.writeShellScriptBin "opencode-server" ''
     exec ${opencodeWithSecrets}/bin/opencode serve \
-      --hostname ${lib.escapeShellArg cfg.server.hostname} \
-      --port ${toString cfg.server.port}
+      --hostname 127.0.0.1 \
+      --port 4096
   '';
 in
 {

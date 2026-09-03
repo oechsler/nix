@@ -23,6 +23,7 @@
     ./networking/base.nix
     ./networking/wifi.nix
     ./networking/tailscale.nix
+    ./caddy.nix
     ./locale.nix
     ./users.nix
     ./ldap.nix
