@@ -220,27 +220,35 @@
     disableAspm = true;
   };
 
-  # ASUS ROG STRIX X870-I GAMING WIFI has a phantom USB port 3-7 on the
-  # AMD 800 Series Chipset xHCI controller (PCI 0000:71:00.0). The firmware
-  # reports the port as "not used" but the controller keeps trying to enumerate
-  # it, causing hub_event to hang during suspend with wq_busy=1 (-16 EBUSY).
-  #
-  # Disable at boot and re-disable after each resume (xHC reset clears port state).
-  systemd.services.disable-usb3-port7 = {
-    description = "Disable phantom USB port 3-7";
-    wantedBy = [ "multi-user.target" ];
-    after = [ "sysinit.target" ];
-    unitConfig.ConditionPathExists = "/sys/bus/usb/devices/usb3/3-0:1.0/usb3-port7/disable";
-    serviceConfig.Type = "exec";
-    script = ''
-      echo 1 > /sys/bus/usb/devices/usb3/3-0:1.0/usb3-port7/disable
-    '';
-  };
+  # The RX 9070 XT exposes both s2idle and deep sleep. s2idle can resume with
+  # the compositor and existing GUI processes alive but unable to create new
+  # windows, leaving applications such as LibreWolf reporting a stale
+  # instance. Use the firmware-backed sleep path on this desktop instead.
+  systemd = {
+    sleep.settings.Sleep.MemorySleepMode = "deep";
 
-  # Re-disable after resume (sleep-actions ExecStop runs post-resume).
-  systemd.services.sleep-actions.serviceConfig.ExecStop = lib.mkAfter [
-    "${pkgs.bash}/bin/bash -c 'port=/sys/bus/usb/devices/usb3/3-0:1.0/usb3-port7/disable; [ ! -e \"$port\" ] || echo 1 > \"$port\"'"
-  ];
+    # ASUS ROG STRIX X870-I GAMING WIFI has a phantom USB port 3-7 on the
+    # AMD 800 Series Chipset xHCI controller (PCI 0000:71:00.0). The firmware
+    # reports the port as "not used" but the controller keeps trying to enumerate
+    # it, causing hub_event to hang during suspend with wq_busy=1 (-16 EBUSY).
+    #
+    # Disable at boot and re-disable after each resume (xHC reset clears port state).
+    services.disable-usb3-port7 = {
+      description = "Disable phantom USB port 3-7";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "sysinit.target" ];
+      unitConfig.ConditionPathExists = "/sys/bus/usb/devices/usb3/3-0:1.0/usb3-port7/disable";
+      serviceConfig.Type = "exec";
+      script = ''
+        echo 1 > /sys/bus/usb/devices/usb3/3-0:1.0/usb3-port7/disable
+      '';
+    };
+
+    # Re-disable after resume (sleep-actions ExecStop runs post-resume).
+    services.sleep-actions.serviceConfig.ExecStop = lib.mkAfter [
+      "${pkgs.bash}/bin/bash -c 'port=/sys/bus/usb/devices/usb3/3-0:1.0/usb3-port7/disable; [ ! -e \"$port\" ] || echo 1 > \"$port\"'"
+    ];
+  };
 
   system.stateVersion = "26.11";
 }
