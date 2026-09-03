@@ -200,7 +200,7 @@ in
             )
             ++ [ "kitty" ]
             ++ lib.optionals config.features.dev.enable [ "nvim" ]
-            ++ lib.optionals config.features.apps.enable [ "obsidian" ]
+            ++ lib.optionals config.features.apps.enable [ "md.Obsidian" ]
             ++ lib.optionals config.features.gaming.enable [ "steam" ]
             ++ lib.optionals config.features.apps.enable [ "vesktop" ]
             ++ lib.optional (

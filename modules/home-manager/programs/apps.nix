@@ -122,6 +122,18 @@ in
           genericName = "Internet Messenger";
         };
 
+        # hypr-dock groups windows by app ID; Obsidian reports md.Obsidian.
+        xdg.dataFile."applications/md.Obsidian.desktop".text = ''
+          [Desktop Entry]
+          Type=Application
+          Name=Obsidian
+          Comment=Knowledge base
+          Exec=obsidian %u
+          Icon=obsidian
+          StartupWMClass=md.Obsidian
+          NoDisplay=true
+        '';
+
         programs.spicetify =
           let
             spicePkgs = inputs.spicetify-nix.legacyPackages.${pkgs.stdenv.hostPlatform.system};
