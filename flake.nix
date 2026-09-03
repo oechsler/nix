@@ -37,7 +37,7 @@
 #   nixos-rebuild switch --flake .#samuels-razer
 #
 # Usage (as dependency in other repos):
-#   See lib.mkHost documentation in README.md
+#   See lib.mkHost documentation in docs/QUICKSTART.md
 {
   description = "Samuel's NixOS configuration";
 
@@ -102,7 +102,7 @@
       # Pinned: nix flake update must not silently bump the kernel version.
       # Bump this together with nixpkgs-kernel when upgrading the kernel.
       # See: github.com/xddxdd/nix-cachyos-kernel (version.json tracks kernel versions)
-      # Current: rev c69c33c2 (2026-08-20), kernel nullnullnull
+      # Current: rev c69c33c2 (2026-08-20); kernel version tracked by the input
       # MT7927 (WiFi/BT on samuels-terra) requires kernel 7.2+ — bump when available.
       url = "github:xddxdd/nix-cachyos-kernel/c69c33c24148defbcc34ab25456cc460bc33fdbb";
       inputs.nixpkgs.follows = "nixpkgs-kernel";
@@ -356,74 +356,6 @@
       #===========================
       # CI/CD Checks
       #===========================
-      checks.${system} = {
-        # Custom convention linter (self-documenting)
-        # Enforces: NIX_CODE_STYLE.md, NIX_DOCS_STYLE.md
-        lint = import ./lint.nix {
-          inherit pkgs;
-          inherit (pkgs) lib;
-        };
-
-        # statix: Anti-patterns and best practices (enforced)
-        # https://github.com/oppiliappan/statix
-        statix = pkgs.runCommand "statix-check" { } ''
-          # Copy source and remove generated hardware configs before checking
-          cp -r ${./.} ./source
-          chmod -R +w ./source
-          rm -f ./source/hosts/*/hardware-configuration.generated.nix
-          ${pkgs.statix}/bin/statix check ./source --format=stderr
-          touch $out
-        '';
-
-        # deadnix: Dead code detection (enforced)
-        # https://github.com/astro/deadnix
-        deadnix = pkgs.runCommand "deadnix-check" { } ''
-          ${pkgs.deadnix}/bin/deadnix ${./.}
-          touch $out
-        '';
-
-        # shellcheck: Shell script linter (enforced)
-        # https://www.shellcheck.net
-        shellcheck = pkgs.runCommand "shellcheck-check" { } ''
-          find ${./.} -type f -name '*.sh' -print0 \
-            | xargs --null --no-run-if-empty ${pkgs.shellcheck}/bin/shellcheck
-          touch $out
-        '';
-
-        format = pkgs.runCommand "nixfmt-check" { } ''
-          find ${./.} -name '*.nix' ! -name 'hardware-configuration.generated.nix' -print0 \
-            | xargs --null --no-run-if-empty ${pkgs.nixfmt}/bin/nixfmt --check
-          touch $out
-        '';
-
-        markdownlint = pkgs.runCommand "markdownlint-check" { } ''
-          cp -r ${./.} ./source
-          cd ./source
-          ${pkgs.markdownlint-cli2}/bin/markdownlint-cli2 '**/*.md'
-          touch $out
-        '';
-
-        markdown-format = pkgs.runCommand "markdown-format-check" { } ''
-          ${pkgs.prettier}/bin/prettier --check '${./.}/**/*.md'
-          touch $out
-        '';
-
-        rust = pkgs.rustPlatform.buildRustPackage {
-          pname = "pam-lldap-check";
-          version = "0.1.0";
-          src = ./modules/packages/pam-lldap;
-          cargoHash = "sha256-+Du65HEaZSKbafS21q/TVPJGS28jd0FENP3+PsSF7F4=";
-          nativeBuildInputs = [
-            pkgs.clippy
-            pkgs.rustfmt
-          ];
-          dontBuild = true;
-          checkPhase = ''
-            cargo fmt --check
-            cargo clippy --offline --all-targets -- -D warnings
-          '';
-          installPhase = "touch $out";
-        };
-      };
+      checks.${system} = import ./lint.nix { inherit pkgs; };
     };
 }

@@ -43,7 +43,7 @@ let
       # Guard: refuse to run if Secure Boot is not enabled in the flake config.
       # Read at runtime from the flake so the install-time override (mkForce false)
       # does not permanently disable this script on the installed system.
-      REPO_DIR="$(eval echo ~"''${SUDO_USER:-''${USER}}")/repos/nix"
+      REPO_DIR=${lib.escapeShellArg "${config.users.users.${config.user.name}.home}/repos/nix"}
 
       sb_in_config=false
       grep -q 'secureBoot\.enable\s*=\s*true' "$REPO_DIR/hosts/$(hostname)/configuration.nix" 2>/dev/null \
@@ -83,8 +83,8 @@ let
 
       #--- Read current state ---
       bootctl_out=$(bootctl status 2>/dev/null || true)
-      sb_enabled=$(echo "$bootctl_out" | awk '/Secure Boot:/{print $3}')
-      setup_mode=$(echo "$bootctl_out" | awk '/Setup Mode:/{print $3}')
+      sb_enabled=$(printf '%s\n' "$bootctl_out" | awk '/Secure Boot:/{print $3}')
+      setup_mode=$(printf '%s\n' "$bootctl_out" | awk '/Setup Mode:/{print $3}')
       keys_exist=false
       [[ -f /var/lib/sbctl/keys/db/db.pem && -f /var/lib/sbctl/keys/db/db.key ]] && keys_exist=true
       keys_enrolled=false

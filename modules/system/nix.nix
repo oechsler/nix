@@ -172,7 +172,7 @@ in
           # nixos-rebuild uses a fixed transient systemd unit name. Wait for
           # a manually started rebuild before the automatic one invokes it.
           waitForManualRebuild = pkgs.writeShellScript "nixos-upgrade-wait" ''
-            for attempt in $(seq 1 300); do
+            for attempt in $(${pkgs.coreutils}/bin/seq 1 300); do
               if ! ${pkgs.systemd}/bin/systemctl is-active --quiet nixos-rebuild-switch-to-configuration.service; then
                 exit 0
               fi
@@ -188,9 +188,9 @@ in
           # build succeeds. The override file lives inside the flake source (so Nix can
           # find it in pure eval) but is never git-added — cleaned up after build.
           updateFlake = pkgs.writeShellScript "nixos-upgrade-update-flake" ''
-            cd ${flakeDir}
-            ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git checkout flake.lock
-            ${pkgs.sudo}/bin/sudo -u ${user} ${pkgs.git}/bin/git pull --ff-only
+            cd ${lib.escapeShellArg flakeDir}
+            ${pkgs.sudo}/bin/sudo -u ${lib.escapeShellArg user} ${pkgs.git}/bin/git -C ${lib.escapeShellArg flakeDir} checkout flake.lock
+            ${pkgs.sudo}/bin/sudo -u ${lib.escapeShellArg user} ${pkgs.git}/bin/git -C ${lib.escapeShellArg flakeDir} pull --ff-only
 
             # Write Secure Boot override when sbctl keys are missing.
             # Never git-added — exists only during the build window.

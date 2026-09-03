@@ -52,11 +52,11 @@ let
       mkdir -p "${user.home}/.ssh"
       temporary=$(mktemp "${keysFile}.XXXXXX")
       trap 'rm -f "$temporary"' EXIT
-       {
-         printf '# Source: user.keys; last synchronized: %s\n' "$(${pkgs.coreutils}/bin/date -u +%Y-%m-%dT%H:%M:%SZ)"
-         printf '%s\n' "$keys"
-       } > "$temporary"
-      chown ${config.user.name}:${user.group} "${user.home}/.ssh" "$temporary"
+      {
+        printf '# Source: user.keys; last synchronized: %s\n' "$(${pkgs.coreutils}/bin/date -u +%Y-%m-%dT%H:%M:%SZ)"
+        printf '%s\n' "$keys"
+      } > "$temporary"
+      chown ${lib.escapeShellArg "${config.user.name}:${user.group}"} "${user.home}/.ssh" "$temporary"
       chmod 700 "${user.home}/.ssh"
       chmod 600 "$temporary"
       mv "$temporary" "${keysFile}"
@@ -83,7 +83,7 @@ let
       printf '# Source: SSH agent; last synchronized: %s\n' "$(${pkgs.coreutils}/bin/date -u +%Y-%m-%dT%H:%M:%SZ)"
       printf '%s\n' "$keys"
     } > "$temporary"
-    chown ${config.user.name}:${user.group} "$temporary"
+    chown ${lib.escapeShellArg "${config.user.name}:${user.group}"} "$temporary"
     chmod 600 "$temporary"
     mv "$temporary" "${agentKeysFile}"
     trap - EXIT

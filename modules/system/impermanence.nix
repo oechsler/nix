@@ -168,15 +168,17 @@ in
       unitConfig.DefaultDependencies = "no";
       serviceConfig.Type = "oneshot";
       script = ''
+        set -euo pipefail
+
         mkdir -p /mnt
 
         # Mount btrfs root to access subvolumes
         # subvol=/ means mount the btrfs root (not @ subvolume)
-        mount -t btrfs -o subvol=/ ${rootDevice} /mnt
+        mount -t btrfs -o subvol=/ ${lib.escapeShellArg rootDevice} /mnt
 
         # Delete all nested subvolumes under @ (e.g., snapshots)
         # cut -f9: Extract subvolume path from btrfs output
-        btrfs subvolume list -o /mnt/@ | cut -f9 -d' ' | while read subvol; do
+        btrfs subvolume list -o /mnt/@ | cut -f9 -d' ' | while read -r subvol; do
           btrfs subvolume delete "/mnt/$subvol"
         done
 

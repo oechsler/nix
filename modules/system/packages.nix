@@ -395,7 +395,7 @@ in
                       # Extract and install icon
                       local icon="${packageIcon}"  # Guaranteed host fallback icon
                       if [ -d "$tmpdir/root" ]; then
-                        local icon_file
+                        local icon_file=""
                         # Prefer the icon named by the embedded desktop file.
                         if [ -n "$icon_id" ]; then
                           local icon_path

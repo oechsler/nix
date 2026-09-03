@@ -348,6 +348,8 @@ in
         Type=Application
         Name=KDE Launchers Setup
         Exec=${pkgs.writeShellScript "kde-launchers-setup" ''
+          set -eu
+
           # Wait for Plasma to be ready
           timeout=30
           while [ $timeout -gt 0 ]; do
@@ -449,6 +451,8 @@ in
         Type=Application
         Name=Breeze Window Decoration
         Exec=${pkgs.writeShellScript "kde-breeze-decoration" ''
+          set -eu
+
           ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key library org.kde.breeze
           ${kwriteconfig} --file kwinrc --group org.kde.kdecoration2 --key theme Breeze
           ${pkgs.kdePackages.qttools}/bin/qdbus org.kde.KWin /KWin reconfigure 2>/dev/null || true

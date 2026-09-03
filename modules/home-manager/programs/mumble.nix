@@ -71,7 +71,7 @@ let
   '') cfg.servers;
 
   updateConfig = pkgs.writeShellScript "mumble-config-update" ''
-    set -eu
+    set -euo pipefail
 
     mumble_config="${configFile}"
     mumble_database="${databaseFile}"
@@ -91,18 +91,18 @@ let
         --arg server_filter_mode ${lib.escapeShellArg cfg.serverFilterMode} \
         --argjson play_mute_cue ${lib.boolToString cfg.playMuteCue} \
         --argjson public_list ${lib.boolToString (!cfg.disablePublicServerList)} \
-         '.mumble_has_quit_normally = true
-          | .settings_version = 1
-          | .audio.input_system = "PulseAudio"
+        '.mumble_has_quit_normally = true
+         | .settings_version = 1
+         | .audio.input_system = "PulseAudio"
          | .audio.output_system = "PulseAudio"
          | .audio.echo_cancel_mode = "Disabled"
          | .audio.play_mute_cue = $play_mute_cue
          | .misc.audio_wizard_has_been_shown = true
          | .misc.viewed_server_ping_consent_message = true
-           | .ui.theme = ""
-           | .ui.theme_style = ""
-           | .talkingui.display_talkingui = false
-           | .ui.channel_expansion_mode = $channel_expansion_mode
+         | .ui.theme = ""
+         | .ui.theme_style = ""
+         | .talkingui.display_talkingui = false
+         | .ui.channel_expansion_mode = $channel_expansion_mode
          | .last_connection.username = $username
          | .last_connection.server_name = $server_name
          | .ui.disable_public_server_list = ($public_list | not)
@@ -147,6 +147,8 @@ let
   '';
 
   setQuitNormallyCommand = pkgs.writeShellScript "mumble-set-quit-flag" ''
+    set -eu
+
     [ -n "''${MAINPID:-}" ] || exit 0
     kill -0 "$MAINPID" 2>/dev/null || exit 0
     [ -f "${configFile}" ] || exit 0
@@ -155,6 +157,8 @@ let
   '';
 
   mumbleCommand = pkgs.writeShellScript "mumble-launcher" ''
+    set -eu
+
     ${updateConfig}
     exec ${pkgs.mumble}/bin/mumble "$@"
   '';

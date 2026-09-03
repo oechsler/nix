@@ -50,6 +50,20 @@ let
   lockSuspend = import ./scripts/lock-suspend.nix { inherit pkgs; };
   dimDisplay = "${brightnessController} dim ${toString idle.hypridle.dim.percent} ${toString idle.hypridle.dim.stepPercent} ${idle.hypridle.dim.stepDelay}";
   undimDisplay = "${brightnessController} restore";
+  resumeDisplay = pkgs.writeShellScript "hyprland-resume" ''
+    set -eu
+
+    # Each refresh is independent; a missing optional component must not stop
+    # the following display wake-up actions.
+    ${pkgs.hyprland}/bin/hyprctl reload 2>/dev/null || true
+    ${brightnessController} restore 2>/dev/null || true
+    ${pkgs.systemd}/bin/systemctl --user try-restart awww.service 2>/dev/null || true
+    ${pkgs.procps}/bin/pkill -USR2 hyprlock 2>/dev/null || true
+    for _ in 1 2 3; do
+      ${pkgs.hyprland}/bin/hyprctl dispatch dpms on 2>/dev/null && break
+      ${pkgs.coreutils}/bin/sleep 0.5
+    done
+  '';
 
   # ============================================================================
   # IDLE ACTION SCRIPTS
@@ -72,7 +86,7 @@ let
   # Lock + suspend on battery
   # Charger transitions can make the battery listener fire while its idle
   # timeout is already elapsed. Require stable battery operation first.
-  suspendBattery = "${onBattery} && sleep 10 && ${onBattery} && ${lockSuspend}";
+  suspendBattery = "${onBattery} && ${pkgs.coreutils}/bin/sleep 10 && ${onBattery} && ${lockSuspend}";
 
   # Lock + suspend on AC
   suspendAc = "${onAC} && ${lockSuspend}";
@@ -148,7 +162,7 @@ in
           # Do not restart portals after every resume: this can terminate
           # active PipeWire screen-capture sessions. Hyprland, wallpaper,
           # locker, and display state are refreshed independently.
-          after_sleep_cmd = "${pkgs.runtimeShell} -c 'hyprctl reload 2>/dev/null || true; ${brightnessController} restore 2>/dev/null || true; systemctl --user try-restart awww.service 2>/dev/null || true; pkill -USR2 hyprlock 2>/dev/null || true; for i in 1 2 3; do hyprctl dispatch dpms on 2>/dev/null && break; sleep 0.5; done'";
+          after_sleep_cmd = "${resumeDisplay}";
         };
 
         listener = sharedListeners ++ lib.optionals isLaptop laptopListeners;

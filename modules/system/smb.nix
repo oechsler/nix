@@ -44,8 +44,11 @@ let
   # NETWORK READINESS CHECK
   # ============================================================================
   waitForNetwork = pkgs.writeShellScript "wait-for-network" ''
+    set -u
+
     echo "Waiting for network and DNS..."
-    for i in $(seq 1 30); do
+    for i in $(${pkgs.coreutils}/bin/seq 1 30); do
+      ready=false
       if ${pkgs.iproute2}/bin/ip route | ${pkgs.gnugrep}/bin/grep -q '^default'; then
         ready=true
         ${shareHostChecks}
@@ -70,20 +73,20 @@ let
       creds = config.sops.templates."smb-credentials-${share.name}".path;
     in
     ''
-      LABEL="${share.label}"
-      MOUNT_UID=$(id -u ${user.name})
-      MOUNT_GID=$(id -g ${user.name})
+      LABEL=${lib.escapeShellArg share.label}
+      MOUNT_UID=$(id -u ${lib.escapeShellArg user.name})
+      MOUNT_GID=$(id -g ${lib.escapeShellArg user.name})
 
-      mkdir -p "${user.home}/smb/$LABEL"
-      chown ${user.name}:${user.group} "${user.home}/smb/$LABEL"
+      mkdir -p ${lib.escapeShellArg "${user.home}/smb"}/"$LABEL"
+      chown ${lib.escapeShellArg "${user.name}:${user.group}"} ${lib.escapeShellArg "${user.home}/smb"}/"$LABEL"
 
       if mountpoint -q "${user.home}/smb/$LABEL"; then
         echo "SMB already mounted: $LABEL"
       else
         MOUNTED=false
-        for i in $(seq 1 5); do
-          if timeout 10 mount -t cifs "${share.path}" "${user.home}/smb/$LABEL" \
-            -o credentials=${creds},uid=$MOUNT_UID,gid=$MOUNT_GID,forceuid,forcegid,soft,file_mode=0644,dir_mode=0755; then
+        for i in $(${pkgs.coreutils}/bin/seq 1 5); do
+          if timeout 10 mount -t cifs ${lib.escapeShellArg share.path} ${lib.escapeShellArg user.home}/"smb/$LABEL" \
+            -o credentials=${lib.escapeShellArg creds},uid="$MOUNT_UID",gid="$MOUNT_GID",forceuid,forcegid,soft,file_mode=0644,dir_mode=0755; then
             MOUNTED=true
             break
           fi
@@ -93,11 +96,11 @@ let
 
         if [ "$MOUNTED" = true ]; then
           echo "SMB mount successful: $LABEL"
-          sudo -u ${user.name} DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$MOUNT_UID/bus \
+          sudo -u ${lib.escapeShellArg user.name} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$MOUNT_UID/bus" \
             ${pkgs.libnotify}/bin/notify-send -a "SMB Mount" -i network-server "${translate "SMB mount successful" "SMB-Mount erfolgreich"}" "${translate "$LABEL was connected" "$LABEL wurde verbunden"}" || true
         else
           echo "Mount failed after 5 attempts: $LABEL"
-          sudo -u ${user.name} DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/$MOUNT_UID/bus \
+          sudo -u ${lib.escapeShellArg user.name} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$MOUNT_UID/bus" \
             ${pkgs.libnotify}/bin/notify-send -a "SMB Mount" -u critical -i dialog-error "${translate "SMB mount failed" "SMB-Mount fehlgeschlagen"}" "${translate "$LABEL could not be connected" "$LABEL konnte nicht verbunden werden"}" || true
         fi
       fi

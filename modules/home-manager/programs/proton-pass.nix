@@ -67,7 +67,8 @@ in
         # Desktop: Browser-based login
         # Server: Interactive CLI login
         (pkgs.writeShellScriptBin "proton-pass-init" ''
-          set -e
+          set -eu
+
           echo "Starting Proton Pass CLI login..."
           echo "A browser window will open for authentication."
           ${pkgs.proton-pass-cli}/bin/pass-cli login
