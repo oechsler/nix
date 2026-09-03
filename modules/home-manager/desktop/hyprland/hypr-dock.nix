@@ -54,7 +54,6 @@ let
   );
   startScript = pkgs.writeShellScript "hypr-dock-start" ''
     set -eu
-    ${pkgs.coreutils}/bin/sleep 3
     exec ${pkgs.hypr-dock}/bin/hypr-dock
   '';
 in
@@ -87,8 +86,7 @@ in
         ];
       };
       Service = {
-        # Let Hyprland finish applying its config before the dock reads gaps
-        # and creates its layer-shell surface.
+        # Start with the graphical session.
         ExecStart = startScript;
         Restart = "on-failure";
         RestartSec = 2;
