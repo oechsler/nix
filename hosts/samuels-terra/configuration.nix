@@ -220,11 +220,11 @@
     disableAspm = true;
   };
 
-  # The RX 9070 XT exposes both s2idle and deep sleep. s2idle can resume with
-  # the compositor and existing GUI processes alive but unable to create new
-  # windows, leaving applications such as LibreWolf reporting a stale
-  # instance. Use the firmware-backed sleep path on this desktop instead.
   systemd = {
+    # The RX 9070 XT exposes both s2idle and deep sleep. s2idle can resume with
+    # the compositor and existing GUI processes alive but unable to create new
+    # windows, leaving applications such as LibreWolf reporting a stale
+    # instance. Use the firmware-backed sleep path on this desktop instead.
     sleep.settings.Sleep.MemorySleepMode = "deep";
 
     # ASUS ROG STRIX X870-I GAMING WIFI has a phantom USB port 3-7 on the
