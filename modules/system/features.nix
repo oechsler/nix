@@ -313,7 +313,7 @@ in
         settings = lib.mkOption {
           type = lib.types.attrs;
           default = { };
-          description = "Additional OpenCode settings, excluding generated model, provider, MCP, and LSP settings.";
+          description = "Additional OpenCode settings, excluding generated model, provider, MCP, LSP, formatter, and server settings.";
         };
         lsp = lib.mkOption {
           type = lib.types.attrsOf (
