@@ -103,7 +103,12 @@ in
         "/var/lib/sddm" # SDDM state
       ]
       ++ lib.optionals (config.services.localEndpoints != { }) [
-        "/var/lib/caddy" # Caddy local CA and certificate state
+        {
+          directory = "/var/lib/caddy";
+          user = "caddy";
+          group = "caddy";
+          mode = "0755";
+        }
       ]
       ++ lib.optionals config.features.auth.ldap.enable [
         "/var/lib/pam-lldap" # Cached LDAP password verifier
