@@ -157,6 +157,7 @@
       };
       mcp.obsidian = {
         enable = true;
+        insecureTls = true;
         url = "https://127.0.0.1:27124/mcp/";
         headers.Authorization = "Bearer 7319249c2c302002ec534be8f09a05a1452ec85a5c49a330308fd32824de1554";
       };

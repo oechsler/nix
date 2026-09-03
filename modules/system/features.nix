@@ -499,6 +499,11 @@ in
                   default = "Bearer ";
                   description = "Prefix prepended to the configured token.";
                 };
+                insecureTls = lib.mkOption {
+                  type = lib.types.bool;
+                  default = false;
+                  description = "Disable TLS certificate verification for this remote MCP (applies to the OpenCode process).";
+                };
                 oauth = lib.mkOption {
                   type = lib.types.nullOr (
                     lib.types.submodule {

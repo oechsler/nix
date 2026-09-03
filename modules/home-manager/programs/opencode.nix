@@ -25,6 +25,7 @@ let
     _: provider: provider.apiKeySecret != null
   ) enabledProviders;
   mcpWithSecrets = lib.filterAttrs (_: server: server.tokenSecret != null) cfg.mcp;
+  mcpWithInsecureTls = lib.any (server: server.insecureTls) (lib.attrValues cfg.mcp);
   mcpWithOAuthSecrets = lib.filterAttrs (
     _: server:
     server.type == "remote" && server.oauth != null && server.oauth.clientSecretSecret != null
@@ -236,6 +237,10 @@ let
     _name: server: lib.nameValuePair server.oauth.clientSecretSecret { }
   ) mcpWithOAuthSecrets;
   opencodeWithSecrets = pkgs.writeShellScriptBin "opencode" ''
+    ${lib.optionalString mcpWithInsecureTls ''
+      # OpenCode has no per-remote-MCP TLS exception; this affects this process.
+      export NODE_TLS_REJECT_UNAUTHORIZED=0
+    ''}
     ${providerSecretChecks}
     ${mcpSecretChecks}
     ${mcpOAuthSecretChecks}
