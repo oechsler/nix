@@ -148,7 +148,6 @@
 
     # --- Development ---
     dev.opencode = {
-      server.enable = true;
       mcp.homeassistant = {
         url = "https://homeassistant.at.oechsler.it/api/mcp";
         tokenSecret = "opencode/mcp/homeassistant/token";

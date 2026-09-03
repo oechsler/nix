@@ -376,17 +376,6 @@ in
           default = { };
           description = "Additional OpenCode formatters and overrides.";
         };
-        server = {
-          # The server is private; the central Caddy endpoint is https://opencode.caddy.
-          enable = (lib.mkEnableOption "OpenCode background server") // {
-            default = false;
-          };
-          directory = lib.mkOption {
-            type = lib.types.path;
-            default = "/home/${config.user.name}/repos";
-            description = "Working directory exposed by the OpenCode server.";
-          };
-        };
         provider = lib.mkOption {
           type = lib.types.attrsOf (
             lib.types.submodule {

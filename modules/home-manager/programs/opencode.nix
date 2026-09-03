@@ -247,11 +247,6 @@ let
     ${providerEnvAssignments}${mcpEnvAssignments}${mcpOAuthEnvAssignments}
     exec ${pkgs.opencode}/bin/opencode "$@"
   '';
-  opencodeServer = pkgs.writeShellScriptBin "opencode-server" ''
-    exec ${opencodeWithSecrets}/bin/opencode serve \
-      --hostname 127.0.0.1 \
-      --port 4096
-  '';
 in
 {
   config = lib.mkIf (features.dev.enable && features.dev.opencode.enable) {
@@ -310,20 +305,5 @@ in
       };
     };
 
-    systemd.user.services.opencode-server = lib.mkIf cfg.server.enable {
-      Unit = {
-        Description = "OpenCode background server";
-        After = [ "sops-nix.service" ];
-      };
-      Service = {
-        Type = "exec";
-        ExecStart = "${opencodeServer}/bin/opencode-server";
-        WorkingDirectory = cfg.server.directory;
-        Environment = "SSH_AUTH_SOCK=${config.home.homeDirectory}/.ssh/proton-pass-agent.sock";
-        Restart = "on-failure";
-        RestartSec = 5;
-      };
-      Install.WantedBy = [ "default.target" ];
-    };
   };
 }
