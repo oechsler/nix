@@ -2,17 +2,19 @@
 #!nix-shell -i bash -p sops
 # shellcheck shell=bash
 
-set -e
-cd "$(dirname "$0")"
+set -euo pipefail
 
-if [ ! -f sops.encrypted.yaml ]; then
-    echo "ERROR: sops.encrypted.yaml not found"
-    exit 1
+script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+cd -- "$script_dir"
+
+if [[ ! -f sops.encrypted.yaml ]]; then
+  printf 'ERROR: sops.encrypted.yaml not found\n' >&2
+  exit 1
 fi
 
-echo "Decrypting sops.encrypted.yaml → sops.decrypted.yaml"
+printf 'Decrypting sops.encrypted.yaml -> sops.decrypted.yaml\n'
 tmp_file=$(mktemp sops.decrypted.yaml.XXXXXX)
 trap 'rm -f "$tmp_file"' EXIT
-sops -d sops.encrypted.yaml > "$tmp_file"
+sops -d sops.encrypted.yaml >"$tmp_file"
 mv "$tmp_file" sops.decrypted.yaml
-echo "Done! Edit sops.decrypted.yaml, then run ./encrypt.sh"
+printf 'Done! Edit sops.decrypted.yaml, then run ./encrypt.sh\n'

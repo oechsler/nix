@@ -11,10 +11,10 @@
 
 {
   imports = [
-    ./theme.nix
     ./autostart.nix
-    ./powerdevil.nix
-    ./kscreen.nix
     ./dolphin.nix
+    ./kscreen.nix
+    ./powerdevil.nix
+    ./theme.nix
   ];
 }

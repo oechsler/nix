@@ -328,17 +328,17 @@ in
   #===========================
   # Hyprland-specific modules
   imports = [
-    ./hyprmoncfg.nix # Declarative profiles and hotplug/lid handling
-    ./automount.nix # GVFS removable media automount
-    ./hyprshell.nix # Rust/GTK4 workspace-aware window switcher
-    ./theme.nix # Qt/Kvantum theming, hidden window buttons
-    ./waybar.nix # Status bar
-    ./rofi.nix # Application launcher, power menu, window switcher
     ./awww.nix # Wayland-specific tools (clipboard, screenshots)
-    ./hyprlock.nix # Screen locker
-    ./hypridle.nix # Idle management (auto-lock, screen timeout)
+    ./automount.nix # GVFS removable media automount
     ./dunst.nix # Notification daemon
     ./hypr-dock.nix # Application dock
+    ./hypridle.nix # Idle management (auto-lock, screen timeout)
+    ./hyprlock.nix # Screen locker
+    ./hyprmoncfg.nix # Declarative profiles and hotplug/lid handling
+    ./hyprshell.nix # Rust/GTK4 workspace-aware window switcher
+    ./rofi.nix # Application launcher, power menu, window switcher
+    ./theme.nix # Qt/Kvantum theming, hidden window buttons
+    ./waybar.nix # Status bar
   ]
   ++ lib.optionals (features.desktop.fileManager == "default") [
     ./nautilus.nix # File manager (GNOME Files)

@@ -55,7 +55,8 @@ let
   blurredFile = "current-blurred.jpg";
 
   wallpaperPath = config.theme.backgrounds.path;
-  isUrl = lib.hasPrefix "http://" wallpaperPath || lib.hasPrefix "https://" wallpaperPath;
+  wallpaperSource = toString wallpaperPath;
+  isUrl = lib.hasPrefix "http://" wallpaperSource || lib.hasPrefix "https://" wallpaperSource;
 
   # ============================================================================
   # WALLPAPER ARCHIVE

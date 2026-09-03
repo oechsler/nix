@@ -14,13 +14,12 @@ in
 
 {
   imports = [
-    ./sddm.nix
-    ./hyprland.nix
     ./kde.nix
+    ./hyprland.nix
+    ./sddm.nix
   ];
 
-  # Make nixpkgs Electron/Chromium wrappers prefer native Wayland in graphical
-  # sessions. XWayland tends to behave worse with SDR surfaces on HDR desktops.
+  # Prefer native Wayland for Chromium/Electron in graphical sessions.
   environment.sessionVariables.NIXOS_OZONE_WL = lib.mkIf config.features.desktop.enable "1";
 
   # UDisks mounts removable media below /run/media/<user>. Keep that standard

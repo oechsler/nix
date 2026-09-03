@@ -18,6 +18,27 @@ let
   isKde = features.desktop.wm == "kde";
   browserEnabled = features.desktop.browser.enable;
   browser = features.desktop.browser.type;
+  editorMimeTypes = [
+    "text/plain"
+    "text/markdown"
+    "text/x-script.python"
+    "text/x-shellscript"
+    "text/x-nix"
+    "text/x-lua"
+    "text/x-c"
+    "text/x-c++"
+    "text/x-go"
+    "text/x-rust"
+    "text/x-java"
+    "text/x-javascript"
+    "text/x-typescript"
+    "text/css"
+    "text/html"
+    "text/xml"
+    "application/json"
+    "application/x-yaml"
+    "application/toml"
+  ];
 in
 
 {
@@ -41,55 +62,19 @@ in
           "Utility"
           "TextEditor"
         ];
-        mimeType = [
-          "text/plain"
-          "text/markdown"
-          "text/x-script.python"
-          "text/x-shellscript"
-          "text/x-nix"
-          "text/x-lua"
-          "text/x-c"
-          "text/x-c++"
-          "text/x-go"
-          "text/x-rust"
-          "text/x-java"
-          "text/x-javascript"
-          "text/x-typescript"
-          "text/css"
-          "text/html"
-          "text/xml"
-          "application/json"
-          "application/x-yaml"
-          "application/toml"
-        ];
+        mimeType = editorMimeTypes;
       };
 
     };
 
     mimeApps = {
       enable = true;
-      defaultApplications = lib.optionalAttrs browserEnabled {
-        "application/pdf" = [ "${browser}.desktop" ];
-        "text/plain" = [ "nvim.desktop" ];
-        "text/markdown" = [ "nvim.desktop" ];
-        "text/x-script.python" = [ "nvim.desktop" ];
-        "text/x-shellscript" = [ "nvim.desktop" ];
-        "text/x-nix" = [ "nvim.desktop" ];
-        "text/x-lua" = [ "nvim.desktop" ];
-        "text/x-c" = [ "nvim.desktop" ];
-        "text/x-c++" = [ "nvim.desktop" ];
-        "text/x-go" = [ "nvim.desktop" ];
-        "text/x-rust" = [ "nvim.desktop" ];
-        "text/x-java" = [ "nvim.desktop" ];
-        "text/x-javascript" = [ "nvim.desktop" ];
-        "text/x-typescript" = [ "nvim.desktop" ];
-        "text/css" = [ "nvim.desktop" ];
-        "text/html" = [ "nvim.desktop" ];
-        "text/xml" = [ "nvim.desktop" ];
-        "application/json" = [ "nvim.desktop" ];
-        "application/x-yaml" = [ "nvim.desktop" ];
-        "application/toml" = [ "nvim.desktop" ];
-      };
+      defaultApplications = lib.optionalAttrs browserEnabled (
+        lib.genAttrs editorMimeTypes (_: [ "nvim.desktop" ])
+        // {
+          "application/pdf" = [ "${browser}.desktop" ];
+        }
+      );
     };
 
     # KDE rewrites mimeapps.list through System Settings and file dialogs.

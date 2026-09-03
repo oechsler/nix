@@ -19,7 +19,7 @@
 # - No separate games partition
 #
 # Encryption:
-# - LUKS with TPM2 auto-unlock (via luks.nix)
+# - LUKS with YubiKey FIDO2 unlock (via luks.nix)
 # - Password file at /var/lib/nixos-install/luks-password during installation
 #
 # Impermanence:

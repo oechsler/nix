@@ -11,7 +11,7 @@
 
   hasVRR = monitors: lib.any (monitor: monitor.vrr != 0) monitors;
 
-  primaryName = monitors: if monitors != [ ] then (lib.head monitors).name else "";
+  primaryName = monitors: lib.optionalString (monitors != [ ]) (lib.head monitors).name;
 
-  primaryScale = fallback: monitors: if monitors != [ ] then (lib.head monitors).scale else fallback;
+  primaryScale = fallback: monitors: (lib.head (monitors ++ [ { scale = fallback; } ])).scale;
 }
