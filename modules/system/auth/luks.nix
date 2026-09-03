@@ -113,16 +113,9 @@ in
         name: _:
         lib.nameValuePair "systemd-cryptsetup@${name}" {
           overrideStrategy = "asDropin";
-          # libfido2 aborts an unanswered touch request after about 30 seconds.
-          # Retry instead of letting cryptsetup.target enter the rescue shell.
-          unitConfig.StartLimitIntervalSec = "0";
           after = [ "fido2-yubikey-wait.service" ];
           wants = [ "fido2-yubikey-wait.service" ];
-          serviceConfig = {
-            Restart = "on-failure";
-            RestartSec = "1s";
-            TimeoutStartSec = "infinity";
-          };
+          serviceConfig.TimeoutStartSec = "infinity";
         }
       ) devices;
     };
