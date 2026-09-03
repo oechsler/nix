@@ -35,6 +35,7 @@
 # - libsecret - Tools for accessing gnome-keyring (used by Chrome, Vesktop, etc.)
 
 {
+  config,
   pkgs,
   features,
   displays,
@@ -101,15 +102,17 @@ in
 
         programs.vesktop = {
           enable = true;
-          package = null;
-          settings = {
-            minimizeToTray = true;
-            autoStartMinimized = true;
-            tray = true;
-            clickTrayToShowHide = true;
-            arRPC = true;
-          };
+          package = vesktopApp;
         };
+
+        # Vesktop updates this file at runtime. Remove an old Home Manager
+        # symlink once, but preserve any user-managed settings file.
+        home.activation.removeManagedVesktopSettings = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+          settings_file="${config.xdg.configHome}/vesktop/settings/settings.json"
+          if [ -L "$settings_file" ]; then
+            ${pkgs.coreutils}/bin/rm -f "$settings_file"
+          fi
+        '';
 
         xdg.desktopEntries.vesktop = {
           name = "Discord";
