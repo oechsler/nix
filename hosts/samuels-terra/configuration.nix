@@ -147,12 +147,14 @@
     gaming.steamMachine.enable = true;
 
     # --- Development ---
-    dev.opencode.server.enable = true;
-    dev.opencode.mcp.homeassistant = {
-      # Keep configured, but let OpenCode enable it at runtime when needed.
-      enable = false;
-      url = "https://homeassistant.at.oechsler.it/api/mcp";
-      tokenSecret = "opencode/mcp/homeassistant/token";
+    dev.opencode = {
+      server.enable = true;
+      mcp.homeassistant = {
+        # Keep configured, but let OpenCode enable it at runtime when needed.
+        enable = false;
+        url = "https://homeassistant.at.oechsler.it/api/mcp";
+        tokenSecret = "opencode/mcp/homeassistant/token";
+      };
     };
 
     # --- Operations Tools ---
