@@ -319,7 +319,7 @@ let
   batteryWarning = import ./scripts/battery-warning.nix { inherit pkgs i18n theme; };
 
   fileManagerCommand =
-    if features.desktop.fileManager == "terminal" then "kitty yazi" else "nautilus";
+    if features.desktop.fileManager == "terminal" then "kitty --class yazi yazi" else "nautilus";
 
 in
 {
