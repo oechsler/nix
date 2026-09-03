@@ -447,17 +447,23 @@ Development tools inherit from `features.dev.enable` by default. OpenCode is
 ready to use with the shared model defaults; hosts only need to add services
 that are specific to them.
 
-| Option                               | Default                    | Description                                 |
-| ------------------------------------ | -------------------------- | ------------------------------------------- |
-| `features.dev.enable`                | `true`                     | Development languages, tools, and IDEs.     |
-| `features.dev.opencode.enable`       | `dev.enable`               | OpenCode AI coding agent.                   |
-| `features.dev.opencode.defaultModel` | `openai/gpt-5.6-luna`      | Model used when no other model is selected. |
-| `features.dev.opencode.settings`     | `{}`                       | Additional OpenCode settings.               |
-| `features.dev.opencode.provider`     | shared defaults            | Available model providers and models.       |
-| `features.dev.opencode.mcp`          | none enabled               | Additional OpenCode integrations.           |
-| `features.dev.jetbrains.enable`      | `dev.enable`               | JetBrains IDEs as a group.                  |
-| `features.dev.jetbrains.entries`     | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.                  |
-| `features.dev.dbeaver.enable`        | `dev.enable`               | DBeaver database GUI.                       |
+| Option                                   | Default                    | Description                                 |
+| ---------------------------------------- | -------------------------- | ------------------------------------------- |
+| `features.dev.enable`                    | `true`                     | Development languages, tools, and IDEs.     |
+| `features.dev.opencode.enable`           | `dev.enable`               | OpenCode AI coding agent.                   |
+| `features.dev.opencode.defaultModel`     | `openai/gpt-5.6-luna`      | Model used when no other model is selected. |
+| `features.dev.opencode.settings`         | `{}`                       | Additional OpenCode settings.               |
+| `features.dev.opencode.provider`         | shared defaults            | Available model providers and models.       |
+| `features.dev.opencode.mcp`              | none enabled               | Additional OpenCode integrations.           |
+| `features.dev.opencode.lsp`              | shared defaults            | Language servers for OpenCode.              |
+| `features.dev.opencode.formatter`        | shared defaults            | Formatters for supported source files.      |
+| `features.dev.opencode.server.enable`    | `false`                    | Background OpenCode server.                 |
+| `features.dev.opencode.server.directory` | `~/repos`                  | Working directory for the server.           |
+| `features.dev.opencode.server.hostname`  | `0.0.0.0`                  | Listen address.                             |
+| `features.dev.opencode.server.port`      | `4096`                     | Listen port.                                |
+| `features.dev.jetbrains.enable`          | `dev.enable`               | JetBrains IDEs as a group.                  |
+| `features.dev.jetbrains.entries`         | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.                  |
+| `features.dev.dbeaver.enable`            | `dev.enable`               | DBeaver database GUI.                       |
 
 #### JetBrains IDEs
 
@@ -486,6 +492,33 @@ Existing providers and models can be adjusted by using the same name; unrelated
 defaults remain available. Providers can be enabled or disabled individually.
 Additional OpenCode settings can be placed in `settings`. Built-in LSP servers
 remain enabled by default; additional servers and overrides belong in `lsp`.
+Formatters are configured declaratively in `formatter`; the shared defaults cover
+Nix, JavaScript/TypeScript, JSON, YAML, Markdown, shell, Python, Go, Rust, and
+Java. They run after OpenCode writes or edits a matching file. The optional
+background server is disabled by default; enable it with
+`features.dev.opencode.server.enable = true` and customize its directory,
+listen address, or port as needed. It can be reached over the local network or
+VPN and used with `opencode attach`.
+
+The LSP defaults cover Nix, shell, YAML, Python, Go, Rust, JavaScript/TypeScript,
+Java, Markdown, JSON, and TOML. A host can add an LSP server or override a
+default by using its name. Set `enable = false` to disable one:
+
+```nix
+features.dev.opencode.lsp = {
+  markdown = {
+    command = [ "marksman" "server" ];
+    extensions = [ ".md" ];
+  };
+  custom = {
+    command = [ "my-language-server" "--stdio" ];
+    extensions = [ ".custom" ];
+    env = { PROJECT_ROOT = "/workspace"; };
+    initialization = { setting = true; };
+  };
+  json.enable = false;
+};
+```
 
 For example, a host can add a provider and an MCP while keeping the defaults:
 
@@ -511,6 +544,19 @@ Use `settings.small_model` to choose a separate small model, or `lsp` to add
 servers and disable built-in ones. Remote MCPs can configure OAuth/OIDC with
 `oauth`; its client secret is referenced through `clientSecretSecret`. See
 [sops/README.md](../sops/README.md) for the credential layout and workflow.
+
+Formatter defaults can be disabled or overridden by name. Custom formatters use
+`$FILE` as the file placeholder in their command:
+
+```nix
+features.dev.opencode.formatter = {
+  prettier.enable = false;
+  custom-nix = {
+    command = [ "my-nix-formatter" "$FILE" ];
+    extensions = [ ".nix" ];
+  };
+};
+```
 
 ```nix
 features.dev.opencode.mcp.company = {
