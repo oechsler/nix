@@ -410,6 +410,8 @@ in
       ++ lib.optionals enableAppPreviews mediaKeymaps;
   };
 
+  home.sessionPath = lib.optionals enableAppPreviews [ "${pkgs.mediainfo}/bin" ];
+
   xdg.desktopEntries.yazi = {
     name = "Yazi";
     genericName = "File Manager";
