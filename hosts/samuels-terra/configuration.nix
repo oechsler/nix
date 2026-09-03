@@ -147,6 +147,7 @@
     gaming.steamMachine.enable = true;
 
     # --- Development ---
+    dev.opencode.server.enable = true;
     dev.opencode.mcp.homeassistant = {
       # Keep configured, but let OpenCode enable it at runtime when needed.
       enable = false;
