@@ -162,8 +162,11 @@ let
 
   # Reload script (used by Super+Shift+R keybinding)
   reload = pkgs.writeShellScript "waybar-reload" ''
-    pkill waybar
-    uwsm-app -- waybar &
+    set -eu
+
+    # pkill returns 1 when no instance exists; that is a valid reload state.
+    ${pkgs.procps}/bin/pkill -x waybar || true
+    exec uwsm-app -- waybar
   '';
 
   waybar = pkgs.waybar.overrideAttrs (old: {
@@ -308,7 +311,9 @@ in
 
         "custom/power-profile" = {
           exec = pkgs.writeShellScript "waybar-power-profile" ''
-            profile=$(${pkgs.power-profiles-daemon}/bin/powerprofilesctl get)
+            set -eu
+
+            profile="$(${pkgs.power-profiles-daemon}/bin/powerprofilesctl get)"
             case "$profile" in
                performance) echo '{"text": "<span size=\"large\">&#x2009;󱐋&#x2009;</span>", "tooltip": "${i18n.translate "Performance" "Leistung"}"}' ;;
               power-saver)  echo '{"text": "<span size=\"large\">󰌪&#x2009;</span>", "tooltip": "${i18n.translate "Power saver" "Energiesparen"}"}' ;;

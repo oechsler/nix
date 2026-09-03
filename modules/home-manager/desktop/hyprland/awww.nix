@@ -21,6 +21,8 @@ let
   wallpaperCommands = "${awwwPkg}/bin/awww img ${theme.wallpaperPath} --transition-type fade --transition-duration 0.6";
 
   startScript = pkgs.writeShellScript "awww-start" ''
+    set -eu
+
     ${awwwPkg}/bin/awww-daemon &
     daemon_pid=$!
 
@@ -38,11 +40,13 @@ let
   '';
 
   setWallpaperScript = pkgs.writeShellScript "awww-set" ''
+    set -eu
+
     export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
-    wayland_socket=$(ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null \
-      | grep -v '\.lock$' \
-      | grep -v '\-awww-daemon\.sock$' \
-      | head -1 || true)
+    wayland_socket=$(${pkgs.coreutils}/bin/ls -t "$XDG_RUNTIME_DIR"/wayland-* 2>/dev/null \
+      | ${pkgs.gnugrep}/bin/grep -v '\.lock$' \
+      | ${pkgs.gnugrep}/bin/grep -v '\-awww-daemon\.sock$' \
+      | ${pkgs.coreutils}/bin/head -1 || true)
     [ -n "$wayland_socket" ] || exit 0
     export WAYLAND_DISPLAY=$(${pkgs.uutils-coreutils-noprefix}/bin/basename "$wayland_socket")
     ${wallpaperCommands}

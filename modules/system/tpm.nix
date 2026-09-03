@@ -15,7 +15,7 @@
 
 let
   luksDevices = config.boot.initrd.luks.devices;
-  deviceList = lib.concatStringsSep " " (map (d: d.device) (lib.attrValues luksDevices));
+  deviceList = lib.escapeShellArgs (map (d: d.device) (lib.attrValues luksDevices));
 
   tpm-luks-init = pkgs.writeShellApplication {
     name = "tpm-luks-init";

@@ -115,6 +115,8 @@ in
 
       # Declarative password is "!" (locked) — user-passwd.service sets the
       # real password at boot via chpasswd. Tell NixOS this is intentional.
+      # Required while the declarative shadow password is locked and the real
+      # password is installed from SOPS at boot by user-passwd.service.
       allowNoPasswordLogin = true;
 
       #---------------------------
@@ -144,7 +146,7 @@ in
     # Used by desktop account settings (SDDM, system settings)
     system.activationScripts.userIcon = ''
       mkdir -p /var/lib/AccountsService/icons
-      cp ${cfg.icon} /var/lib/AccountsService/icons/${cfg.name}
+      cp ${lib.escapeShellArg cfg.icon} ${lib.escapeShellArg "/var/lib/AccountsService/icons/${cfg.name}"}
     '';
 
     #---------------------------
@@ -159,8 +161,9 @@ in
     system.activationScripts.user-passwd = lib.mkIf (!config.features.auth.ldap.enable) {
       deps = [ "users" ];
       text = ''
-        if [ -f ${config.sops.secrets."user/password".path} ]; then
-          echo "${cfg.name}:$(cat ${config.sops.secrets."user/password".path})" \
+        password_file=${lib.escapeShellArg config.sops.secrets."user/password".path}
+        if [ -f "$password_file" ]; then
+          printf '%s:%s\n' ${lib.escapeShellArg cfg.name} "$(cat "$password_file")" \
             | ${pkgs.shadow}/bin/chpasswd
         fi
       '';
@@ -176,7 +179,8 @@ in
         RemainAfterExit = true;
       };
       script = ''
-        echo "${cfg.name}:$(cat ${config.sops.secrets."user/password".path})" \
+        password_file=${lib.escapeShellArg config.sops.secrets."user/password".path}
+        printf '%s:%s\n' ${lib.escapeShellArg cfg.name} "$(cat "$password_file")" \
           | ${pkgs.shadow}/bin/chpasswd
       '';
     };

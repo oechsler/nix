@@ -11,8 +11,12 @@ let
   iconDir = "${theme.icons.package}/share/icons/Papirus/32x32/status";
 in
 pkgs.writeShellScript "volume-notify" ''
-  volume=$(${pkgs.wireplumber}/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ | ${pkgs.gawk}/bin/awk '{printf "%.0f", $2 * 100}')
-  muted=$(${pkgs.wireplumber}/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ | ${pkgs.gnugrep}/bin/grep -c MUTED)
+  set -eu
+
+  volume="$(${pkgs.wireplumber}/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ \
+    | ${pkgs.gawk}/bin/awk '{printf "%.0f", $2 * 100}')"
+  muted="$(${pkgs.wireplumber}/bin/wpctl get-volume @DEFAULT_AUDIO_SINK@ \
+    | ${pkgs.gnugrep}/bin/grep -c MUTED || true)"
 
   if [ "$muted" -eq 1 ]; then
     icon="${iconDir}/audio-volume-muted.svg"

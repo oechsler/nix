@@ -41,11 +41,23 @@ let
 
   desktopSteamCondition = pkgs.writeShellScript "steam-desktop-condition" ''
     set -eu
-    pidf="''${XDG_RUNTIME_DIR:-/tmp}/steam-gamescope-pid"
-    if [ -r "$pidf" ] && read -r spid < "$pidf" && kill -0 "$spid" 2>/dev/null; then
+
+    pid_file="''${XDG_RUNTIME_DIR:-/tmp}/steam-gamescope-pid"
+    if [ -r "$pid_file" ] && read -r steam_pid < "$pid_file" \
+      && kill -0 "$steam_pid" 2>/dev/null; then
       exit 1
     fi
     exit 0
+  '';
+  trayscaleStart = pkgs.writeShellScript "trayscale-start" ''
+    set -eu
+    ${pkgs.coreutils}/bin/sleep 3
+    exec ${pkgs.trayscale}/bin/trayscale --hide-window
+  '';
+  steamStart = pkgs.writeShellScript "steam-start" ''
+    set -eu
+    ${pkgs.coreutils}/bin/sleep 20
+    exec steam -silent
   '';
 in
 {
@@ -150,7 +162,7 @@ in
         Service = {
           # Waybar provides the StatusNotifierWatcher; wait for it before
           # registering the tray item.
-          ExecStart = "${pkgs.bash}/bin/sh -c 'sleep 3; exec ${pkgs.trayscale}/bin/trayscale --hide-window'";
+          ExecStart = trayscaleStart;
           Restart = "on-failure";
           RestartSec = 3;
         };
@@ -169,7 +181,7 @@ in
           PartOf = [ "graphical-session.target" ];
         };
         Service = {
-          ExecStart = "${pkgs.bash}/bin/sh -lc 'sleep 20; exec steam -silent'";
+          ExecStart = steamStart;
           ExecCondition = "${desktopSteamCondition}";
           Environment = "PATH=/etc/profiles/per-user/${config.home.username}/bin:/run/current-system/sw/bin";
           Type = "exec";

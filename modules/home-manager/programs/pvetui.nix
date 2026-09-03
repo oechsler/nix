@@ -117,7 +117,7 @@ let
             user: "${profile.user}"
             realm: "${profile.realm}"
             token_id: "${profile.tokenId}"
-            token_secret: "$(cat ${secretPath})"
+            token_secret: "$(cat ${lib.escapeShellArg secretPath})"
             insecure: ${lib.boolToString profile.insecure}
             ssh_user: "${profile.sshUser}"
             vm_ssh_user: "${profile.vmSshUser}"

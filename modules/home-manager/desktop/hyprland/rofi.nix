@@ -69,23 +69,23 @@ let
     ${lib.escapeShellArg place.name}) open_path ${lib.escapeShellArg place.path} ;;
   '') places;
 
-  openPath = ''${pkgs.xdg-utils}/bin/xdg-open "$1" >/dev/null 2>&1 &'';
-
   placesMenu = pkgs.writeShellScript "rofi-places" ''
-    if pgrep -x rofi > /dev/null; then
-      if pgrep -fa "rofi -dmenu.*${placesPrompt}" > /dev/null; then
-        pkill -x rofi
+    set -eu
+
+    if ${pkgs.procps}/bin/pgrep -x rofi > /dev/null; then
+      if ${pkgs.procps}/bin/pgrep -fa "rofi -dmenu.*${placesPrompt}" > /dev/null; then
+        ${pkgs.procps}/bin/pkill -x rofi
         exit 0
       fi
-      pkill -x rofi
+      ${pkgs.procps}/bin/pkill -x rofi
     fi
 
     open_path() {
-      ${openPath}
+      ${pkgs.xdg-utils}/bin/xdg-open "$1" >/dev/null 2>&1 &
     }
 
-    removable_mounts=$(${pkgs.util-linux}/bin/lsblk --json --output LABEL,MOUNTPOINT,RM,TYPE 2>/dev/null \
-      | ${pkgs.jq}/bin/jq -r '.blockdevices[]? | recurse(.children[]?) | select(.rm == true and .mountpoint != null) | [(.label // "${removableMedia}"), .mountpoint] | @tsv')
+    removable_mounts="$(${pkgs.util-linux}/bin/lsblk --json --output LABEL,MOUNTPOINT,RM,TYPE 2>/dev/null \
+      | ${pkgs.jq}/bin/jq -r '.blockdevices[]? | recurse(.children[]?) | select(.rm == true and .mountpoint != null) | [(.label // "${removableMedia}"), .mountpoint] | @tsv')"
 
     choice=$(
       {
@@ -127,17 +127,19 @@ let
   toggleRofi =
     mode:
     pkgs.writeShellScript "rofi-${mode}" ''
-      if pgrep -x "rofi" > /dev/null; then
+      set -eu
+
+      if ${pkgs.procps}/bin/pgrep -x rofi > /dev/null; then
         # Check if rofi is running with the same mode
-        if pgrep -fa "rofi.*-show ${mode}" > /dev/null; then
-          pkill -x rofi
+        if ${pkgs.procps}/bin/pgrep -fa "rofi.*-show ${mode}" > /dev/null; then
+          ${pkgs.procps}/bin/pkill -x rofi
         else
           # Different mode requested - restart with new mode
-          pkill -x rofi
-          rofi -show ${mode}
+          ${pkgs.procps}/bin/pkill -x rofi
+          exec ${pkgs.rofi}/bin/rofi -show ${mode}
         fi
       else
-        rofi -show ${mode}
+        exec ${pkgs.rofi}/bin/rofi -show ${mode}
       fi
     '';
 
@@ -160,16 +162,18 @@ let
   # - 󰐥 Herunterfahren (Shutdown) - Power off system
   # - 󰘚 UEFI (Firmware Setup) - Reboot into UEFI firmware settings
   powerMenu = pkgs.writeShellScript "rofi-power-menu" ''
+    set -eu
+
     suspend() {
       ${import ./scripts/lock-suspend.nix { inherit pkgs; }}
     }
 
-    if pgrep -x rofi > /dev/null && pgrep -fa "rofi -dmenu -p ${powerPrompt}" > /dev/null; then
-      pkill -x rofi
+    if ${pkgs.procps}/bin/pgrep -x rofi > /dev/null && ${pkgs.procps}/bin/pgrep -fa "rofi -dmenu -p ${powerPrompt}" > /dev/null; then
+      ${pkgs.procps}/bin/pkill -x rofi
       exit 0
     fi
-    pgrep -x rofi > /dev/null && exit 0
-    choice=$(printf '%s\n' "${powerLock}" "${powerSuspend}" "${powerLogout}" "${powerReboot}" "${powerOff}" "${powerFirmware}" | rofi -dmenu -p "${powerPrompt}" -i -no-custom -no-show-icons -lines 6)
+    ${pkgs.procps}/bin/pgrep -x rofi > /dev/null && exit 0
+    choice="$(printf '%s\n' "${powerLock}" "${powerSuspend}" "${powerLogout}" "${powerReboot}" "${powerOff}" "${powerFirmware}" | ${pkgs.rofi}/bin/rofi -dmenu -p "${powerPrompt}" -i -no-custom -no-show-icons -lines 6)"
     case "$choice" in
       "${powerLock}")     hyprlock ;;
       "${powerSuspend}")  suspend ;;
@@ -197,19 +201,21 @@ let
   # 3. For text: Show text directly
   # 4. User selects entry → decode and copy to clipboard
   cliphistRofi = pkgs.writeShellScript "rofi-clipboard" ''
-    if pgrep -x "rofi" > /dev/null; then
-      if pgrep -fa "rofi.*-dmenu.*clipboard" > /dev/null; then
-        pkill -x rofi
+    set -eu
+
+    if ${pkgs.procps}/bin/pgrep -x rofi > /dev/null; then
+      if ${pkgs.procps}/bin/pgrep -fa "rofi.*-dmenu.*clipboard" > /dev/null; then
+        ${pkgs.procps}/bin/pkill -x rofi
         exit 0
       else
-        pkill -x rofi
+        ${pkgs.procps}/bin/pkill -x rofi
       fi
     fi
 
     preview_dir="/tmp/cliphist-previews"
     mkdir -p "$preview_dir"
 
-    selection_file=$(${pkgs.coreutils}/bin/mktemp)
+    selection_file="$(${pkgs.coreutils}/bin/mktemp)"
     trap '${pkgs.coreutils}/bin/rm -f "$selection_file"' EXIT
     ${pkgs.cliphist}/bin/cliphist list | while IFS= read -r line; do
       id="''${line%%	*}"
@@ -261,14 +267,16 @@ let
   #
   # Shows current profile first in the list
   powerProfileMenu = pkgs.writeShellScript "rofi-power-profile" ''
-    if pgrep -x rofi > /dev/null && pgrep -fa "rofi -dmenu -p" > /dev/null; then
-      pkill -x rofi
+    set -eu
+
+    if ${pkgs.procps}/bin/pgrep -x rofi > /dev/null && ${pkgs.procps}/bin/pgrep -fa "rofi -dmenu -p" > /dev/null; then
+      ${pkgs.procps}/bin/pkill -x rofi
       exit 0
     fi
-    pgrep -x rofi > /dev/null && exit 0
+    ${pkgs.procps}/bin/pgrep -x rofi > /dev/null && exit 0
 
     # Get current profile
-    current=$(${pkgs.power-profiles-daemon}/bin/powerprofilesctl get)
+    current="$(${pkgs.power-profiles-daemon}/bin/powerprofilesctl get)"
 
     # Build menu with current profile first
     profiles=""

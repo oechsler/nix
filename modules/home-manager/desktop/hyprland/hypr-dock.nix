@@ -52,6 +52,11 @@ let
       previewMode = "live";
     }
   );
+  startScript = pkgs.writeShellScript "hypr-dock-start" ''
+    set -eu
+    ${pkgs.coreutils}/bin/sleep 3
+    exec ${pkgs.hypr-dock}/bin/hypr-dock
+  '';
 in
 {
   #===========================
@@ -84,7 +89,7 @@ in
       Service = {
         # Let Hyprland finish applying its config before the dock reads gaps
         # and creates its layer-shell surface.
-        ExecStart = "${pkgs.bash}/bin/sh -c 'sleep 3; exec ${pkgs.hypr-dock}/bin/hypr-dock'";
+        ExecStart = startScript;
         Restart = "on-failure";
         RestartSec = 2;
         # Only kill the dock process, not apps launched from it

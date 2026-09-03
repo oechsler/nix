@@ -20,6 +20,10 @@ let
   iconPath = "${theme.icons.package}/share/icons/Papirus/32x32/devices/drive-removable-media-usb-pendrive.svg";
 
   notifyScript = pkgs.writeShellScript "udiskie-notify" ''
+    set -eu
+
+    # Udiskie passes event, volume label and drive label as positional args.
+    [ "$#" -ge 3 ] || exit 0
     event="$1"
     label="$2"
     drive_label="$3"

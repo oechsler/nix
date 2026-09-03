@@ -8,8 +8,8 @@ script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 cd -- "$script_dir"
 
 if [[ ! -f sops.encrypted.yaml ]]; then
-  printf 'ERROR: sops.encrypted.yaml not found\n' >&2
-  exit 1
+	printf 'ERROR: sops.encrypted.yaml not found\n' >&2
+	exit 1
 fi
 
 printf 'Decrypting sops.encrypted.yaml -> sops.decrypted.yaml\n'

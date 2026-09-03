@@ -203,10 +203,10 @@ in
                 pskPath = config.sops.secrets."wifi/${net.name}/psk".path;
               in
               ''
-                ssid_hex=$(printf '%s' "${net.ssid}" | od -An -tx1 | tr -d ' \n')
+                ssid_hex=$(printf '%s' ${lib.escapeShellArg net.ssid} | od -An -tx1 | tr -d ' \n')
                 mkdir -p /var/lib/iwd
-                rm -f "/var/lib/iwd/${net.ssid}.psk"
-                printf '[Security]\nPassphrase=%s\n' "$(cat ${pskPath})" \
+                rm -f ${lib.escapeShellArg "/var/lib/iwd/${net.ssid}.psk"}
+                printf '[Security]\nPassphrase=%s\n' "$(cat ${lib.escapeShellArg pskPath})" \
                   > "/var/lib/iwd/=$ssid_hex.psk"
                 chmod 0600 "/var/lib/iwd/=$ssid_hex.psk"
               ''
@@ -217,10 +217,10 @@ in
                 passwordPath = config.sops.secrets."wifi/${net.name}/password".path;
               in
               ''
-                ssid_hex=$(printf '%s' "${net.ssid}" | od -An -tx1 | tr -d ' \n')
+                ssid_hex=$(printf '%s' ${lib.escapeShellArg net.ssid} | od -An -tx1 | tr -d ' \n')
                 mkdir -p /var/lib/iwd
                 printf '[Security]\nEAP-Method=PEAP\nEAP-Identity=%s\nEAP-PEAP-Phase2-Method=MSCHAPV2\nEAP-PEAP-Phase2-Password=%s\n' \
-                  "${net.identity}" "$(cat ${passwordPath})" \
+                  ${lib.escapeShellArg net.identity} "$(cat ${lib.escapeShellArg passwordPath})" \
                   > "/var/lib/iwd/=$ssid_hex.8021x"
                 chmod 0600 "/var/lib/iwd/=$ssid_hex.8021x"
               ''

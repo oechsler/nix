@@ -5,6 +5,8 @@
 { pkgs }:
 
 pkgs.writeShellScript "lock-and-suspend" ''
+  set -eu
+
   ${pkgs.systemd}/bin/loginctl lock-session
 
   # Give hyprlock time to take over the display before suspending.

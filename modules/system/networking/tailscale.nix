@@ -24,13 +24,18 @@ in
 
     environment.systemPackages = [
       (pkgs.writeShellScriptBin "tailscale-init" ''
-        set -e
+        set -eu
+
+        tailscale_command() {
+          sudo ${pkgs.tailscale}/bin/tailscale "$@"
+        }
+
         echo "Starting Tailscale login..."
-        sudo tailscale up --accept-routes --accept-dns
+        tailscale_command up --accept-routes --accept-dns
         echo "Setting operator to ${config.user.name}..."
-        sudo tailscale set --operator=${config.user.name}
+        tailscale_command set --operator=${lib.escapeShellArg config.user.name}
         echo "Done! Tailscale is ready."
-        tailscale status
+        ${pkgs.tailscale}/bin/tailscale status
       '')
     ]
     ++ lib.optionals config.features.desktop.enable [

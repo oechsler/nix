@@ -11,6 +11,9 @@ let
   icon = "${theme.icons.package}/share/icons/Papirus/32x32/apps/brightness.svg";
 in
 pkgs.writeShellScript "brightness-notify" ''
+  set -eu
+
+  # The caller supplies the already calculated percentage.
   brightness="$1"
 
   ${pkgs.libnotify}/bin/notify-send -a "changeBrightness" -u low \
