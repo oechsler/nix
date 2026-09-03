@@ -8,7 +8,6 @@ let
   unlockOpts = {
     yubikey = [
       "fido2-device=auto"
-      # Wait for late USB enumeration, then fall back to the password prompt.
       "token-timeout=30s"
     ];
     tpm2 = [ "tpm2-device=auto" ];
