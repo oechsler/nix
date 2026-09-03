@@ -21,12 +21,15 @@ let
 in
 {
   config = lib.mkIf config.features.snapshots.enable {
-    fileSystems = {
-      "${userHome}/.local/share/Steam" = subvolume "@steam";
-      "${userHome}/smb" = subvolume "@smb";
-    }
-    // lib.optionalAttrs config.features.apps.nextcloud.enable {
-      "${userHome}/Nextcloud" = subvolume "@nextcloud";
-    };
+    fileSystems =
+      lib.optionalAttrs config.features.gaming.enable {
+        "${userHome}/.local/share/Steam" = subvolume "@steam";
+      }
+      // lib.optionalAttrs config.features.apps.nextcloud.enable {
+        "${userHome}/Nextcloud" = subvolume "@nextcloud";
+      }
+      // lib.optionalAttrs (config.features.smb.enable && config.features.smb.shares != [ ]) {
+        "${userHome}/smb" = subvolume "@smb";
+      };
   };
 }

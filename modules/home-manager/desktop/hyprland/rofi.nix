@@ -59,7 +59,7 @@ let
       name = share.label;
       path = "${config.home.homeDirectory}/smb/${share.label}";
       icon = "network-server";
-    }) features.smb.shares;
+    }) (lib.optionals (features.smb.enable && features.smb.shares != [ ]) features.smb.shares);
 
   placesEntries = lib.concatMapStringsSep "\n" (place: ''
     printf '%s\0icon\x1f%s\n' ${lib.escapeShellArg place.name} ${lib.escapeShellArg place.icon}
