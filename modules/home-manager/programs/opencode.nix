@@ -21,11 +21,20 @@
   lib,
   features,
   pkgs,
+  theme,
   ...
 }:
 
 let
   cfg = features.dev.opencode;
+  opencodeTheme =
+    {
+      latte = "catppuccin";
+      frappe = "catppuccin-frappe";
+      macchiato = "catppuccin-macchiato";
+      mocha = "catppuccin";
+    }
+    .${theme.catppuccin.flavor};
   enabledProviders = lib.filterAttrs (_: provider: provider.enable) cfg.provider;
   providersWithSecrets = lib.filterAttrs (
     _: provider: provider.apiKeySecret != null
@@ -294,6 +303,7 @@ in
         // lspSettings;
         formatter = formatterSettings;
         enabled_providers = builtins.attrNames enabledProviders;
+        theme = cfg.settings.theme or opencodeTheme;
         model = cfg.defaultModel;
         small_model = cfg.settings.small_model or cfg.defaultModel;
 
