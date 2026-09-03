@@ -443,9 +443,42 @@ features = {
 
 ### Development
 
-Development tools inherit from `features.dev.enable` by default. OpenCode is
-ready to use with the shared model defaults; hosts only need to add services
-that are specific to them.
+`features.dev.enable` controls the complete command-line development
+environment. Desktop applications and Android tooling have separate options.
+
+#### Language Toolchains
+
+The default language environments include compilers or runtimes, language
+servers, diagnostics, and formatters where available:
+
+- C/C++: Clang, LLD, `clangd`, `clang-format`
+- Go: Go, `gopls`, `gofumpt`
+- Java: JDK, Gradle, `jdt-language-server`, `google-java-format`
+- JavaScript/TypeScript: Bun, `typescript-language-server`, `prettierd`
+- JSON: `vscode-json-languageserver`, `prettierd`
+- Kotlin: Kotlin, Gradle, `kotlin-language-server`, `ktlint`, Detekt
+- Markdown: `marksman`, `prettierd`
+- Nix: `nixd`, `nil`, `nixfmt`
+- Python: `pyright`, `ruff`
+- Rust: `rustc`, Cargo, Clippy, `rust-analyzer`, `rustfmt`
+- Shell: `bash-language-server`, `shfmt`
+- TOML: `taplo`
+- YAML: `yaml-language-server`, `prettierd`
+
+#### Infrastructure Tools
+
+Enabled with `features.dev.enable`:
+
+- Ansible
+- OpenTofu
+- Distrobox when container support is enabled
+
+#### Editors and IDEs
+
+Neovim is configured as the default terminal editor and provides completion,
+diagnostics, LSP navigation, Treesitter highlighting, and format-on-save for
+the language environments above. JetBrains IDEs and DBeaver are optional GUI
+tools. JetBrains entries default to GoLand and RustRover.
 
 | Option                               | Default                    | Description                                 |
 | ------------------------------------ | -------------------------- | ------------------------------------------- |
@@ -459,13 +492,27 @@ that are specific to them.
 | `features.dev.opencode.formatter`    | shared defaults            | Formatters for supported source files.      |
 | `features.dev.jetbrains.enable`      | `dev.enable`               | JetBrains IDEs as a group.                  |
 | `features.dev.jetbrains.entries`     | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.                  |
+| `features.dev.android.enable`        | `false`                    | Android SDK and Android build tools.        |
 | `features.dev.dbeaver.enable`        | `dev.enable`               | DBeaver database GUI.                       |
 
 #### JetBrains IDEs
 
-Available values are `clion`, `datagrip`, `dataspell`, `gateway`, `goland`,
-`idea-oss`, `idea-ultimate`, `mps`, `phpstorm`, `pycharm`, `rider`, `rubymine`,
-`rustrover`, and `webstorm`.
+Available values are `android-studio`, `clion`, `datagrip`, `dataspell`,
+`gateway`, `goland`, `idea-oss`, `idea-ultimate`, `mps`, `phpstorm`, `pycharm`,
+`rider`, `rubymine`, `rustrover`, and `webstorm`. `android-studio` requires
+`features.dev.android.enable = true`.
+
+#### Android Development
+
+Android tooling is disabled by default. Enable it independently of Android
+Studio to install the Android SDK, platform tools, build tools, and NDK:
+
+```nix
+features.dev.android.enable = true;
+```
+
+Add `android-studio` to `features.dev.jetbrains.entries` when the IDE is also
+needed. The configuration rejects that IDE entry when Android tooling is off.
 
 ```nix
 features = {
@@ -493,9 +540,7 @@ Additional OpenCode settings can be placed in `settings`. The `lsp` and
 `formatter` attributes have shared defaults and can be extended or overridden
 by name. Set `enable = false` to disable an individual entry.
 
-The LSP defaults cover Nix, shell, YAML, Python, Go, Rust, JavaScript/TypeScript,
-Java, Markdown, JSON, and TOML. The formatter defaults cover Nix,
-JavaScript/TypeScript, JSON, YAML, Markdown, shell, Python, Go, Rust, and Java.
+The OpenCode LSP and formatter defaults apply to the applicable entries above.
 Formatters run after OpenCode writes or edits a matching file.
 
 For example, a host can override an LSP, disable a formatter, and add a custom

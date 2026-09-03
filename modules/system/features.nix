@@ -547,6 +547,7 @@ in
         entries = lib.mkOption {
           type = lib.types.listOf (
             lib.types.enum [
+              "android-studio"
               "clion"
               "datagrip"
               "dataspell"
@@ -568,6 +569,11 @@ in
             "rustrover"
           ];
           description = "JetBrains IDEs to install.";
+        };
+      };
+      android = {
+        enable = (lib.mkEnableOption "Android development tooling") // {
+          default = false;
         };
       };
       dbeaver = {

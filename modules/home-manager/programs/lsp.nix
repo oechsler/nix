@@ -4,18 +4,8 @@
 # other clients can start them directly. These tools are only needed when
 # development tools are enabled.
 #
-# Matching opencode built-ins (https://opencode.ai/docs/lsp/):
-#   nixd                   -> .nix (Nix)
-#   bash-language-server   -> .sh, .bash, .zsh (bash)
-#   yaml-language-server   -> .yaml, .yml (yaml-ls)
-#   pyright                -> .py (pyright)
-#   gopls                  -> .go (gopls)
-#   rust-analyzer          -> .rs (provided by the Nix Rust toolchain)
-#   typescript-language-server -> .ts, .js (typescript)
-#   jdt-language-server    -> .java (jdtls)
-#   marksman               -> .md (markdown)
-#   vscode-json-language-server -> .json, .jsonc (jsonls)
-#   taplo                  -> .toml (taplo)
+# The same tools are consumed by Neovim and OpenCode. Keep this list aligned
+# with the language-specific configuration in those clients.
 
 {
   pkgs,
@@ -27,40 +17,53 @@
 {
   config = lib.mkIf features.dev.enable {
     home.packages = with pkgs; [
-      # Nix
-      nixd
-      nil
+      # C/C++
+      clang-tools
 
-      # Shell & Config
-      bash-language-server
-      yaml-language-server
-      marksman
+      # Go
+      gofumpt
+      gopls
+
+      # Java
+      google-java-format
+      jdt-language-server
+
+      # JavaScript/TypeScript
+      prettierd
+      typescript-language-server
+
+      # JSON
       vscode-json-languageserver
-      taplo
+
+      # Kotlin
+      detekt
+      kotlin-language-server
+      ktlint
+
+      # Markdown
+      marksman
+
+      # Nix
+      nil
+      nixd
+      nixfmt
 
       # Python
       pyright
-
-      # Go
-      gopls
+      ruff
 
       # Rust
       rust-analyzer
 
-      # TypeScript / JavaScript
-      typescript-language-server
-
-      # Java
-      jdt-language-server
-
-      # Formatters
-      nixfmt
-      prettierd
-      gofumpt
-      google-java-format
+      # Shell
+      bash-language-server
       shfmt
-      ruff
-      clang-tools
+
+      # TOML
+      taplo
+
+      # YAML
+      yaml-language-server
     ];
   };
 }

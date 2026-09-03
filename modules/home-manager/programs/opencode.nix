@@ -42,6 +42,110 @@ let
   providerSecretPath = provider: config.sops.secrets.${provider.apiKeySecret}.path;
   mcpSecretPath = server: config.sops.secrets.${server.tokenSecret}.path;
   mcpOAuthSecretPath = server: config.sops.secrets.${server.oauth.clientSecretSecret}.path;
+  defaultLsp = {
+    nixd = {
+      command = [
+        "${pkgs.nixd}/bin/nixd"
+        "--stdio"
+      ];
+      extensions = [ ".nix" ];
+    };
+    bash-language-server = {
+      command = [
+        "${pkgs.bash-language-server}/bin/bash-language-server"
+        "start"
+      ];
+      extensions = [
+        ".sh"
+        ".bash"
+        ".zsh"
+      ];
+    };
+    yaml-language-server = {
+      command = [
+        "${pkgs.yaml-language-server}/bin/yaml-language-server"
+        "--stdio"
+      ];
+      extensions = [
+        ".yaml"
+        ".yml"
+      ];
+    };
+    pyright = {
+      command = [
+        "${pkgs.pyright}/bin/pyright-langserver"
+        "--stdio"
+      ];
+      extensions = [ ".py" ];
+    };
+    gopls = {
+      command = [ "${pkgs.gopls}/bin/gopls" ];
+      extensions = [ ".go" ];
+    };
+    rust-analyzer = {
+      command = [ "${pkgs.rust-analyzer}/bin/rust-analyzer" ];
+      extensions = [ ".rs" ];
+    };
+    typescript-language-server = {
+      command = [
+        "${pkgs.typescript-language-server}/bin/typescript-language-server"
+        "--stdio"
+      ];
+      extensions = [
+        ".js"
+        ".jsx"
+        ".ts"
+        ".tsx"
+      ];
+    };
+    jdtls = {
+      command = [ "${pkgs.jdt-language-server}/bin/jdtls" ];
+      extensions = [ ".java" ];
+    };
+    kotlin-language-server = {
+      command = [ "${pkgs.kotlin-language-server}/bin/kotlin-language-server" ];
+      extensions = [
+        ".kt"
+        ".kts"
+      ];
+    };
+    clangd = {
+      command = [ "${pkgs.clang-tools}/bin/clangd" ];
+      extensions = [
+        ".c"
+        ".h"
+        ".cc"
+        ".cpp"
+        ".cxx"
+        ".hpp"
+      ];
+    };
+    marksman = {
+      command = [
+        "${pkgs.marksman}/bin/marksman"
+        "server"
+      ];
+      extensions = [ ".md" ];
+    };
+    vscode-json-language-server = {
+      command = [
+        "${pkgs.vscode-json-languageserver}/bin/vscode-json-language-server"
+        "--stdio"
+      ];
+      extensions = [
+        ".json"
+        ".jsonc"
+      ];
+    };
+    taplo = {
+      command = [
+        "${pkgs.taplo}/bin/taplo"
+        "lsp"
+        "stdio"
+      ];
+      extensions = [ ".toml" ];
+    };
+  };
   providerSecretChecks = lib.concatStringsSep "\n" (
     lib.mapAttrsToList (name: provider: ''
       if ! test -r ${providerSecretPath provider}; then
@@ -152,6 +256,32 @@ let
       ];
       extensions = [ ".java" ];
     };
+    ktlint = {
+      command = [
+        "${pkgs.ktlint}/bin/ktlint"
+        "-F"
+        "$FILE"
+      ];
+      extensions = [
+        ".kt"
+        ".kts"
+      ];
+    };
+    clang-format = {
+      command = [
+        "${pkgs.clang-tools}/bin/clang-format"
+        "-i"
+        "$FILE"
+      ];
+      extensions = [
+        ".c"
+        ".h"
+        ".cc"
+        ".cpp"
+        ".cxx"
+        ".hpp"
+      ];
+    };
   };
   formatterSettings = lib.mapAttrs (
     _name: formatter:
@@ -186,13 +316,15 @@ let
   lspSettings = lib.mapAttrs (
     _name: server:
     {
-      disabled = !server.enable;
+      disabled = !(server.enable or true);
     }
     // lib.optionalAttrs (server.command != [ ]) { inherit (server) command; }
     // lib.optionalAttrs (server.extensions != [ ]) { inherit (server) extensions; }
-    // lib.optionalAttrs (server.env != { }) { inherit (server) env; }
-    // lib.optionalAttrs (server.initialization != { }) { inherit (server) initialization; }
-  ) cfg.lsp;
+    // lib.optionalAttrs ((server.env or { }) != { }) { inherit (server) env; }
+    // lib.optionalAttrs ((server.initialization or { }) != { }) {
+      inherit (server) initialization;
+    }
+  ) (defaultLsp // cfg.lsp);
   mcpSettings = lib.mapAttrs (
     name: server:
     {
