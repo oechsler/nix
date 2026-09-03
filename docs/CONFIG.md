@@ -545,16 +545,6 @@ configure OAuth/OIDC with `oauth`; its client secret is referenced through
 When `features.dev.opencode.server.enable` is enabled, OpenCode is available in
 the browser at `https://opencode.caddy`.
 
-```nix
-features.dev.opencode.mcp.company = {
-  url = "https://ai.example/mcp";
-  oauth = {
-    scope = "openid profile";
-    clientSecretSecret = "opencode/mcp/company/oauth-client-secret";
-  };
-};
-```
-
 ### Operations
 
 Operations features provide declarative access to infrastructure. Profiles,
