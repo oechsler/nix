@@ -59,6 +59,10 @@ in
       extraConfig = caddyConfig;
     };
 
+    systemd.services.caddy.preStart = lib.mkIf (
+      endpoints != { }
+    ) "${pkgs.coreutils}/bin/chown -R caddy:caddy ${config.services.caddy.dataDir}";
+
     home-manager.users.${config.user.name}.programs.${browser}.policies.Certificates.Install =
       lib.mkIf (endpoints != { })
         [ caddyRootCertificateExport ];
