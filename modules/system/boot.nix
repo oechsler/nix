@@ -91,6 +91,16 @@ in
       boot = {
         plymouth.enable = true;
 
+        # Load the display driver in the initrd so Plymouth takes over from
+        # the firmware framebuffer at the monitor's native EDID mode.
+        initrd.kernelModules =
+          lib.optionals (config.features.hardware.gpu == "amd") [
+            "amdgpu"
+          ]
+          ++ lib.optionals (config.features.hardware.gpu == "intel") [
+            "i915"
+          ];
+
         # Silent boot
         consoleLogLevel = 0;
         initrd.verbose = false;
