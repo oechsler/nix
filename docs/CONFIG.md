@@ -543,7 +543,7 @@ configure OAuth/OIDC with `oauth`; its client secret is referenced through
 [sops/README.md](../sops/README.md) for the credential layout and workflow.
 
 When `features.dev.opencode.server.enable` is enabled, OpenCode is available in
-the browser at `https://opencode.local`.
+the browser at `https://opencode.caddy`.
 
 ```nix
 features.dev.opencode.mcp.company = {
