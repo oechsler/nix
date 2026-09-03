@@ -73,17 +73,17 @@ let
   );
   providerEnvAssignments = lib.concatStringsSep "" (
     lib.mapAttrsToList (name: provider: ''
-      ${providerEnvName name}="$(< ${providerSecretPath provider})" \
+      export ${providerEnvName name}="$(< ${providerSecretPath provider})"
     '') providersWithSecrets
   );
   mcpEnvAssignments = lib.concatStringsSep "" (
     lib.mapAttrsToList (name: server: ''
-      ${mcpEnvName name}="$(< ${mcpSecretPath server})" \
+      export ${mcpEnvName name}="$(< ${mcpSecretPath server})"
     '') mcpWithSecrets
   );
   mcpOAuthEnvAssignments = lib.concatStringsSep "" (
     lib.mapAttrsToList (name: server: ''
-      ${mcpOAuthEnvName name}="$(< ${mcpOAuthSecretPath server})" \
+      export ${mcpOAuthEnvName name}="$(< ${mcpOAuthSecretPath server})"
     '') mcpWithOAuthSecrets
   );
   providerSettings = lib.mapAttrs (
@@ -161,9 +161,8 @@ let
     ${providerSecretChecks}
     ${mcpSecretChecks}
     ${mcpOAuthSecretChecks}
-    exec env \
-      ${providerEnvAssignments}${mcpEnvAssignments}${mcpOAuthEnvAssignments}
-      ${pkgs.opencode}/bin/opencode "$@"
+    ${providerEnvAssignments}${mcpEnvAssignments}${mcpOAuthEnvAssignments}
+    exec ${pkgs.opencode}/bin/opencode "$@"
   '';
 in
 {
