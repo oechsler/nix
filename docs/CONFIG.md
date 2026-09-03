@@ -459,8 +459,6 @@ that are specific to them.
 | `features.dev.opencode.formatter`        | shared defaults            | Formatters for supported source files.      |
 | `features.dev.opencode.server.enable`    | `false`                    | Background OpenCode server.                 |
 | `features.dev.opencode.server.directory` | `~/repos`                  | Working directory for the server.           |
-| `features.dev.opencode.server.hostname`  | `0.0.0.0`                  | Listen address.                             |
-| `features.dev.opencode.server.port`      | `4096`                     | Listen port.                                |
 | `features.dev.jetbrains.enable`          | `dev.enable`               | JetBrains IDEs as a group.                  |
 | `features.dev.jetbrains.entries`         | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.                  |
 | `features.dev.dbeaver.enable`            | `dev.enable`               | DBeaver database GUI.                       |
@@ -481,7 +479,8 @@ features = {
 
 OpenCode uses shared model and provider defaults. The default model is
 `openai/gpt-5.6-luna`. OpenAI provides `gpt-5.6-luna`, `gpt-5.6-terra`, and
-`gpt-5.6-sol`; OpenCode Go provides the configured DeepSeek and Qwen models.
+`gpt-5.6-sol`; OpenCode Go provides the configured DeepSeek, GPT, and Qwen
+models.
 
 A host normally only adds its own MCP servers. MCPs are present but disabled by
 default, and can be enabled from OpenCode. Set `enable = true` when an MCP
@@ -542,6 +541,9 @@ Use `settings.small_model` to choose a separate small model. Remote MCPs can
 configure OAuth/OIDC with `oauth`; its client secret is referenced through
 `clientSecretSecret`. See
 [sops/README.md](../sops/README.md) for the credential layout and workflow.
+
+When `features.dev.opencode.server.enable` is enabled, OpenCode is available in
+the browser at `https://opencode.local`.
 
 ```nix
 features.dev.opencode.mcp.company = {

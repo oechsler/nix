@@ -425,8 +425,8 @@ in
           "font.name.monospace.x-western" = fonts.monospace;
           "font.name.monospace.x-unicode" = fonts.monospace;
 
-          # DNS over HTTPS
-          "network.trr.mode" = 5; # 5 = Off
+          # Use the system resolver instead of DNS over HTTPS.
+          "network.trr.mode" = 5;
 
           # Enable userContent.css for font overrides
           "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
