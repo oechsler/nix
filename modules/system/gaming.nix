@@ -118,7 +118,7 @@ let
     esac
 
     exit_file="''${STEAM_MACHINE_SESSION_EXIT_FILE:-''${XDG_RUNTIME_DIR:-/tmp}/steam-machine-session-exit}"
-    mkdir -p "$(${pkgs.uutils-coreutils-noprefix}/bin/dirname "$exit_file")"
+     ${pkgs.uutils-coreutils-noprefix}/bin/mkdir -p "$(${pkgs.uutils-coreutils-noprefix}/bin/dirname "$exit_file")"
     : > "$exit_file"
 
     ${terminateSteamGamescope} >/dev/null
@@ -184,102 +184,102 @@ let
         "-pipewire-dmabuf"
       ];
       steamGamescope = pkgs.writeShellScriptBin "steam-gamescope" ''
-        set -eu
+           set -eu
 
-        ${lib.concatStringsSep "\n" exports}
+           ${lib.concatStringsSep "\n" exports}
 
-        if [ -z "''${XDG_RUNTIME_DIR:-}" ]; then
-          echo "steam-gamescope: XDG_RUNTIME_DIR is not set" >&2
-          exit 1
-        fi
+           if [ -z "''${XDG_RUNTIME_DIR:-}" ]; then
+             echo "steam-gamescope: XDG_RUNTIME_DIR is not set" >&2
+             exit 1
+           fi
 
-        export XDG_SESSION_TYPE=x11
-        ${pkgs.dbus}/bin/dbus-update-activation-environment --systemd \
-          DESKTOP_SESSION XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_RUNTIME_DIR || true
+           export XDG_SESSION_TYPE=x11
+           ${pkgs.dbus}/bin/dbus-update-activation-environment --systemd \
+             DESKTOP_SESSION XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE XDG_RUNTIME_DIR || true
 
-        session_dir="$(${pkgs.uutils-coreutils-noprefix}/bin/mktemp -p "$XDG_RUNTIME_DIR" -d -t steam-machine.XXXXXXX)"
-        startup_socket="$session_dir/startup.socket"
-        stats_pipe="$session_dir/stats.pipe"
-        mangohud_config="$session_dir/mangohud.config"
-        ${pkgs.uutils-coreutils-noprefix}/bin/mkfifo "$startup_socket" "$stats_pipe"
+           session_dir="$(${pkgs.uutils-coreutils-noprefix}/bin/mktemp -p "$XDG_RUNTIME_DIR" -d -t steam-machine.XXXXXXX)"
+           startup_socket="$session_dir/startup.socket"
+           stats_pipe="$session_dir/stats.pipe"
+           mangohud_config="$session_dir/mangohud.config"
+           ${pkgs.uutils-coreutils-noprefix}/bin/mkfifo "$startup_socket" "$stats_pipe"
 
-        exit_file="''${XDG_RUNTIME_DIR:-/tmp}/steam-machine-session-exit"
-        export STEAM_MACHINE_SESSION_EXIT_FILE="$exit_file"
-        rm -f "$exit_file"
+           exit_file="''${XDG_RUNTIME_DIR:-/tmp}/steam-machine-session-exit"
+           export STEAM_MACHINE_SESSION_EXIT_FILE="$exit_file"
+        ${pkgs.uutils-coreutils-noprefix}/bin/rm -f "$exit_file"
 
-        export GAMESCOPE_MODE_SAVE_FILE="''${XDG_CONFIG_HOME:-$HOME/.config}/gamescope/modes.cfg"
-        export GAMESCOPE_PATCHED_EDID_FILE="''${XDG_CONFIG_HOME:-$HOME/.config}/gamescope/edid.bin"
-        export GAMESCOPE_LIMITER_FILE="$session_dir/limiter"
-        export GAMESCOPE_STATS="$stats_pipe"
-        echo $$ > "$XDG_RUNTIME_DIR/steam-gamescope-pid"
+           export GAMESCOPE_MODE_SAVE_FILE="''${XDG_CONFIG_HOME:-$HOME/.config}/gamescope/modes.cfg"
+           export GAMESCOPE_PATCHED_EDID_FILE="''${XDG_CONFIG_HOME:-$HOME/.config}/gamescope/edid.bin"
+           export GAMESCOPE_LIMITER_FILE="$session_dir/limiter"
+           export GAMESCOPE_STATS="$stats_pipe"
+           echo $$ > "$XDG_RUNTIME_DIR/steam-gamescope-pid"
 
-        export ENABLE_GAMESCOPE_WSI=1
-        export STEAM_MANGOAPP_PRESETS_SUPPORTED=1
-        export STEAM_USE_MANGOAPP=1
-        export STEAM_MANGOAPP_HORIZONTAL_SUPPORTED=1
-        export MANGOHUD_CONFIGFILE="$mangohud_config"
+           export ENABLE_GAMESCOPE_WSI=1
+           export STEAM_MANGOAPP_PRESETS_SUPPORTED=1
+           export STEAM_USE_MANGOAPP=1
+           export STEAM_MANGOAPP_HORIZONTAL_SUPPORTED=1
+           export MANGOHUD_CONFIGFILE="$mangohud_config"
 
-        mkdir -p "$(${pkgs.uutils-coreutils-noprefix}/bin/dirname "$GAMESCOPE_MODE_SAVE_FILE")"
-        touch "$GAMESCOPE_MODE_SAVE_FILE"
-        touch "$GAMESCOPE_PATCHED_EDID_FILE"
-        touch "$GAMESCOPE_LIMITER_FILE"
-        printf 'no_display\n' > "$MANGOHUD_CONFIGFILE"
+            ${pkgs.uutils-coreutils-noprefix}/bin/mkdir -p "$(${pkgs.uutils-coreutils-noprefix}/bin/dirname "$GAMESCOPE_MODE_SAVE_FILE")"
+            ${pkgs.uutils-coreutils-noprefix}/bin/touch "$GAMESCOPE_MODE_SAVE_FILE"
+            ${pkgs.uutils-coreutils-noprefix}/bin/touch "$GAMESCOPE_PATCHED_EDID_FILE"
+            ${pkgs.uutils-coreutils-noprefix}/bin/touch "$GAMESCOPE_LIMITER_FILE"
+           printf 'no_display\n' > "$MANGOHUD_CONFIGFILE"
 
-        rm -f "$XDG_RUNTIME_DIR/gamescope-stats"
-        ln -s "$session_dir" "$XDG_RUNTIME_DIR/gamescope-stats"
+            ${pkgs.uutils-coreutils-noprefix}/bin/rm -f "$XDG_RUNTIME_DIR/gamescope-stats"
+            ${pkgs.uutils-coreutils-noprefix}/bin/ln -s "$session_dir" "$XDG_RUNTIME_DIR/gamescope-stats"
 
-        cleanup() {
-          ${pkgs.procps}/bin/pkill -TERM -P "$$" || true
-          [ -n "''${gamescope_pid:-}" ] && kill "$gamescope_pid" 2>/dev/null || true
-          [ -n "''${mangoapp_pid:-}" ] && kill "$mangoapp_pid" 2>/dev/null || true
-          rm -f "$exit_file"
-          rm -f "$XDG_RUNTIME_DIR/gamescope-stats"
-          rm -f "$XDG_RUNTIME_DIR/steam-gamescope-pid"
-          rm -rf "$session_dir"
-          ${pkgs.systemd}/bin/systemctl --user unmask steam.service --runtime 2>/dev/null || true
-        }
-        trap cleanup EXIT HUP INT TERM
+           cleanup() {
+             ${pkgs.procps}/bin/pkill -TERM -P "$$" || true
+             [ -n "''${gamescope_pid:-}" ] && kill "$gamescope_pid" 2>/dev/null || true
+             [ -n "''${mangoapp_pid:-}" ] && kill "$mangoapp_pid" 2>/dev/null || true
+              ${pkgs.uutils-coreutils-noprefix}/bin/rm -f "$exit_file"
+              ${pkgs.uutils-coreutils-noprefix}/bin/rm -f "$XDG_RUNTIME_DIR/gamescope-stats"
+              ${pkgs.uutils-coreutils-noprefix}/bin/rm -f "$XDG_RUNTIME_DIR/steam-gamescope-pid"
+              ${pkgs.uutils-coreutils-noprefix}/bin/rm -rf "$session_dir"
+             ${pkgs.systemd}/bin/systemctl --user unmask steam.service --runtime 2>/dev/null || true
+           }
+           trap cleanup EXIT HUP INT TERM
 
-        ${pkgs.systemd}/bin/systemctl --user stop steam.service 2>/dev/null || true
-        ${pkgs.systemd}/bin/systemctl --user mask steam.service --runtime 2>/dev/null || true
+           ${pkgs.systemd}/bin/systemctl --user stop steam.service 2>/dev/null || true
+           ${pkgs.systemd}/bin/systemctl --user mask steam.service --runtime 2>/dev/null || true
 
-        ${pkgs.procps}/bin/pkill -x steam 2>/dev/null || true
-        ${pkgs.procps}/bin/pkill -x steamwebhelper 2>/dev/null || true
-        ${pkgs.uutils-coreutils-noprefix}/bin/sleep 2
+           ${pkgs.procps}/bin/pkill -x steam 2>/dev/null || true
+           ${pkgs.procps}/bin/pkill -x steamwebhelper 2>/dev/null || true
+           ${pkgs.uutils-coreutils-noprefix}/bin/sleep 2
 
-        gamescope_bin=/run/wrappers/bin/gamescope
-        [ -x "$gamescope_bin" ] || gamescope_bin=${pkgs.gamescope}/bin/gamescope
+           gamescope_bin=/run/wrappers/bin/gamescope
+           [ -x "$gamescope_bin" ] || gamescope_bin=${pkgs.gamescope}/bin/gamescope
 
-        "$gamescope_bin" --steam ${gamescopeArgs} \
-          --generate-drm-mode fixed \
-          --default-touch-mode 4 \
-          --hide-cursor-delay 3000 \
-          -e -R "$startup_socket" -T "$stats_pipe" &
-        gamescope_pid=$!
+           "$gamescope_bin" --steam ${gamescopeArgs} \
+             --generate-drm-mode fixed \
+             --default-touch-mode 4 \
+             --hide-cursor-delay 3000 \
+             -e -R "$startup_socket" -T "$stats_pipe" &
+           gamescope_pid=$!
 
-        if read -r -t 10 response_x_display response_wl_display <> "$startup_socket"; then
-          export DISPLAY="$response_x_display"
-          export GAMESCOPE_WAYLAND_DISPLAY="$response_wl_display"
-          export WAYLAND_DISPLAY="$response_wl_display"
-          env > "$XDG_RUNTIME_DIR/gamescope-environment"
-        else
-          echo "steam-gamescope: gamescope did not report startup displays" >&2
-        fi
+           if read -r -t 10 response_x_display response_wl_display <> "$startup_socket"; then
+             export DISPLAY="$response_x_display"
+             export GAMESCOPE_WAYLAND_DISPLAY="$response_wl_display"
+             export WAYLAND_DISPLAY="$response_wl_display"
+             env > "$XDG_RUNTIME_DIR/gamescope-environment"
+           else
+             echo "steam-gamescope: gamescope did not report startup displays" >&2
+           fi
 
-        # Let Gamescope finish applying HDR on the DRM output before Steam
-        # initializes its client-side HDR/color pipeline. Without this, Steam can
-        # start washed out until HDR is toggled off/on in Game Mode.
-        ${pkgs.uutils-coreutils-noprefix}/bin/sleep 1
+           # Let Gamescope finish applying HDR on the DRM output before Steam
+           # initializes its client-side HDR/color pipeline. Without this, Steam can
+           # start washed out until HDR is toggled off/on in Game Mode.
+           ${pkgs.uutils-coreutils-noprefix}/bin/sleep 1
 
-        ${pkgs.mangohud}/bin/mangoapp &
-        mangoapp_pid=$!
+           ${pkgs.mangohud}/bin/mangoapp &
+           mangoapp_pid=$!
 
-        ${config.programs.steam.package}/bin/steam ${steamArgs}
-        status=$?
+           ${config.programs.steam.package}/bin/steam ${steamArgs}
+           status=$?
 
-        kill "$gamescope_pid" 2>/dev/null || true
-        wait "$gamescope_pid" 2>/dev/null || true
-        exit "$status"
+           kill "$gamescope_pid" 2>/dev/null || true
+           wait "$gamescope_pid" 2>/dev/null || true
+           exit "$status"
       '';
     in
     (pkgs.writeTextDir "share/wayland-sessions/steam.desktop" ''

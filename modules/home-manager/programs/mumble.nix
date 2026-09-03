@@ -77,12 +77,12 @@ let
     mumble_database="${databaseFile}"
 
     if [ ! -e "$mumble_config" ]; then
-      mkdir -p "$(dirname "$mumble_config")"
-      cp ${mumbleConfig} "$mumble_config"
+       ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$mumble_config")"
+       ${pkgs.coreutils}/bin/cp ${mumbleConfig} "$mumble_config"
     fi
 
     if [ -f "$mumble_config" ]; then
-      mumble_tmp="$(mktemp "''${mumble_config}.XXXXXX")"
+       mumble_tmp="$(${pkgs.coreutils}/bin/mktemp "''${mumble_config}.XXXXXX")"
       if ${pkgs.jq}/bin/jq \
         --arg username ${lib.escapeShellArg cfg.username} \
         --arg server_name ${lib.escapeShellArg serverNameValue} \
@@ -113,34 +113,34 @@ let
          | .ui.send_usage_statistics = false
          | .ui.server_filter_mode = $server_filter_mode' \
         "$mumble_config" > "$mumble_tmp"; then
-        chmod --reference="$mumble_config" "$mumble_tmp"
-        mv "$mumble_tmp" "$mumble_config"
+         ${pkgs.coreutils}/bin/chmod --reference="$mumble_config" "$mumble_tmp"
+         ${pkgs.coreutils}/bin/mv "$mumble_tmp" "$mumble_config"
       else
-        rm -f "$mumble_tmp"
+         ${pkgs.coreutils}/bin/rm -f "$mumble_tmp"
       fi
     fi
 
     if ${lib.boolToString hasCertificate} && [ -r "${certificatePath}" ] && [ -f "$mumble_config" ]; then
-      mumble_tmp="$(mktemp "''${mumble_config}.XXXXXX")"
+       mumble_tmp="$(${pkgs.coreutils}/bin/mktemp "''${mumble_config}.XXXXXX")"
       if ${pkgs.jq}/bin/jq --rawfile certificate "${certificatePath}" \
         '.certificate = ($certificate | gsub("\\s"; ""))' \
         "$mumble_config" > "$mumble_tmp"; then
-        chmod --reference="$mumble_config" "$mumble_tmp"
-        mv "$mumble_tmp" "$mumble_config"
+         ${pkgs.coreutils}/bin/chmod --reference="$mumble_config" "$mumble_tmp"
+         ${pkgs.coreutils}/bin/mv "$mumble_tmp" "$mumble_config"
       else
-        rm -f "$mumble_tmp"
+         ${pkgs.coreutils}/bin/rm -f "$mumble_tmp"
       fi
     elif ! ${lib.boolToString hasCertificate} && [ -f "$mumble_config" ]; then
-      mumble_tmp="$(mktemp "''${mumble_config}.XXXXXX")"
+       mumble_tmp="$(${pkgs.coreutils}/bin/mktemp "''${mumble_config}.XXXXXX")"
       if ${pkgs.jq}/bin/jq 'del(.certificate)' "$mumble_config" > "$mumble_tmp"; then
-        chmod --reference="$mumble_config" "$mumble_tmp"
-        mv "$mumble_tmp" "$mumble_config"
+         ${pkgs.coreutils}/bin/chmod --reference="$mumble_config" "$mumble_tmp"
+         ${pkgs.coreutils}/bin/mv "$mumble_tmp" "$mumble_config"
       else
-        rm -f "$mumble_tmp"
+         ${pkgs.coreutils}/bin/rm -f "$mumble_tmp"
       fi
     fi
 
-    mkdir -p "$(dirname "$mumble_database")"
+     ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$mumble_database")"
     ${pkgs.sqlite}/bin/sqlite3 "$mumble_database" \
       'CREATE TABLE IF NOT EXISTS servers (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, hostname TEXT, port INTEGER DEFAULT 64738, username TEXT, password TEXT, url TEXT);'
     ${serverSql}
@@ -200,7 +200,7 @@ in
       default = ''
         mumble_unit="${config.xdg.configHome}/systemd/user/mumble.service"
         if [ -L "$mumble_unit" ] && [ "$(readlink "$mumble_unit")" = "/dev/null" ]; then
-          rm -f "$mumble_unit"
+           ${pkgs.coreutils}/bin/rm -f "$mumble_unit"
         fi
       '';
       description = "Command used to remove a stale masked Mumble user unit.";

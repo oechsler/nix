@@ -82,11 +82,11 @@ let
     colors_name="$2"
     kdeglobals_src="$3"
 
-    mkdir -p /var/lib/sddm/.config
-    mkdir -p /var/lib/sddm/.local/share/color-schemes
-    ln -sf "$colors_src" "/var/lib/sddm/.local/share/color-schemes/$colors_name.colors"
-    cp "$kdeglobals_src" /var/lib/sddm/.config/kdeglobals
-    chown -R sddm:sddm /var/lib/sddm/.config /var/lib/sddm/.local/share
+    ${pkgs.coreutils}/bin/mkdir -p /var/lib/sddm/.config
+    ${pkgs.coreutils}/bin/mkdir -p /var/lib/sddm/.local/share/color-schemes
+    ${pkgs.coreutils}/bin/ln -sf "$colors_src" "/var/lib/sddm/.local/share/color-schemes/$colors_name.colors"
+    ${pkgs.coreutils}/bin/cp "$kdeglobals_src" /var/lib/sddm/.config/kdeglobals
+    ${pkgs.coreutils}/bin/chown -R sddm:sddm /var/lib/sddm/.config /var/lib/sddm/.local/share
   '';
   sddmGreeterEnvironment = lib.concatStringsSep "," [
     "QT_WAYLAND_SHELL_INTEGRATION=layer-shell"
@@ -171,7 +171,7 @@ let
 
       for edid_file in /sys/class/drm/*-"$output"/edid; do
         status_file=''${edid_file%/edid}/status
-        if [ -s "$edid_file" ] && [ -e "$status_file" ] && [ "$(cat "$status_file")" = connected ]; then
+        if [ -s "$edid_file" ] && [ -e "$status_file" ] && [ "$(${pkgs.coreutils}/bin/cat "$status_file")" = connected ]; then
           actual_edid=$(${pkgs.uutils-coreutils-noprefix}/bin/sha256sum "$edid_file" | ${pkgs.uutils-coreutils-noprefix}/bin/cut -d' ' -f1)
           if [ "$actual_edid" = "$expected_edid" ]; then
             matched_edid=1
@@ -191,15 +191,15 @@ let
     config_dir=/var/lib/sddm/.config
     config_file=$config_dir/kwinoutputconfig.json
 
-    mkdir -p "$config_dir"
-    chown sddm:sddm "$config_dir"
-    chmod 0755 "$config_dir"
+     ${pkgs.coreutils}/bin/mkdir -p "$config_dir"
+     ${pkgs.coreutils}/bin/chown sddm:sddm "$config_dir"
+     ${pkgs.coreutils}/bin/chmod 0755 "$config_dir"
 
     all_connected=1
     for output in ${configuredOutputNames}; do
       connected=0
       for status_file in /sys/class/drm/*-"$output"/status; do
-        if [ -e "$status_file" ] && [ "$(cat "$status_file")" = connected ]; then
+         if [ -e "$status_file" ] && [ "$(${pkgs.coreutils}/bin/cat "$status_file")" = connected ]; then
           connected=1
         fi
       done
@@ -212,9 +212,9 @@ let
     ${configuredOutputEdidChecks}
 
     if [ "$all_connected" -eq 1 ]; then
-      install -o sddm -g sddm -m 0644 ${sddmDisplayConfigFile} "$config_file"
+       ${pkgs.coreutils}/bin/install -o sddm -g sddm -m 0644 ${sddmDisplayConfigFile} "$config_file"
     else
-      rm -f "$config_file"
+       ${pkgs.coreutils}/bin/rm -f "$config_file"
     fi
   '';
 
@@ -290,7 +290,7 @@ let
     export QT_QUICK_CONTROLS_STYLE=Material
 
     gsettings_dir="$XDG_CONFIG_HOME/glib-2.0/settings"
-    mkdir -p "$gsettings_dir"
+    ${pkgs.coreutils}/bin/mkdir -p "$gsettings_dir"
     printf '%s\n' \
       '[org/maliit/keyboard/maliit]' \
       "active-language='${config.locale.keyboard}'" \
@@ -299,7 +299,7 @@ let
       > "$gsettings_dir/keyfile"
 
     qtquick_dir="$XDG_CONFIG_HOME/QtProject"
-    mkdir -p "$qtquick_dir"
+    ${pkgs.coreutils}/bin/mkdir -p "$qtquick_dir"
     printf '%s\n' \
       '[Controls]' \
       'Style=Material' \

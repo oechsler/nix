@@ -57,7 +57,7 @@ let
   steamStart = pkgs.writeShellScript "steam-start" ''
     set -eu
     ${pkgs.coreutils}/bin/sleep 20
-    exec steam -silent
+    exec ${pkgs.steam}/bin/steam -silent
   '';
 in
 {
@@ -98,11 +98,11 @@ in
         lib.optionals features.apps.enable [
           {
             name = "Proton Pass";
-            exec = "proton-pass --hidden";
+            exec = "${pkgs.proton-pass}/bin/proton-pass --hidden";
           }
           {
             name = "Vesktop";
-            exec = "vesktop --start-minimized";
+            exec = "${pkgs.vesktop}/bin/vesktop --start-minimized";
           }
         ]
         ++ lib.optionals mumbleEnabled [
@@ -117,7 +117,7 @@ in
         ++ lib.optionals (features.gaming.enable && isKde) [
           {
             name = "Steam";
-            exec = "steam -silent";
+            exec = "${pkgs.steam}/bin/steam -silent";
           }
         ];
 
@@ -139,7 +139,7 @@ in
           [Desktop Entry]
           Type=Application
           Name=Nextcloud
-          Exec=nextcloud --background
+           Exec=${pkgs.nextcloud-client}/bin/nextcloud --background
         '';
       };
 

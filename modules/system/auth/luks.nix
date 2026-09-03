@@ -17,6 +17,7 @@ let
       systemd
       gawk
       uutils-coreutils-noprefix
+      sudo
     ];
     text = ''
       if [[ $EUID -ne 0 ]]; then exec sudo "$0" "$@"; fi
@@ -95,10 +96,10 @@ in
             while [ "$SECONDS" -lt "$deadline" ]; do
               for dev in /dev/hidraw*; do
                 [ -e "$dev" ] || continue
-                props="$(udevadm info --query=property --name="$dev" 2>/dev/null || true)"
+                props="$(${pkgs.systemd}/bin/udevadm info --query=property --name="$dev" 2>/dev/null || true)"
                 case "$props" in *ID_VENDOR_ID=1050*) exit 0 ;; esac
               done
-              sleep 0.2
+              ${pkgs.uutils-coreutils-noprefix}/bin/sleep 0.2
             done
           '';
         };

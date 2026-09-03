@@ -66,6 +66,7 @@ let
       inherit package binary;
       enable = hasHDR;
     };
+  vesktopApp = wrapChromiumApp vesktop "vesktop";
 
 in
 {
@@ -85,7 +86,7 @@ in
             with pkgs;
             [
               alsa-scarlett-gui
-              (wrapChromiumApp vesktop "vesktop")
+              vesktopApp
               freecad
               libreoffice
             ]
@@ -112,7 +113,7 @@ in
 
         xdg.desktopEntries.vesktop = {
           name = "Discord";
-          exec = "vesktop %U";
+          exec = "${vesktopApp}/bin/vesktop %U";
           icon = "discord";
           categories = [
             "Network"

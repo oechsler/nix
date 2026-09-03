@@ -77,13 +77,13 @@ in
           echo "Login successful! Session stored in ~/.local/share/proton-pass-cli"
           echo ""
           echo "Restarting SSH agent service..."
-          systemctl --user restart proton-pass-ssh-agent
+           ${pkgs.systemd}/bin/systemctl --user restart proton-pass-ssh-agent
 
           echo ""
           echo "Done! Proton Pass is ready."
           echo ""
           echo "SSH agent status:"
-          systemctl --user status proton-pass-ssh-agent --no-pager
+           ${pkgs.systemd}/bin/systemctl --user status proton-pass-ssh-agent --no-pager
         '')
       ];
 

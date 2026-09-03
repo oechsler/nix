@@ -16,7 +16,7 @@
     home = {
       activation = {
         removeLegacyHyprlandConfig = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-          rm -f "${config.xdg.configHome}/hypr/hyprland.conf"
+          ${pkgs.coreutils}/bin/rm -f "${config.xdg.configHome}/hypr/hyprland.conf"
         '';
 
         # Remove a stale Mumble mask before Home Manager owns the user unit.

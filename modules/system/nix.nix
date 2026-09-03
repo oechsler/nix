@@ -176,7 +176,7 @@ in
               if ! ${pkgs.systemd}/bin/systemctl is-active --quiet nixos-rebuild-switch-to-configuration.service; then
                 exit 0
               fi
-              sleep 2
+               ${pkgs.coreutils}/bin/sleep 2
             done
             echo "Timed out waiting for another NixOS rebuild to finish." >&2
             exit 1
@@ -195,10 +195,10 @@ in
             # Write Secure Boot override when sbctl keys are missing.
             # Never git-added — exists only during the build window.
             OVERRIDE="${flakeDir}/hosts/${config.networking.hostName}/secure-boot-upgrade-override.nix"
-            if grep -q 'secureBoot\.enable = true' ${flakeDir}/hosts/${config.networking.hostName}/configuration.nix 2>/dev/null \
+             if ${pkgs.gnugrep}/bin/grep -q 'secureBoot\.enable = true' ${flakeDir}/hosts/${config.networking.hostName}/configuration.nix 2>/dev/null \
               && [ ! -f /var/lib/sbctl/keys/db/db.pem ]; then
               printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }\n' > "$OVERRIDE"
-              sed -i '/imports = \[/a\    .\/secure-boot-upgrade-override.nix' \
+               ${pkgs.gnused}/bin/sed -i '/imports = \[/a\    .\/secure-boot-upgrade-override.nix' \
                 ${flakeDir}/hosts/${config.networking.hostName}/configuration.nix
             fi
           '';
@@ -208,9 +208,9 @@ in
           cleanupOverride = pkgs.writeShellScript "nixos-upgrade-cleanup-override" ''
             OVERRIDE="${flakeDir}/hosts/${config.networking.hostName}/secure-boot-upgrade-override.nix"
             if [ -f "$OVERRIDE" ]; then
-              sed -i '/secure-boot-upgrade-override\.nix/d' \
+               ${pkgs.gnused}/bin/sed -i '/secure-boot-upgrade-override\.nix/d' \
                 ${flakeDir}/hosts/${config.networking.hostName}/configuration.nix
-              rm -f "$OVERRIDE"
+               ${pkgs.coreutils}/bin/rm -f "$OVERRIDE"
             fi
           '';
 
@@ -219,8 +219,8 @@ in
           # If different: Reboot recommended
           # If same: System already up-to-date
           successScript = pkgs.writeShellScript "nixos-upgrade-success" ''
-            current=$(readlink /nix/var/nix/profiles/system)
-            booted=$(readlink /run/booted-system)
+             current=$(${pkgs.coreutils}/bin/readlink /nix/var/nix/profiles/system)
+             booted=$(${pkgs.coreutils}/bin/readlink /run/booted-system)
             if [ "$current" != "$booted" ]; then
               # New system generation built, reboot needed to activate
                 ${notify} -u normal -t 7000 -i "${updateIcon}" \
@@ -263,7 +263,7 @@ in
         let
           notify = pkgs.writeShellScript "nixos-upgrade-notify-failure" ''
             # Extract last 5 error lines from nixos-upgrade journal
-            error=$(${pkgs.systemd}/bin/journalctl -u nixos-upgrade.service -b --no-pager -p err -o cat | tail -5)
+             error=$(${pkgs.systemd}/bin/journalctl -u nixos-upgrade.service -b --no-pager -p err -o cat | ${pkgs.coreutils}/bin/tail -5)
 
             # Send critical notification to user session
             ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \

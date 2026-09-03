@@ -166,7 +166,7 @@ let
 
     # pkill returns 1 when no instance exists; that is a valid reload state.
     ${pkgs.procps}/bin/pkill -x waybar || true
-    exec uwsm-app -- waybar
+     exec ${pkgs.uwsm}/bin/uwsm-app -- ${pkgs.waybar}/bin/waybar
   '';
 
   waybar = pkgs.waybar.overrideAttrs (old: {
@@ -279,7 +279,7 @@ in
           ];
           tooltip-format = "{gwaddr}";
           tooltip-format-wifi = "{essid} ({signalStrength}%)";
-          on-click = lib.mkIf features.wifi.enable "${config.terminal.exec} impala";
+          on-click = lib.mkIf features.wifi.enable "${config.terminal.exec} ${pkgs.impala}/bin/impala";
         };
 
         "bluetooth" = {
@@ -290,7 +290,7 @@ in
           tooltip-format = "{controller_alias}\t{controller_address}";
           tooltip-format-connected = "{controller_alias}\t{controller_address}\n\n{device_enumerate}";
           tooltip-format-enumerate-connected = "{device_alias}\t{device_address}";
-          on-click = "${config.terminal.exec} bluetui";
+          on-click = "${config.terminal.exec} ${pkgs.bluetui}/bin/bluetui";
         };
 
         "pulseaudio" = {
@@ -305,7 +305,7 @@ in
             headphone = "<span size='large'>󰋋</span>";
             headset = "<span size='large'>󰋎</span>";
           };
-          on-click = "${config.terminal.exec} wiremix";
+          on-click = "${config.terminal.exec} ${pkgs.wiremix}/bin/wiremix";
           tooltip-format = "{desc}";
         };
 
@@ -320,7 +320,7 @@ in
                *)             echo '{"text": "<span size=\"large\">󰾆&#x2009;</span>", "tooltip": "${i18n.translate "Balanced" "Ausgewogen"}"}' ;;
             esac
           '';
-          exec-if = "command -v powerprofilesctl";
+          exec-if = "${pkgs.coreutils}/bin/test -x ${pkgs.power-profiles-daemon}/bin/powerprofilesctl";
           return-type = "json";
           interval = 5;
           on-click = "${config.rofi.powerProfile}";

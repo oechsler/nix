@@ -64,14 +64,14 @@ let
       ''
         export HOME="$TMPDIR/home"
         export XDG_CONFIG_HOME="$HOME/.config"
-        mkdir -p "$XDG_CONFIG_HOME"
+          ${pkgs.coreutils}/bin/mkdir -p "$XDG_CONFIG_HOME"
         input="$TMPDIR/nixos-logo.png"
         trimmed="$TMPDIR/nixos-logo-trimmed.png"
         output="$TMPDIR/nixos-logo-themed.png"
-        cp ${pkgs.nixos-icons}/share/icons/hicolor/1024x1024/apps/nix-snowflake.png "$input"
+          ${pkgs.coreutils}/bin/cp ${pkgs.nixos-icons}/share/icons/hicolor/1024x1024/apps/nix-snowflake.png "$input"
         magick "$input" -trim +repage "$trimmed"
         gowall convert "$trimmed" --theme ${snowflakeTheme} --output "$output" --yes
-        cp "$output" "$out"
+          ${pkgs.coreutils}/bin/cp "$output" "$out"
       '';
 in
 {
@@ -130,7 +130,7 @@ in
             (old: {
               postInstall = (old.postInstall or "") + ''
                 for size in 16x16 22x22 24x24 32x32 48x48 64x64; do
-                  ln -s rustrover.svg "$out/share/icons/Papirus/$size"/apps/rust-rover.svg
+                  ${pkgs.coreutils}/bin/ln -s rustrover.svg "$out/share/icons/Papirus/$size"/apps/rust-rover.svg
                   done
               '';
             });
@@ -410,9 +410,9 @@ in
           '';
         in
         ''
-          mkdir -p /root/.config/gtk-3.0 /root/.config/gtk-4.0
-          cp ${settingsIni} /root/.config/gtk-3.0/settings.ini
-          cp ${settingsIni} /root/.config/gtk-4.0/settings.ini
+          ${pkgs.coreutils}/bin/mkdir -p /root/.config/gtk-3.0 /root/.config/gtk-4.0
+          ${pkgs.coreutils}/bin/cp ${settingsIni} /root/.config/gtk-3.0/settings.ini
+          ${pkgs.coreutils}/bin/cp ${settingsIni} /root/.config/gtk-4.0/settings.ini
         '';
     })
 
@@ -430,7 +430,7 @@ in
       };
 
       system.activationScripts.rootGtkDark.text = ''
-        rm -f /root/.config/gtk-3.0/settings.ini /root/.config/gtk-4.0/settings.ini
+        ${pkgs.coreutils}/bin/rm -f /root/.config/gtk-3.0/settings.ini /root/.config/gtk-4.0/settings.ini
       '';
     })
 
@@ -491,13 +491,13 @@ in
             };
           in
           ''
-            mkdir -p /root/.config/qt5ct /root/.config/qt6ct /root/.config/Kvantum
+            ${pkgs.coreutils}/bin/mkdir -p /root/.config/qt5ct /root/.config/qt6ct /root/.config/Kvantum
 
             printf '%s' ${lib.escapeShellArg config.theme.qtConfig} > /root/.config/qt5ct/qt5ct.conf
             printf '%s' ${lib.escapeShellArg config.theme.qtConfig} > /root/.config/qt6ct/qt6ct.conf
-            cp ${kvantumConf} /root/.config/Kvantum/kvantum.kvconfig
+            ${pkgs.coreutils}/bin/cp ${kvantumConf} /root/.config/Kvantum/kvantum.kvconfig
 
-            ln -sfn ${catppuccinKvantum}/share/Kvantum/${kvantumTheme} /root/.config/Kvantum/${kvantumTheme}
+            ${pkgs.coreutils}/bin/ln -sfn ${catppuccinKvantum}/share/Kvantum/${kvantumTheme} /root/.config/Kvantum/${kvantumTheme}
           '';
       };
     })

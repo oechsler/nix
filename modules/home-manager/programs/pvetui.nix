@@ -98,13 +98,13 @@ let
     umask 077
     CONFIG_DIR="$HOME/.config/pvetui"
     CONFIG_FILE="$CONFIG_DIR/config.yml"
-    mkdir -p "$CONFIG_DIR"
-    temporary=$(mktemp "$CONFIG_DIR/config.yml.XXXXXX")
-    trap 'rm -f "$temporary"' EXIT
+     ${pkgs.coreutils}/bin/mkdir -p "$CONFIG_DIR"
+     temporary=$(${pkgs.coreutils}/bin/mktemp "$CONFIG_DIR/config.yml.XXXXXX")
+     trap '${pkgs.coreutils}/bin/rm -f "$temporary"' EXIT
 
     # Generate config with secrets in a private temporary file, then replace
     # the visible config atomically.
-    cat > "$temporary" << EOF
+     ${pkgs.coreutils}/bin/cat > "$temporary" << EOF
     profiles:
     ${lib.concatMapStringsSep "\n" (
       profile:
@@ -117,7 +117,7 @@ let
             user: "${profile.user}"
             realm: "${profile.realm}"
             token_id: "${profile.tokenId}"
-            token_secret: "$(cat ${lib.escapeShellArg secretPath})"
+             token_secret: "$(${pkgs.coreutils}/bin/cat ${lib.escapeShellArg secretPath})"
             insecure: ${lib.boolToString profile.insecure}
             ssh_user: "${profile.sshUser}"
             vm_ssh_user: "${profile.vmSshUser}"
@@ -166,7 +166,7 @@ let
       tasks_page: "F3"
       storage_page: "F4"
     EOF
-    mv "$temporary" "$CONFIG_FILE"
+     ${pkgs.coreutils}/bin/mv "$temporary" "$CONFIG_FILE"
     trap - EXIT
 
     exec ${pvetui}/bin/pvetui "$@"

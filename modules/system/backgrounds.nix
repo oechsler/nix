@@ -260,12 +260,12 @@ let
     CACHE_KEY="${wallpaperCacheKey}"
 
     if [[ -s "$CURRENT" && -s "$BLURRED" && -f "$STAMP" ]] \
-      && [[ "$(cat "$STAMP")" == "$CACHE_KEY" ]]; then
+      && [[ "$(${pkgs.coreutils}/bin/cat "$STAMP")" == "$CACHE_KEY" ]]; then
       echo "Wallpaper already prepared, using cached files"
       exit 0
     fi
 
-    mkdir -p "$OUTPUT_DIR"
+    ${pkgs.coreutils}/bin/mkdir -p "$OUTPUT_DIR"
 
     archive_ok=0
 
@@ -279,7 +279,7 @@ let
         | ${pkgs.gzip}/bin/gzip -d \
         | ${pkgs.gnutar}/bin/tar xf - -C "$OUTPUT_DIR" "./${wallpaperPath}"
         ${pkgs.imagemagick}/bin/magick "$OUTPUT_DIR/${wallpaperPath}" "$CURRENT"
-        rm "$OUTPUT_DIR/${wallpaperPath}"
+        ${pkgs.coreutils}/bin/rm "$OUTPUT_DIR/${wallpaperPath}"
         archive_ok=1
       fi
     else
@@ -308,12 +308,12 @@ let
     ${pkgs.imagemagick}/bin/magick "$CURRENT" -blur 0x30 "$BLURRED"
 
     # Set world-readable permissions
-    chmod 644 "$CURRENT" "$BLURRED"
+    ${pkgs.coreutils}/bin/chmod 644 "$CURRENT" "$BLURRED"
     printf '%s\n' "$CACHE_KEY" > "$STAMP"
 
     # Signal user-level awww to reload (see awww.nix path unit)
-    touch "/var/lib/backgrounds/.reload"
-    chmod 666 "/var/lib/backgrounds/.reload"
+    ${pkgs.coreutils}/bin/touch "/var/lib/backgrounds/.reload"
+    ${pkgs.coreutils}/bin/chmod 666 "/var/lib/backgrounds/.reload"
   '';
 in
 {
@@ -407,7 +407,7 @@ in
         script = ''
           set -euo pipefail
 
-          mkdir -p "${outputDir}"
+          ${pkgs.coreutils}/bin/mkdir -p "${outputDir}"
           CURRENT="${outputDir}/${currentFile}"
           BLURRED="${outputDir}/${blurredFile}"
 
@@ -422,11 +422,11 @@ in
           ${pkgs.imagemagick}/bin/magick "$CURRENT" -blur 0x30 "$BLURRED"
 
           # Set world-readable permissions
-          chmod 644 "$CURRENT" "$BLURRED"
+          ${pkgs.coreutils}/bin/chmod 644 "$CURRENT" "$BLURRED"
 
           # Signal user-level awww to reload (see awww.nix path unit)
-          touch "/var/lib/backgrounds/.reload"
-          chmod 666 "/var/lib/backgrounds/.reload"
+          ${pkgs.coreutils}/bin/touch "/var/lib/backgrounds/.reload"
+          ${pkgs.coreutils}/bin/chmod 666 "/var/lib/backgrounds/.reload"
         '';
       };
     })

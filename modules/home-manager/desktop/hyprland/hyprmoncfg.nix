@@ -125,11 +125,11 @@ in
         lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
           default_profile="${config.xdg.configHome}/hyprmoncfg/profiles/default.json"
           if [ -L "$default_profile" ] && [ ! -e "$default_profile" ]; then
-            run rm -- "$default_profile"
+             run ${pkgs.coreutils}/bin/rm -- "$default_profile"
           fi
           if [ ! -e "$default_profile" ]; then
-            run mkdir -p "$(dirname "$default_profile")"
-            run ln -s "${profileSource}" "$default_profile"
+             run ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$default_profile")"
+             run ${pkgs.coreutils}/bin/ln -s "${profileSource}" "$default_profile"
           fi
         ''
       );

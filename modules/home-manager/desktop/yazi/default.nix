@@ -246,7 +246,7 @@ in
     settings = {
       opener.extract = [
         {
-          run = ''ouch d -y "$@"'';
+          run = ''${pkgs.ouch}/bin/ouch d -y "$@"'';
           desc = "Extract here with ouch";
           for = "unix";
         }
@@ -257,13 +257,13 @@ in
           {
             id = "git";
             url = "*";
-            run = "git";
+            run = "${pkgs.git}/bin/git";
             group = "git";
           }
           {
             id = "git";
             url = "*/";
-            run = "git";
+            run = "${pkgs.git}/bin/git";
             group = "git";
           }
         ];
@@ -272,7 +272,7 @@ in
         prepend_previewers = [
           {
             mime = "application/{*zip,tar,bzip2,7z*,rar,xz,zstd,java-archive}";
-            run = "ouch";
+            run = "${pkgs.ouch}/bin/ouch";
           }
         ]
         ++ lib.optionals enableAppPreviews appPreviewers
@@ -395,7 +395,7 @@ in
             "<Space>"
             "a"
           ];
-          run = "shell --block 'zip -r --junk-paths archiv.zip %s'";
+          run = "shell --block '${pkgs.zip}/bin/zip -r --junk-paths archiv.zip %s'";
           desc = "Zip selected files";
         }
         {
@@ -403,7 +403,7 @@ in
             "<Space>"
             "x"
           ];
-          run = "shell --block 'unzip -q %h'";
+          run = "shell --block '${pkgs.unzip}/bin/unzip -q %h'";
           desc = "Extract ZIP file";
         }
       ]
@@ -413,7 +413,7 @@ in
   xdg.desktopEntries.yazi = {
     name = "Yazi";
     genericName = "File Manager";
-    exec = "kitty --class yazi yazi %U";
+    exec = "${pkgs.kitty}/bin/kitty --class yazi ${pkgs.yazi}/bin/yazi %U";
     icon = "folder";
     terminal = false;
     settings.StartupWMClass = "yazi";
@@ -431,11 +431,11 @@ in
 
   programs.fish.functions.y = {
     body = ''
-      set -l tmp (mktemp -t yazi-cwd.XXXXXX)
-      yazi --cwd-file="$tmp" $argv
+       set -l tmp (${pkgs.coreutils}/bin/mktemp -t yazi-cwd.XXXXXX)
+       ${pkgs.yazi}/bin/yazi --cwd-file="$tmp" $argv
       if test -f "$tmp"
-        set -l cwd (cat "$tmp")
-        command rm -f "$tmp"
+         set -l cwd (${pkgs.coreutils}/bin/cat "$tmp")
+         command ${pkgs.coreutils}/bin/rm -f "$tmp"
         if test -n "$cwd" -a "$cwd" != "$PWD"
           builtin cd "$cwd"
         end

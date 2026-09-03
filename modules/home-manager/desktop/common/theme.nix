@@ -128,19 +128,19 @@ in
         ICON_SOURCE_DIR="${iconPackage}/share/icons/${iconName}"
 
         if [ -d "$SOURCE_DIR" ]; then
-          [ -e "$THEME_DIR" ] && chmod -R u+w "$THEME_DIR" 2>/dev/null || true
-          rm -rf "$THEME_DIR"
-          mkdir -p "$(dirname "$THEME_DIR")"
-          cp -rL --reflink=auto "$SOURCE_DIR" "$THEME_DIR"
+           [ -e "$THEME_DIR" ] && ${pkgs.coreutils}/bin/chmod -R u+w "$THEME_DIR" 2>/dev/null || true
+           ${pkgs.coreutils}/bin/rm -rf "$THEME_DIR"
+           ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$THEME_DIR")"
+           ${pkgs.coreutils}/bin/cp -rL --reflink=auto "$SOURCE_DIR" "$THEME_DIR"
         fi
 
         # Replace gtk-4.0 CSS symlinks with real files (flatpak can't follow Nix store symlinks)
         for css in gtk.css gtk-dark.css; do
           CSS_FILE="$GTK4_DIR/$css"
           if [ -L "$CSS_FILE" ]; then
-            CONTENT=$(cat "$CSS_FILE" 2>/dev/null)
+             CONTENT=$(${pkgs.coreutils}/bin/cat "$CSS_FILE" 2>/dev/null)
             if [ -n "$CONTENT" ]; then
-              rm -f "$CSS_FILE"
+               ${pkgs.coreutils}/bin/rm -f "$CSS_FILE"
               printf '%s\n' "$CONTENT" > "$CSS_FILE"
             fi
           fi
@@ -148,10 +148,10 @@ in
 
         # Flatpak cannot follow the icon theme symlink into the Nix store.
         if [ -d "$ICON_SOURCE_DIR" ]; then
-          [ -e "$ICON_DIR" ] && chmod -R u+w "$ICON_DIR" 2>/dev/null || true
-          rm -rf "$ICON_DIR"
-          mkdir -p "$(dirname "$ICON_DIR")"
-          cp -rL --reflink=auto "$ICON_SOURCE_DIR" "$ICON_DIR"
+           [ -e "$ICON_DIR" ] && ${pkgs.coreutils}/bin/chmod -R u+w "$ICON_DIR" 2>/dev/null || true
+           ${pkgs.coreutils}/bin/rm -rf "$ICON_DIR"
+           ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$ICON_DIR")"
+           ${pkgs.coreutils}/bin/cp -rL --reflink=auto "$ICON_SOURCE_DIR" "$ICON_DIR"
         fi
       '';
 

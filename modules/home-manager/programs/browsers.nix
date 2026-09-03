@@ -168,14 +168,14 @@ let
         ];
       }
       ''
-        mkdir stylus
-        unzip -q ${firefoxAddons.stylus}/share/mozilla/extensions/'{ec8030f7-c20a-464f-9b0e-13a3a9e97384}'/${stylusId}.xpi -d stylus
-        node ${compileCatppuccinUserstyles} \
-          stylus/js \
-          ${catppuccinUserstylesExport} \
-          ${catppuccinUserstylesLibrary} \
-          ${config.catppuccin.flavor} \
-          ${config.catppuccin.accent} > "$out"
+        ${pkgs.coreutils}/bin/mkdir stylus
+        ${pkgs.unzip}/bin/unzip -q ${firefoxAddons.stylus}/share/mozilla/extensions/'{ec8030f7-c20a-464f-9b0e-13a3a9e97384}'/${stylusId}.xpi -d stylus
+        ${pkgs.nodejs}/bin/node ${compileCatppuccinUserstyles} \
+         stylus/js \
+         ${catppuccinUserstylesExport} \
+         ${catppuccinUserstylesLibrary} \
+         ${config.catppuccin.flavor} \
+         ${config.catppuccin.accent} > "$out"
       '';
 in
 {

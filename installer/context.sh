@@ -20,11 +20,20 @@ REPO_DIR="$SCRIPT_DIR"
 
 # When invoked via PATH, resolve the repo from the upgrade unit.
 if [[ ! -f "$REPO_DIR/flake.nix" ]]; then
-  REPO_DIR=$(systemctl show nixos-upgrade.service --property=ExecStart 2>/dev/null |
-    grep -o -- '--flake [^ ]*' | awk '{print $2}' | sed 's/#.*//' || true)
+  if command -v systemctl >/dev/null && command -v grep >/dev/null &&
+    command -v awk >/dev/null && command -v sed >/dev/null; then
+    REPO_DIR=$(systemctl show nixos-upgrade.service --property=ExecStart 2>/dev/null |
+      grep -o -- '--flake [^ ]*' | awk '{print $2}' | sed 's/#.*//' || true)
+  else
+    REPO_DIR=""
+  fi
   if [[ -z "$REPO_DIR" || ! -f "$REPO_DIR/flake.nix" ]]; then
-    USER_HOME="$(getent passwd "${SUDO_USER:-$USER}" | cut -d: -f6)"
-    REPO_DIR="$USER_HOME/repos/nix"
+    if command -v getent >/dev/null && command -v cut >/dev/null; then
+      USER_HOME="$(getent passwd "${SUDO_USER:-${USER:-root}}" | cut -d: -f6)"
+    else
+      USER_HOME="${HOME:-}"
+    fi
+    REPO_DIR="${USER_HOME:-${HOME:-/root}}/repos/nix"
   fi
 fi
 
@@ -87,7 +96,7 @@ save_state() {
     printf 'LUKS_PASSWORD=%q\n' "${LUKS_PASSWORD:-}"
     printf 'USER_PASSWORD_HASH=%q\n' "${USER_PASSWORD_HASH:-}"
     if [[ -n "${SSH_KEY_FILE:-}" && -f "$SSH_KEY_FILE" ]]; then
-      printf 'SSH_KEY_CONTENT=%q\n' "$(cat "$SSH_KEY_FILE")"
+      printf 'SSH_KEY_CONTENT=%q\n' "$(<"$SSH_KEY_FILE")"
     else
       printf 'SSH_KEY_CONTENT=%q\n' "${SSH_KEY_CONTENT:-}"
     fi

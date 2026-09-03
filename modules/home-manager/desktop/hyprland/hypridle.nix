@@ -42,7 +42,7 @@ let
   # BATTERY DETECTION HELPERS
   # ============================================================================
   hasBattery = "(test -d /sys/class/power_supply/BAT0 || test -d /sys/class/power_supply/BAT1)";
-  acOnline = "(cat /sys/class/power_supply/*/online 2>/dev/null | grep -q 1)";
+  acOnline = "(${pkgs.coreutils}/bin/cat /sys/class/power_supply/*/online 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q 1)";
   onBattery = "${hasBattery} && ! ${acOnline}";
   onAC = "! ${hasBattery} || ${acOnline}";
 
@@ -157,8 +157,8 @@ in
 
       settings = {
         general = {
-          lock_cmd = "pidof hyprlock || hyprlock";
-          before_sleep_cmd = "loginctl lock-session";
+          lock_cmd = "${pkgs.procps}/bin/pidof hyprlock || ${pkgs.hyprlock}/bin/hyprlock";
+          before_sleep_cmd = "${pkgs.systemd}/bin/loginctl lock-session";
           # Do not restart portals after every resume: this can terminate
           # active PipeWire screen-capture sessions. Hyprland, wallpaper,
           # locker, and display state are refreshed independently.

@@ -356,7 +356,7 @@ in
             if ${pkgs.kdePackages.qttools}/bin/qdbus org.kde.plasmashell /PlasmaShell >/dev/null 2>&1; then
               break
             fi
-            sleep 0.5
+             ${pkgs.coreutils}/bin/sleep 0.5
             timeout=$((timeout - 1))
           done
 
@@ -364,7 +364,7 @@ in
           # Wait for Plasma to write its initial config (missing on first login)
           config_timeout=30
           while [ ! -f "$config" ] && [ $config_timeout -gt 0 ]; do
-            sleep 0.5
+             ${pkgs.coreutils}/bin/sleep 0.5
             config_timeout=$((config_timeout - 1))
           done
           if [ -f "$config" ]; then
@@ -437,7 +437,7 @@ in
                   org.kde.ActivityManager.ResourcesLinking.LinkResourceToActivity \
                   org.kde.plasma.favorites.applications "$resource" :global 2>/dev/null || true
               done
-              touch "$kickoff_marker"
+               ${pkgs.coreutils}/bin/touch "$kickoff_marker"
             fi
           fi
         ''}

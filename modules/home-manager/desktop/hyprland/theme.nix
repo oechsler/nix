@@ -78,8 +78,8 @@ in
           KVANTUM_DIR="$HOME/.config/Kvantum"
           for f in "$KVANTUM_DIR"/*.bak; do
             [ -e "$f" ] || continue
-            chmod -R u+w "$f" 2>/dev/null || true
-            rm -rf "$f"
+             ${pkgs.coreutils}/bin/chmod -R u+w "$f" 2>/dev/null || true
+             ${pkgs.coreutils}/bin/rm -rf "$f"
           done
         '';
 
@@ -92,16 +92,16 @@ in
           if [ -L "$KVANTUM_DIR" ]; then
             SRC=$(readlink -f "$KVANTUM_DIR")
             if [ -d "$SRC" ]; then
-              rm -f "$KVANTUM_DIR"
-              cp -rL --reflink=auto "$SRC" "$KVANTUM_DIR"
+               ${pkgs.coreutils}/bin/rm -f "$KVANTUM_DIR"
+               ${pkgs.coreutils}/bin/cp -rL --reflink=auto "$SRC" "$KVANTUM_DIR"
             fi
           fi
 
           # Replace kvantum.kvconfig symlink with real file
           if [ -L "$KVANTUM_CONF" ]; then
-            CONTENT=$(cat "$KVANTUM_CONF" 2>/dev/null)
+             CONTENT=$(${pkgs.coreutils}/bin/cat "$KVANTUM_CONF" 2>/dev/null)
             if [ -n "$CONTENT" ]; then
-              rm -f "$KVANTUM_CONF"
+               ${pkgs.coreutils}/bin/rm -f "$KVANTUM_CONF"
               printf '%s\n' "$CONTENT" > "$KVANTUM_CONF"
             fi
           fi
@@ -116,15 +116,15 @@ in
 
           if [ -f "$COLOR_SOURCE" ]; then
             [ -e "$COLOR_SCHEME" ] && chmod u+w "$COLOR_SCHEME" 2>/dev/null || true
-            rm -f "$COLOR_SCHEME"
-            mkdir -p "$(dirname "$COLOR_SCHEME")"
-            cp -L "$COLOR_SOURCE" "$COLOR_SCHEME"
+             ${pkgs.coreutils}/bin/rm -f "$COLOR_SCHEME"
+             ${pkgs.coreutils}/bin/mkdir -p "$(${pkgs.coreutils}/bin/dirname "$COLOR_SCHEME")"
+             ${pkgs.coreutils}/bin/cp -L "$COLOR_SOURCE" "$COLOR_SCHEME"
           fi
 
           if [ -L "$KDEGLOBALS" ]; then
-            CONTENT=$(cat "$KDEGLOBALS" 2>/dev/null)
+             CONTENT=$(${pkgs.coreutils}/bin/cat "$KDEGLOBALS" 2>/dev/null)
             if [ -n "$CONTENT" ]; then
-              rm -f "$KDEGLOBALS"
+               ${pkgs.coreutils}/bin/rm -f "$KDEGLOBALS"
               printf '%s\n' "$CONTENT" > "$KDEGLOBALS"
             fi
           fi

@@ -8,7 +8,7 @@ system="x86_64-linux"
 output="installerIso"
 
 usage() {
-	cat <<'EOF'
+  cat <<'EOF'
 Usage: ./build-iso.sh
 
 Builds one graphical installer ISO containing all prebuilt hosts.
@@ -16,35 +16,35 @@ EOF
 }
 
 parse_args() {
-	while [[ $# -gt 0 ]]; do
-		case "$1" in
-		-h | --help)
-			usage
-			exit 0
-			;;
-		*)
-			printf 'Unknown option: %s\n' "$1" >&2
-			usage >&2
-			exit 1
-			;;
-		esac
-	done
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      *)
+        printf 'Unknown option: %s\n' "$1" >&2
+        usage >&2
+        exit 1
+        ;;
+    esac
+  done
 }
 
 main() {
-	parse_args "$@"
+  parse_args "$@"
 
-	out_link="$repo_dir/result"
-	tmp_link="$repo_dir/.result-installer-iso.$$"
-	trap 'rm -rf "$tmp_link"' EXIT
+  out_link="$repo_dir/result"
+  tmp_link="$repo_dir/.result-installer-iso.$$"
+  trap 'rm -rf "$tmp_link"' EXIT
 
-	printf 'Building graphical multi-host installer ISO...\n'
-	nix build --show-trace ".#packages.${system}.${output}" --out-link "$tmp_link"
-	rm -rf "$out_link"
-	mv "$tmp_link" "$out_link"
+  printf 'Building graphical multi-host installer ISO...\n'
+  nix build --show-trace ".#packages.${system}.${output}" --out-link "$tmp_link"
+  rm -rf "$out_link"
+  mv "$tmp_link" "$out_link"
 
-	printf 'Build output: %s\n' "$(readlink -f "$out_link")"
-	printf 'ISO image: %s\n' "$out_link/iso/"
+  printf 'Build output: %s\n' "$(readlink -f "$out_link")"
+  printf 'ISO image: %s\n' "$out_link/iso/"
 }
 
 main "$@"

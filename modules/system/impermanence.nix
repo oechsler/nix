@@ -36,7 +36,12 @@
 # - Tailscale identity
 # - System state (nixos generations, etc.)
 
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   # Extract root device from filesystem configuration
@@ -170,25 +175,25 @@ in
       script = ''
         set -euo pipefail
 
-        mkdir -p /mnt
+        ${pkgs.uutils-coreutils-noprefix}/bin/mkdir -p /mnt
 
         # Mount btrfs root to access subvolumes
         # subvol=/ means mount the btrfs root (not @ subvolume)
-        mount -t btrfs -o subvol=/ ${lib.escapeShellArg rootDevice} /mnt
+        ${pkgs.util-linux}/bin/mount -t btrfs -o subvol=/ ${lib.escapeShellArg rootDevice} /mnt
 
         # Delete all nested subvolumes under @ (e.g., snapshots)
         # cut -f9: Extract subvolume path from btrfs output
-        btrfs subvolume list -o /mnt/@ | cut -f9 -d' ' | while read -r subvol; do
-          btrfs subvolume delete "/mnt/$subvol"
+        ${pkgs.btrfs-progs}/bin/btrfs subvolume list -o /mnt/@ | ${pkgs.uutils-coreutils-noprefix}/bin/cut -f9 -d' ' | while read -r subvol; do
+          ${pkgs.btrfs-progs}/bin/btrfs subvolume delete "/mnt/$subvol"
         done
 
         # Delete @ subvolume (the root filesystem)
-        btrfs subvolume delete /mnt/@
+        ${pkgs.btrfs-progs}/bin/btrfs subvolume delete /mnt/@
 
         # Create new empty @ subvolume
-        btrfs subvolume create /mnt/@
+        ${pkgs.btrfs-progs}/bin/btrfs subvolume create /mnt/@
 
-        umount /mnt
+        ${pkgs.util-linux}/bin/umount /mnt
       '';
     };
 

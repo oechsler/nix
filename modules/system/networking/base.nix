@@ -171,8 +171,8 @@ in
                     iface="''${net##*/}"
                     [ "$iface" = "$event_iface" ] && continue
                     is_wireless "$iface" && continue
-                    [ -r "$net/type" ] && [ "$(cat "$net/type")" = 1 ] || continue
-                    [ -r "$net/carrier" ] && [ "$(cat "$net/carrier")" = 1 ] && return 0
+                   [ -r "$net/type" ] && [ "$(${pkgs.coreutils}/bin/cat "$net/type")" = 1 ] || continue
+                   [ -r "$net/carrier" ] && [ "$(${pkgs.coreutils}/bin/cat "$net/carrier")" = 1 ] && return 0
                   done
                   return 1
                 }

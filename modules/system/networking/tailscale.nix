@@ -27,7 +27,7 @@ in
         set -eu
 
         tailscale_command() {
-          sudo ${pkgs.tailscale}/bin/tailscale "$@"
+           ${pkgs.sudo}/bin/sudo ${pkgs.tailscale}/bin/tailscale "$@"
         }
 
         echo "Starting Tailscale login..."

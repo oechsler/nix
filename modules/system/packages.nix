@@ -130,13 +130,13 @@ let
 
     state_dir=/var/lib/flatpak-watcher
     previous_state="$state_dir/apps"
-    current_state=$(mktemp)
-    install -d -m 0755 "$state_dir"
-    $FLATPAK list --system --app --columns=application,name,runtime | sort > "$current_state"
+    current_state=$(${pkgs.coreutils}/bin/mktemp)
+     ${pkgs.coreutils}/bin/install -d -m 0755 "$state_dir"
+    $FLATPAK list --system --app --columns=application,name,runtime | ${pkgs.coreutils}/bin/sort > "$current_state"
     if [ -f "$previous_state" ]; then
       while IFS=$'\t' read -r app name runtime; do
         [ -n "$app" ] || continue
-        if ! cut -f1 "$previous_state" | grep -Fqx "$app"; then
+        if ! ${pkgs.coreutils}/bin/cut -f1 "$previous_state" | ${pkgs.gnugrep}/bin/grep -Fqx "$app"; then
           icon=$(resolve_icon "$app")
           log app installed "app=$app runtime=$runtime"
           log icon resolved "app=$app path=$icon"
@@ -147,7 +147,7 @@ let
       done < "$current_state"
       while IFS=$'\t' read -r app name runtime; do
         [ -n "$app" ] || continue
-        if ! cut -f1 "$current_state" | grep -Fqx "$app"; then
+        if ! ${pkgs.coreutils}/bin/cut -f1 "$current_state" | ${pkgs.gnugrep}/bin/grep -Fqx "$app"; then
           log app removed "app=$app runtime=$runtime"
           icon=$(resolve_icon "$app")
           log icon resolved "app=$app path=$icon"
@@ -157,10 +157,10 @@ let
         fi
       done < "$previous_state"
     else
-      log app baseline "apps=$(wc -l < "$current_state")"
+      log app baseline "apps=$(${pkgs.coreutils}/bin/wc -l < "$current_state")"
     fi
-    mv "$current_state" "$previous_state"
-    log sync ok "apps=$(wc -l < "$previous_state")"
+     ${pkgs.coreutils}/bin/mv "$current_state" "$previous_state"
+    log sync ok "apps=$(${pkgs.coreutils}/bin/wc -l < "$previous_state")"
   '';
 in
 {
@@ -322,7 +322,7 @@ in
                     DIR="$HOME/Applications"                         # Where AppImages are stored
                     DESKTOP_DIR="$HOME/.local/share/applications"    # Desktop entries
                     ICON_DIR="$HOME/.local/share/icons/appimage"     # Extracted icons
-                    mkdir -p "$DIR" "$DESKTOP_DIR" "$ICON_DIR"
+                    ${pkgs.coreutils}/bin/mkdir -p "$DIR" "$DESKTOP_DIR" "$ICON_DIR"
                     log watch started "directories=$DIR,$DESKTOP_DIR"
 
                     # Function: Generate desktop entry for an AppImage
@@ -344,16 +344,16 @@ in
                         return
                       fi
                       local basename_file
-                      basename_file=$(basename "$appimage")
+                      basename_file=$(${pkgs.coreutils}/bin/basename "$appimage")
                       local slug
-                      slug=$(echo "$basename_file" | sed 's/\.AppImage$//; s/\.appimage$//')
+                      slug=$(echo "$basename_file" | ${pkgs.gnused}/bin/sed 's/\.AppImage$//; s/\.appimage$//')
 
-                      chmod +x "$appimage"
+                      ${pkgs.coreutils}/bin/chmod +x "$appimage"
 
                       # Skip if the app already registered its own desktop entry
                       # (We only create entries for apps that don't have one)
                       local existing
-                      existing=$(grep -rl "$appimage" "$DESKTOP_DIR"/ 2>/dev/null | grep -v "^$DESKTOP_DIR/appimage-" | head -1)
+                      existing=$(${pkgs.gnugrep}/bin/grep -rl "$appimage" "$DESKTOP_DIR"/ 2>/dev/null | ${pkgs.gnugrep}/bin/grep -v "^$DESKTOP_DIR/appimage-" | ${pkgs.coreutils}/bin/head -1)
                       if [ -n "$existing" ]; then
                         log process skipped "reason=already-registered-by:$existing"
                         return
@@ -362,15 +362,15 @@ in
                       # Extract metadata using unsquashfs (safe, doesn't execute the AppImage)
                       # AppImages are SquashFS filesystems with metadata files inside
                       local tmpdir
-                      tmpdir=$(mktemp -d)
+                      tmpdir=$(${pkgs.coreutils}/bin/mktemp -d)
 
                       # Find the SquashFS offset in the AppImage
                       local offset
-                      offset=$(grep -abo 'hsqs' "$appimage" 2>/dev/null | tail -1 | cut -d: -f1)
+                      offset=$(${pkgs.gnugrep}/bin/grep -abo 'hsqs' "$appimage" 2>/dev/null | ${pkgs.coreutils}/bin/tail -1 | ${pkgs.coreutils}/bin/cut -d: -f1)
 
                       if [ -n "$offset" ]; then
                         # Extract only top-level .desktop files and icons (max-depth 1)
-                        unsquashfs -offset "$offset" -dest "$tmpdir/root" -max-depth 1 \
+                        ${pkgs.squashfsTools}/bin/unsquashfs -offset "$offset" -dest "$tmpdir/root" -max-depth 1 \
                           "$appimage" '*.desktop' '*.png' '*.svg' '.DirIcon' &>/dev/null || true
                       else
                         log extract warning "reason=no-squashfs file=$appimage"
@@ -379,18 +379,18 @@ in
                       # Extract application name from embedded .desktop file
                       local name=""
                       local embedded_desktop
-                      embedded_desktop=$(find "$tmpdir/root" -maxdepth 1 -name '*.desktop' -type f 2>/dev/null | head -1)
+                      embedded_desktop=$(${pkgs.findutils}/bin/find "$tmpdir/root" -maxdepth 1 -name '*.desktop' -type f 2>/dev/null | ${pkgs.coreutils}/bin/head -1)
                       local icon_id=""
                       if [ -n "$embedded_desktop" ]; then
-                        name=$(sed -n 's/^Name=//p' "$embedded_desktop" | head -1)
-                        icon_id=$(sed -n 's/^Icon=//p' "$embedded_desktop" | head -1)
-                        icon_id=$(basename "$icon_id")
+                        name=$(${pkgs.gnused}/bin/sed -n 's/^Name=//p' "$embedded_desktop" | ${pkgs.coreutils}/bin/head -1)
+                        icon_id=$(${pkgs.gnused}/bin/sed -n 's/^Icon=//p' "$embedded_desktop" | ${pkgs.coreutils}/bin/head -1)
+                        icon_id=$(${pkgs.coreutils}/bin/basename "$icon_id")
                         icon_id="''${icon_id%.png}"
                         icon_id="''${icon_id%.svg}"
                         icon_id="''${icon_id%.xpm}"
                       fi
                       # Fallback: Generate name from filename (e.g., "my-app-1.2.3" → "my app 1.2.3")
-                      [ -z "$name" ] && name=$(echo "$slug" | sed 's/-/ /g; s/_/ /g')
+                      [ -z "$name" ] && name=$(echo "$slug" | ${pkgs.gnused}/bin/sed 's/-/ /g; s/_/ /g')
 
                       # Extract and install icon
                       local icon="${packageIcon}"  # Guaranteed host fallback icon
@@ -408,36 +408,36 @@ in
                                 break
                                 ;;
                             esac
-                          done | head -1)
+                          done | ${pkgs.coreutils}/bin/head -1)
                           if [ -n "$icon_path" ]; then
                             local icon_ext="''${icon_path##*.}"
                             icon_file="$tmpdir/icon.$icon_ext"
-                            unsquashfs -cat -offset "$offset" "$appimage" "$icon_path" > "$icon_file" 2>/dev/null || icon_file=""
+                            ${pkgs.squashfsTools}/bin/unsquashfs -cat -offset "$offset" "$appimage" "$icon_path" > "$icon_file" 2>/dev/null || icon_file=""
                           fi
                         fi
                         # Fallback: look for any extracted PNG or SVG icon.
-                        [ -z "$icon_file" ] && icon_file=$(find "$tmpdir/root" -type f \( -name '*.png' -o -name '*.svg' \) | head -1)
+                        [ -z "$icon_file" ] && icon_file=$(${pkgs.findutils}/bin/find "$tmpdir/root" -type f \( -name '*.png' -o -name '*.svg' \) | ${pkgs.coreutils}/bin/head -1)
                         # Fallback: .DirIcon (common in AppImages)
-                        [ -z "$icon_file" ] && icon_file=$(find "$tmpdir/root" -maxdepth 1 -name '.DirIcon' -type f | head -1)
+                        [ -z "$icon_file" ] && icon_file=$(${pkgs.findutils}/bin/find "$tmpdir/root" -maxdepth 1 -name '.DirIcon' -type f | ${pkgs.coreutils}/bin/head -1)
 
                         if [ -n "$icon_file" ]; then
                           local ext
-                          ext=$(echo "$icon_file" | sed 's/.*\.//')
+                          ext=$(echo "$icon_file" | ${pkgs.gnused}/bin/sed 's/.*\.//')
                           [ "$ext" = "DirIcon" ] && ext="png"
                           # Copy icon to our icon directory
-                          cp "$icon_file" "$ICON_DIR/$slug.$ext"
+                          ${pkgs.coreutils}/bin/cp "$icon_file" "$ICON_DIR/$slug.$ext"
                           icon="$ICON_DIR/$slug.$ext"
                         else
                           log icon fallback "file=$basename_file icon=$icon"
                         fi
                       fi
 
-                      rm -rf "$tmpdir"
+                      ${pkgs.coreutils}/bin/rm -rf "$tmpdir"
 
                       # Create desktop entry
                       # Prefix with "appimage-" so we can identify our auto-generated entries
                       local desktop_file="$DESKTOP_DIR/appimage-$basename_file.desktop"
-                      cat > "$desktop_file" <<EOF
+                      ${pkgs.coreutils}/bin/cat > "$desktop_file" <<EOF
           [Desktop Entry]
           Type=Application
           Name=$name
@@ -461,7 +461,7 @@ in
                       local filename="$1"
                       log remove started "file=$filename"
                       local icon_name
-                      icon_name=$(echo "$filename" | sed 's/\.AppImage$//; s/\.appimage$//')
+                      icon_name=$(echo "$filename" | ${pkgs.gnused}/bin/sed 's/\.AppImage$//; s/\.appimage$//')
                       local removed_icon="${packageIcon}"
                       for extension in svg png; do
                         if [ -f "$ICON_DIR/$icon_name.$extension" ]; then
@@ -469,8 +469,8 @@ in
                           break
                         fi
                       done
-                      rm -f "$DESKTOP_DIR/appimage-$filename.desktop"
-                      rm -f "$ICON_DIR/$icon_name".*
+                      ${pkgs.coreutils}/bin/rm -f "$DESKTOP_DIR/appimage-$filename.desktop"
+                      ${pkgs.coreutils}/bin/rm -f "$ICON_DIR/$icon_name".*
                       ${pkgs.libnotify}/bin/notify-send -a "${appImageWatcherName}" -i "$removed_icon" \
                         --replace-id="$(notification_id "$filename")" \
                         "${appImageRemovedTitle}" "$icon_name" || true
@@ -487,44 +487,44 @@ in
 
                         # Get the AppImage path from our desktop entry
                         local exec_path
-                        exec_path=$(sed -n 's/^Exec=//p' "$desktop_file" | head -1)
+                        exec_path=$(${pkgs.gnused}/bin/sed -n 's/^Exec=//p' "$desktop_file" | ${pkgs.coreutils}/bin/head -1)
                         [ -z "$exec_path" ] && continue
 
                         # Check if there's another .desktop file (not ours) for the same AppImage
                         local other
-                        other=$(grep -rl "$exec_path" "$DESKTOP_DIR"/ 2>/dev/null | grep -v "^$DESKTOP_DIR/appimage-" | head -1)
+                        other=$(${pkgs.gnugrep}/bin/grep -rl "$exec_path" "$DESKTOP_DIR"/ 2>/dev/null | ${pkgs.gnugrep}/bin/grep -v "^$DESKTOP_DIR/appimage-" | ${pkgs.coreutils}/bin/head -1)
 
                         if [ -n "$other" ]; then
                           # App has its own entry now, remove ours
                           local bname
-                          bname=$(basename "$desktop_file" .desktop | sed 's/^appimage-//')
-                          rm -f "$desktop_file"
+                          bname=$(${pkgs.coreutils}/bin/basename "$desktop_file" .desktop | ${pkgs.gnused}/bin/sed 's/^appimage-//')
+                          ${pkgs.coreutils}/bin/rm -f "$desktop_file"
 
                           # Remove our extracted icon too
                           local icon_name
-                          icon_name=$(echo "$bname" | sed 's/\.AppImage$//; s/\.appimage$//')
-                          rm -f "$ICON_DIR/$icon_name".*
+                          icon_name=$(echo "$bname" | ${pkgs.gnused}/bin/sed 's/\.AppImage$//; s/\.appimage$//')
+                          ${pkgs.coreutils}/bin/rm -f "$ICON_DIR/$icon_name".*
                         fi
                       done
                     }
 
                     # Initial scan: Generate entries for existing AppImages
                     log scan started "directory=$DIR"
-                    find "$DIR" -maxdepth 1 -iname '*.appimage' -type f | while read -r f; do
+                    ${pkgs.findutils}/bin/find "$DIR" -maxdepth 1 -iname '*.appimage' -type f | while read -r f; do
                       generate_entry "$f"
                     done
 
                     # Clean up stale entries (AppImage was deleted while service was not running)
                     for desktop_file in "$DESKTOP_DIR"/appimage-*.desktop; do
                       [ -f "$desktop_file" ] || continue
-                      appimage_name=$(basename "$desktop_file" .desktop | sed 's/^appimage-//')
-                      [ -f "$DIR/$appimage_name" ] || rm -f "$desktop_file"
+                      appimage_name=$(${pkgs.coreutils}/bin/basename "$desktop_file" .desktop | ${pkgs.gnused}/bin/sed 's/^appimage-//')
+                      [ -f "$DIR/$appimage_name" ] || ${pkgs.coreutils}/bin/rm -f "$desktop_file"
                     done
                     cleanup_duplicates
 
                     # Watch for changes using inotifywait
                     # Monitors both ~/Applications (for .AppImage files) and ~/.local/share/applications (for app-registered entries)
-                    inotifywait -m -e create -e moved_to -e delete -e moved_from \
+                    ${pkgs.inotify-tools}/bin/inotifywait -m -e create -e moved_to -e delete -e moved_from \
                       "$DIR" "$DESKTOP_DIR" --format '%w|%e|%f' | while IFS='|' read -r watched_dir event filename; do
                       log event received "event=$event path=$watched_dir$filename"
 

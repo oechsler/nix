@@ -45,7 +45,7 @@ in
 
 {
   home.activation.udiskieRestart = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-    systemctl --user --machine=${config.home.username}@ try-restart udiskie.service >/dev/null 2>&1 || true
+    ${pkgs.systemd}/bin/systemctl --user --machine=${config.home.username}@ try-restart udiskie.service >/dev/null 2>&1 || true
   '';
 
   # Let udiskie own automounting instead of racing GVFS for the same device.

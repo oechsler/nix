@@ -107,7 +107,7 @@ let
     declare -A initialized_players=()
     cache_dir="''${XDG_CACHE_HOME:-$HOME/.cache}/media-track-notify"
     fallback_icon="${theme.icons.package}/share/icons/Papirus/32x32/mimetypes/audio-x-generic.svg"
-    mkdir -p "$cache_dir"
+     ${pkgs.coreutils}/bin/mkdir -p "$cache_dir"
     player_icon() {
       local player="$1"
       local icon_name
@@ -193,10 +193,10 @@ let
   screenshotCommand = mode: ''
     set -eu
 
-    output="${config.xdg.userDirs.pictures}/Screenshot_$(date +%Y%m%d_%H%M%S).png"
-    mkdir -p "${config.xdg.userDirs.pictures}"
-    saved_files=$(mktemp)
-    trap 'rm -f "$saved_files"' EXIT
+     output="${config.xdg.userDirs.pictures}/Screenshot_$(${pkgs.coreutils}/bin/date +%Y%m%d_%H%M%S).png"
+     ${pkgs.coreutils}/bin/mkdir -p "${config.xdg.userDirs.pictures}"
+     saved_files=$(${pkgs.coreutils}/bin/mktemp)
+     trap '${pkgs.coreutils}/bin/rm -f "$saved_files"' EXIT
     ${pkgs.inotify-tools}/bin/inotifywait -q -m \
       -e close_write -e moved_to --format '%w%f' \
       --include '\\.png$' "${config.xdg.userDirs.pictures}" > "$saved_files" &
@@ -206,7 +206,7 @@ let
         --copy-command '${pkgs.wl-clipboard}/bin/wl-copy --type image/png' \
         --disable-notifications --early-exit --output-filename "$output"
     satty_status=$?
-    kill "$watcher_pid" 2>/dev/null || true
+     ${pkgs.coreutils}/bin/kill "$watcher_pid" 2>/dev/null || true
     wait "$watcher_pid" 2>/dev/null || true
     saved_output=""
     while IFS= read -r saved_file; do
@@ -315,7 +315,10 @@ let
   batteryWarning = import ./scripts/battery-warning.nix { inherit pkgs i18n theme; };
 
   fileManagerCommand =
-    if features.desktop.fileManager == "terminal" then "kitty --class yazi yazi" else "nautilus";
+    if features.desktop.fileManager == "terminal" then
+      "${pkgs.kitty}/bin/kitty --class yazi ${pkgs.yazi}/bin/yazi"
+    else
+      "${pkgs.nautilus}/bin/nautilus";
   delayedAutostart =
     app:
     pkgs.writeShellScript "hyprland-autostart-${slug app.name}" ''
@@ -470,7 +473,7 @@ in
           "hyprland.start"
           (luaInline ''
             function()
-              hl.exec_cmd("hyprctl dispatch workspace 1")
+               hl.exec_cmd("${pkgs.hyprland}/bin/hyprctl dispatch workspace 1")
             end
           '')
         ];
@@ -860,10 +863,10 @@ in
         ];
 
         bind = [
-          (execBind (modKey "Return") "kitty")
+          (execBind (modKey "Return") "${pkgs.kitty}/bin/kitty")
           (bind (modKey "Q") "window.close()")
           (execBind (modKey "M") config.rofi.power)
-          (execBind (modKey "SHIFT + Q") "hyprlock")
+          (execBind (modKey "SHIFT + Q") "${pkgs.hyprlock}/bin/hyprlock")
           (execBind (modKey "E") fileManagerCommand)
           (bindCallbackWith { } (modKey "V") toggleFloating)
           (execBind (modKey "R") config.rofi.toggle)
@@ -913,7 +916,7 @@ in
               repeating = true;
             }
             "XF86AudioRaiseVolume"
-            "exec_cmd(${builtins.toJSON "wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+ && ${volumeNotify}"})"
+            "exec_cmd(${builtins.toJSON "${pkgs.wireplumber}/bin/wpctl set-volume -l 1 @DEFAULT_AUDIO_SINK@ 5%+ && ${volumeNotify}"})"
           )
           (bindWith
             {
@@ -921,7 +924,7 @@ in
               repeating = true;
             }
             "XF86AudioLowerVolume"
-            "exec_cmd(${builtins.toJSON "wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && ${volumeNotify}"})"
+            "exec_cmd(${builtins.toJSON "${pkgs.wireplumber}/bin/wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%- && ${volumeNotify}"})"
           )
           (bindWith
             {
@@ -929,12 +932,16 @@ in
               repeating = true;
             }
             "XF86AudioMute"
-            "exec_cmd(${builtins.toJSON "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && ${volumeNotify}"})"
+            "exec_cmd(${builtins.toJSON "${pkgs.wireplumber}/bin/wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle && ${volumeNotify}"})"
           )
-          (bindWith {
-            locked = true;
-            repeating = true;
-          } "XF86AudioMicMute" ''exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle")'')
+          (bindWith
+            {
+              locked = true;
+              repeating = true;
+            }
+            "XF86AudioMicMute"
+            ''exec_cmd("${pkgs.wireplumber}/bin/wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle")''
+          )
           (bindWith {
             locked = true;
             repeating = true;
@@ -951,10 +958,16 @@ in
             locked = true;
             repeating = true;
           } (modKey "F6") "exec_cmd(${builtins.toJSON "${displayBrightness} up"})")
-          (bindWith { locked = true; } "XF86AudioNext" ''exec_cmd("playerctl next")'')
-          (bindWith { locked = true; } "XF86AudioPause" ''exec_cmd("playerctl play-pause")'')
-          (bindWith { locked = true; } "XF86AudioPlay" ''exec_cmd("playerctl play-pause")'')
-          (bindWith { locked = true; } "XF86AudioPrev" ''exec_cmd("playerctl previous")'')
+          (bindWith { locked = true; } "XF86AudioNext" ''exec_cmd("${pkgs.playerctl}/bin/playerctl next")'')
+          (bindWith {
+            locked = true;
+          } "XF86AudioPause" ''exec_cmd("${pkgs.playerctl}/bin/playerctl play-pause")'')
+          (bindWith {
+            locked = true;
+          } "XF86AudioPlay" ''exec_cmd("${pkgs.playerctl}/bin/playerctl play-pause")'')
+          (bindWith {
+            locked = true;
+          } "XF86AudioPrev" ''exec_cmd("${pkgs.playerctl}/bin/playerctl previous")'')
           (bindWith { locked = true; } "XF86PowerOff"
             "exec_cmd(${builtins.toJSON "${pkgs.procps}/bin/pidof hyprlock && ${pkgs.systemd}/bin/systemctl suspend || ${config.rofi.power}"})"
           )

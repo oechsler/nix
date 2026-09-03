@@ -11,6 +11,7 @@
   config,
   features,
   lib,
+  pkgs,
   ...
 }:
 
@@ -54,7 +55,7 @@ in
       nvim = {
         name = "Neovim";
         genericName = "Text Editor";
-        exec = "kitty --class nvim nvim %F";
+        exec = "${pkgs.kitty}/bin/kitty --class nvim ${pkgs.neovim}/bin/nvim %F";
         icon = "nvim";
         terminal = false;
         settings.StartupWMClass = "nvim";
