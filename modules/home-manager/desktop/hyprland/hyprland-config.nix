@@ -316,7 +316,7 @@ let
 
   fileManagerCommand =
     if features.desktop.fileManager == "terminal" then
-      "${pkgs.kitty}/bin/kitty --class yazi ${pkgs.yazi}/bin/yazi"
+      "${pkgs.kitty}/bin/kitty --class yazi ${config.programs.yazi.finalPackage}/bin/yazi"
     else
       "${pkgs.nautilus}/bin/nautilus";
   delayedAutostart =

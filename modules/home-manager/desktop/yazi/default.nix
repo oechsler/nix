@@ -413,7 +413,7 @@ in
   xdg.desktopEntries.yazi = {
     name = "Yazi";
     genericName = "File Manager";
-    exec = "${pkgs.kitty}/bin/kitty --class yazi ${pkgs.yazi}/bin/yazi %U";
+    exec = "${pkgs.kitty}/bin/kitty --class yazi ${config.programs.yazi.finalPackage}/bin/yazi %U";
     icon = "folder";
     terminal = false;
     settings.StartupWMClass = "yazi";
@@ -432,7 +432,7 @@ in
   programs.fish.functions.y = {
     body = ''
        set -l tmp (${pkgs.coreutils}/bin/mktemp -t yazi-cwd.XXXXXX)
-       ${pkgs.yazi}/bin/yazi --cwd-file="$tmp" $argv
+       ${config.programs.yazi.finalPackage}/bin/yazi --cwd-file="$tmp" $argv
       if test -f "$tmp"
          set -l cwd (${pkgs.coreutils}/bin/cat "$tmp")
          command ${pkgs.coreutils}/bin/rm -f "$tmp"
