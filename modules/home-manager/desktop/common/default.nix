@@ -12,12 +12,12 @@
 
 {
   imports = [
-    ./theme.nix
-    ./maintenance.nix
-    ./xdg.nix
-    ./bookmarks.nix
     ./autostart.nix
+    ./bookmarks.nix
     ./idle.nix
+    ./maintenance.nix
+    ./theme.nix
+    ./xdg.nix
   ];
 
   home.sessionVariables.NIXOS_OZONE_WL = lib.mkIf features.desktop.enable "1";

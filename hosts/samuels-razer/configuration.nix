@@ -73,7 +73,7 @@
 
     # --- Boot & Security ---
     # secureBoot.enable is NOT set — Razer BIOS does not reliably support custom key enrollment.
-    # TPM-backed LUKS provides the primary boot-time security on this machine.
+    # YubiKey-backed LUKS provides the primary boot-time security on this machine.
     encryption.unlockMethod = "yubikey";
     auth.yubikey.enable = true;
 

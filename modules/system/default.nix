@@ -1,53 +1,44 @@
-# System Configuration Modules
-#
-# This module imports all system-level configuration modules.
-#
-# Categories:
-# - Core: nix, boot, networking, locale, users
-# - Security: sops, secure-boot, compat
-# - Hardware: audio, bluetooth, fonts, theme, displays, input
-# - Storage: impermanence, snapshots, smb, backgrounds
-# - Services: power, virtualisation, gaming, ssh
-# - Integration: packages, features, home-manager
+# System-wide modules, kept in alphabetical order. Feature-specific modules own
+# their options and guard their configuration locally.
 
 { ... }:
 
 {
   imports = [
     ../lib/service-logging.nix
-    ./nix.nix
-    ./sops.nix
-    ./boot.nix
-    ./secure-boot.nix
-    ./compat.nix
-    ./networking/base.nix
-    ./networking/wifi.nix
-    ./networking/tailscale.nix
-    ./locale.nix
-    ./users.nix
-    ./ldap.nix
     ./audio.nix
-    ./bluetooth.nix
-    ./fonts.nix
-    ./theme.nix
-    ./backgrounds.nix
-    ./impermanence.nix
-    ./hardware.nix
-    ./virtualisation.nix
-    ./power.nix
-    ./smb.nix
-    ./gaming.nix
-    ./packages.nix
-    ./ssh.nix
     ./auth.nix
-    ./tpm.nix
-    ./snapshots.nix
+    ./backgrounds.nix
+    ./bluetooth.nix
+    ./boot.nix
+    ./compat.nix
     ./data-subvolumes.nix
-    ./features.nix
-    ./displays.nix
-    ./input.nix
-    ./home-manager.nix
-    ./terminal.nix
     ./desktop
+    ./displays.nix
+    ./features.nix
+    ./fonts.nix
+    ./gaming.nix
+    ./hardware.nix
+    ./home-manager.nix
+    ./impermanence.nix
+    ./input.nix
+    ./ldap.nix
+    ./locale.nix
+    ./networking/base.nix
+    ./networking/tailscale.nix
+    ./networking/wifi.nix
+    ./nix.nix
+    ./packages.nix
+    ./power.nix
+    ./secure-boot.nix
+    ./smb.nix
+    ./snapshots.nix
+    ./sops.nix
+    ./ssh.nix
+    ./terminal.nix
+    ./theme.nix
+    ./tpm.nix
+    ./users.nix
+    ./virtualisation.nix
   ];
 }

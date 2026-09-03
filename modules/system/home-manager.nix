@@ -36,20 +36,17 @@ let
   # Check if host has a custom home.nix file
   hostHomeNix = hostPath + "/home.nix";
   hasHostHomeNix = builtins.pathExists hostHomeNix;
+  wallpaperSource = toString config.theme.backgrounds.path;
+  wallpaperIsUrl =
+    lib.hasPrefix "http://" wallpaperSource || lib.hasPrefix "https://" wallpaperSource;
 in
 {
   # Ensure secrets and wallpaper are ready before home-manager activation
-  systemd.services."home-manager-${config.user.name}".after =
-    let
-      isUrl =
-        lib.hasPrefix "http://" config.theme.backgrounds.path
-        || lib.hasPrefix "https://" config.theme.backgrounds.path;
-    in
-    [
-      "sops-install-secrets.service"
-    ]
-    ++ lib.optional isUrl "download-wallpaper.service"
-    ++ lib.optional (!isUrl) "prepare-wallpaper.service";
+  systemd.services."home-manager-${config.user.name}".after = [
+    "sops-install-secrets.service"
+  ]
+  ++ lib.optional wallpaperIsUrl "download-wallpaper.service"
+  ++ lib.optional (!wallpaperIsUrl) "prepare-wallpaper.service";
 
   home-manager = {
     useGlobalPkgs = true;

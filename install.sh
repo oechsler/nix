@@ -35,19 +35,20 @@ DO_POST_INSTALL=false
 SKIP_TOTP=false
 QUIET_UPGRADE=false
 REPAIR=false
+INSTALLER_ISO="${INSTALLER_ISO:-false}"
 REPO_URL="${REPO_URL:-https://github.com/oechsler/nix.git}"
 REPO_REMOTE_URL="https://git.at.oechsler.it/samuel/nix.git"
 ORIGINAL_ARGS=("$@")
-REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # When invoked via PATH (not from the repo directory), resolve the repo location
 # from the running system's nixos-upgrade unit — same source of truth as quickstart.sh.
 if [[ ! -f "$REPO_DIR/flake.nix" ]]; then
-  REPO_DIR=$(systemctl show nixos-upgrade.service --property=ExecStart 2>/dev/null \
-    | grep -o -- '--flake [^ ]*' | awk '{print $2}' | sed 's/#.*//' || true)
-  if [[ -z "$REPO_DIR" || ! -f "$REPO_DIR/flake.nix" ]]; then
-    USER_HOME="$(getent passwd "${SUDO_USER:-$USER}" | cut -d: -f6)"
-    REPO_DIR="$USER_HOME/repos/nix"
-  fi
+	REPO_DIR=$(systemctl show nixos-upgrade.service --property=ExecStart 2>/dev/null |
+		grep -o -- '--flake [^ ]*' | awk '{print $2}' | sed 's/#.*//' || true)
+	if [[ -z "$REPO_DIR" || ! -f "$REPO_DIR/flake.nix" ]]; then
+		USER_HOME="$(getent passwd "${SUDO_USER:-$USER}" | cut -d: -f6)"
+		REPO_DIR="$USER_HOME/repos/nix"
+	fi
 fi
 STATE_DIR="/var/lib/nixos-install"
 STATE_FILE="$STATE_DIR/state.env"
@@ -55,15 +56,15 @@ LUKS_PASSWORD_FILE=""
 INSTALL_SUCCESS=false
 
 cleanup() {
-  [[ -z "$LUKS_PASSWORD_FILE" ]] || rm -f "$LUKS_PASSWORD_FILE"
-  [[ "$INSTALL_SUCCESS" == true ]] && rm -f "$STATE_FILE"
+	[[ -z "$LUKS_PASSWORD_FILE" ]] || rm -f "$LUKS_PASSWORD_FILE"
+	[[ "$INSTALL_SUCCESS" == true ]] && rm -f "$STATE_FILE"
 }
 
 trap cleanup EXIT
 trap 'exit 130' HUP INT TERM
 
 show_help() {
-  cat <<'EOF'
+	cat <<'EOF'
 NixOS Interactive Installer
 
 Usage: install.sh [options]
@@ -98,56 +99,94 @@ Step combinations:
   install.sh --post-install               Re-run post-install only
   install.sh --dry-run                    Show what would happen, no changes
 EOF
-  exit 0
+	exit 0
 }
 
 require_option_value() {
-  [[ $# -ge 2 && -n "${2:-}" ]] || {
-    echo "Option $1 requires a value." >&2
-    exit 1
-  }
+	[[ $# -ge 2 && -n "${2:-}" ]] || {
+		echo "Option $1 requires a value." >&2
+		exit 1
+	}
 }
 
 while [[ $# -gt 0 ]]; do
-  case "$1" in
-    -h|--help)           show_help ;;
-    --host)              require_option_value "$@"; HOST="$2"; shift 2 ;;
-    -s|--ssh-key)        require_option_value "$@"; SSH_KEY="$2"; shift 2 ;;
-    -p|--luks-password)  require_option_value "$@"; LUKS_PASSWORD="$2"; shift 2 ;;
-    --skip-totp)         SKIP_TOTP=true; shift ;;
-    --quiet)             QUIET_UPGRADE=true; shift ;;
-    --repair)            REPAIR=true; shift ;;
-    -y|--yes)            YES=true; shift ;;
-    --dry-run)           DRY_RUN=true; shift ;;
-    --format)            DO_FORMAT=true; shift ;;
-    --install)           DO_INSTALL=true; shift ;;
-    --post-install)      DO_POST_INSTALL=true; shift ;;
-    --iso)               INSTALLER_ISO=true; shift ;;
-    *)
-      echo "Unknown option: $1" >&2
-      echo "Run '$0 --help' for usage information." >&2
-      exit 1
-      ;;
-  esac
+	case "$1" in
+	-h | --help) show_help ;;
+	--host)
+		require_option_value "$@"
+		HOST="$2"
+		shift 2
+		;;
+	-s | --ssh-key)
+		require_option_value "$@"
+		SSH_KEY="$2"
+		shift 2
+		;;
+	-p | --luks-password)
+		require_option_value "$@"
+		LUKS_PASSWORD="$2"
+		shift 2
+		;;
+	--skip-totp)
+		SKIP_TOTP=true
+		shift
+		;;
+	--quiet)
+		QUIET_UPGRADE=true
+		shift
+		;;
+	--repair)
+		REPAIR=true
+		shift
+		;;
+	-y | --yes)
+		YES=true
+		shift
+		;;
+	--dry-run)
+		DRY_RUN=true
+		shift
+		;;
+	--format)
+		DO_FORMAT=true
+		shift
+		;;
+	--install)
+		DO_INSTALL=true
+		shift
+		;;
+	--post-install)
+		DO_POST_INSTALL=true
+		shift
+		;;
+	--iso)
+		INSTALLER_ISO=true
+		shift
+		;;
+	*)
+		echo "Unknown option: $1" >&2
+		echo "Run '$0 --help' for usage information." >&2
+		exit 1
+		;;
+	esac
 done
 
 ISO_MANIFEST="/etc/nixos-installer/manifest.json"
-INSTALLER_ISO="${INSTALLER_ISO:-false}"
 if [[ -f "$ISO_MANIFEST" ]]; then
-  INSTALLER_ISO=true
-  REPO_DIR="/etc/nixos-installer/repo"
+	INSTALLER_ISO=true
+	REPO_DIR="/etc/nixos-installer/repo"
 fi
 
 if [[ "$INSTALLER_ISO" == true && ! -f "$ISO_MANIFEST" ]]; then
-  echo "Installer ISO manifest not found: $ISO_MANIFEST" >&2
-  exit 1
+	echo "Installer ISO manifest not found: $ISO_MANIFEST" >&2
+	exit 1
 fi
 
 # Default: all steps if none specified
 if [[ "$DO_FORMAT" == false && "$DO_INSTALL" == false && "$DO_POST_INSTALL" == false ]]; then
-  DO_FORMAT=true
-  DO_INSTALL=true
-  DO_POST_INSTALL=true
+	DO_FORMAT=true
+	DO_INSTALL=true
+	DO_POST_INSTALL=true
 fi
 
 #===========================
@@ -155,20 +194,27 @@ fi
 #===========================
 
 if [[ -t 1 ]]; then
-  RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[0;33m'
-  BLUE='\033[0;34m' BOLD='\033[1m' DIM='\033[2m' RESET='\033[0m'
+	RED='\033[0;31m' GREEN='\033[0;32m' YELLOW='\033[0;33m'
+	BLUE='\033[0;34m' BOLD='\033[1m' DIM='\033[2m' RESET='\033[0m'
 else
-  RED='' GREEN='' YELLOW='' BLUE='' BOLD='' DIM='' RESET=''
+	RED='' GREEN='' YELLOW='' BLUE='' BOLD='' DIM='' RESET=''
 fi
 
 STEP_CURRENT=0
 STEP_TOTAL=0
 
-info()    { echo -e "${BLUE}==>${RESET} ${BOLD}$*${RESET}"; }
+info() { echo -e "${BLUE}==>${RESET} ${BOLD}$*${RESET}"; }
 success() { echo -e "    ${GREEN}✓${RESET} $*"; }
-warn()    { echo -e "    ${YELLOW}!${RESET} $*"; }
-error()   { echo -e "${RED}Error:${RESET} $*" >&2; exit 1; }
-step()    { STEP_CURRENT=$((STEP_CURRENT + 1)); echo ""; info "[$STEP_CURRENT/$STEP_TOTAL] $*"; }
+warn() { echo -e "    ${YELLOW}!${RESET} $*"; }
+error() {
+	echo -e "${RED}Error:${RESET} $*" >&2
+	exit 1
+}
+step() {
+	STEP_CURRENT=$((STEP_CURRENT + 1))
+	echo ""
+	info "[$STEP_CURRENT/$STEP_TOTAL] $*"
+}
 
 label_bool() { [[ "$1" == "true" ]] && echo -e "${GREEN}enabled${RESET}" || echo -e "${DIM}disabled${RESET}"; }
 
@@ -177,70 +223,70 @@ label_bool() { [[ "$1" == "true" ]] && echo -e "${GREEN}enabled${RESET}" || echo
 #===========================
 
 load_state() {
-  if [[ -f "$STATE_FILE" ]]; then
-    echo ""
-    info "Resuming previous session"
-    echo ""
-    # Save CLI values before sourcing (CLI has priority)
-    local cli_host="$HOST" cli_ssh="$SSH_KEY" cli_luks="$LUKS_PASSWORD"
-    # shellcheck source=/dev/null
-    source "$STATE_FILE"
-    # Restore CLI values where set
-    [[ -n "$cli_host" ]] && HOST="$cli_host"
-    [[ -n "$cli_luks" ]] && LUKS_PASSWORD="$cli_luks"
-    # Restore SSH key: CLI path takes priority, then cached content
-    if [[ -n "$cli_ssh" ]]; then
-      SSH_KEY="$cli_ssh"
-      SSH_KEY_FILE=""
-    elif [[ -n "${SSH_KEY_CONTENT:-}" ]]; then
-      SSH_KEY_FILE="$(mktemp)"
-      printf '%s\n' "$SSH_KEY_CONTENT" > "$SSH_KEY_FILE"
-      chmod 600 "$SSH_KEY_FILE"
-    fi
-    success "Loaded: host=$HOST"
-    echo ""
-  fi
+	if [[ -f "$STATE_FILE" ]]; then
+		echo ""
+		info "Resuming previous session"
+		echo ""
+		# Save CLI values before sourcing (CLI has priority)
+		local cli_host="$HOST" cli_ssh="$SSH_KEY" cli_luks="$LUKS_PASSWORD"
+		# shellcheck source=/dev/null
+		source "$STATE_FILE"
+		# Restore CLI values where set
+		[[ -n "$cli_host" ]] && HOST="$cli_host"
+		[[ -n "$cli_luks" ]] && LUKS_PASSWORD="$cli_luks"
+		# Restore SSH key: CLI path takes priority, then cached content
+		if [[ -n "$cli_ssh" ]]; then
+			SSH_KEY="$cli_ssh"
+			SSH_KEY_FILE=""
+		elif [[ -n "${SSH_KEY_CONTENT:-}" ]]; then
+			SSH_KEY_FILE="$(mktemp)"
+			printf '%s\n' "$SSH_KEY_CONTENT" >"$SSH_KEY_FILE"
+			chmod 600 "$SSH_KEY_FILE"
+		fi
+		success "Loaded: host=$HOST"
+		echo ""
+	fi
 }
 
 save_state() {
-  local temporary
-  temporary=$(mktemp "$STATE_DIR/state.env.XXXXXX")
-  trap 'rm -f "$temporary"' RETURN
-  {
-    # Inputs
-    printf 'HOST=%q\n' "$HOST"
-    printf 'LUKS_PASSWORD=%q\n' "${LUKS_PASSWORD:-}"
-    printf 'USER_PASSWORD_HASH=%q\n' "${USER_PASSWORD_HASH:-}"
-    # Store key content (not path) so resume works within the same session
-    if [[ -n "${SSH_KEY_FILE:-}" && -f "$SSH_KEY_FILE" ]]; then
-      printf 'SSH_KEY_CONTENT=%q\n' "$(cat "$SSH_KEY_FILE")"
-    else
-      printf 'SSH_KEY_CONTENT=%q\n' "${SSH_KEY_CONTENT:-}"
-    fi
-    # Detected features — cached to avoid re-running nix eval on resume
-    printf 'FEAT_ENCRYPTION=%q\n' "${FEAT_ENCRYPTION:-false}"
-    printf 'FEAT_UNLOCK_METHOD=%q\n' "${FEAT_UNLOCK_METHOD:-}"
-    printf 'FEAT_IMPERMANENCE=%q\n' "${FEAT_IMPERMANENCE:-false}"
-    printf 'PERSIST_PREFIX=%q\n' "${PERSIST_PREFIX:-}"
-    printf 'FEAT_TOTP=%q\n' "${FEAT_TOTP:-false}"
-    printf 'FEAT_YUBIKEY=%q\n' "${FEAT_YUBIKEY:-false}"
-    printf 'FEAT_YUBIKEY_LUKS=%q\n' "${FEAT_YUBIKEY_LUKS:-false}"
-    printf 'FEAT_SECURE_BOOT=%q\n' "${FEAT_SECURE_BOOT:-false}"
-    printf 'FEAT_DESKTOP=%q\n' "${FEAT_DESKTOP:-false}"
-    printf 'FEAT_WM=%q\n' "${FEAT_WM:-}"
-    printf 'FEAT_FORM_FACTOR=%q\n' "${FEAT_FORM_FACTOR:-}"
-    printf 'FEAT_KERNEL=%q\n' "${FEAT_KERNEL:-}"
-    printf 'FEAT_KERNEL_VERSION=%q\n' "${FEAT_KERNEL_VERSION:-}"
-    printf 'FEAT_KEYBOARD=%q\n' "${FEAT_KEYBOARD:-}"
-    printf 'FEAT_LANGUAGE=%q\n' "${FEAT_LANGUAGE:-}"
-    printf 'CONFIG_USERNAME=%q\n' "${CONFIG_USERNAME:-}"
-    printf 'CONFIG_PASSWORD_LOCKED=%q\n' "${CONFIG_PASSWORD_LOCKED:-false}"
-    # Progress — prevents double-enrollment if installer crashes after TPM enroll
-    printf 'TPM_ENROLLED=%q\n' "${TPM_ENROLLED:-false}"
-  } > "$temporary"
-  chmod 600 "$temporary"
-  mv "$temporary" "$STATE_FILE"
-  trap - RETURN
+	local temporary
+	temporary=$(mktemp "$STATE_DIR/state.env.XXXXXX")
+	trap 'rm -f "$temporary"' RETURN
+	{
+		# Inputs
+		printf 'HOST=%q\n' "$HOST"
+		printf 'LUKS_PASSWORD=%q\n' "${LUKS_PASSWORD:-}"
+		printf 'USER_PASSWORD_HASH=%q\n' "${USER_PASSWORD_HASH:-}"
+		# Store key content (not path) so resume works within the same session
+		if [[ -n "${SSH_KEY_FILE:-}" && -f "$SSH_KEY_FILE" ]]; then
+			printf 'SSH_KEY_CONTENT=%q\n' "$(cat "$SSH_KEY_FILE")"
+		else
+			printf 'SSH_KEY_CONTENT=%q\n' "${SSH_KEY_CONTENT:-}"
+		fi
+		# Detected features — cached to avoid re-running nix eval on resume
+		printf 'FEAT_ENCRYPTION=%q\n' "${FEAT_ENCRYPTION:-false}"
+		printf 'FEAT_UNLOCK_METHOD=%q\n' "${FEAT_UNLOCK_METHOD:-}"
+		printf 'FEAT_IMPERMANENCE=%q\n' "${FEAT_IMPERMANENCE:-false}"
+		printf 'PERSIST_PREFIX=%q\n' "${PERSIST_PREFIX:-}"
+		printf 'FEAT_TOTP=%q\n' "${FEAT_TOTP:-false}"
+		printf 'FEAT_YUBIKEY=%q\n' "${FEAT_YUBIKEY:-false}"
+		printf 'FEAT_YUBIKEY_LUKS=%q\n' "${FEAT_YUBIKEY_LUKS:-false}"
+		printf 'FEAT_SECURE_BOOT=%q\n' "${FEAT_SECURE_BOOT:-false}"
+		printf 'FEAT_DESKTOP=%q\n' "${FEAT_DESKTOP:-false}"
+		printf 'FEAT_WM=%q\n' "${FEAT_WM:-}"
+		printf 'FEAT_FORM_FACTOR=%q\n' "${FEAT_FORM_FACTOR:-}"
+		printf 'FEAT_KERNEL=%q\n' "${FEAT_KERNEL:-}"
+		printf 'FEAT_KERNEL_VERSION=%q\n' "${FEAT_KERNEL_VERSION:-}"
+		printf 'FEAT_KEYBOARD=%q\n' "${FEAT_KEYBOARD:-}"
+		printf 'FEAT_LANGUAGE=%q\n' "${FEAT_LANGUAGE:-}"
+		printf 'CONFIG_USERNAME=%q\n' "${CONFIG_USERNAME:-}"
+		printf 'CONFIG_PASSWORD_LOCKED=%q\n' "${CONFIG_PASSWORD_LOCKED:-false}"
+		# Progress — prevents double-enrollment if installer crashes after TPM enroll
+		printf 'TPM_ENROLLED=%q\n' "${TPM_ENROLLED:-false}"
+	} >"$temporary"
+	chmod 600 "$temporary"
+	mv "$temporary" "$STATE_FILE"
+	trap - RETURN
 }
 
 #===========================
@@ -250,47 +296,51 @@ save_state() {
 # Write LUKS_PASSWORD to a private temporary file for tools that need a file
 # (disko, systemd-cryptenroll).
 luks_password_file() {
-  if [[ -z "$LUKS_PASSWORD_FILE" ]]; then
-    LUKS_PASSWORD_FILE="$STATE_DIR/luks-password"
-    : > "$LUKS_PASSWORD_FILE"
-    chmod 600 "$LUKS_PASSWORD_FILE"
-    printf '%s' "$LUKS_PASSWORD" > "$LUKS_PASSWORD_FILE"
-  fi
-  echo "$LUKS_PASSWORD_FILE"
+	if [[ -z "$LUKS_PASSWORD_FILE" ]]; then
+		LUKS_PASSWORD_FILE="$STATE_DIR/luks-password"
+		: >"$LUKS_PASSWORD_FILE"
+		chmod 600 "$LUKS_PASSWORD_FILE"
+		printf '%s' "$LUKS_PASSWORD" >"$LUKS_PASSWORD_FILE"
+	fi
+	echo "$LUKS_PASSWORD_FILE"
 }
 
 phase_validate() {
-  # Print header once — suppress after sudo re-elevation
-  [[ "${_HEADER_PRINTED:-}" != "1" ]] && { info "NixOS Installer"; echo ""; export _HEADER_PRINTED=1; }
+	# Print header once — suppress after sudo re-elevation
+	[[ "${_HEADER_PRINTED:-}" != "1" ]] && {
+		info "NixOS Installer"
+		echo ""
+		export _HEADER_PRINTED=1
+	}
 
-  if [[ ! -e /etc/NIXOS ]]; then
-    error "Not a NixOS system. Boot from a NixOS ISO first."
-  fi
+	if [[ ! -e /etc/NIXOS ]]; then
+		error "Not a NixOS system. Boot from a NixOS ISO first."
+	fi
 
-  if [[ $EUID -ne 0 ]]; then
-    exec sudo env _HEADER_PRINTED=1 "$0" "${ORIGINAL_ARGS[@]}"
-  fi
+	if [[ $EUID -ne 0 ]]; then
+		exec sudo env _HEADER_PRINTED=1 "$0" "${ORIGINAL_ARGS[@]}"
+	fi
 
-  mkdir -p "$STATE_DIR"
-  chmod 700 "$STATE_DIR"
-  chown root:root "$STATE_DIR"
+	mkdir -p "$STATE_DIR"
+	chmod 700 "$STATE_DIR"
+	chown root:root "$STATE_DIR"
 
-  if [[ "$DRY_RUN" == true ]]; then
-    warn "Dry-run mode: no changes will be made"
-    echo ""
-  fi
+	if [[ "$DRY_RUN" == true ]]; then
+		warn "Dry-run mode: no changes will be made"
+		echo ""
+	fi
 
-  local root_fstype
-  root_fstype="$(findmnt -n -o FSTYPE /)"
-  IS_LIVE=false
-  [[ "$root_fstype" == "tmpfs" ]] && IS_LIVE=true
+	local root_fstype
+	root_fstype="$(findmnt -n -o FSTYPE /)"
+	IS_LIVE=false
+	[[ "$root_fstype" == "tmpfs" ]] && IS_LIVE=true
 
-  command -v nix &>/dev/null || error "Nix is not available."
+	command -v nix &>/dev/null || error "Nix is not available."
 
-  export NIX_CONFIG="experimental-features = nix-command flakes
+	export NIX_CONFIG="experimental-features = nix-command flakes
 warn-dirty = false"
 
-  success "Environment OK"
+	success "Environment OK"
 }
 
 #===========================
@@ -298,83 +348,83 @@ warn-dirty = false"
 #===========================
 
 ensure_jq() {
-  # jq is not included in the NixOS installer image but is required for
-  # evaluating the selected host's feature summary.
-  if ! command -v jq &>/dev/null; then
-    nix profile install nixpkgs#jq 2>/dev/null || nix-env -iA nixos.jq 2>/dev/null
-  fi
-  command -v jq &>/dev/null || error "jq is required but could not be installed."
+	# jq is not included in the NixOS installer image but is required for
+	# evaluating the selected host's feature summary.
+	if ! command -v jq &>/dev/null; then
+		nix profile install nixpkgs#jq 2>/dev/null || nix-env -iA nixos.jq 2>/dev/null
+	fi
+	command -v jq &>/dev/null || error "jq is required but could not be installed."
 }
 
 phase_select_host() {
-  local hosts=()
-  local descriptions=()
+	local hosts=()
+	local descriptions=()
 
-  if [[ "$INSTALLER_ISO" == true ]]; then
-    ensure_jq
-    mapfile -t hosts < <(jq -r '.hosts | keys[]' "$ISO_MANIFEST")
-    for name in "${hosts[@]}"; do
-      local desc=""
-      if [[ -f "$REPO_DIR/hosts/$name/configuration.nix" ]]; then
-        desc="$(head -1 "$REPO_DIR/hosts/$name/configuration.nix" | sed 's/^# *//' | sed 's/ *$//')"
-      fi
-      descriptions+=("$desc")
-    done
-  else
-    for dir in "$REPO_DIR"/hosts/*/; do
-      local name
-      name="$(basename "$dir")"
-      [[ -f "$dir/configuration.nix" ]] || continue
-      hosts+=("$name")
-      # Extract description from first comment line of configuration.nix
-      local desc
-      desc="$(head -1 "$dir/configuration.nix" | sed 's/^# *//' | sed 's/ *$//')"
-      descriptions+=("$desc")
-    done
-  fi
+	if [[ "$INSTALLER_ISO" == true ]]; then
+		ensure_jq
+		mapfile -t hosts < <(jq -r '.hosts | keys[]' "$ISO_MANIFEST")
+		for name in "${hosts[@]}"; do
+			local desc=""
+			if [[ -f "$REPO_DIR/hosts/$name/configuration.nix" ]]; then
+				desc="$(head -1 "$REPO_DIR/hosts/$name/configuration.nix" | sed 's/^# *//' | sed 's/ *$//')"
+			fi
+			descriptions+=("$desc")
+		done
+	else
+		for dir in "$REPO_DIR"/hosts/*/; do
+			local name
+			name="$(basename "$dir")"
+			[[ -f "$dir/configuration.nix" ]] || continue
+			hosts+=("$name")
+			# Extract description from first comment line of configuration.nix
+			local desc
+			desc="$(head -1 "$dir/configuration.nix" | sed 's/^# *//' | sed 's/ *$//')"
+			descriptions+=("$desc")
+		done
+	fi
 
-  [[ ${#hosts[@]} -gt 0 ]] || error "No hosts found in $REPO_DIR/hosts/"
+	[[ ${#hosts[@]} -gt 0 ]] || error "No hosts found in $REPO_DIR/hosts/"
 
-  # On an installed system: auto-detect host from current hostname
-  if [[ -z "$HOST" && "$IS_LIVE" != true ]]; then
-    local current_hostname
-    current_hostname="$(hostname)"
-    for h in "${hosts[@]}"; do
-      if [[ "$h" == "$current_hostname" ]]; then
-        HOST="$current_hostname"
-        success "Host detected from hostname: $HOST"
-        return
-      fi
-    done
-  fi
+	# On an installed system: auto-detect host from current hostname
+	if [[ -z "$HOST" && "$IS_LIVE" != true ]]; then
+		local current_hostname
+		current_hostname="$(hostname)"
+		for h in "${hosts[@]}"; do
+			if [[ "$h" == "$current_hostname" ]]; then
+				HOST="$current_hostname"
+				success "Host detected from hostname: $HOST"
+				return
+			fi
+		done
+	fi
 
-  # Validate pre-selected host
-  if [[ -n "$HOST" ]]; then
-    local found=false
-    for h in "${hosts[@]}"; do
-      [[ "$h" == "$HOST" ]] && found=true
-    done
-    [[ "$found" == true ]] || error "Host '$HOST' not found. Available: ${hosts[*]}"
-    return
-  fi
+	# Validate pre-selected host
+	if [[ -n "$HOST" ]]; then
+		local found=false
+		for h in "${hosts[@]}"; do
+			[[ "$h" == "$HOST" ]] && found=true
+		done
+		[[ "$found" == true ]] || error "Host '$HOST' not found. Available: ${hosts[*]}"
+		return
+	fi
 
-  # Interactive selection
-  echo ""
-  info "Available hosts:"
-  echo ""
-  for i in "${!hosts[@]}"; do
-    echo -e "    ${BOLD}[$((i+1))]${RESET} ${hosts[$i]}  ${DIM}— ${descriptions[$i]}${RESET}"
-  done
-  echo ""
+	# Interactive selection
+	echo ""
+	info "Available hosts:"
+	echo ""
+	for i in "${!hosts[@]}"; do
+		echo -e "    ${BOLD}[$((i + 1))]${RESET} ${hosts[$i]}  ${DIM}— ${descriptions[$i]}${RESET}"
+	done
+	echo ""
 
-  local choice
-  read -rp "    Select host [1-${#hosts[@]}]: " choice
+	local choice
+	read -rp "    Select host [1-${#hosts[@]}]: " choice
 
-  if [[ "$choice" =~ ^[0-9]+$ ]] && (( choice >= 1 && choice <= ${#hosts[@]} )); then
-    HOST="${hosts[$((choice-1))]}"
-  else
-    error "Invalid selection."
-  fi
+	if [[ "$choice" =~ ^[0-9]+$ ]] && ((choice >= 1 && choice <= ${#hosts[@]})); then
+		HOST="${hosts[$((choice - 1))]}"
+	else
+		error "Invalid selection."
+	fi
 }
 
 #===========================
@@ -403,26 +453,26 @@ LUKS_DEVICES=()
 TPM_ENROLLED=false
 
 phase_detect_features() {
-  # Skip nix eval if features were already detected and cached in the state file
-  if [[ -n "$CONFIG_USERNAME" ]]; then
-    echo ""
-    success "Features loaded from cache (host: $HOST)"
-    echo ""
-    return
-  fi
+	# Skip nix eval if features were already detected and cached in the state file
+	if [[ -n "$CONFIG_USERNAME" ]]; then
+		echo ""
+		success "Features loaded from cache (host: $HOST)"
+		echo ""
+		return
+	fi
 
-  ensure_jq
+	ensure_jq
 
-  echo ""
-  info "Reading configuration for $HOST..."
-  echo ""
+	echo ""
+	info "Reading configuration for $HOST..."
+	echo ""
 
-  local json
-  if [[ "$INSTALLER_ISO" == true ]]; then
-    json=$(jq -c --arg host "$HOST" '.hosts[$host] // empty' "$ISO_MANIFEST")
-    [[ -n "$json" ]] || error "Host '$HOST' is missing from the installer ISO manifest."
-  else
-    json=$(nix eval --json "$REPO_DIR#nixosConfigurations.${HOST}.config" --apply '
+	local json
+	if [[ "$INSTALLER_ISO" == true ]]; then
+		json=$(jq -c --arg host "$HOST" '.hosts[$host] // empty' "$ISO_MANIFEST")
+		[[ -n "$json" ]] || error "Host '$HOST' is missing from the installer ISO manifest."
+	else
+		json=$(nix eval --json "$REPO_DIR#nixosConfigurations.${HOST}.config" --apply '
     cfg: {
       encryption = cfg.features.encryption.enable;
       unlockMethod = cfg.features.encryption.unlockMethod;
@@ -447,84 +497,84 @@ phase_detect_features() {
       luksDevices = builtins.attrValues (builtins.mapAttrs (name: dev: dev.device) cfg.boot.initrd.luks.devices);
     }
   }') || error "Failed to evaluate configuration. Check flake syntax."
-  fi
+	fi
 
-  FEAT_ENCRYPTION=$(echo "$json"      | jq -r '.encryption')
-  FEAT_UNLOCK_METHOD=$(echo "$json"     | jq -r '.unlockMethod')
-  FEAT_IMPERMANENCE=$(echo "$json"    | jq -r '.impermanence')
-  PERSIST_PREFIX=$(echo "$json"       | jq -r '.persistPrefix')
-  FEAT_TOTP=$(echo "$json"            | jq -r '.totp')
-  FEAT_YUBIKEY=$(echo "$json"         | jq -r '.yubikey')
-  FEAT_YUBIKEY_LUKS=$(echo "$json"    | jq -r '.yubikeyLuks')
-  FEAT_SECURE_BOOT=$(echo "$json"     | jq -r '.secureBoot')
-  FEAT_DESKTOP=$(echo "$json"         | jq -r '.desktop')
-  FEAT_WM=$(echo "$json"              | jq -r '.wm')
-  FEAT_FORM_FACTOR=$(echo "$json"      | jq -r '.formFactor')
-  FEAT_KERNEL=$(echo "$json"           | jq -r '.kernel')
-  FEAT_KERNEL_VERSION=$(echo "$json"   | jq -r '.kernelVersion')
-  FEAT_KEYBOARD=$(echo "$json"         | jq -r '.keyboard')
-  FEAT_LANGUAGE=$(echo "$json"          | jq -r '.language')
-  CONFIG_USERNAME=$(echo "$json"      | jq -r '.userName')
-  CONFIG_PASSWORD_LOCKED=$(echo "$json" | jq -r '.passwordLocked')
+	FEAT_ENCRYPTION=$(jq -r '.encryption' <<<"$json")
+	FEAT_UNLOCK_METHOD=$(jq -r '.unlockMethod' <<<"$json")
+	FEAT_IMPERMANENCE=$(jq -r '.impermanence' <<<"$json")
+	PERSIST_PREFIX=$(jq -r '.persistPrefix' <<<"$json")
+	FEAT_TOTP=$(jq -r '.totp' <<<"$json")
+	FEAT_YUBIKEY=$(jq -r '.yubikey' <<<"$json")
+	FEAT_YUBIKEY_LUKS=$(jq -r '.yubikeyLuks' <<<"$json")
+	FEAT_SECURE_BOOT=$(jq -r '.secureBoot' <<<"$json")
+	FEAT_DESKTOP=$(jq -r '.desktop' <<<"$json")
+	FEAT_WM=$(jq -r '.wm' <<<"$json")
+	FEAT_FORM_FACTOR=$(jq -r '.formFactor' <<<"$json")
+	FEAT_KERNEL=$(jq -r '.kernel' <<<"$json")
+	FEAT_KERNEL_VERSION=$(jq -r '.kernelVersion' <<<"$json")
+	FEAT_KEYBOARD=$(jq -r '.keyboard' <<<"$json")
+	FEAT_LANGUAGE=$(jq -r '.language' <<<"$json")
+	CONFIG_USERNAME=$(jq -r '.userName' <<<"$json")
+	CONFIG_PASSWORD_LOCKED=$(jq -r '.passwordLocked' <<<"$json")
 
-  # Parse LUKS device paths into array
-  mapfile -t LUKS_DEVICES < <(echo "$json" | jq -r '.luksDevices[]')
+	# Parse LUKS device paths into array
+	mapfile -t LUKS_DEVICES < <(jq -r '.luksDevices[]' <<<"$json")
 
-  echo -e "    Host:          ${BOLD}$HOST${RESET}"
-  echo -e "    Username:      ${BOLD}$CONFIG_USERNAME${RESET}"
-  if [[ -n "$FEAT_FORM_FACTOR" && "$FEAT_FORM_FACTOR" != "null" ]]; then
-    echo -e "    Form factor:   ${BOLD}$FEAT_FORM_FACTOR${RESET}"
-  fi
-  if [[ -n "$FEAT_KERNEL" && "$FEAT_KERNEL" != "null" ]]; then
-    echo -e "    Kernel:        ${BOLD}$FEAT_KERNEL${RESET} (${FEAT_KERNEL_VERSION})"
-  fi
-  if [[ "$FEAT_DESKTOP" == "true" ]]; then
-    echo -e "    Desktop:       ${BOLD}$FEAT_WM${RESET}"
-  fi
-  if [[ -n "$FEAT_KEYBOARD" && "$FEAT_KEYBOARD" != "null" ]]; then
-    echo -e "    Keyboard:      ${BOLD}$FEAT_KEYBOARD${RESET}"
-  fi
-  if [[ -n "$FEAT_LANGUAGE" && "$FEAT_LANGUAGE" != "null" ]]; then
-    echo -e "    Language:      ${BOLD}$FEAT_LANGUAGE${RESET}"
-  fi
-  echo -e "    Encryption:    $(label_bool "$FEAT_ENCRYPTION")"
-  echo -e "    Impermanence:  $(label_bool "$FEAT_IMPERMANENCE")"
-  echo -e "    TOTP 2FA:      $(label_bool "$FEAT_TOTP")"
-  echo -e "    YubiKey:       $(label_bool "$FEAT_YUBIKEY")"
-  echo -e "    Secure Boot:   $(label_bool "$FEAT_SECURE_BOOT")"
-  if [[ "$FEAT_ENCRYPTION" == "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
-    echo -e "    LUKS devices:  ${DIM}${#LUKS_DEVICES[@]} partition(s)${RESET}"
-    echo -e "    LUKS Unlock:   $(label_bool "$FEAT_YUBIKEY_LUKS") (YubiKey FIDO2)"
-  fi
-  if [[ "$CONFIG_PASSWORD_LOCKED" == "true" && -z "$USER_PASSWORD_HASH" ]]; then
-    echo -e "    Password:      ${YELLOW}not set${RESET}"
-  elif [[ "$CONFIG_PASSWORD_LOCKED" == "false" ]]; then
-    echo -e "    Password:      ${GREEN}via sops${RESET}  ${DIM}(set at boot by user-passwd.service)${RESET}"
-  else
-    echo -e "    Password:      ${GREEN}set in config${RESET}"
-  fi
-  echo ""
-  success "Features detected"
-  save_state
+	echo -e "    Host:          ${BOLD}$HOST${RESET}"
+	echo -e "    Username:      ${BOLD}$CONFIG_USERNAME${RESET}"
+	if [[ -n "$FEAT_FORM_FACTOR" && "$FEAT_FORM_FACTOR" != "null" ]]; then
+		echo -e "    Form factor:   ${BOLD}$FEAT_FORM_FACTOR${RESET}"
+	fi
+	if [[ -n "$FEAT_KERNEL" && "$FEAT_KERNEL" != "null" ]]; then
+		echo -e "    Kernel:        ${BOLD}$FEAT_KERNEL${RESET} (${FEAT_KERNEL_VERSION})"
+	fi
+	if [[ "$FEAT_DESKTOP" == "true" ]]; then
+		echo -e "    Desktop:       ${BOLD}$FEAT_WM${RESET}"
+	fi
+	if [[ -n "$FEAT_KEYBOARD" && "$FEAT_KEYBOARD" != "null" ]]; then
+		echo -e "    Keyboard:      ${BOLD}$FEAT_KEYBOARD${RESET}"
+	fi
+	if [[ -n "$FEAT_LANGUAGE" && "$FEAT_LANGUAGE" != "null" ]]; then
+		echo -e "    Language:      ${BOLD}$FEAT_LANGUAGE${RESET}"
+	fi
+	echo -e "    Encryption:    $(label_bool "$FEAT_ENCRYPTION")"
+	echo -e "    Impermanence:  $(label_bool "$FEAT_IMPERMANENCE")"
+	echo -e "    TOTP 2FA:      $(label_bool "$FEAT_TOTP")"
+	echo -e "    YubiKey:       $(label_bool "$FEAT_YUBIKEY")"
+	echo -e "    Secure Boot:   $(label_bool "$FEAT_SECURE_BOOT")"
+	if [[ "$FEAT_ENCRYPTION" == "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
+		echo -e "    LUKS devices:  ${DIM}${#LUKS_DEVICES[@]} partition(s)${RESET}"
+		echo -e "    LUKS Unlock:   $(label_bool "$FEAT_YUBIKEY_LUKS") (YubiKey FIDO2)"
+	fi
+	if [[ "$CONFIG_PASSWORD_LOCKED" == "true" && -z "$USER_PASSWORD_HASH" ]]; then
+		echo -e "    Password:      ${YELLOW}not set${RESET}"
+	elif [[ "$CONFIG_PASSWORD_LOCKED" == "false" ]]; then
+		echo -e "    Password:      ${GREEN}via sops${RESET}  ${DIM}(set at boot by user-passwd.service)${RESET}"
+	else
+		echo -e "    Password:      ${GREEN}set in config${RESET}"
+	fi
+	echo ""
+	success "Features detected"
+	save_state
 }
 
 apply_keyboard_layout() {
-  [[ -n "$FEAT_KEYBOARD" && "$FEAT_KEYBOARD" != "null" ]] || return 0
+	[[ -n "$FEAT_KEYBOARD" && "$FEAT_KEYBOARD" != "null" ]] || return 0
 
-  if command -v loadkeys &>/dev/null; then
-    loadkeys "$FEAT_KEYBOARD" 2>/dev/null || warn "Could not apply console keyboard layout: $FEAT_KEYBOARD"
-  fi
+	if command -v loadkeys &>/dev/null; then
+		loadkeys "$FEAT_KEYBOARD" 2>/dev/null || warn "Could not apply console keyboard layout: $FEAT_KEYBOARD"
+	fi
 
-  if command -v setxkbmap &>/dev/null && [[ -n "${DISPLAY:-}" ]]; then
-    setxkbmap "$FEAT_KEYBOARD" 2>/dev/null || warn "Could not apply X11 keyboard layout: $FEAT_KEYBOARD"
-  fi
+	if command -v setxkbmap &>/dev/null && [[ -n "${DISPLAY:-}" ]]; then
+		setxkbmap "$FEAT_KEYBOARD" 2>/dev/null || warn "Could not apply X11 keyboard layout: $FEAT_KEYBOARD"
+	fi
 
-  if command -v localectl &>/dev/null; then
-    localectl set-keymap "$FEAT_KEYBOARD" 2>/dev/null || true
-    localectl set-x11-keymap "$FEAT_KEYBOARD" 2>/dev/null || true
-  fi
+	if command -v localectl &>/dev/null; then
+		localectl set-keymap "$FEAT_KEYBOARD" 2>/dev/null || true
+		localectl set-x11-keymap "$FEAT_KEYBOARD" 2>/dev/null || true
+	fi
 
-  success "Keyboard layout: $FEAT_KEYBOARD"
+	success "Keyboard layout: $FEAT_KEYBOARD"
 }
 
 #===========================
@@ -537,101 +587,105 @@ AGE_KEY=""
 USER_PASSWORD_HASH=""
 
 phase_collect_inputs() {
-  # Env-var fallbacks — useful for scripted/CI installs without exposing
-  # values in the process list. CLI flags take priority over env vars.
-  [[ -z "$LUKS_PASSWORD" && -n "${NIXOS_LUKS_PASSWORD:-}" ]] && LUKS_PASSWORD="$NIXOS_LUKS_PASSWORD"
-  [[ -z "$SSH_KEY"       && -n "${NIXOS_SSH_KEY:-}"       ]] && SSH_KEY="$NIXOS_SSH_KEY"
+	# Env-var fallbacks — useful for scripted/CI installs without exposing
+	# values in the process list. CLI flags take priority over env vars.
+	[[ -z "$LUKS_PASSWORD" && -n "${NIXOS_LUKS_PASSWORD:-}" ]] && LUKS_PASSWORD="$NIXOS_LUKS_PASSWORD"
+	[[ -z "$SSH_KEY" && -n "${NIXOS_SSH_KEY:-}" ]] && SSH_KEY="$NIXOS_SSH_KEY"
 
-  # --- LUKS Password ---
-  # Needed for: format (disko), install (nixos-install), TPM enrollment (post-install).
-  # Not needed for: post-install-only when no TPM, YubiKey-LUKS, or TPM-Secure-Boot deferral.
-  local need_luks=false
-  [[ "$DO_FORMAT" == true || "$DO_INSTALL" == true ]] && need_luks=true
-  if [[ "$DO_POST_INSTALL" == true && "$FEAT_ENCRYPTION" == "true" && \
-        "$FEAT_YUBIKEY_LUKS" != "true" && "$FEAT_SECURE_BOOT" != "true" ]]; then
-    need_luks=true
-  fi
-  if [[ "$FEAT_ENCRYPTION" == "true" ]] && [[ "$need_luks" == true ]]; then
-    echo ""
-    if [[ -n "$LUKS_PASSWORD" ]]; then
-      success "LUKS password ready (cached)"
-    elif [[ "$YES" == true ]]; then
-      error "Encryption enabled but no LUKS password. Use -p PASSWORD."
-    else
-      info "LUKS Disk Encryption"
-      echo ""
-      local pass pass_confirm
-      read -rsp "Enter LUKS password: " pass; echo
-      read -rsp "Confirm password: " pass_confirm; echo
-      [[ "$pass" == "$pass_confirm" ]] || error "Passwords do not match."
-      LUKS_PASSWORD="$pass"
-      success "Password saved"
-    fi
-  fi
+	# --- LUKS Password ---
+	# Needed for: format (disko), install (nixos-install), TPM enrollment (post-install).
+	# Not needed for: post-install-only when no TPM, YubiKey-LUKS, or TPM-Secure-Boot deferral.
+	local need_luks=false
+	[[ "$DO_FORMAT" == true || "$DO_INSTALL" == true ]] && need_luks=true
+	if [[ "$DO_POST_INSTALL" == true && "$FEAT_ENCRYPTION" == "true" &&
+		"$FEAT_YUBIKEY_LUKS" != "true" && "$FEAT_SECURE_BOOT" != "true" ]]; then
+		need_luks=true
+	fi
+	if [[ "$FEAT_ENCRYPTION" == "true" ]] && [[ "$need_luks" == true ]]; then
+		echo ""
+		if [[ -n "$LUKS_PASSWORD" ]]; then
+			success "LUKS password ready (cached)"
+		elif [[ "$YES" == true ]]; then
+			error "Encryption enabled but no LUKS password. Use -p PASSWORD."
+		else
+			info "LUKS Disk Encryption"
+			echo ""
+			local pass pass_confirm
+			read -rsp "Enter LUKS password: " pass
+			echo
+			read -rsp "Confirm password: " pass_confirm
+			echo
+			[[ "$pass" == "$pass_confirm" ]] || error "Passwords do not match."
+			LUKS_PASSWORD="$pass"
+			success "Password saved"
+		fi
+	fi
 
-  # --- SSH Key (only needed for post-install) ---
-  if [[ "$DO_POST_INSTALL" == true ]]; then
-    echo ""
-    info "SSH Key (required for SOPS secrets)"
-    echo ""
-    if [[ -n "$SSH_KEY_FILE" && -f "$SSH_KEY_FILE" ]]; then
-      success "SSH key ready (cached)"
-    elif [[ -n "$SSH_KEY" ]]; then
-      SSH_KEY_FILE="$SSH_KEY"
-      [[ -f "$SSH_KEY_FILE" ]] || error "SSH key file not found: $SSH_KEY_FILE"
-      success "SSH key ready"
-    elif [[ "$YES" == true ]]; then
-      error "SSH key required for post-install. Use -s /path/to/key or set NIXOS_SSH_KEY."
-    else
-      echo -e "    ${BOLD}[1]${RESET} Enter file path"
-      echo -e "    ${BOLD}[2]${RESET} Paste key content"
-      echo ""
-      local choice
-      read -rp "    Choice [1-2]: " choice
+	# --- SSH Key (only needed for post-install) ---
+	if [[ "$DO_POST_INSTALL" == true ]]; then
+		echo ""
+		info "SSH Key (required for SOPS secrets)"
+		echo ""
+		if [[ -n "$SSH_KEY_FILE" && -f "$SSH_KEY_FILE" ]]; then
+			success "SSH key ready (cached)"
+		elif [[ -n "$SSH_KEY" ]]; then
+			SSH_KEY_FILE="$SSH_KEY"
+			[[ -f "$SSH_KEY_FILE" ]] || error "SSH key file not found: $SSH_KEY_FILE"
+			success "SSH key ready"
+		elif [[ "$YES" == true ]]; then
+			error "SSH key required for post-install. Use -s /path/to/key or set NIXOS_SSH_KEY."
+		else
+			echo -e "    ${BOLD}[1]${RESET} Enter file path"
+			echo -e "    ${BOLD}[2]${RESET} Paste key content"
+			echo ""
+			local choice
+			read -rp "    Choice [1-2]: " choice
 
-      case "$choice" in
-        1)
-          read -rp "    Path to SSH private key: " SSH_KEY_FILE
-          [[ -f "$SSH_KEY_FILE" ]] || error "File not found: $SSH_KEY_FILE"
-          ;;
-        2)
-          echo "    Paste your ed25519 private key (end with Ctrl+D):"
-          SSH_KEY_FILE="$(mktemp)"
-          cat > "$SSH_KEY_FILE"
-          chmod 600 "$SSH_KEY_FILE"
-          ;;
-        *)
-          error "Invalid choice."
-          ;;
-      esac
-      success "SSH key ready"
-    fi
-  fi
+			case "$choice" in
+			1)
+				read -rp "    Path to SSH private key: " SSH_KEY_FILE
+				[[ -f "$SSH_KEY_FILE" ]] || error "File not found: $SSH_KEY_FILE"
+				;;
+			2)
+				echo "    Paste your ed25519 private key (end with Ctrl+D):"
+				SSH_KEY_FILE="$(mktemp)"
+				cat >"$SSH_KEY_FILE"
+				chmod 600 "$SSH_KEY_FILE"
+				;;
+			*)
+				error "Invalid choice."
+				;;
+			esac
+			success "SSH key ready"
+		fi
+	fi
 
-  # --- User Password ---
-  if [[ "$CONFIG_PASSWORD_LOCKED" == "true" ]]; then
-    echo ""
-    if [[ -n "$USER_PASSWORD_HASH" ]]; then
-      success "Password hash ready (cached)"
-    else
-      warn "No password set in host config — account would be locked after install."
-      echo ""
-      info "User Password"
-      echo ""
-      local pass pass_confirm
-      read -rsp "Enter password for $CONFIG_USERNAME: " pass; echo
-      read -rsp "Confirm password: " pass_confirm; echo
-      [[ "$pass" == "$pass_confirm" ]] || error "Passwords do not match."
-      if command -v mkpasswd &>/dev/null; then
-        USER_PASSWORD_HASH="$(echo "$pass" | mkpasswd -m sha-512 -s)"
-      else
-        USER_PASSWORD_HASH="$(echo "$pass" | nix-shell -p mkpasswd --run 'mkpasswd -m sha-512 -s')"
-      fi
-      success "Password hash generated"
-    fi
-  fi
+	# --- User Password ---
+	if [[ "$CONFIG_PASSWORD_LOCKED" == "true" ]]; then
+		echo ""
+		if [[ -n "$USER_PASSWORD_HASH" ]]; then
+			success "Password hash ready (cached)"
+		else
+			warn "No password set in host config — account would be locked after install."
+			echo ""
+			info "User Password"
+			echo ""
+			local pass pass_confirm
+			read -rsp "Enter password for $CONFIG_USERNAME: " pass
+			echo
+			read -rsp "Confirm password: " pass_confirm
+			echo
+			[[ "$pass" == "$pass_confirm" ]] || error "Passwords do not match."
+			if command -v mkpasswd &>/dev/null; then
+				USER_PASSWORD_HASH="$(echo "$pass" | mkpasswd -m sha-512 -s)"
+			else
+				USER_PASSWORD_HASH="$(echo "$pass" | nix-shell -p mkpasswd --run 'mkpasswd -m sha-512 -s')"
+			fi
+			success "Password hash generated"
+		fi
+	fi
 
-  save_state
+	save_state
 }
 
 #===========================
@@ -639,70 +693,73 @@ phase_collect_inputs() {
 #===========================
 
 phase_summary() {
-  echo ""
-  echo -e "${BOLD}============================================${RESET}"
-  echo -e "${BOLD}  Installation Summary${RESET}"
-  echo -e "${BOLD}============================================${RESET}"
-  echo ""
-  echo -e "    Host:           $HOST"
-  echo -e "    Username:       $CONFIG_USERNAME"
-  # shellcheck disable=SC2046
-  echo -e "    Steps:          $(printf '%s ' \
-    $([[ "$DO_FORMAT" == true ]] && echo "format") \
-    $([[ "$DO_INSTALL" == true ]] && echo "install") \
-    $([[ "$DO_POST_INSTALL" == true ]] && echo "post-install"))"
-  echo ""
-  if [[ "$DO_FORMAT" == true ]]; then
-    echo -e "    ${BOLD}Disk Setup:${RESET}"
-    if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
-      echo -e "      Encryption:   LUKS (password set)"
-    else
-      echo -e "      Encryption:   none"
-    fi
-    echo -e "      Filesystem:   btrfs with subvolumes"
-    if [[ "$FEAT_IMPERMANENCE" == "true" ]]; then
-      echo -e "      Impermanence: enabled (persist: $PERSIST_PREFIX)"
-    else
-      echo -e "      Impermanence: disabled"
-    fi
-    echo ""
-  fi
-  if [[ "$DO_POST_INSTALL" == true ]]; then
-    echo -e "    ${BOLD}Post-Install:${RESET}"
-    if [[ -n "$USER_PASSWORD_HASH" ]]; then
-      echo -e "      Password:     will be written to config"
-    elif [[ "$CONFIG_PASSWORD_LOCKED" == "false" ]]; then
-      echo -e "      Password:     from sops (set at boot)"
-    fi
-    echo -e "      SSH key:      will be installed"
-    echo -e "      SOPS:         age key from SSH key"
-    if [[ "$FEAT_TOTP" == "true" ]]; then
-      if [[ "$SKIP_TOTP" == "true" || "$YES" == "true" ]]; then
-        echo -e "      TOTP 2FA:     deferred (run totp-init after first boot)"
-      else
-        echo -e "      TOTP 2FA:     will be configured interactively"
-      fi
-    fi
-    if [[ "$FEAT_YUBIKEY" == "true" ]]; then
-      echo -e "      YubiKey:      registration required after first boot"
-    fi
-    echo ""
-  fi
-  if [[ "$DO_FORMAT" == true ]]; then
-    echo -e "    ${RED}${BOLD}WARNING: This will ERASE all data on the configured disks!${RESET}"
-  fi
-  echo ""
+	echo ""
+	echo -e "${BOLD}============================================${RESET}"
+	echo -e "${BOLD}  Installation Summary${RESET}"
+	echo -e "${BOLD}============================================${RESET}"
+	echo ""
+	echo -e "    Host:           $HOST"
+	echo -e "    Username:       $CONFIG_USERNAME"
+	# shellcheck disable=SC2046
+	echo -e "    Steps:          $(printf '%s ' \
+		$([[ "$DO_FORMAT" == true ]] && echo "format") \
+		$([[ "$DO_INSTALL" == true ]] && echo "install") \
+		$([[ "$DO_POST_INSTALL" == true ]] && echo "post-install"))"
+	echo ""
+	if [[ "$DO_FORMAT" == true ]]; then
+		echo -e "    ${BOLD}Disk Setup:${RESET}"
+		if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
+			echo -e "      Encryption:   LUKS (password set)"
+		else
+			echo -e "      Encryption:   none"
+		fi
+		echo -e "      Filesystem:   btrfs with subvolumes"
+		if [[ "$FEAT_IMPERMANENCE" == "true" ]]; then
+			echo -e "      Impermanence: enabled (persist: $PERSIST_PREFIX)"
+		else
+			echo -e "      Impermanence: disabled"
+		fi
+		echo ""
+	fi
+	if [[ "$DO_POST_INSTALL" == true ]]; then
+		echo -e "    ${BOLD}Post-Install:${RESET}"
+		if [[ -n "$USER_PASSWORD_HASH" ]]; then
+			echo -e "      Password:     will be written to config"
+		elif [[ "$CONFIG_PASSWORD_LOCKED" == "false" ]]; then
+			echo -e "      Password:     from sops (set at boot)"
+		fi
+		echo -e "      SSH key:      will be installed"
+		echo -e "      SOPS:         age key from SSH key"
+		if [[ "$FEAT_TOTP" == "true" ]]; then
+			if [[ "$SKIP_TOTP" == "true" || "$YES" == "true" ]]; then
+				echo -e "      TOTP 2FA:     deferred (run totp-init after first boot)"
+			else
+				echo -e "      TOTP 2FA:     will be configured interactively"
+			fi
+		fi
+		if [[ "$FEAT_YUBIKEY" == "true" ]]; then
+			echo -e "      YubiKey:      registration required after first boot"
+		fi
+		echo ""
+	fi
+	if [[ "$DO_FORMAT" == true ]]; then
+		echo -e "    ${RED}${BOLD}WARNING: This will ERASE all data on the configured disks!${RESET}"
+	fi
+	echo ""
 
-  if [[ "$DRY_RUN" == true ]]; then
-    success "Dry-run complete. No changes were made."
-    exit 0
-  fi
+	if [[ "$DRY_RUN" == true ]]; then
+		success "Dry-run complete. No changes were made."
+		exit 0
+	fi
 
-  if [[ "$YES" != true ]]; then
-    local confirm
-    read -rp "    Continue? [y/N]: " confirm
-    [[ "$confirm" =~ ^[yY]$ ]] || { echo "Aborted."; exit 0; }
-  fi
+	if [[ "$YES" != true ]]; then
+		local confirm
+		read -rp "    Continue? [y/N]: " confirm
+		[[ "$confirm" =~ ^[yY]$ ]] || {
+			echo "Aborted."
+			exit 0
+		}
+	fi
 }
 
 #===========================
@@ -710,32 +767,32 @@ phase_summary() {
 #===========================
 
 phase_state_version() {
-  local host_dir="$REPO_DIR/hosts/$HOST"
+	local host_dir="$REPO_DIR/hosts/$HOST"
 
-  if [[ "$INSTALLER_ISO" == true ]]; then
-    success "Using prebuilt NixOS version"
-    return
-  fi
+	if [[ "$INSTALLER_ISO" == true ]]; then
+		success "Using prebuilt NixOS version"
+		return
+	fi
 
-  local version
-  version="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.pkgs.lib.version" | grep -o '^[0-9]*\.[0-9]*')"
-  echo ""
-  success "NixOS version: $version"
+	local version
+	version="$(nix eval --raw "$REPO_DIR#nixosConfigurations.${HOST}.pkgs.lib.version" | grep -o '^[0-9]*\.[0-9]*')"
+	echo ""
+	success "NixOS version: $version"
 
-  sed -i "s|system\.stateVersion = \"[^\"]*\"|system.stateVersion = \"$version\"|" \
-    "$host_dir/configuration.nix"
+	sed -i "s|system\.stateVersion = \"[^\"]*\"|system.stateVersion = \"$version\"|" \
+		"$host_dir/configuration.nix"
 
-  if [[ -f "$host_dir/home.nix" ]]; then
-    sed -i "s|home\.stateVersion = \"[^\"]*\"|home.stateVersion = \"$version\"|" \
-      "$host_dir/home.nix"
-  fi
+	if [[ -f "$host_dir/home.nix" ]]; then
+		sed -i "s|home\.stateVersion = \"[^\"]*\"|home.stateVersion = \"$version\"|" \
+			"$host_dir/home.nix"
+	fi
 
-  # Write generated password hash into host config.
-  # Use python for the substitution — sed interprets $ in the replacement string
-  # as a back-reference, which breaks sha-512 hashes that start with $6$.
-  if [[ -n "$USER_PASSWORD_HASH" ]]; then
-    if grep -q 'user\.hashedPassword' "$host_dir/configuration.nix"; then
-      python3 - "$host_dir/configuration.nix" "$USER_PASSWORD_HASH" <<'PYEOF'
+	# Write generated password hash into host config.
+	# Use python for the substitution — sed interprets $ in the replacement string
+	# as a back-reference, which breaks sha-512 hashes that start with $6$.
+	if [[ -n "$USER_PASSWORD_HASH" ]]; then
+		if grep -q 'user\.hashedPassword' "$host_dir/configuration.nix"; then
+			python3 - "$host_dir/configuration.nix" "$USER_PASSWORD_HASH" <<'PYEOF'
 import sys, re
 path, hash_val = sys.argv[1], sys.argv[2]
 with open(path) as f:
@@ -748,8 +805,8 @@ content = re.sub(
 with open(path, 'w') as f:
     f.write(content)
 PYEOF
-    else
-      python3 - "$host_dir/configuration.nix" "$USER_PASSWORD_HASH" <<'PYEOF'
+		else
+			python3 - "$host_dir/configuration.nix" "$USER_PASSWORD_HASH" <<'PYEOF'
 import sys
 path, hash_val = sys.argv[1], sys.argv[2]
 with open(path) as f:
@@ -762,11 +819,11 @@ for i in range(len(lines)-1, -1, -1):
 with open(path, 'w') as f:
     f.writelines(lines)
 PYEOF
-    fi
-    success "Password hash written to configuration.nix"
-  fi
+		fi
+		success "Password hash written to configuration.nix"
+	fi
 
-  git -C "$REPO_DIR" add "$host_dir/"
+	git -C "$REPO_DIR" add "$host_dir/"
 }
 
 #===========================
@@ -774,53 +831,53 @@ PYEOF
 #===========================
 
 phase_partition() {
-  [[ "$FEAT_ENCRYPTION" == "true" ]] && luks_password_file > /dev/null
-  echo ""
+	[[ "$FEAT_ENCRYPTION" == "true" ]] && luks_password_file >/dev/null
+	echo ""
 
-  # shellcheck disable=SC2054  # comma is disko syntax, not array separator
-  local disko_args=(--mode destroy,format,mount --flake "$REPO_DIR#$HOST" --yes-wipe-all-disks)
+	# shellcheck disable=SC2054  # comma is disko syntax, not array separator
+	local disko_args=(--mode destroy,format,mount --flake "$REPO_DIR#$HOST" --yes-wipe-all-disks)
 
-  if [[ "$INSTALLER_ISO" == true ]]; then
-    command -v disko &>/dev/null || error "Disko is missing from the installer ISO."
-    if ! disko "${disko_args[@]}"; then
-      error "Disko failed. Check disk IDs in hosts/$HOST/disko.nix"
-    fi
-  else
-    local disko_ref
-    disko_ref=$(nix flake metadata "path:${REPO_DIR}" --json 2>/dev/null \
-      | jq -r '.locks.nodes.disko.locked | "github:\(.owner)/\(.repo)/\(.rev)"')
-    if [[ -z "$disko_ref" || "$disko_ref" == "null" ]]; then
-      disko_ref="github:nix-community/disko"
-    fi
-    if ! nix run "$disko_ref" -- "${disko_args[@]}"; then
-      error "Disko failed. Check disk IDs in hosts/$HOST/disko.nix"
-    fi
-  fi
+	if [[ "$INSTALLER_ISO" == true ]]; then
+		command -v disko &>/dev/null || error "Disko is missing from the installer ISO."
+		if ! disko "${disko_args[@]}"; then
+			error "Disko failed. Check disk IDs in hosts/$HOST/disko.nix"
+		fi
+	else
+		local disko_ref
+		disko_ref=$(nix flake metadata "path:${REPO_DIR}" --json 2>/dev/null |
+			jq -r '.locks.nodes.disko.locked | "github:\(.owner)/\(.repo)/\(.rev)"')
+		if [[ -z "$disko_ref" || "$disko_ref" == "null" ]]; then
+			disko_ref="github:nix-community/disko"
+		fi
+		if ! nix run "$disko_ref" -- "${disko_args[@]}"; then
+			error "Disko failed. Check disk IDs in hosts/$HOST/disko.nix"
+		fi
+	fi
 
-  success "Disks partitioned and mounted at /mnt"
+	success "Disks partitioned and mounted at /mnt"
 }
 
 phase_mount() {
-  local disko_args=(--mode mount --flake "$REPO_DIR#$HOST")
+	local disko_args=(--mode mount --flake "$REPO_DIR#$HOST")
 
-  if [[ "$INSTALLER_ISO" == true ]]; then
-    command -v disko &>/dev/null || error "Disko is missing from the installer ISO."
-    if ! disko "${disko_args[@]}"; then
-      error "Disko mount failed. Are the disks connected?"
-    fi
-  else
-    local disko_ref
-    disko_ref=$(nix flake metadata "path:${REPO_DIR}" --json 2>/dev/null \
-      | jq -r '.locks.nodes.disko.locked | "github:\(.owner)/\(.repo)/\(.rev)"')
-    if [[ -z "$disko_ref" || "$disko_ref" == "null" ]]; then
-      disko_ref="github:nix-community/disko"
-    fi
-    if ! nix run "$disko_ref" -- "${disko_args[@]}"; then
-      error "Disko mount failed. Are the disks connected?"
-    fi
-  fi
+	if [[ "$INSTALLER_ISO" == true ]]; then
+		command -v disko &>/dev/null || error "Disko is missing from the installer ISO."
+		if ! disko "${disko_args[@]}"; then
+			error "Disko mount failed. Are the disks connected?"
+		fi
+	else
+		local disko_ref
+		disko_ref=$(nix flake metadata "path:${REPO_DIR}" --json 2>/dev/null |
+			jq -r '.locks.nodes.disko.locked | "github:\(.owner)/\(.repo)/\(.rev)"')
+		if [[ -z "$disko_ref" || "$disko_ref" == "null" ]]; then
+			disko_ref="github:nix-community/disko"
+		fi
+		if ! nix run "$disko_ref" -- "${disko_args[@]}"; then
+			error "Disko mount failed. Are the disks connected?"
+		fi
+	fi
 
-  success "Existing disks mounted at /mnt"
+	success "Existing disks mounted at /mnt"
 }
 
 #===========================
@@ -828,70 +885,70 @@ phase_mount() {
 #===========================
 
 phase_install() {
-  local host_dir="$REPO_DIR/hosts/$HOST"
+	local host_dir="$REPO_DIR/hosts/$HOST"
 
-  # Scale build parallelism to available RAM (~4 GB per job, min 1)
-  # Uses MemAvailable (not MemTotal) so live ISO overhead is accounted for
-  local avail_gb max_jobs
-  avail_gb=$(awk '/^MemAvailable:/{printf "%d", $2/1024/1024}' /proc/meminfo)
-  max_jobs=$(( avail_gb / 4 ))
-  (( max_jobs < 1 )) && max_jobs=1
-  echo ""
-  success "RAM available: ${avail_gb} GB — using --max-jobs ${max_jobs}"
-  echo ""
+	# Scale build parallelism to available RAM (~4 GB per job, min 1)
+	# Uses MemAvailable (not MemTotal) so live ISO overhead is accounted for
+	local avail_gb max_jobs
+	avail_gb=$(awk '/^MemAvailable:/{printf "%d", $2/1024/1024}' /proc/meminfo)
+	max_jobs=$((avail_gb / 4))
+	((max_jobs < 1)) && max_jobs=1
+	echo ""
+	success "RAM available: ${avail_gb} GB — using --max-jobs ${max_jobs}"
+	echo ""
 
-  [[ "$FEAT_ENCRYPTION" == "true" ]] && luks_password_file > /dev/null
+	[[ "$FEAT_ENCRYPTION" == "true" ]] && luks_password_file >/dev/null
 
-  if [[ "$INSTALLER_ISO" == true ]]; then
-    success "Using prebuilt system closure from installer ISO"
-  else
-    info "Generating hardware configuration..."
-    echo ""
-    nixos-generate-config --root /mnt --show-hardware-config > "$host_dir/hardware-configuration.generated.nix"
-    nix flake lock "$REPO_DIR"
-    git -C "$REPO_DIR" add "$host_dir/hardware-configuration.generated.nix" "$REPO_DIR/flake.lock"
-    success "Hardware configuration generated"
-    echo ""
-  fi
+	if [[ "$INSTALLER_ISO" == true ]]; then
+		success "Using prebuilt system closure from installer ISO"
+	else
+		info "Generating hardware configuration..."
+		echo ""
+		nixos-generate-config --root /mnt --show-hardware-config >"$host_dir/hardware-configuration.generated.nix"
+		nix flake lock "$REPO_DIR"
+		git -C "$REPO_DIR" add "$host_dir/hardware-configuration.generated.nix" "$REPO_DIR/flake.lock"
+		success "Hardware configuration generated"
+		echo ""
+	fi
 
-  # Redirect nix temp/build dirs to /mnt so they land on disk, not the live ISO tmpfs
-  mkdir -p /mnt/tmp
-  export TMPDIR=/mnt/tmp
+	# Redirect nix temp/build dirs to /mnt so they land on disk, not the live ISO tmpfs
+	mkdir -p /mnt/tmp
+	export TMPDIR=/mnt/tmp
 
-  if [[ "$INSTALLER_ISO" == true ]]; then
-    local system_path
-    system_path=$(jq -r --arg host "$HOST" '.hosts[$host].system // empty' "$ISO_MANIFEST")
-    [[ -n "$system_path" && -e "$system_path" ]] \
-      || error "Prebuilt system closure for $HOST is missing from the installer ISO."
+	if [[ "$INSTALLER_ISO" == true ]]; then
+		local system_path
+		system_path=$(jq -r --arg host "$HOST" '.hosts[$host].system // empty' "$ISO_MANIFEST")
+		[[ -n "$system_path" && -e "$system_path" ]] ||
+			error "Prebuilt system closure for $HOST is missing from the installer ISO."
 
-    if ! nixos-install --system "$system_path" --no-root-password --max-jobs "$max_jobs"; then
-      error "nixos-install failed. Check the output above."
-    fi
-  elif [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
-    # Disable lanzaboote for the install — keys don't exist yet.
-    # secure-boot-init handles everything after first boot.
-    local override_nix="$host_dir/secure-boot-install-override.nix"
-    printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }\n' > "$override_nix"
-    sed -i "/imports = \[/a\\    .\/secure-boot-install-override.nix" "$host_dir/configuration.nix"
-    git -C "$REPO_DIR" add "$override_nix" "$host_dir/configuration.nix"
+		if ! nixos-install --system "$system_path" --no-root-password --max-jobs "$max_jobs"; then
+			error "nixos-install failed. Check the output above."
+		fi
+	elif [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
+		# Disable lanzaboote for the install — keys don't exist yet.
+		# secure-boot-init handles everything after first boot.
+		local override_nix="$host_dir/secure-boot-install-override.nix"
+		printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }\n' >"$override_nix"
+		sed -i "/imports = \[/a\\    .\/secure-boot-install-override.nix" "$host_dir/configuration.nix"
+		git -C "$REPO_DIR" add "$override_nix" "$host_dir/configuration.nix"
 
-    local install_ok=true
-    nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs" \
-      || install_ok=false
+		local install_ok=true
+		nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs" ||
+			install_ok=false
 
-    sed -i '/secure-boot-install-override\.nix/d' "$host_dir/configuration.nix"
-    rm -f "$override_nix"
-    git -C "$REPO_DIR" add "$host_dir/configuration.nix"
-    git -C "$REPO_DIR" rm --cached "$override_nix" 2>/dev/null || true
+		sed -i '/secure-boot-install-override\.nix/d' "$host_dir/configuration.nix"
+		rm -f "$override_nix"
+		git -C "$REPO_DIR" add "$host_dir/configuration.nix"
+		git -C "$REPO_DIR" rm --cached "$override_nix" 2>/dev/null || true
 
-    [[ "$install_ok" == true ]] || error "nixos-install failed. Check the output above."
-  else
-    if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs"; then
-      error "nixos-install failed. Check the output above."
-    fi
-  fi
+		[[ "$install_ok" == true ]] || error "nixos-install failed. Check the output above."
+	else
+		if ! nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs"; then
+			error "nixos-install failed. Check the output above."
+		fi
+	fi
 
-  success "NixOS installed"
+	success "NixOS installed"
 }
 
 #===========================
@@ -899,183 +956,184 @@ phase_install() {
 #===========================
 
 setup_ssh() {
-  AGE_KEY="$(nix-shell -p ssh-to-age --run "ssh-to-age -private-key -i $(printf '%q' "$SSH_KEY_FILE")")"
+	AGE_KEY="$(nix-shell -p ssh-to-age --run "ssh-to-age -private-key -i $(printf '%q' "$SSH_KEY_FILE")")"
 
-  local ssh_dir="/mnt/home/$CONFIG_USERNAME/.ssh"
-  mkdir -p "$ssh_dir"
-  cp "$SSH_KEY_FILE" "$ssh_dir/id_ed25519"
-  ssh-keygen -y -f "$SSH_KEY_FILE" > "$ssh_dir/id_ed25519.pub"
-  chmod 700 "$ssh_dir"
-  chmod 600 "$ssh_dir/id_ed25519"
-  chmod 644 "$ssh_dir/id_ed25519.pub"
+	local ssh_dir="/mnt/home/$CONFIG_USERNAME/.ssh"
+	mkdir -p "$ssh_dir"
+	cp "$SSH_KEY_FILE" "$ssh_dir/id_ed25519"
+	ssh-keygen -y -f "$SSH_KEY_FILE" >"$ssh_dir/id_ed25519.pub"
+	chmod 700 "$ssh_dir"
+	chmod 600 "$ssh_dir/id_ed25519"
+	chmod 644 "$ssh_dir/id_ed25519.pub"
 
-  # Clean up temp file if key was pasted (not a persistent path)
-  [[ -z "$SSH_KEY" ]] && rm -f "$SSH_KEY_FILE"
+	# Clean up temp file if key was pasted (not a persistent path)
+	[[ -z "$SSH_KEY" ]] && rm -f "$SSH_KEY_FILE"
 
-  success "SSH key installed"
+	success "SSH key installed"
 }
 
 setup_sops() {
-  local user_dir="/mnt/home/$CONFIG_USERNAME/.config/sops/age"
-  local system_dir="/mnt${PERSIST_PREFIX}/var/lib/sops/age"
+	local user_dir="/mnt/home/$CONFIG_USERNAME/.config/sops/age"
+	local system_dir="/mnt${PERSIST_PREFIX}/var/lib/sops/age"
 
-  mkdir -p "$user_dir" "$system_dir"
-  echo "$AGE_KEY" > "$user_dir/keys.txt"
-  echo "$AGE_KEY" > "$system_dir/keys.txt"
-  chmod 600 "$user_dir/keys.txt" "$system_dir/keys.txt"
+	mkdir -p "$user_dir" "$system_dir"
+	echo "$AGE_KEY" >"$user_dir/keys.txt"
+	echo "$AGE_KEY" >"$system_dir/keys.txt"
+	chmod 600 "$user_dir/keys.txt" "$system_dir/keys.txt"
 
-  success "SOPS age key saved"
+	success "SOPS age key saved"
 }
 
 setup_totp() {
-  local secret_hex secret_b32 oath_file
-  secret_hex=$(od -An -tx1 -N20 /dev/urandom | tr -d ' \n')
-  secret_b32=$(printf '%s' "$secret_hex" | sed 's/../\\x&/g' | xargs -0 printf '%b' | base32 | tr -d '\n')
+	local secret_hex secret_b32 oath_file
+	secret_hex=$(od -An -tx1 -N20 /dev/urandom | tr -d ' \n')
+	secret_b32=$(printf '%s' "$secret_hex" | sed 's/../\\x&/g' | xargs -0 printf '%b' | base32 | tr -d '\n')
 
-  oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"
-  mkdir -p "$(dirname "$oath_file")"
-  install -m 600 /dev/null "$oath_file"
-  echo "HOTP/T30/6 $CONFIG_USERNAME - $secret_hex" > "$oath_file"
+	oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"
+	mkdir -p "$(dirname "$oath_file")"
+	install -m 600 /dev/null "$oath_file"
+	echo "HOTP/T30/6 $CONFIG_USERNAME - $secret_hex" >"$oath_file"
 
-  echo ""
-  info "Scan this QR code with your authenticator app:"
-  echo ""
-  nix-shell -p qrencode --run \
-    "qrencode -t ANSIUTF8 'otpauth://totp/NixOS:${CONFIG_USERNAME}@${HOST}?secret=${secret_b32}&issuer=NixOS'"
-  echo ""
-  echo -e "    Backup secret (base32): ${BOLD}$secret_b32${RESET}"
-  echo ""
+	echo ""
+	info "Scan this QR code with your authenticator app:"
+	echo ""
+	nix-shell -p qrencode --run \
+		"qrencode -t ANSIUTF8 'otpauth://totp/NixOS:${CONFIG_USERNAME}@${HOST}?secret=${secret_b32}&issuer=NixOS'"
+	echo ""
+	echo -e "    Backup secret (base32): ${BOLD}$secret_b32${RESET}"
+	echo ""
 
-  # Verify OTP before confirming
-  local verified=false
-  for _ in 1 2 3; do
-    read -rp "    Enter OTP code to verify: " otp_code
-    local expected
-    expected=$(nix-shell -p oath-toolkit --run "oathtool --totp -d 6 $secret_hex")
-    if [[ "$otp_code" == "$expected" ]]; then
-      verified=true
-      break
-    fi
-    warn "Incorrect. Try again."
-  done
+	# Verify OTP before confirming
+	local verified=false
+	for _ in 1 2 3; do
+		read -rp "    Enter OTP code to verify: " otp_code
+		local expected
+		expected=$(nix-shell -p oath-toolkit --run "oathtool --totp -d 6 $secret_hex")
+		if [[ "$otp_code" == "$expected" ]]; then
+			verified=true
+			break
+		fi
+		warn "Incorrect. Try again."
+	done
 
-  if [[ "$verified" != "true" ]]; then
-    warn "Verification failed. Removing secret."
-    rm -f "$oath_file"
-    return 1
-  fi
+	if [[ "$verified" != "true" ]]; then
+		warn "Verification failed. Removing secret."
+		rm -f "$oath_file"
+		return 1
+	fi
 
-  success "TOTP configured"
+	success "TOTP configured"
 }
-
 
 setup_tpm() {
-  # TPM hardware present?
-  [[ -c /dev/tpmrm0 ]] || { warn "No TPM2 device found, skipping."; return 1; }
+	# TPM hardware present?
+	[[ -c /dev/tpmrm0 ]] || {
+		warn "No TPM2 device found, skipping."
+		return 1
+	}
 
-  # systemd-cryptenroll available?
-  if ! command -v systemd-cryptenroll &>/dev/null; then
-    warn "systemd-cryptenroll not available, skipping TPM enrollment."
-    return 1
-  fi
+	# systemd-cryptenroll available?
+	if ! command -v systemd-cryptenroll &>/dev/null; then
+		warn "systemd-cryptenroll not available, skipping TPM enrollment."
+		return 1
+	fi
 
-  local password_file
-  password_file="$(luks_password_file)"
+	local password_file
+	password_file="$(luks_password_file)"
 
-  local pcrs="0+7"
-  for dev in "${LUKS_DEVICES[@]}"; do
-    info "Enrolling TPM2 on $(basename "$dev")..."
-    if systemd-cryptenroll "$dev" --tpm2-device=auto --tpm2-pcrs="$pcrs" --unlock-key-file="$password_file"; then
-      success "$(basename "$dev") enrolled"
-    else
-      warn "$(basename "$dev") failed"
-      return 1
-    fi
-  done
+	local pcrs="0+7"
+	for dev in "${LUKS_DEVICES[@]}"; do
+		info "Enrolling TPM2 on $(basename "$dev")..."
+		if systemd-cryptenroll "$dev" --tpm2-device=auto --tpm2-pcrs="$pcrs" --unlock-key-file="$password_file"; then
+			success "$(basename "$dev") enrolled"
+		else
+			warn "$(basename "$dev") failed"
+			return 1
+		fi
+	done
 
-  TPM_ENROLLED=true
-  save_state
+	TPM_ENROLLED=true
+	save_state
 }
 
-
 copy_config() {
-  local dest="/mnt/home/$CONFIG_USERNAME/repos/nix"
-  local home_prefix="/mnt/home/$CONFIG_USERNAME"
-  [[ -L "$dest" ]] && rm -f "$dest"
-  if [[ ! -d "$dest" ]]; then
-    mkdir -p "/mnt/home/$CONFIG_USERNAME/repos"
+	local dest="/mnt/home/$CONFIG_USERNAME/repos/nix"
+	local home_prefix="/mnt/home/$CONFIG_USERNAME"
+	[[ -L "$dest" ]] && rm -f "$dest"
+	if [[ ! -d "$dest" ]]; then
+		mkdir -p "/mnt/home/$CONFIG_USERNAME/repos"
 
-    if [[ "$INSTALLER_ISO" != true ]]; then
-      # Stage all local changes (stateVersion, hardware config, password hash) so
-      # nix eval on the installed system sees them immediately. Committing is left
-      # to the user — the installer does not create commits on their behalf.
-      git -C "$REPO_DIR" add --all
-    fi
+		if [[ "$INSTALLER_ISO" != true ]]; then
+			# Stage all local changes (stateVersion, hardware config, password hash) so
+			# nix eval on the installed system sees them immediately. Committing is left
+			# to the user — the installer does not create commits on their behalf.
+			git -C "$REPO_DIR" add --all
+		fi
 
-    # Copy the exact build-time repository snapshot used by the installer.
-    cp -aL "$REPO_DIR" "$dest"
+		# Copy the exact build-time repository snapshot used by the installer.
+		cp -aL "$REPO_DIR" "$dest"
 
-    if [[ "$INSTALLER_ISO" == true ]] && command -v git &>/dev/null \
-      && timeout 10 git ls-remote "$REPO_URL" HEAD &>/dev/null; then
-      local remote_dest="${dest}.remote"
-      rm -rf "$remote_dest"
-      if git clone --depth 1 --branch main "$REPO_URL" "$remote_dest" &>/dev/null; then
-        git -C "$remote_dest" remote set-url origin "$REPO_REMOTE_URL"
-        rm -rf "$dest"
-        mv "$remote_dest" "$dest"
-        success "Online repository cloned to ~${dest#"$home_prefix"}"
-        return 0
-      fi
-      rm -rf "$remote_dest"
-      warn "Online repository clone failed; keeping the embedded ISO snapshot."
-    fi
+		if [[ "$INSTALLER_ISO" == true ]] && command -v git &>/dev/null &&
+			timeout 10 git ls-remote "$REPO_URL" HEAD &>/dev/null; then
+			local remote_dest="${dest}.remote"
+			rm -rf "$remote_dest"
+			if git clone --depth 1 --branch main "$REPO_URL" "$remote_dest" &>/dev/null; then
+				git -C "$remote_dest" remote set-url origin "$REPO_REMOTE_URL"
+				rm -rf "$dest"
+				mv "$remote_dest" "$dest"
+				success "Online repository cloned to ~${dest#"$home_prefix"}"
+				return 0
+			fi
+			rm -rf "$remote_dest"
+			warn "Online repository clone failed; keeping the embedded ISO snapshot."
+		fi
 
-    if git -C "$dest" remote get-url origin &>/dev/null; then
-      git -C "$dest" remote set-url origin "$REPO_REMOTE_URL"
-    fi
+		if git -C "$dest" remote get-url origin &>/dev/null; then
+			git -C "$dest" remote set-url origin "$REPO_REMOTE_URL"
+		fi
 
-    success "Config copied to ~${dest#"$home_prefix"}"
-  fi
+		success "Config copied to ~${dest#"$home_prefix"}"
+	fi
 }
 
 phase_post_install() {
-  echo ""
-  setup_ssh
-  setup_sops
+	echo ""
+	setup_ssh
+	setup_sops
 
-  if [[ "$FEAT_TOTP" == "true" ]]; then
-    local oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"
-    if [[ -f "$oath_file" ]]; then
-      success "TOTP already configured (cached)"
-    elif [[ "$SKIP_TOTP" == "true" || "$YES" == "true" ]]; then
-      warn "TOTP setup skipped. Run 'totp-init' after first boot."
-    elif ! setup_totp; then
-      warn "TOTP setup failed. Run 'totp-init' after first boot."
-    fi
-  fi
+	if [[ "$FEAT_TOTP" == "true" ]]; then
+		local oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"
+		if [[ -f "$oath_file" ]]; then
+			success "TOTP already configured (cached)"
+		elif [[ "$SKIP_TOTP" == "true" || "$YES" == "true" ]]; then
+			warn "TOTP setup skipped. Run 'totp-init' after first boot."
+		elif ! setup_totp; then
+			warn "TOTP setup failed. Run 'totp-init' after first boot."
+		fi
+	fi
 
-  if [[ "$FEAT_ENCRYPTION" == "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
-    if [[ "$FEAT_YUBIKEY_LUKS" != "true" ]]; then
-      if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
-        # TPM PCR 7 measures Secure Boot state — enrolling now (Secure Boot OFF) would
-        # produce a seal that breaks once Secure Boot is enabled after secure-boot-init.
-        # Defer to first boot, after Secure Boot is fully set up.
-        true
-      elif ! setup_tpm; then
-        warn "TPM enrollment skipped. Run 'sudo tpm-luks-init' after first boot."
-      fi
-    fi
-  fi
+	if [[ "$FEAT_ENCRYPTION" == "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
+		if [[ "$FEAT_YUBIKEY_LUKS" != "true" ]]; then
+			if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
+				# TPM PCR 7 measures Secure Boot state — enrolling now (Secure Boot OFF) would
+				# produce a seal that breaks once Secure Boot is enabled after secure-boot-init.
+				# Defer to first boot, after Secure Boot is fully set up.
+				true
+			elif ! setup_tpm; then
+				warn "TPM enrollment skipped. Run 'sudo tpm-luks-init' after first boot."
+			fi
+		fi
+	fi
 
-  if ! copy_config; then
-    warn "Config copy failed. Clone the repo manually after boot."
-  fi
+	if ! copy_config; then
+		warn "Config copy failed. Clone the repo manually after boot."
+	fi
 
-  echo ""
-  info "Fixing home directory ownership..."
-  echo ""
-  nixos-enter --root /mnt -c "chown -R $CONFIG_USERNAME:users /home/$CONFIG_USERNAME"
-  success "Ownership fixed"
+	echo ""
+	info "Fixing home directory ownership..."
+	echo ""
+	nixos-enter --root /mnt -c "chown -R $CONFIG_USERNAME:users /home/$CONFIG_USERNAME"
+	success "Ownership fixed"
 }
 
 #===========================
@@ -1083,152 +1141,152 @@ phase_post_install() {
 #===========================
 
 phase_complete() {
-  INSTALL_SUCCESS=true
+	INSTALL_SUCCESS=true
 
-  # Collect any post-boot tasks so we can show them in one place.
-  # Order matters: Secure Boot before TPM (PCR 7 seals against SB state).
-  local post_boot_tasks=()
-  local tpm_deferred=false
+	# Collect any post-boot tasks so we can show them in one place.
+	# Order matters: Secure Boot before TPM (PCR 7 seals against SB state).
+	local post_boot_tasks=()
+	local tpm_deferred=false
 
-  # Build post-boot task list. Order matters: Secure Boot must run before TPM
-  # because PCR 7 seals against the active Secure Boot state.
-  local oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"
+	# Build post-boot task list. Order matters: Secure Boot must run before TPM
+	# because PCR 7 seals against the active Secure Boot state.
+	local oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"
 
-  [[ "$FEAT_SECURE_BOOT" == "true" ]] && \
-    post_boot_tasks+=("secure-boot-init    — sign boot files and enroll Secure Boot keys")
+	[[ "$FEAT_SECURE_BOOT" == "true" ]] &&
+		post_boot_tasks+=("secure-boot-init    — sign boot files and enroll Secure Boot keys")
 
-  [[ "$FEAT_YUBIKEY_LUKS" == "true" && "$FEAT_ENCRYPTION" == "true" ]] && \
-    post_boot_tasks+=("yubikey-luks-init   — enroll YubiKey FIDO2 for LUKS unlock at boot")
+	[[ "$FEAT_YUBIKEY_LUKS" == "true" && "$FEAT_ENCRYPTION" == "true" ]] &&
+		post_boot_tasks+=("yubikey-luks-init   — enroll YubiKey FIDO2 for LUKS unlock at boot")
 
-  [[ "$FEAT_YUBIKEY" == "true" ]] && \
-    post_boot_tasks+=("yubikey-init        — register YubiKey for sudo / SSH")
+	[[ "$FEAT_YUBIKEY" == "true" ]] &&
+		post_boot_tasks+=("yubikey-init        — register YubiKey for sudo / SSH")
 
-  # TOTP: only shown when not already configured (skipped via --skip-totp or -y)
-  [[ "$FEAT_TOTP" == "true" && ! -f "$oath_file" ]] && \
-    post_boot_tasks+=("totp-init           — configure TOTP 2FA for sudo / SSH")
+	# TOTP: only shown when not already configured (skipped via --skip-totp or -y)
+	[[ "$FEAT_TOTP" == "true" && ! -f "$oath_file" ]] &&
+		post_boot_tasks+=("totp-init           — configure TOTP 2FA for sudo / SSH")
 
-  # TPM: deferred when Secure Boot is enabled so the seal is made against the
-  # final SB state (PCR 7). Enrolling before SB is active produces a broken seal.
-  if [[ "$TPM_ENROLLED" != "true" && "$FEAT_ENCRYPTION" == "true" && \
-        "$FEAT_UNLOCK_METHOD" == "tpm2" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
-    tpm_deferred=true
-    post_boot_tasks+=("tpm-luks-init       — enroll TPM2 for automatic LUKS unlock at boot")
-  fi
+	# TPM: deferred when Secure Boot is enabled so the seal is made against the
+	# final SB state (PCR 7). Enrolling before SB is active produces a broken seal.
+	if [[ "$TPM_ENROLLED" != "true" && "$FEAT_ENCRYPTION" == "true" &&
+		"$FEAT_UNLOCK_METHOD" == "tpm2" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
+		tpm_deferred=true
+		post_boot_tasks+=("tpm-luks-init       — enroll TPM2 for automatic LUKS unlock at boot")
+	fi
 
-  # ASUS board detection for Secure Boot instructions
-  local board_vendor sys_vendor is_asus=false
-  board_vendor="$(cat /sys/class/dmi/id/board_vendor 2>/dev/null || true)"
-  sys_vendor="$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)"
-  if [[ "$board_vendor" == *"ASUSTeK"* || "$board_vendor" == *"ASUS"* || \
-        "$sys_vendor" == *"ASUSTeK"* || "$sys_vendor" == *"ASUS"* ]]; then
-    is_asus=true
-  fi
+	# ASUS board detection for Secure Boot instructions
+	local board_vendor sys_vendor is_asus=false
+	board_vendor="$(cat /sys/class/dmi/id/board_vendor 2>/dev/null || true)"
+	sys_vendor="$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)"
+	if [[ "$board_vendor" == *"ASUSTeK"* || "$board_vendor" == *"ASUS"* ||
+		"$sys_vendor" == *"ASUSTeK"* || "$sys_vendor" == *"ASUS"* ]]; then
+		is_asus=true
+	fi
 
-  echo ""
-  echo -e "${BOLD}============================================${RESET}"
-  echo -e "${GREEN}${BOLD}  Installation complete!${RESET}"
-  echo -e "${BOLD}============================================${RESET}"
+	echo ""
+	echo -e "${BOLD}============================================${RESET}"
+	echo -e "${GREEN}${BOLD}  Installation complete!${RESET}"
+	echo -e "${BOLD}============================================${RESET}"
 
-  # ---- What was set up ----
-  echo ""
-  echo -e "  ${BOLD}What was set up:${RESET}"
-  echo ""
-  echo -e "    NixOS installed for ${BOLD}$HOST${RESET} (${CONFIG_USERNAME})"
-  if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
-    if [[ "$TPM_ENROLLED" == "true" ]]; then
-      echo -e "    Disk encryption:  ${GREEN}LUKS + TPM2 auto-unlock${RESET}  ${DIM}(password fallback works)${RESET}"
-    elif [[ "$FEAT_YUBIKEY_LUKS" == "true" ]]; then
-      echo -e "    Disk encryption:  ${GREEN}LUKS${RESET}  ${DIM}(YubiKey FIDO2 enrollment pending — password at boot until then)${RESET}"
-    elif [[ "$tpm_deferred" == "true" ]]; then
-      echo -e "    Disk encryption:  ${GREEN}LUKS${RESET}  ${DIM}(TPM2 enrollment pending — password at boot until then)${RESET}"
-    else
-      echo -e "    Disk encryption:  ${GREEN}LUKS${RESET}  ${DIM}(password required at boot)${RESET}"
-    fi
-  fi
-  if [[ "$FEAT_TOTP" == "true" ]]; then
-    if [[ -f "$oath_file" ]]; then
-      echo -e "    TOTP 2FA:         ${GREEN}configured${RESET}  ${DIM}(use your authenticator app for sudo/SSH)${RESET}"
-    else
-      echo -e "    TOTP 2FA:         ${YELLOW}pending${RESET}  ${DIM}(run totp-init after first boot)${RESET}"
-    fi
-  fi
-  echo -e "    SSH key:          ${GREEN}installed${RESET}"
-  echo -e "    SOPS age key:     ${GREEN}installed${RESET}"
+	# ---- What was set up ----
+	echo ""
+	echo -e "  ${BOLD}What was set up:${RESET}"
+	echo ""
+	echo -e "    NixOS installed for ${BOLD}$HOST${RESET} (${CONFIG_USERNAME})"
+	if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
+		if [[ "$TPM_ENROLLED" == "true" ]]; then
+			echo -e "    Disk encryption:  ${GREEN}LUKS + TPM2 auto-unlock${RESET}  ${DIM}(password fallback works)${RESET}"
+		elif [[ "$FEAT_YUBIKEY_LUKS" == "true" ]]; then
+			echo -e "    Disk encryption:  ${GREEN}LUKS${RESET}  ${DIM}(YubiKey FIDO2 enrollment pending — password at boot until then)${RESET}"
+		elif [[ "$tpm_deferred" == "true" ]]; then
+			echo -e "    Disk encryption:  ${GREEN}LUKS${RESET}  ${DIM}(TPM2 enrollment pending — password at boot until then)${RESET}"
+		else
+			echo -e "    Disk encryption:  ${GREEN}LUKS${RESET}  ${DIM}(password required at boot)${RESET}"
+		fi
+	fi
+	if [[ "$FEAT_TOTP" == "true" ]]; then
+		if [[ -f "$oath_file" ]]; then
+			echo -e "    TOTP 2FA:         ${GREEN}configured${RESET}  ${DIM}(use your authenticator app for sudo/SSH)${RESET}"
+		else
+			echo -e "    TOTP 2FA:         ${YELLOW}pending${RESET}  ${DIM}(run totp-init after first boot)${RESET}"
+		fi
+	fi
+	echo -e "    SSH key:          ${GREEN}installed${RESET}"
+	echo -e "    SOPS age key:     ${GREEN}installed${RESET}"
 
-  # ---- What to do after first boot ----
-  if [[ ${#post_boot_tasks[@]} -gt 0 ]]; then
-    echo ""
-    echo -e "  ${BOLD}${YELLOW}After first boot, run these commands:${RESET}"
-    echo ""
-    local i=1
-    for task in "${post_boot_tasks[@]}"; do
-      local cmd="${task%%—*}"
-      local desc="${task#*—}"
-      echo -e "    ${BOLD}$((i++)).${RESET} ${BOLD}${cmd}${RESET} ${DIM}—${desc}${RESET}"
-    done
-    echo ""
-    if [[ "$tpm_deferred" == "true" && "$FEAT_SECURE_BOOT" == "true" ]]; then
-      echo -e "    ${DIM}Run secure-boot-init first — TPM enrollment seals against the active${RESET}"
-      echo -e "    ${DIM}Secure Boot state (PCR 7). Wrong order = broken auto-unlock.${RESET}"
-    else
-      echo -e "    ${DIM}Until enrolled: LUKS uses password, sudo uses password fallback.${RESET}"
-    fi
-  fi
+	# ---- What to do after first boot ----
+	if [[ ${#post_boot_tasks[@]} -gt 0 ]]; then
+		echo ""
+		echo -e "  ${BOLD}${YELLOW}After first boot, run these commands:${RESET}"
+		echo ""
+		local i=1
+		for task in "${post_boot_tasks[@]}"; do
+			local cmd="${task%%—*}"
+			local desc="${task#*—}"
+			echo -e "    ${BOLD}$((i++)).${RESET} ${BOLD}${cmd}${RESET} ${DIM}—${desc}${RESET}"
+		done
+		echo ""
+		if [[ "$tpm_deferred" == "true" && "$FEAT_SECURE_BOOT" == "true" ]]; then
+			echo -e "    ${DIM}Run secure-boot-init first — TPM enrollment seals against the active${RESET}"
+			echo -e "    ${DIM}Secure Boot state (PCR 7). Wrong order = broken auto-unlock.${RESET}"
+		else
+			echo -e "    ${DIM}Until enrolled: LUKS uses password, sudo uses password fallback.${RESET}"
+		fi
+	fi
 
-  # ---- Secure Boot UEFI instructions ----
-  if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
-    echo ""
-    echo -e "  ${BOLD}Secure Boot — UEFI steps before running secure-boot-init:${RESET}"
-    echo ""
-    echo -e "    ${DIM}NixOS will boot normally with Secure Boot OFF until you complete these steps.${RESET}"
-    echo ""
-    if [[ "$is_asus" == "true" ]]; then
-      echo -e "    ${YELLOW}! ASUS board — special Setup Mode procedure required.${RESET}"
-      echo ""
-      echo -e "    ${BOLD}Step A${RESET} — In UEFI (Boot → Secure Boot):"
-      echo -e "      OS Type:          ${BOLD}Other OS${RESET}"
-      echo -e "      Secure Boot Mode: ${BOLD}Custom${RESET}"
-      echo -e "      Key Management:   ${BOLD}Clear Secure Boot Keys${RESET}"
-      echo -e "      ${DIM}(ASUS does not enter Setup Mode automatically — key deletion is required)${RESET}"
-      echo ""
-      echo -e "    ${BOLD}Step B${RESET} — Save, reboot into NixOS and run ${BOLD}secure-boot-init${RESET}"
-      echo ""
-      echo -e "    ${BOLD}Step C${RESET} — In UEFI: activate Secure Boot:"
-      echo -e "      Secure Boot: ${BOLD}Enabled${RESET}"
-      echo -e "      ${DIM}→ Secure Boot state will show: On${RESET}"
-    else
-      echo -e "    ${BOLD}Step A${RESET} — In UEFI: enter Setup Mode:"
-      echo -e "      Disable Secure Boot"
-      echo -e "      Enable ${BOLD}Setup Mode${RESET}  ${DIM}(or 'Reset to Setup Mode' — clears existing keys)${RESET}"
-      echo -e "      Save and reboot into NixOS"
-      echo ""
-      echo -e "    ${BOLD}Step B${RESET} — Run ${BOLD}secure-boot-init${RESET}"
-      echo -e "      ${DIM}Generates keys, rebuilds with lanzaboote, enrolls into firmware.${RESET}"
-      echo ""
-      echo -e "    ${BOLD}Step C${RESET} — In UEFI: enable ${BOLD}Secure Boot${RESET}"
-      echo -e "      ${DIM}Then run secure-boot-init once more to verify all files are signed.${RESET}"
-    fi
-  fi
+	# ---- Secure Boot UEFI instructions ----
+	if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
+		echo ""
+		echo -e "  ${BOLD}Secure Boot — UEFI steps before running secure-boot-init:${RESET}"
+		echo ""
+		echo -e "    ${DIM}NixOS will boot normally with Secure Boot OFF until you complete these steps.${RESET}"
+		echo ""
+		if [[ "$is_asus" == "true" ]]; then
+			echo -e "    ${YELLOW}! ASUS board — special Setup Mode procedure required.${RESET}"
+			echo ""
+			echo -e "    ${BOLD}Step A${RESET} — In UEFI (Boot → Secure Boot):"
+			echo -e "      OS Type:          ${BOLD}Other OS${RESET}"
+			echo -e "      Secure Boot Mode: ${BOLD}Custom${RESET}"
+			echo -e "      Key Management:   ${BOLD}Clear Secure Boot Keys${RESET}"
+			echo -e "      ${DIM}(ASUS does not enter Setup Mode automatically — key deletion is required)${RESET}"
+			echo ""
+			echo -e "    ${BOLD}Step B${RESET} — Save, reboot into NixOS and run ${BOLD}secure-boot-init${RESET}"
+			echo ""
+			echo -e "    ${BOLD}Step C${RESET} — In UEFI: activate Secure Boot:"
+			echo -e "      Secure Boot: ${BOLD}Enabled${RESET}"
+			echo -e "      ${DIM}→ Secure Boot state will show: On${RESET}"
+		else
+			echo -e "    ${BOLD}Step A${RESET} — In UEFI: enter Setup Mode:"
+			echo -e "      Disable Secure Boot"
+			echo -e "      Enable ${BOLD}Setup Mode${RESET}  ${DIM}(or 'Reset to Setup Mode' — clears existing keys)${RESET}"
+			echo -e "      Save and reboot into NixOS"
+			echo ""
+			echo -e "    ${BOLD}Step B${RESET} — Run ${BOLD}secure-boot-init${RESET}"
+			echo -e "      ${DIM}Generates keys, rebuilds with lanzaboote, enrolls into firmware.${RESET}"
+			echo ""
+			echo -e "    ${BOLD}Step C${RESET} — In UEFI: enable ${BOLD}Secure Boot${RESET}"
+			echo -e "      ${DIM}Then run secure-boot-init once more to verify all files are signed.${RESET}"
+		fi
+	fi
 
-  echo ""
-  echo -e "${BOLD}============================================${RESET}"
-  echo ""
+	echo ""
+	echo -e "${BOLD}============================================${RESET}"
+	echo ""
 
-  # ---- Reboot prompt ----
-  if [[ "$YES" != true ]]; then
-    if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
-      read -rp "    Reboot into UEFI firmware setup now? [Y/n]: " confirm
-      if [[ ! "${confirm:-}" =~ ^[nN]$ ]]; then
-        systemctl reboot --firmware-setup
-      else
-        echo "    Reboot manually when ready."
-      fi
-    else
-      read -rp "    Reboot now? [Y/n]: " confirm
-      [[ "${confirm:-}" =~ ^[nN]$ ]] || reboot
-    fi
-  fi
-  echo ""
+	# ---- Reboot prompt ----
+	if [[ "$YES" != true ]]; then
+		if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
+			read -rp "    Reboot into UEFI firmware setup now? [Y/n]: " confirm
+			if [[ ! "${confirm:-}" =~ ^[nN]$ ]]; then
+				systemctl reboot --firmware-setup
+			else
+				echo "    Reboot manually when ready."
+			fi
+		else
+			read -rp "    Reboot now? [Y/n]: " confirm
+			[[ "${confirm:-}" =~ ^[nN]$ ]] || reboot
+		fi
+	fi
+	echo ""
 }
 
 #===========================
@@ -1238,11 +1296,11 @@ phase_complete() {
 # Shows which post-install steps still need to be done.
 # Used both on the upgrade entry screen and after a successful upgrade.
 show_pending_setup() {
-  local json
-  if [[ "$INSTALLER_ISO" == true ]]; then
-    json=$(jq -c --arg host "$HOST" '.hosts[$host] // empty' "$ISO_MANIFEST")
-  else
-    json=$(nix eval --json "$REPO_DIR#nixosConfigurations.${HOST}.config" --apply '
+	local json
+	if [[ "$INSTALLER_ISO" == true ]]; then
+		json=$(jq -c --arg host "$HOST" '.hosts[$host] // empty' "$ISO_MANIFEST")
+	else
+		json=$(nix eval --json "$REPO_DIR#nixosConfigurations.${HOST}.config" --apply '
     cfg: {
       secureBoot    = cfg.features.secureBoot.enable;
       yubikey       = cfg.features.auth.yubikey.enable;
@@ -1253,84 +1311,84 @@ show_pending_setup() {
       persistPrefix = cfg.features.impermanence.persistPrefix;
     }
     ' 2>/dev/null) || error "Failed to evaluate setup status. Check flake syntax."
-  fi
+	fi
 
-  local feat_sb feat_yubikey feat_yubikey_luks feat_totp feat_enc feat_unlock_method persist_prefix
-  feat_sb=$(echo "$json"           | jq -r '.secureBoot    // false')
-  feat_yubikey=$(echo "$json"      | jq -r '.yubikey       // false')
-  feat_yubikey_luks=$(echo "$json" | jq -r '.yubikeyLuks   // false')
-  feat_totp=$(echo "$json"         | jq -r '.totp          // false')
-  feat_enc=$(echo "$json"          | jq -r '.encryption    // false')
-  feat_unlock_method=$(echo "$json" | jq -r '.unlockMethod  // "password"')
-  persist_prefix=$(echo "$json"    | jq -r '.persistPrefix // ""')
+	local feat_sb feat_yubikey feat_yubikey_luks feat_totp feat_enc feat_unlock_method persist_prefix
+	feat_sb=$(jq -r '.secureBoot // false' <<<"$json")
+	feat_yubikey=$(jq -r '.yubikey // false' <<<"$json")
+	feat_yubikey_luks=$(jq -r '.yubikeyLuks // false' <<<"$json")
+	feat_totp=$(jq -r '.totp // false' <<<"$json")
+	feat_enc=$(jq -r '.encryption // false' <<<"$json")
+	feat_unlock_method=$(jq -r '.unlockMethod // "password"' <<<"$json")
+	persist_prefix=$(jq -r '.persistPrefix // ""' <<<"$json")
 
-  # Live state checks
-  local sb_active=false yubikey_luks_enrolled=false yubikey_pam_enrolled=false totp_enrolled=false
-  local invoking_username="${SUDO_USER:-$USER}"
+	# Live state checks
+	local sb_active=false yubikey_luks_enrolled=false yubikey_pam_enrolled=false totp_enrolled=false
+	local invoking_username="${SUDO_USER:-$USER}"
 
-  if [[ "$feat_sb" == "true" ]]; then
-    local sb_state
-    sb_state=$(bootctl status 2>/dev/null | awk '/Secure Boot:/{print $3}')
-    [[ "$sb_state" == "enabled" ]] && sb_active=true
-  fi
-  if [[ "$feat_yubikey_luks" == "true" && "$feat_enc" == "true" ]]; then
-    # Find the underlying LUKS block device by looking for the parent of the
-    # first crypt device — systemd-cryptenroll needs the raw partition, not /dev/mapper/...
-    local first_dev
-    first_dev=$(lsblk -rno NAME,TYPE,PKNAME | awk '$2=="crypt" && $3!="" {print "/dev/"$3; exit}')
-    if [[ -n "$first_dev" ]] && systemd-cryptenroll "$first_dev" 2>/dev/null | grep -q "fido2"; then
-      yubikey_luks_enrolled=true
-    fi
-  fi
-  local tpm_enrolled=false
-  if [[ "$feat_unlock_method" == "tpm2" && "$feat_enc" == "true" ]]; then
-    local tpm_first_dev
-    tpm_first_dev=$(lsblk -rno NAME,TYPE,PKNAME | awk '$2=="crypt" && $3!="" {print "/dev/"$3; exit}')
-    if [[ -n "$tpm_first_dev" ]] && systemd-cryptenroll "$tpm_first_dev" 2>/dev/null | grep -q "tpm2"; then
-      tpm_enrolled=true
-    fi
-  fi
-  if [[ "$feat_yubikey" == "true" ]]; then
-    local u2f_file="${persist_prefix}/etc/u2f_mappings"
-    [[ -f "$u2f_file" ]] && grep -q "^${invoking_username}:" "$u2f_file" 2>/dev/null && yubikey_pam_enrolled=true
-  fi
-  if [[ "$feat_totp" == "true" ]]; then
-    local oath_file="${persist_prefix}/etc/users.oath"
-    [[ -f "$oath_file" ]] && grep -q "^HOTP.*${invoking_username}" "$oath_file" 2>/dev/null && totp_enrolled=true
-  fi
+	if [[ "$feat_sb" == "true" ]]; then
+		local sb_state
+		sb_state=$(bootctl status 2>/dev/null | awk '/Secure Boot:/{print $3}')
+		[[ "$sb_state" == "enabled" ]] && sb_active=true
+	fi
+	if [[ "$feat_yubikey_luks" == "true" && "$feat_enc" == "true" ]]; then
+		# Find the underlying LUKS block device by looking for the parent of the
+		# first crypt device — systemd-cryptenroll needs the raw partition, not /dev/mapper/...
+		local first_dev
+		first_dev=$(lsblk -rno NAME,TYPE,PKNAME | awk '$2=="crypt" && $3!="" {print "/dev/"$3; exit}')
+		if [[ -n "$first_dev" ]] && systemd-cryptenroll "$first_dev" 2>/dev/null | grep -q "fido2"; then
+			yubikey_luks_enrolled=true
+		fi
+	fi
+	local tpm_enrolled=false
+	if [[ "$feat_unlock_method" == "tpm2" && "$feat_enc" == "true" ]]; then
+		local tpm_first_dev
+		tpm_first_dev=$(lsblk -rno NAME,TYPE,PKNAME | awk '$2=="crypt" && $3!="" {print "/dev/"$3; exit}')
+		if [[ -n "$tpm_first_dev" ]] && systemd-cryptenroll "$tpm_first_dev" 2>/dev/null | grep -q "tpm2"; then
+			tpm_enrolled=true
+		fi
+	fi
+	if [[ "$feat_yubikey" == "true" ]]; then
+		local u2f_file="${persist_prefix}/etc/u2f_mappings"
+		[[ -f "$u2f_file" ]] && grep -q "^${invoking_username}:" "$u2f_file" 2>/dev/null && yubikey_pam_enrolled=true
+	fi
+	if [[ "$feat_totp" == "true" ]]; then
+		local oath_file="${persist_prefix}/etc/users.oath"
+		[[ -f "$oath_file" ]] && grep -q "^HOTP.*${invoking_username}" "$oath_file" 2>/dev/null && totp_enrolled=true
+	fi
 
-  # Build pending task list
-  local pending=()
+	# Build pending task list
+	local pending=()
 
-  [[ "$feat_sb" == "true"           && "$sb_active" != "true"            ]] && \
-    pending+=("secure-boot-init    — sign boot files and enroll Secure Boot keys into firmware")
+	[[ "$feat_sb" == "true" && "$sb_active" != "true" ]] &&
+		pending+=("secure-boot-init    — sign boot files and enroll Secure Boot keys into firmware")
 
-  [[ "$feat_yubikey_luks" == "true" && "$yubikey_luks_enrolled" != "true" ]] && \
-    pending+=("yubikey-luks-init   — enroll YubiKey FIDO2 for automatic disk unlock at boot")
+	[[ "$feat_yubikey_luks" == "true" && "$yubikey_luks_enrolled" != "true" ]] &&
+		pending+=("yubikey-luks-init   — enroll YubiKey FIDO2 for automatic disk unlock at boot")
 
-  [[ "$feat_yubikey" == "true"      && "$yubikey_pam_enrolled" != "true"  ]] && \
-    pending+=("yubikey-init        — register YubiKey for sudo and SSH authentication")
+	[[ "$feat_yubikey" == "true" && "$yubikey_pam_enrolled" != "true" ]] &&
+		pending+=("yubikey-init        — register YubiKey for sudo and SSH authentication")
 
-  [[ "$feat_totp" == "true"         && "$totp_enrolled" != "true"         ]] && \
-    pending+=("totp-init           — set up TOTP two-factor authentication for sudo and SSH")
+	[[ "$feat_totp" == "true" && "$totp_enrolled" != "true" ]] &&
+		pending+=("totp-init           — set up TOTP two-factor authentication for sudo and SSH")
 
-  [[ "$feat_unlock_method" == "tpm2" && "$feat_enc" == "true" && "$tpm_enrolled" != "true" ]] && \
-    pending+=("tpm-luks-init       — enroll TPM2 for automatic disk unlock at boot")
+	[[ "$feat_unlock_method" == "tpm2" && "$feat_enc" == "true" && "$tpm_enrolled" != "true" ]] &&
+		pending+=("tpm-luks-init       — enroll TPM2 for automatic disk unlock at boot")
 
-  if [[ ${#pending[@]} -eq 0 ]]; then
-    success "All features are fully set up."
-  else
-    echo -e "  ${BOLD}${YELLOW}Pending setup:${RESET}"
-    echo ""
-    local i=1
-    for task in "${pending[@]}"; do
-      local cmd="${task%%—*}"
-      local desc="${task#*—}"
-      echo -e "    ${BOLD}$((i++)).${RESET} ${BOLD}${cmd}${RESET} ${DIM}—${desc}${RESET}"
-    done
-    echo ""
-    echo -e "    ${DIM}Each script is interactive and guides you through the process step by step.${RESET}"
-  fi
+	if [[ ${#pending[@]} -eq 0 ]]; then
+		success "All features are fully set up."
+	else
+		echo -e "  ${BOLD}${YELLOW}Pending setup:${RESET}"
+		echo ""
+		local i=1
+		for task in "${pending[@]}"; do
+			local cmd="${task%%—*}"
+			local desc="${task#*—}"
+			echo -e "    ${BOLD}$((i++)).${RESET} ${BOLD}${cmd}${RESET} ${DIM}—${desc}${RESET}"
+		done
+		echo ""
+		echo -e "    ${DIM}Each script is interactive and guides you through the process step by step.${RESET}"
+	fi
 }
 
 #===========================
@@ -1338,117 +1396,117 @@ show_pending_setup() {
 #===========================
 
 phase_upgrade() {
-  # Mirror what the auto-upgrade service does:
-  # 1. Reset flake.lock to HEAD (discard local experiments)
-  # 2. Pull latest changes from remote
-  # 3. nixos-rebuild switch (activate immediately, unlike the service which uses boot)
+	# Mirror what the auto-upgrade service does:
+	# 1. Reset flake.lock to HEAD (discard local experiments)
+	# 2. Pull latest changes from remote
+	# 3. nixos-rebuild switch (activate immediately, unlike the service which uses boot)
 
-  local invoking_user="${SUDO_USER:-$USER}"
+	local invoking_user="${SUDO_USER:-$USER}"
 
-  info "Syncing repository..."
-  echo ""
-  if git -C "$REPO_DIR" remote get-url origin &>/dev/null; then
-    sudo -u "$invoking_user" git -C "$REPO_DIR" checkout flake.lock
-    sudo -u "$invoking_user" git -C "$REPO_DIR" pull --ff-only
-    success "Repository up to date"
-  else
-    warn "No git remote configured — skipping pull"
-  fi
-  echo ""
+	info "Syncing repository..."
+	echo ""
+	if git -C "$REPO_DIR" remote get-url origin &>/dev/null; then
+		sudo -u "$invoking_user" git -C "$REPO_DIR" checkout flake.lock
+		sudo -u "$invoking_user" git -C "$REPO_DIR" pull --ff-only
+		success "Repository up to date"
+	else
+		warn "No git remote configured — skipping pull"
+	fi
+	echo ""
 
-  info "Rebuilding system..."
-  echo ""
+	info "Rebuilding system..."
+	echo ""
 
-  if [[ "$REPAIR" == "true" ]]; then
-    if [[ $EUID -eq 0 ]]; then
-      info "Repairing Nix store before rebuild..."
-      nix-store --verify --repair || true
-    else
-      warn "--repair requires root/trusted-user privileges; continuing without repair."
-    fi
-    echo ""
-  fi
+	if [[ "$REPAIR" == "true" ]]; then
+		if [[ $EUID -eq 0 ]]; then
+			info "Repairing Nix store before rebuild..."
+			nix-store --verify --repair || true
+		else
+			warn "--repair requires root/trusted-user privileges; continuing without repair."
+		fi
+		echo ""
+	fi
 
-  # Stop the auto-upgrade timer (and service if currently building) to prevent
-  # concurrent Nix store access which causes "getting attributes of path" errors.
-  local upgrade_was_active=false
-  if systemctl is-active --quiet nixos-upgrade.timer 2>/dev/null \
-      || systemctl is-active --quiet nixos-upgrade.service 2>/dev/null; then
-    upgrade_was_active=true
-    if systemctl is-active --quiet nixos-upgrade.service 2>/dev/null; then
-      info "nixos-upgrade.service is running — waiting for it to finish..."
-      systemctl stop nixos-upgrade.service 2>/dev/null || true
-      info "Verifying Nix store integrity..."
-      nix-store --verify --repair 2>/dev/null || true
-    fi
-    info "Stopping nixos-upgrade.timer..."
-    systemctl stop nixos-upgrade.timer 2>/dev/null || true
-  fi
+	# Stop the auto-upgrade timer (and service if currently building) to prevent
+	# concurrent Nix store access which causes "getting attributes of path" errors.
+	local upgrade_was_active=false
+	if systemctl is-active --quiet nixos-upgrade.timer 2>/dev/null ||
+		systemctl is-active --quiet nixos-upgrade.service 2>/dev/null; then
+		upgrade_was_active=true
+		if systemctl is-active --quiet nixos-upgrade.service 2>/dev/null; then
+			info "nixos-upgrade.service is running — waiting for it to finish..."
+			systemctl stop nixos-upgrade.service 2>/dev/null || true
+			info "Verifying Nix store integrity..."
+			nix-store --verify --repair 2>/dev/null || true
+		fi
+		info "Stopping nixos-upgrade.timer..."
+		systemctl stop nixos-upgrade.timer 2>/dev/null || true
+	fi
 
-  local avail_gb max_jobs
-  avail_gb=$(awk '/^MemAvailable:/{printf "%d", $2/1024/1024}' /proc/meminfo)
-  max_jobs=$(( avail_gb / 4 ))
-  (( max_jobs < 1 )) && max_jobs=1
-  echo ""
-  success "RAM available: ${avail_gb} GB — using --max-jobs ${max_jobs}"
-  echo ""
+	local avail_gb max_jobs
+	avail_gb=$(awk '/^MemAvailable:/{printf "%d", $2/1024/1024}' /proc/meminfo)
+	max_jobs=$((avail_gb / 4))
+	((max_jobs < 1)) && max_jobs=1
+	echo ""
+	success "RAM available: ${avail_gb} GB — using --max-jobs ${max_jobs}"
+	echo ""
 
-  # lanzaboote requires /var/lib/sbctl/keys to exist at build time.
-  # If secure-boot-init hasn't run yet, disable lanzaboote for this rebuild
-  # so the system can still be upgraded. secure-boot-init will re-enable it.
-  local sb_keys_exist=false
-  [[ -f /var/lib/sbctl/keys/db/db.pem && -f /var/lib/sbctl/keys/db/db.key ]] && sb_keys_exist=true
+	# lanzaboote requires /var/lib/sbctl/keys to exist at build time.
+	# If secure-boot-init hasn't run yet, disable lanzaboote for this rebuild
+	# so the system can still be upgraded. secure-boot-init will re-enable it.
+	local sb_keys_exist=false
+	[[ -f /var/lib/sbctl/keys/db/db.pem && -f /var/lib/sbctl/keys/db/db.key ]] && sb_keys_exist=true
 
-  # Check if secureBoot is enabled by grepping the host config directly —
-  # more reliable than nix eval which can fail for various reasons on an
-  # installed system (missing flake registry, network, etc.)
-  local sb_config_enabled=false
-  local host_config="$REPO_DIR/hosts/$HOST/configuration.nix"
-  grep -q 'secureBoot\.enable\s*=\s*true' "$host_config" 2>/dev/null && sb_config_enabled=true
+	# Check if secureBoot is enabled by grepping the host config directly —
+	# more reliable than nix eval which can fail for various reasons on an
+	# installed system (missing flake registry, network, etc.)
+	local sb_config_enabled=false
+	local host_config="$REPO_DIR/hosts/$HOST/configuration.nix"
+	grep -q 'secureBoot\.enable\s*=\s*true' "$host_config" 2>/dev/null && sb_config_enabled=true
 
-  local rebuild_ok=true
-  if [[ "$sb_config_enabled" == "true" && "$sb_keys_exist" != "true" ]]; then
-    warn "Secure Boot keys not yet generated — disabling lanzaboote for this rebuild."
-    echo ""
-    local host_dir="$REPO_DIR/hosts/$HOST"
-    local override_nix="$host_dir/secure-boot-upgrade-override.nix"
-    printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }\n' > "$override_nix"
-    sed -i "/imports = \[/a\\    .\/secure-boot-upgrade-override.nix" "$host_dir/configuration.nix"
-    git -C "$REPO_DIR" add "$override_nix" "$host_dir/configuration.nix"
+	local rebuild_ok=true
+	if [[ "$sb_config_enabled" == "true" && "$sb_keys_exist" != "true" ]]; then
+		warn "Secure Boot keys not yet generated — disabling lanzaboote for this rebuild."
+		echo ""
+		local host_dir="$REPO_DIR/hosts/$HOST"
+		local override_nix="$host_dir/secure-boot-upgrade-override.nix"
+		printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }\n' >"$override_nix"
+		sed -i "/imports = \[/a\\    .\/secure-boot-upgrade-override.nix" "$host_dir/configuration.nix"
+		git -C "$REPO_DIR" add "$override_nix" "$host_dir/configuration.nix"
 
-    nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" || rebuild_ok=false
+		nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" || rebuild_ok=false
 
-    sed -i '/secure-boot-upgrade-override\.nix/d' "$host_dir/configuration.nix"
-    rm -f "$override_nix"
-    git -C "$REPO_DIR" rm --cached "$override_nix" 2>/dev/null || true
-    git -C "$REPO_DIR" add "$host_dir/configuration.nix"
-  else
-    nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" || rebuild_ok=false
-  fi
+		sed -i '/secure-boot-upgrade-override\.nix/d' "$host_dir/configuration.nix"
+		rm -f "$override_nix"
+		git -C "$REPO_DIR" rm --cached "$override_nix" 2>/dev/null || true
+		git -C "$REPO_DIR" add "$host_dir/configuration.nix"
+	else
+		nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" || rebuild_ok=false
+	fi
 
-  if [[ "$upgrade_was_active" == "true" ]]; then
-    info "Restarting nixos-upgrade.timer..."
-    systemctl start nixos-upgrade.timer
-  fi
+	if [[ "$upgrade_was_active" == "true" ]]; then
+		info "Restarting nixos-upgrade.timer..."
+		systemctl start nixos-upgrade.timer
+	fi
 
-  [[ "$rebuild_ok" == true ]] || error "nixos-rebuild failed. Check the output above."
+	[[ "$rebuild_ok" == true ]] || error "nixos-rebuild failed. Check the output above."
 
-  echo ""
-  success "System upgraded."
+	echo ""
+	success "System upgraded."
 
-  [[ "$QUIET_UPGRADE" == "true" ]] && return
+	[[ "$QUIET_UPGRADE" == "true" ]] && return
 
-  echo ""
-  echo -e "${BOLD}============================================${RESET}"
-  echo -e "${GREEN}${BOLD}  Upgrade complete!${RESET}"
-  echo -e "${BOLD}============================================${RESET}"
-  echo ""
+	echo ""
+	echo -e "${BOLD}============================================${RESET}"
+	echo -e "${GREEN}${BOLD}  Upgrade complete!${RESET}"
+	echo -e "${BOLD}============================================${RESET}"
+	echo ""
 
-  show_pending_setup
+	show_pending_setup
 
-  echo ""
-  echo -e "${BOLD}============================================${RESET}"
-  echo ""
+	echo ""
+	echo -e "${BOLD}============================================${RESET}"
+	echo ""
 }
 
 #===========================
@@ -1456,79 +1514,79 @@ phase_upgrade() {
 #===========================
 
 main() {
-  phase_validate
-  load_state
-  phase_select_host
+	phase_validate
+	load_state
+	phase_select_host
 
-  # On an installed system: always upgrade — step flags are ignored.
-  if [[ "$IS_LIVE" != true && "$INSTALLER_ISO" != true ]]; then
-    echo -e "    ${DIM}Pulls the latest configuration from git and rebuilds the system.${RESET}"
-    echo -e "    ${DIM}Activates immediately — no reboot required.${RESET}"
-    echo ""
+	# On an installed system: always upgrade — step flags are ignored.
+	if [[ "$IS_LIVE" != true && "$INSTALLER_ISO" != true ]]; then
+		echo -e "    ${DIM}Pulls the latest configuration from git and rebuilds the system.${RESET}"
+		echo -e "    ${DIM}Activates immediately — no reboot required.${RESET}"
+		echo ""
 
-    if [[ "$YES" == true ]]; then
-      phase_upgrade
-      exit 0
-    fi
+		if [[ "$YES" == true ]]; then
+			phase_upgrade
+			exit 0
+		fi
 
-    local confirm
-    read -rp "Run upgrade now? [Y/n]: " confirm
-    echo ""
-    [[ ! "$confirm" =~ ^[nN]$ ]] || exit 0
-    phase_upgrade
-    exit 0
-  fi
+		local confirm
+		read -rp "Run upgrade now? [Y/n]: " confirm
+		echo ""
+		[[ ! "$confirm" =~ ^[nN]$ ]] || exit 0
+		phase_upgrade
+		exit 0
+	fi
 
-  # shellcheck disable=SC2046
-  echo -e "    Steps: ${BOLD}$(printf '%s ' \
-    $([[ "$DO_FORMAT" == true ]] && echo "format") \
-    $([[ "$DO_INSTALL" == true ]] && echo "install") \
-    $([[ "$DO_POST_INSTALL" == true ]] && echo "post-install"))${RESET}"
-  echo ""
+	# shellcheck disable=SC2046
+	echo -e "    Steps: ${BOLD}$(printf '%s ' \
+		$([[ "$DO_FORMAT" == true ]] && echo "format") \
+		$([[ "$DO_INSTALL" == true ]] && echo "install") \
+		$([[ "$DO_POST_INSTALL" == true ]] && echo "post-install"))${RESET}"
+	echo ""
 
-  phase_detect_features
-  apply_keyboard_layout
-  phase_collect_inputs
-  phase_summary
+	phase_detect_features
+	apply_keyboard_layout
+	phase_collect_inputs
+	phase_summary
 
-  # Mount existing disks via disko if /mnt is not mounted and format was not requested
-  if [[ "$DO_FORMAT" != true ]] && [[ "$DO_INSTALL" == true || "$DO_POST_INSTALL" == true ]]; then
-    if ! mountpoint -q /mnt 2>/dev/null; then
-      DO_MOUNT=true
-    fi
-  fi
+	# Mount existing disks via disko if /mnt is not mounted and format was not requested
+	if [[ "$DO_FORMAT" != true ]] && [[ "$DO_INSTALL" == true || "$DO_POST_INSTALL" == true ]]; then
+		if ! mountpoint -q /mnt 2>/dev/null; then
+			DO_MOUNT=true
+		fi
+	fi
 
-  # Dynamic step count
-  STEP_TOTAL=0
-  [[ "$DO_FORMAT" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
-  [[ "${DO_MOUNT:-false}" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
-  if [[ "$DO_INSTALL" == true ]]; then
-    STEP_TOTAL=$((STEP_TOTAL + 1))
-    [[ "$INSTALLER_ISO" != true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
-  fi
-  [[ "$DO_POST_INSTALL" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
+	# Dynamic step count
+	STEP_TOTAL=0
+	[[ "$DO_FORMAT" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
+	[[ "${DO_MOUNT:-false}" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
+	if [[ "$DO_INSTALL" == true ]]; then
+		STEP_TOTAL=$((STEP_TOTAL + 1))
+		[[ "$INSTALLER_ISO" != true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
+	fi
+	[[ "$DO_POST_INSTALL" == true ]] && STEP_TOTAL=$((STEP_TOTAL + 1))
 
-  if [[ "$DO_FORMAT" == true ]]; then
-    step "Partitioning disks"
-    phase_partition
-  elif [[ "${DO_MOUNT:-false}" == true ]]; then
-    step "Mounting existing disks"
-    phase_mount
-  fi
+	if [[ "$DO_FORMAT" == true ]]; then
+		step "Partitioning disks"
+		phase_partition
+	elif [[ "${DO_MOUNT:-false}" == true ]]; then
+		step "Mounting existing disks"
+		phase_mount
+	fi
 
-  if [[ "$DO_INSTALL" == true ]]; then
-    [[ "$INSTALLER_ISO" != true ]] && step "Detecting NixOS version"
-    phase_state_version
-    step "Installing NixOS"
-    phase_install
-  fi
+	if [[ "$DO_INSTALL" == true ]]; then
+		[[ "$INSTALLER_ISO" != true ]] && step "Detecting NixOS version"
+		phase_state_version
+		step "Installing NixOS"
+		phase_install
+	fi
 
-  if [[ "$DO_POST_INSTALL" == true ]]; then
-    step "Post-install setup"
-    phase_post_install
-  fi
+	if [[ "$DO_POST_INSTALL" == true ]]; then
+		step "Post-install setup"
+		phase_post_install
+	fi
 
-  phase_complete
+	phase_complete
 }
 
 main

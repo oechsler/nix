@@ -140,6 +140,67 @@ in
     };
 
     services = {
+      avahi = {
+        enable = true;
+        nssmdns4 = true;
+        openFirewall = true;
+        publish = {
+          enable = true;
+          addresses = true;
+        };
+      };
+      networkd-dispatcher =
+        lib.mkIf (isHyprland && config.features.wifi.enable && cfg.disconnectOnEthernet)
+          {
+            enable = true;
+            extraArgs = [ "--run-startup-triggers" ];
+            rules.ethernet-wifi-failover = {
+              onState = [
+                "routable"
+                "no-carrier"
+                "off"
+              ];
+              script = ''
+                # iwd's roaming setting is global; wired state decides whether
+                # WiFi should be disconnected or allowed to roam.
+                event_iface="''${IFACE:-}"
+                operational_state="''${OperationalState:-''${STATE:-}}"
+                is_wireless() { [ -d "/sys/class/net/$1/wireless" ]; }
+                ethernet_is_up() {
+                  for net in /sys/class/net/*; do
+                    iface="''${net##*/}"
+                    [ "$iface" = "$event_iface" ] && continue
+                    is_wireless "$iface" && continue
+                    [ -r "$net/type" ] && [ "$(cat "$net/type")" = 1 ] || continue
+                    [ -r "$net/carrier" ] && [ "$(cat "$net/carrier")" = 1 ] && return 0
+                  done
+                  return 1
+                }
+                if is_wireless "$event_iface"; then
+                  ethernet_is_up || exit 0
+                  ${pkgs.iwd}/bin/iwctl station "$event_iface" disconnect || true
+                  exit 0
+                fi
+                if [ "$operational_state" = "routable" ] || ethernet_is_up; then
+                  for wireless in /sys/class/net/*/wireless; do
+                    [ -d "$wireless" ] || continue
+                    iface="''${wireless%/wireless}"
+                    iface="''${iface##*/}"
+                    ${pkgs.iwd}/bin/iwctl station "$iface" disconnect || true
+                  done
+                else
+                  for wireless in /sys/class/net/*/wireless; do
+                    [ -d "$wireless" ] || continue
+                    iface="''${wireless%/wireless}"
+                    iface="''${iface##*/}"
+                    ${lib.concatMapStringsSep "\n" (
+                      net: "${pkgs.iwd}/bin/iwctl station \"$iface\" connect ${lib.escapeShellArg net.ssid} || true"
+                    ) (config.features.wifi.networks ++ config.features.wifi.enterpriseNetworks)}
+                  done
+                fi
+              '';
+            };
+          };
       resolved = {
         enable = true;
         settings.Resolve = {
@@ -165,81 +226,6 @@ in
       services = {
         NetworkManager-wait-online.enable = false;
         resolved.serviceConfig.Environment = [ "SYSTEMD_RESOLVED_FALLBACK_DNS=" ];
-      };
-    };
-
-    services = {
-      networkd-dispatcher =
-        lib.mkIf (isHyprland && config.features.wifi.enable && cfg.disconnectOnEthernet)
-          {
-            enable = true;
-            extraArgs = [ "--run-startup-triggers" ];
-            rules = {
-              ethernet-wifi-failover = {
-                onState = [
-                  "routable"
-                  "no-carrier"
-                  "off"
-                ];
-                script = ''
-                                # iwd's roaming setting is global, so use the wired link state to
-                  # avoid mesh roaming while Ethernet is available.
-                  event_iface="''${IFACE:-}"
-                  operational_state="''${OperationalState:-''${STATE:-}}"
-
-                                is_wireless() {
-                                  [ -d "/sys/class/net/$1/wireless" ]
-                                }
-
-                                ethernet_is_up() {
-                                  for net in /sys/class/net/*; do
-                                    iface="''${net##*/}"
-                                    [ "$iface" = "$event_iface" ] && continue
-                                          is_wireless "$iface" && continue
-                                          [ -r "$net/type" ] && [ "$(cat "$net/type")" = 1 ] || continue
-                                          [ -r "$net/carrier" ] && [ "$(cat "$net/carrier")" = 1 ] && return 0
-                                        done
-                                        return 1
-                                }
-
-                        # A manually restored WiFi connection must not bypass the wired
-                        # preference. Leave WiFi untouched when no Ethernet is available.
-                        if is_wireless "$event_iface"; then
-                          ethernet_is_up || exit 0
-                          ${pkgs.iwd}/bin/iwctl station "$event_iface" disconnect || true
-                          exit 0
-                        fi
-
-                  if [ "$operational_state" = "routable" ] || ethernet_is_up; then
-                                for wireless in /sys/class/net/*/wireless; do
-                                  [ -d "$wireless" ] || continue
-                                  iface="''${wireless%/wireless}"
-                                  iface="''${iface##*/}"
-                                ${pkgs.iwd}/bin/iwctl station "$iface" disconnect || true
-                                done
-                              else
-                                        for wireless in /sys/class/net/*/wireless; do
-                                  [ -d "$wireless" ] || continue
-                                  iface="''${wireless%/wireless}"
-                                  iface="''${iface##*/}"
-                                ${lib.concatMapStringsSep "\n" (
-                                  net: "${pkgs.iwd}/bin/iwctl station \"$iface\" connect ${lib.escapeShellArg net.ssid} || true"
-                                ) (config.features.wifi.networks ++ config.features.wifi.enterpriseNetworks)}
-                                        done
-                                      fi
-                '';
-              };
-            };
-          };
-
-      avahi = {
-        enable = true;
-        nssmdns4 = true;
-        openFirewall = true;
-        publish = {
-          enable = true;
-          addresses = true;
-        };
       };
     };
 

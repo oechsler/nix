@@ -10,9 +10,9 @@
 
 {
   imports = [
+    ./desktop
     ./i18n.nix
     ./programs
-    ./desktop
   ];
 
   # SOPS configuration for home-manager secrets (uses system-level secretsFile)

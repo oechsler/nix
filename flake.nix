@@ -187,7 +187,6 @@
               nixpkgs.overlays = [
                 (final: _prev: {
                   hypr-dock = final.callPackage ./modules/packages/hypr-dock.nix { };
-                  pam-lldap = final.callPackage ./modules/packages/pam-lldap.nix { };
                 })
               ];
             }
@@ -252,7 +251,9 @@
       # this derived from the filesystem prevents the ISO and host outputs from
       # drifting apart when a host is added or removed.
       hostNames = lib.attrNames (
-        lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./hosts)
+        lib.filterAttrs (
+          name: type: type == "directory" && builtins.pathExists ./hosts/${name}/configuration.nix
+        ) (builtins.readDir ./hosts)
       );
 
       nixosConfigurations = lib.genAttrs hostNames mkHost;

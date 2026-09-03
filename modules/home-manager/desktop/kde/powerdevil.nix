@@ -25,6 +25,24 @@
 let
   cfg = config.idle;
   isLaptop = features.hardware.formFactor == "laptop";
+  batteryProfile = brightness: {
+    powerButtonAction = "showLogoutScreen";
+    whenLaptopLidClosed = "sleep";
+    inhibitLidActionWhenExternalMonitorConnected = false;
+    dimDisplay = {
+      enable = true;
+      idleTimeout = cfg.timeouts.dimBattery;
+    };
+    displayBrightness = brightness;
+    turnOffDisplay = {
+      idleTimeout = cfg.timeouts.suspendBattery;
+      idleTimeoutWhenLocked = cfg.timeouts.suspendBattery;
+    };
+    autoSuspend = {
+      action = "sleep";
+      idleTimeout = cfg.timeouts.suspendBattery;
+    };
+  };
 in
 {
   #===========================
@@ -60,52 +78,9 @@ in
           };
         };
 
-        #---------------------------
-        # Battery Profile
-        #---------------------------
-        # Behavior when on battery power
-        battery = {
-          powerButtonAction = "showLogoutScreen";
-          whenLaptopLidClosed = "sleep";
-          inhibitLidActionWhenExternalMonitorConnected = false;
-          dimDisplay = {
-            enable = true;
-            idleTimeout = cfg.timeouts.dimBattery;
-          };
-          displayBrightness = 70;
-          turnOffDisplay = {
-            idleTimeout = cfg.timeouts.suspendBattery;
-            idleTimeoutWhenLocked = cfg.timeouts.suspendBattery;
-          };
-          autoSuspend = {
-            action = "sleep";
-            idleTimeout = cfg.timeouts.suspendBattery;
-          };
-        };
-
-        #---------------------------
-        # Low Battery Profile
-        #---------------------------
-        # Keep the same timing as the normal battery profile to avoid a sudden
-        # behavior change when the low-battery profile becomes active.
-        lowBattery = {
-          powerButtonAction = "showLogoutScreen";
-          whenLaptopLidClosed = "sleep";
-          inhibitLidActionWhenExternalMonitorConnected = false;
-          dimDisplay = {
-            enable = true;
-            idleTimeout = cfg.timeouts.dimBattery;
-          };
-          displayBrightness = 30;
-          turnOffDisplay = {
-            idleTimeout = cfg.timeouts.suspendBattery;
-            idleTimeoutWhenLocked = cfg.timeouts.suspendBattery;
-          };
-          autoSuspend = {
-            action = "sleep";
-            idleTimeout = cfg.timeouts.suspendBattery;
-          };
-        };
+        # Battery profiles use the same timeouts; only the target brightness differs.
+        battery = batteryProfile 70;
+        lowBattery = batteryProfile 30;
       };
 
       # Lock on the AC suspend schedule and require the password immediately.
