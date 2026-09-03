@@ -413,9 +413,10 @@ in
   xdg.desktopEntries.yazi = {
     name = "Yazi";
     genericName = "File Manager";
-    exec = "kitty yazi %U";
+    exec = "kitty --class yazi yazi %U";
     icon = "folder";
     terminal = false;
+    settings.StartupWMClass = "yazi";
     categories = [
       "System"
       "FileManager"
