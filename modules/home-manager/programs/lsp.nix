@@ -57,6 +57,7 @@
 
       # Shell
       bash-language-server
+      fish-lsp
       shfmt
 
       # TOML

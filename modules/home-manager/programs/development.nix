@@ -39,8 +39,10 @@ let
     platformVersions = [ "35" ];
     buildToolsVersions = [ "35.0.0" ];
     includeNDK = true;
-    includeEmulator = false;
-    includeSystemImages = false;
+    includeEmulator = true;
+    includeSystemImages = true;
+    systemImageTypes = [ "google_apis" ];
+    abiVersions = [ "x86_64" ];
   };
 in
 {

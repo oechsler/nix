@@ -452,6 +452,7 @@ The default language environments include compilers or runtimes, language
 servers, diagnostics, and formatters where available:
 
 - C/C++: Clang, LLD, `clangd`, `clang-format`
+- Fish: `fish-lsp`, `fish_indent`
 - Go: Go, `gopls`, `gofumpt`
 - Java: JDK, Gradle, `jdt-language-server`, `google-java-format`
 - JavaScript/TypeScript: Bun, `typescript-language-server`, `prettierd`
@@ -505,7 +506,8 @@ Available values are `android-studio`, `clion`, `datagrip`, `dataspell`,
 #### Android Development
 
 Android tooling is disabled by default. Enable it independently of Android
-Studio to install the Android SDK, platform tools, build tools, and NDK:
+Studio to install the Android SDK, platform tools, build tools, NDK, emulator,
+and an x86_64 Google APIs system image:
 
 ```nix
 features.dev.android.enable = true;
