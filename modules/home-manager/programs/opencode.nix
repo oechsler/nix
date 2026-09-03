@@ -315,18 +315,6 @@ in
         ExecStart = "${opencodeServer}/bin/opencode-server";
         WorkingDirectory = cfg.server.directory;
         Environment = "SSH_AUTH_SOCK=${config.home.homeDirectory}/.ssh/proton-pass-agent.sock";
-        ProtectHome = "tmpfs";
-        BindPaths = [
-          cfg.server.directory
-          "${config.home.homeDirectory}/.local"
-          "${config.home.homeDirectory}/.cache"
-        ];
-        BindReadOnlyPaths = [
-          "${config.xdg.configHome}/git"
-          "${config.xdg.configHome}/opencode"
-          "${config.xdg.configHome}/sops-nix/secrets"
-          "${config.home.homeDirectory}/.ssh"
-        ];
         Restart = "on-failure";
         RestartSec = 5;
       };
