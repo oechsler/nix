@@ -257,13 +257,13 @@ in
           {
             id = "git";
             url = "*";
-            run = "${pkgs.git}/bin/git";
+            run = "git";
             group = "git";
           }
           {
             id = "git";
             url = "*/";
-            run = "${pkgs.git}/bin/git";
+            run = "git";
             group = "git";
           }
         ];
