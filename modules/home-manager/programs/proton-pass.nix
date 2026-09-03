@@ -42,8 +42,16 @@ let
   displayHelpers = import ../../lib/displays.nix { inherit lib; };
   hasHDR = displayHelpers.hasDesktopHDR displays.monitors || displays.defaults.hdr == 2;
   chromium = import ../../lib/chromium.nix { inherit pkgs; };
+  # Electron 43 does not reliably register tray items under Wayland. Keep the
+  # same Electron 42 workaround used by Vesktop until the upstream fix lands.
+  protonPassPackage = pkgs.proton-pass.overrideAttrs (old: {
+    postFixup = (old.postFixup or "") + ''
+      substituteInPlace "$out/bin/proton-pass" \
+        --replace-fail "${lib.getExe pkgs.electron}" "${lib.getExe pkgs.electron_42}"
+    '';
+  });
   protonPass = chromium.wrapHdrSdrApp {
-    package = pkgs.proton-pass;
+    package = protonPassPackage;
     binary = "proton-pass";
     enable = hasHDR;
     name = "proton-pass-electron-hdr-sdr";
