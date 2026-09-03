@@ -76,7 +76,6 @@ in
       storePaths = [
         pkgs.pcsclite.lib
         pkgs.libfido2
-        pkgs.uutils-coreutils-noprefix
       ];
       packages = [ pkgs.libfido2 ];
       services = {
