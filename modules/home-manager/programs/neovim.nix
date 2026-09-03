@@ -5,9 +5,9 @@
 # Features:
 # - LazyVim-based configuration (loaded from ~/.config/nvim)
 # - Comprehensive plugin suite (UI, navigation, editing, LSP)
-# - Treesitter syntax highlighting (Nix, Go, Rust, JS/TS, Java, Lua, Bash, etc.)
-# - LSP servers (nil, gopls, rust-analyzer, typescript, lua-language-server)
-# - Formatters (nixfmt, gofumpt, rustfmt, prettier, stylua)
+# - Treesitter syntax highlighting for all configured language environments
+# - LSP servers for Nix, shell, YAML, Python, Go, Rust, JS/TS, Java, JSON, TOML, and C/C++
+# - Formatters for Nix, shell, Python, Go, Rust, JS/TS, Java, JSON, YAML, Markdown, and C/C++
 # - Clipboard integration (wl-clipboard for Wayland)
 #
 # Plugin categories:
@@ -118,11 +118,20 @@
           javascript
           typescript
           java
+          kotlin
           lua
           bash
           json
           yaml
           toml
+          python
+          c
+          cpp
+          html
+          css
+          xml
+          markdown
+          markdown_inline
         ]
       ))
       mini-nvim
@@ -424,27 +433,78 @@
         filetypes = { "javascript", "javascriptreact", "typescript", "typescriptreact" },
         root_markers = { "tsconfig.json", "jsconfig.json", "package.json" },
       })
-      vim.lsp.config("jdtls", {
-        cmd = { "jdtls" },
-        filetypes = { "java" },
-        root_markers = { "pom.xml", "build.gradle", ".project" },
-      })
-      vim.lsp.enable({ "nil_ls", "gopls", "rust_analyzer", "ts_ls", "jdtls" })
+       vim.lsp.config("jdtls", {
+         cmd = { "jdtls" },
+         filetypes = { "java" },
+         root_markers = { "pom.xml", "build.gradle", ".project" },
+       })
+       vim.lsp.config("kotlin_language_server", {
+         cmd = { "kotlin-language-server" },
+         filetypes = { "kotlin" },
+         root_markers = { "settings.gradle", "settings.gradle.kts", "build.gradle", "build.gradle.kts", ".git" },
+       })
+       vim.lsp.config("bashls", {
+         cmd = { "bash-language-server", "start" },
+         filetypes = { "sh", "bash", "zsh" },
+         root_markers = { ".git" },
+       })
+       vim.lsp.config("yamlls", {
+         cmd = { "yaml-language-server", "--stdio" },
+         filetypes = { "yaml" },
+         root_markers = { ".git" },
+       })
+       vim.lsp.config("pyright", {
+         cmd = { "pyright-langserver", "--stdio" },
+         filetypes = { "python" },
+         root_markers = { "pyproject.toml", "setup.py", "setup.cfg", "requirements.txt", ".git" },
+       })
+       vim.lsp.config("marksman", {
+         cmd = { "marksman", "server" },
+         filetypes = { "markdown" },
+         root_markers = { ".git" },
+       })
+       vim.lsp.config("jsonls", {
+         cmd = { "vscode-json-language-server", "--stdio" },
+         filetypes = { "json", "jsonc" },
+         root_markers = { "package.json", ".git" },
+       })
+       vim.lsp.config("taplo", {
+         cmd = { "taplo", "lsp", "stdio" },
+         filetypes = { "toml" },
+         root_markers = { "pyproject.toml", "Cargo.toml", ".git" },
+       })
+       vim.lsp.config("clangd", {
+         cmd = { "clangd" },
+         filetypes = { "c", "cpp", "objc", "objcpp" },
+         root_markers = { "compile_commands.json", "compile_flags.txt", "CMakeLists.txt", ".git" },
+       })
+       vim.lsp.enable({
+         "nil_ls", "gopls", "rust_analyzer", "ts_ls", "jdtls", "kotlin_language_server", "bashls", "yamlls", "pyright",
+         "marksman", "jsonls", "taplo", "clangd",
+       })
 
-      require("conform").setup({
-        formatters_by_ft = {
-          nix = { "nixfmt" },
-          go = { "gofumpt" },
-          rust = { "rustfmt" },
-          javascript = { "prettierd" },
-          typescript = { "prettierd" },
-          javascriptreact = { "prettierd" },
-          typescriptreact = { "prettierd" },
-          json = { "prettierd" },
-          yaml = { "prettierd" },
-          markdown = { "prettierd" },
-          java = { "google-java-format" },
-        },
+       require("conform").setup({
+         formatters_by_ft = {
+           bash = { "shfmt" },
+           c = { "clang_format" },
+           cpp = { "clang_format" },
+           go = { "gofumpt" },
+           java = { "google-java-format" },
+           javascript = { "prettierd" },
+           javascriptreact = { "prettierd" },
+           json = { "prettierd" },
+           kotlin = { "ktlint" },
+           kotlin_script = { "ktlint" },
+           markdown = { "prettierd" },
+           nix = { "nixfmt" },
+           python = { "ruff" },
+           rust = { "rustfmt" },
+           sh = { "shfmt" },
+           typescript = { "prettierd" },
+           typescriptreact = { "prettierd" },
+           yaml = { "prettierd" },
+           zsh = { "shfmt" },
+         },
         format_on_save = { timeout_ms = 500, lsp_format = "fallback" },
       })
 
