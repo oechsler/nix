@@ -447,21 +447,19 @@ Development tools inherit from `features.dev.enable` by default. OpenCode is
 ready to use with the shared model defaults; hosts only need to add services
 that are specific to them.
 
-| Option                                   | Default                    | Description                                 |
-| ---------------------------------------- | -------------------------- | ------------------------------------------- |
-| `features.dev.enable`                    | `true`                     | Development languages, tools, and IDEs.     |
-| `features.dev.opencode.enable`           | `dev.enable`               | OpenCode AI coding agent.                   |
-| `features.dev.opencode.defaultModel`     | `openai/gpt-5.6-luna`      | Model used when no other model is selected. |
-| `features.dev.opencode.settings`         | `{}`                       | Additional OpenCode settings.               |
-| `features.dev.opencode.provider`         | shared defaults            | Available model providers and models.       |
-| `features.dev.opencode.mcp`              | none enabled               | Additional OpenCode integrations.           |
-| `features.dev.opencode.lsp`              | shared defaults            | Language servers for OpenCode.              |
-| `features.dev.opencode.formatter`        | shared defaults            | Formatters for supported source files.      |
-| `features.dev.opencode.server.enable`    | `false`                    | Background OpenCode server.                 |
-| `features.dev.opencode.server.directory` | `~/repos`                  | Working directory for the server.           |
-| `features.dev.jetbrains.enable`          | `dev.enable`               | JetBrains IDEs as a group.                  |
-| `features.dev.jetbrains.entries`         | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.                  |
-| `features.dev.dbeaver.enable`            | `dev.enable`               | DBeaver database GUI.                       |
+| Option                               | Default                    | Description                                 |
+| ------------------------------------ | -------------------------- | ------------------------------------------- |
+| `features.dev.enable`                | `true`                     | Development languages, tools, and IDEs.     |
+| `features.dev.opencode.enable`       | `dev.enable`               | OpenCode AI coding agent.                   |
+| `features.dev.opencode.defaultModel` | `openai/gpt-5.6-luna`      | Model used when no other model is selected. |
+| `features.dev.opencode.settings`     | `{}`                       | Additional OpenCode settings.               |
+| `features.dev.opencode.provider`     | shared defaults            | Available model providers and models.       |
+| `features.dev.opencode.mcp`          | none enabled               | Additional OpenCode integrations.           |
+| `features.dev.opencode.lsp`          | shared defaults            | Language servers for OpenCode.              |
+| `features.dev.opencode.formatter`    | shared defaults            | Formatters for supported source files.      |
+| `features.dev.jetbrains.enable`      | `dev.enable`               | JetBrains IDEs as a group.                  |
+| `features.dev.jetbrains.entries`     | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.                  |
+| `features.dev.dbeaver.enable`        | `dev.enable`               | DBeaver database GUI.                       |
 
 #### JetBrains IDEs
 
@@ -541,9 +539,6 @@ Use `settings.small_model` to choose a separate small model. Remote MCPs can
 configure OAuth/OIDC with `oauth`; its client secret is referenced through
 `clientSecretSecret`. See
 [sops/README.md](../sops/README.md) for the credential layout and workflow.
-
-When `features.dev.opencode.server.enable` is enabled, OpenCode is available in
-the browser at `https://opencode.caddy`.
 
 ### Operations
 
