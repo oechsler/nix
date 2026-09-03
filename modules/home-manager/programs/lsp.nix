@@ -58,6 +58,9 @@
       prettierd
       gofumpt
       google-java-format
+      shfmt
+      ruff
+      clang-tools
     ];
   };
 }

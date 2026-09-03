@@ -348,6 +348,54 @@ in
           default = { };
           description = "Additional OpenCode LSP servers and overrides.";
         };
+        formatter = lib.mkOption {
+          type = lib.types.attrsOf (
+            lib.types.submodule {
+              options = {
+                enable = lib.mkEnableOption "this OpenCode formatter" // {
+                  default = true;
+                };
+                command = lib.mkOption {
+                  type = lib.types.listOf lib.types.str;
+                  default = [ ];
+                  description = "Command and arguments for the formatter.";
+                };
+                extensions = lib.mkOption {
+                  type = lib.types.listOf lib.types.str;
+                  default = [ ];
+                  description = "File extensions handled by the formatter.";
+                };
+                environment = lib.mkOption {
+                  type = lib.types.attrsOf lib.types.str;
+                  default = { };
+                  description = "Environment variables for the formatter.";
+                };
+              };
+            }
+          );
+          default = { };
+          description = "Additional OpenCode formatters and overrides.";
+        };
+        server = {
+          enable = (lib.mkEnableOption "OpenCode background server") // {
+            default = false;
+          };
+          directory = lib.mkOption {
+            type = lib.types.path;
+            default = "/home/${config.user.name}/repos";
+            description = "Working directory exposed by the OpenCode server.";
+          };
+          hostname = lib.mkOption {
+            type = lib.types.str;
+            default = "0.0.0.0";
+            description = "Hostname or address on which the OpenCode server listens.";
+          };
+          port = lib.mkOption {
+            type = lib.types.port;
+            default = 4096;
+            description = "TCP port for the OpenCode server.";
+          };
+        };
         provider = lib.mkOption {
           type = lib.types.attrsOf (
             lib.types.submodule {

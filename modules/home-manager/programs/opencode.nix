@@ -86,6 +86,89 @@ let
       export ${mcpOAuthEnvName name}="$(< ${mcpOAuthSecretPath server})"
     '') mcpWithOAuthSecrets
   );
+  defaultFormatters = {
+    nixfmt = {
+      command = [
+        "${pkgs.nixfmt}/bin/nixfmt"
+        "$FILE"
+      ];
+      extensions = [ ".nix" ];
+    };
+    prettier = {
+      command = [
+        "${pkgs.prettierd}/bin/prettierd"
+        "$FILE"
+      ];
+      extensions = [
+        ".js"
+        ".jsx"
+        ".ts"
+        ".tsx"
+        ".json"
+        ".jsonc"
+        ".yaml"
+        ".yml"
+        ".md"
+      ];
+    };
+    shfmt = {
+      command = [
+        "${pkgs.shfmt}/bin/shfmt"
+        "-w"
+        "$FILE"
+      ];
+      extensions = [
+        ".sh"
+        ".bash"
+        ".zsh"
+      ];
+    };
+    ruff = {
+      command = [
+        "${pkgs.ruff}/bin/ruff"
+        "format"
+        "$FILE"
+      ];
+      extensions = [
+        ".py"
+        ".pyi"
+      ];
+    };
+    gofumpt = {
+      command = [
+        "${pkgs.gofumpt}/bin/gofumpt"
+        "-w"
+        "$FILE"
+      ];
+      extensions = [ ".go" ];
+    };
+    rustfmt = {
+      command = [
+        "${pkgs.rustfmt}/bin/rustfmt"
+        "$FILE"
+      ];
+      extensions = [ ".rs" ];
+    };
+    google-java-format = {
+      command = [
+        "${pkgs.google-java-format}/bin/google-java-format"
+        "--replace"
+        "$FILE"
+      ];
+      extensions = [ ".java" ];
+    };
+  };
+  formatterSettings = lib.mapAttrs (
+    _name: formatter:
+    {
+      disabled = !(formatter.enable or true);
+    }
+    // lib.optionalAttrs (formatter.command != [ ]) { inherit (formatter) command; }
+    // lib.optionalAttrs (formatter.extensions != [ ]) { inherit (formatter) extensions; }
+    // lib.optionalAttrs ((formatter.environment or { }) != { }) {
+      inherit (formatter) environment;
+    }
+  ) (defaultFormatters // cfg.formatter);
   providerSettings = lib.mapAttrs (
     name: provider:
     {
@@ -164,6 +247,11 @@ let
     ${providerEnvAssignments}${mcpEnvAssignments}${mcpOAuthEnvAssignments}
     exec ${pkgs.opencode}/bin/opencode "$@"
   '';
+  opencodeServer = pkgs.writeShellScriptBin "opencode-server" ''
+    exec ${opencodeWithSecrets}/bin/opencode serve \
+      --hostname ${lib.escapeShellArg cfg.server.hostname} \
+      --port ${toString cfg.server.port}
+  '';
 in
 {
   config = lib.mkIf (features.dev.enable && features.dev.opencode.enable) {
@@ -203,6 +291,7 @@ in
           };
         }
         // lspSettings;
+        formatter = formatterSettings;
         model = cfg.defaultModel;
         small_model = cfg.settings.small_model or cfg.defaultModel;
 
@@ -217,6 +306,21 @@ in
 
         provider = providerSettings;
       };
+    };
+
+    systemd.user.services.opencode-server = lib.mkIf cfg.server.enable {
+      Unit = {
+        Description = "OpenCode background server";
+        After = [ "sops-install-secrets.service" ];
+      };
+      Service = {
+        Type = "exec";
+        ExecStart = "${opencodeServer}/bin/opencode-server";
+        WorkingDirectory = cfg.server.directory;
+        Restart = "on-failure";
+        RestartSec = 5;
+      };
+      Install.WantedBy = [ "default.target" ];
     };
   };
 }
