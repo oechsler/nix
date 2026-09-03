@@ -377,7 +377,7 @@ in
           description = "Additional OpenCode formatters and overrides.";
         };
         server = {
-          # The server is private; the central Caddy endpoint is https://opencode.local.
+          # The server is private; the central Caddy endpoint is https://opencode.caddy.
           enable = (lib.mkEnableOption "OpenCode background server") // {
             default = false;
           };
