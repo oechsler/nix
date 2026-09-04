@@ -66,7 +66,7 @@
         context = 49152;
         unloadAfter = "-1";
         models = {
-          "muse-glimmer:30b".name = "Muse Glimmer 30B";
+          "qwen3.8:27b".name = "Qwen 3.8 27B";
         };
       };
     };
