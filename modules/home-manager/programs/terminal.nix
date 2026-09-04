@@ -184,20 +184,13 @@ in
       '';
     };
 
-    home.packages =
-      with pkgs;
-      [
-        dust
-        fd
-        jq
-        procs
-        ripgrep
-        sd
-      ]
-      ++ lib.optionals (features.desktop.wm == "hyprland") [
-        bluetui
-        impala
-        wiremix
-      ];
+    home.packages = with pkgs; [
+      dust
+      fd
+      jq
+      procs
+      ripgrep
+      sd
+    ];
   };
 }

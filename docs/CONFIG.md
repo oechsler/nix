@@ -231,6 +231,10 @@ PSK networks require `name` and `ssid`; enterprise networks additionally
 require `identity`. SMB shares are mounted below `~/smb/<label>/`, and their
 `username` defaults to `user.name`.
 
+On Hyprland and headless hosts, enabled WiFi, Bluetooth, and audio also install
+the corresponding CLI management tools: `impala`, `bluetui`, and `wiremix`.
+KDE uses its native network, Bluetooth, and audio tools instead.
+
 ```nix
 features = {
   wifi = {

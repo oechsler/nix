@@ -48,7 +48,7 @@ in
     ];
 
     security.pam.services = lib.mkMerge [
-      (lib.genAttrs [ "login" "sudo" "polkit-1" "hyprlock" ] (_: {
+      (lib.genAttrs [ "login" "sudo" "polkit-1" "hyprlock" "sshd" ] (_: {
         unixAuth = false;
         rules.auth.pam_lldap = {
           order = 12000;
