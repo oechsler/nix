@@ -1,9 +1,16 @@
 # Ollama local model server feature.
 
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 
 let
   cfg = config.features.dev.ollama;
+  ollama = lib.getExe config.services.ollama.package;
+  declaredModels = lib.escapeShellArgs cfg.models;
 in
 {
   options.features.dev.ollama = {
@@ -34,5 +41,37 @@ in
       host = if cfg.server then "0.0.0.0" else "127.0.0.1";
       openFirewall = cfg.server;
     };
+
+    # Convert Ollama's carriage-return progress output into journal-friendly lines.
+    systemd.services.ollama-model-loader.script = lib.mkForce ''
+      installed="$(${ollama} list | ${lib.getExe pkgs.gawk} 'NR > 1 {print $1}')"
+      for model in $installed; do
+        declared=false
+        for declared_model in ${declaredModels}; do
+          if [ "$model" = "$declared_model" ]; then
+            declared=true
+            break
+          fi
+        done
+        if [ "$declared" = false ]; then
+          echo "removing model: $model"
+          ${ollama} rm "$model"
+        fi
+      done
+
+      for model in ${declaredModels}; do
+        echo "pulling model: $model"
+        set +e
+        ${ollama} pull "$model" 2>&1 \
+          | ${lib.getExe' pkgs.coreutils "tr"} -d '\000' \
+          | ${lib.getExe' pkgs.coreutils "tr"} '\r' '\n'
+        status=''${PIPESTATUS[0]}
+        set -e
+        if [ "$status" -ne 0 ]; then
+          exit "$status"
+        fi
+        echo "finished model: $model"
+      done
+    '';
   };
 }
