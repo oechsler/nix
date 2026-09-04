@@ -42,7 +42,7 @@ in
       openFirewall = cfg.server;
     };
 
-    # Convert Ollama's carriage-return progress output into journal-friendly lines.
+    # Give Ollama a pseudo-TTY so it emits progress, then make it journal-safe.
     systemd.services.ollama-model-loader.script = lib.mkForce ''
       installed="$(${ollama} list | ${lib.getExe pkgs.gawk} 'NR > 1 {print $1}')"
       for model in $installed; do
@@ -62,7 +62,8 @@ in
       for model in ${declaredModels}; do
         echo "pulling model: $model"
         set +e
-        ${ollama} pull "$model" 2>&1 \
+        ${lib.getExe' pkgs.util-linux "script"} -qefc \
+          "${ollama} pull $(printf '%q' "$model")" /dev/null 2>&1 \
           | LC_ALL=C ${lib.getExe' pkgs.coreutils "tr"} -cd '\011\012\015\040-\176' \
           | ${lib.getExe' pkgs.coreutils "tr"} '\r' '\n'
         status=''${PIPESTATUS[0]}
