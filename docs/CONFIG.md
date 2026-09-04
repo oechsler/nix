@@ -527,6 +527,9 @@ tools. JetBrains entries default to GoLand and RustRover.
 | `features.dev.opencode.mcp`          | none enabled               | Additional OpenCode integrations.           |
 | `features.dev.opencode.lsp`          | shared defaults            | Language servers for OpenCode.              |
 | `features.dev.opencode.formatter`    | shared defaults            | Formatters for supported source files.      |
+| `features.dev.ollama.enable`         | `false`                    | Local Ollama server and CLI.                |
+| `features.dev.ollama.server`         | `false`                    | Expose the Ollama API to other hosts.       |
+| `features.dev.ollama.models`         | `[ ]`                      | Models pulled after the server starts.      |
 | `features.dev.jetbrains.enable`      | `dev.enable`               | JetBrains IDEs as a group.                  |
 | `features.dev.jetbrains.entries`     | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.                  |
 | `features.dev.android.enable`        | `false`                    | Android SDK and Android build tools.        |
@@ -557,6 +560,42 @@ features = {
   dev.jetbrains.entries = [ "goland" "rustrover" ];
 };
 ```
+
+#### Ollama
+
+Ollama is disabled by default. When enabled, the Ollama server runs as a
+background system service and the `ollama` CLI is available system-wide. The
+server listens on `localhost:11434` by default. Declared models are pulled
+after the service starts; an empty list does not pull any models.
+
+Models can be searched at [ollama.com/search](https://ollama.com/search). Use
+[modelfit.io](https://modelfit.io) to estimate GPU VRAM requirements, or the
+required Unified Memory on APUs, before selecting a model.
+
+```nix
+features.dev.ollama = {
+  enable = true;
+  models = [
+    "qwen3:8b"
+    "gemma3:12b"
+  ];
+};
+```
+
+Set `server = true` to listen on all interfaces and allow TCP port `11434`
+through the host firewall. This makes the API available to other hosts on the
+network, so it should only be enabled on a trusted network.
+
+```nix
+features.dev.ollama = {
+  enable = true;
+  server = true;
+};
+```
+
+When OpenCode is enabled on the same host, enabling Ollama automatically adds
+an `ollama` provider using the local OpenAI-compatible API. Each model listed
+in `features.dev.ollama.models` is made available in OpenCode as well.
 
 #### OpenCode
 

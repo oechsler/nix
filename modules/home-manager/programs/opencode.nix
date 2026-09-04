@@ -21,9 +21,25 @@ let
     }
     .${theme.catppuccin.flavor};
   enabledProviders = lib.filterAttrs (_: provider: provider.enable) cfg.provider;
+  ollamaCfg = features.dev.ollama;
+  ollamaProvider = {
+    enable = true;
+    apiKeySecret = null;
+    name = "Ollama";
+    npm = "@ai-sdk/openai-compatible";
+    baseURL = "http://127.0.0.1:11434/v1";
+    models = lib.genAttrs ollamaCfg.models (model: {
+      name = model;
+    });
+  };
+  configuredProviders =
+    enabledProviders
+    // lib.optionalAttrs ollamaCfg.enable {
+      ollama = ollamaProvider;
+    };
   providersWithSecrets = lib.filterAttrs (
     _: provider: provider.apiKeySecret != null
-  ) enabledProviders;
+  ) configuredProviders;
   mcpWithSecrets = lib.filterAttrs (_: server: server.tokenSecret != null) cfg.mcp;
   mcpWithInsecureTls = lib.any (server: server.insecureTls) (lib.attrValues cfg.mcp);
   mcpWithOAuthSecrets = lib.filterAttrs (
@@ -324,7 +340,7 @@ let
           apiKey = "{env:${providerEnvName name}}";
         };
     }
-  ) enabledProviders;
+  ) configuredProviders;
   providerSopsSecrets = lib.mapAttrs' (
     _name: provider: lib.nameValuePair provider.apiKeySecret { }
   ) providersWithSecrets;
@@ -434,7 +450,7 @@ in
         }
         // lspSettings;
         formatter = formatterSettings;
-        enabled_providers = builtins.attrNames enabledProviders;
+        enabled_providers = builtins.attrNames configuredProviders;
         theme = cfg.settings.theme or opencodeTheme;
         model = cfg.defaultModel;
         small_model = cfg.settings.small_model or cfg.defaultModel;
