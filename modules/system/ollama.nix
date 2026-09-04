@@ -9,6 +9,13 @@
 
 let
   cfg = config.features.dev.ollama;
+  ollamaPackage =
+    if config.features.hardware.gpu == "amd" then
+      pkgs.ollama-rocm
+    else if config.features.hardware.gpu == "intel" then
+      pkgs.ollama-vulkan
+    else
+      pkgs.ollama;
   ollama = lib.getExe config.services.ollama.package;
   curl = lib.getExe pkgs.curl;
   ollamaUrl = "http://127.0.0.1:${toString config.services.ollama.port}";
@@ -38,6 +45,7 @@ in
 
     services.ollama = {
       enable = true;
+      package = ollamaPackage;
       loadModels = cfg.models;
       syncModels = true;
       host = if cfg.server then "0.0.0.0" else "127.0.0.1";

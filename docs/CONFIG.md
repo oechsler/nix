@@ -599,6 +599,10 @@ When OpenCode is enabled on the same host, enabling Ollama automatically adds
 an `ollama` provider using the local OpenAI-compatible API. Each model listed
 in `features.dev.ollama.models` is made available in OpenCode as well.
 
+The Ollama package is selected from `features.hardware.gpu`: AMD uses the ROCm
+backend and Intel uses the Vulkan backend. Hosts without a configured GPU use
+the default Ollama package.
+
 #### OpenCode
 
 OpenCode uses shared model and provider defaults. The default model is
