@@ -28,9 +28,7 @@ let
     name = "Ollama";
     npm = "@ai-sdk/openai-compatible";
     baseURL = "http://127.0.0.1:11434/v1";
-    models = lib.genAttrs ollamaCfg.models (model: {
-      name = model;
-    });
+    models = lib.mapAttrs (_model: model: { inherit (model) name; }) ollamaCfg.models;
   };
   configuredProviders =
     enabledProviders
