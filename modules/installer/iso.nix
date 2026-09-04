@@ -14,9 +14,6 @@
 {
   networking.networkmanager.enable = true;
 
-  # The live session must use the same layout before the installer starts.
-  console.keyMap = "de";
-
   security.sudo = {
     enable = true;
     wheelNeedsPassword = false;
@@ -25,7 +22,6 @@
   isoImage.edition = "plasma6";
 
   services = {
-    xserver.xkb.layout = "de";
     desktopManager.plasma6 = {
       enable = true;
       enableQt5Integration = false;
