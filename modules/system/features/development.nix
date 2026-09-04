@@ -37,7 +37,7 @@ in
         };
         output = lib.mkOption {
           type = lib.types.ints.positive;
-          default = 32768;
+          default = 16384;
           description = "Default output length advertised to OpenCode for Ollama models.";
         };
         apiKeySecret = lib.mkOption {

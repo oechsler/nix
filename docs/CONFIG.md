@@ -620,11 +620,12 @@ features.dev.ollama = {
 `context` is Ollama's default context size for every model it starts and
 is also used as the OpenCode context limit unless a model overrides it. Choose
 it according to the available RAM and GPU memory; larger values use more memory
-as the conversation grows. OpenCode uses `32768` as the default output limit;
+as the conversation grows. OpenCode uses `16384` as the default output limit;
 override it for all Ollama models with
 `features.dev.opencode.ollama.output`, or set `output` on an individual model.
 `unloadAfter` defaults to `"5m"` and controls how long an unused model remains
 loaded. Set it to values such as `"1h"` when a model should stay warm longer.
+The defaults are intended as a balanced baseline for chat and coding.
 
 Set `server = true` only when another machine needs access to Ollama. This
 opens port `11434` and should only be used on a trusted network or behind an
@@ -660,7 +661,7 @@ only when OpenCode should connect to a different, usually remote, Ollama server.
 | `features.dev.opencode.ollama.enable`       | Local Ollama setting          | Enable the OpenCode Ollama provider. |
 | `features.dev.opencode.ollama.baseURL`      | `http://127.0.0.1:11434/v1`   | Ollama API endpoint.                 |
 | `features.dev.opencode.ollama.context`      | `features.dev.ollama.context` | Context advertised to OpenCode.      |
-| `features.dev.opencode.ollama.output`       | `32768`                       | Maximum response length.             |
+| `features.dev.opencode.ollama.output`       | `16384`                       | Maximum response length.             |
 | `features.dev.opencode.ollama.models`       | Local Ollama models           | Models shown in OpenCode.            |
 | `features.dev.opencode.ollama.apiKey`       | `null`                        | Inline API key.                      |
 | `features.dev.opencode.ollama.apiKeySecret` | `null`                        | SOPS secret containing the API key.  |

@@ -112,6 +112,14 @@
       assertion = config.features.hardware.formFactor != "headless" || !config.features.apps.enable;
       message = "headless systems cannot enable features.apps.enable.";
     }
+    {
+      assertion = config.features.hardware.formFactor != "headless" || !config.features.flatpak.enable;
+      message = "headless systems cannot enable features.flatpak.enable.";
+    }
+    {
+      assertion = config.features.hardware.formFactor != "headless" || !config.features.appimage.enable;
+      message = "headless systems cannot enable features.appimage.enable.";
+    }
   ];
 
 }
