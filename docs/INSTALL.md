@@ -37,7 +37,13 @@ Build the graphical ISO on a machine with enough RAM:
 ./build-iso.sh
 ```
 
-The ISO build output is linked as `result/`; the bootable image is inside `result/iso/`. It contains the prebuilt closures for every host directory in `hosts/`. Boot the ISO, open Konsole, and run `install-nixos` to select a host. The ISO uses the matching system closure directly, so the target machine does not compile the kernel or desktop locally.
+The ISO build output is linked as `result/`; the bootable image is inside `result/iso/`. It contains the prebuilt closures for every host directory in `hosts/`. Boot the ISO, open Konsole, and start the installer explicitly:
+
+```bash
+/etc/nixos-installer/install.sh
+```
+
+The ISO includes the required system files, so the target machine does not need to compile the system during installation.
 
 CLI flags are passed through to `install.sh`:
 
