@@ -92,9 +92,9 @@ Steps are combinable. Without step flags, all three run. The installer reads hos
 
 ## Disk Layout
 
-The default layout consists of an unencrypted EFI system partition and one
-LUKS-encrypted Btrfs partition. Disko creates the following named volumes and
-mounts:
+The base layout consists of an unencrypted EFI system partition and one
+LUKS-encrypted Btrfs partition. The host's Disko definition creates the core
+volumes below and may include additional feature-specific data subvolumes.
 
 ```
 /dev/nvme...                                            # Physical disk
@@ -111,22 +111,25 @@ mounts:
             │   └── /nix                                #
             ├── @persist                                # Persistent system state
             │   └── /persist                            #
-            ├── @steam                                  # Independent Steam data
-            │   └── /home/<user>/.local/share/Steam     #
-            ├── @nextcloud                              # Independent Nextcloud data
-            │   └── /home/<user>/Nextcloud              #
-            ├── @smb                                    # SMB mount root
-            │   └── /home/<user>/smb                    #
             └── @snapshots                              # Snapshot storage and access
                 └── /.snapshots                         #
 ```
 
+Optional data subvolumes are only used when their feature is enabled. Whether
+they are physically created is controlled by the selected host's Disko file.
+
+| Subvolume    | Mountpoint                        | Required feature                  |
+| ------------ | --------------------------------- | --------------------------------- |
+| `@steam`     | `/home/<user>/.local/share/Steam` | `features.gaming.enable`          |
+| `@nextcloud` | `/home/<user>/Nextcloud`          | `features.apps.nextcloud.enable`  |
+| `@smb`       | `/home/<user>/smb`                | `features.smb.enable` with shares |
+
 When impermanence is enabled, `@` is reset on boot while `/home`, `/nix`, and
-`/persist` retain their declared state. The `@steam`, `@nextcloud`, and `@smb`
-subvolumes keep large or independently managed data outside `@home` snapshots.
-The Btrfs top-level is also mounted at `/mnt/btrfs-root` as a convenience view
-of all subvolumes. btrbk uses this view for snapshot operations, while
-`/.snapshots` remains the normal path for browsing snapshots.
+`/persist` retain their declared state. Optional data subvolumes keep large or
+independently managed data outside `@home` snapshots. The Btrfs top-level is
+also mounted at `/mnt/btrfs-root` as a convenience view of all subvolumes.
+`btrbk` uses this view for snapshot operations, while `/.snapshots` remains the
+normal path for browsing snapshots.
 
 ## Post-Install State
 
@@ -151,6 +154,7 @@ Feature-dependent state:
 - `/etc/libvirt` and `/var/lib/libvirt` (virtual machines)
 - `/var/lib/flatpak` (Flatpak)
 - `/var/lib/iwd` (WiFi)
+- `/var/lib/ollama` (Ollama models and server state)
 - `/var/lib/pam-lldap` (LDAP authentication)
 - `/var/lib/sbctl` (Secure Boot)
 - `/var/lib/sddm` (desktop login)

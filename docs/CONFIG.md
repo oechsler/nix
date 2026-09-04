@@ -123,9 +123,9 @@ supported hardware can enter low-power idle states.
 Impermanence recreates the root filesystem on every boot. Persistent state is
 kept under `/persist` and is declared by feature modules or
 `features.impermanence.extraPaths`. Use `extraPaths` only for state that is not
-already covered by a feature module. The installation must provide the
-`/persist` Btrfs subvolume when this feature is enabled. See
-[INSTALL.md](INSTALL.md#impermanence) for the installation layout.
+already covered by a feature module. See
+[INSTALL.md](INSTALL.md#impermanence) for the persistence paths and installation
+layout.
 
 ```nix
 features = {

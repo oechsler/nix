@@ -12,13 +12,10 @@
 #   - @home subvolume: /home (persistent)
 #   - @nix subvolume: /nix (persistent)
 #   - @persist subvolume: /persist (persistent)
-#   - @steam subvolume: Steam library, persistent but excluded from @home snapshots
-#   - @nextcloud subvolume: sync client data, persistent and resyncable
-#   - @smb subvolume: persistent mount root for network shares
 #   - @snapshots subvolume: /.snapshots (persistent snapshot storage)
 #
 # Encryption:
-# - LUKS with YubiKey FIDO2 unlock (via luks.nix)
+# - LUKS with TPM2 auto-unlock (via luks.nix)
 # - Password file at /var/lib/nixos-install/luks-password during installation
 #
 # Before installation:
@@ -27,17 +24,7 @@
 
 # NixOS supplies config.user.name; standalone Disko evaluation supplies
 # username explicitly through flake.nix because it has no NixOS config.
-moduleArgs:
-
-let
-  username =
-    moduleArgs.username or (
-      if moduleArgs ? config && moduleArgs.config ? user then
-        moduleArgs.config.user.name
-      else
-        throw "samuels-ser9/disko.nix requires the global user.name option"
-    );
-in
+_:
 
 {
   disko.devices = {
@@ -104,15 +91,6 @@ in
                         "compress=zstd"
                         "noatime"
                       ];
-                    };
-                    "@steam" = {
-                      mountpoint = "/home/${username}/.local/share/Steam";
-                    };
-                    "@nextcloud" = {
-                      mountpoint = "/home/${username}/Nextcloud";
-                    };
-                    "@smb" = {
-                      mountpoint = "/home/${username}/smb";
                     };
                     "@snapshots" = {
                       mountpoint = "/.snapshots";
