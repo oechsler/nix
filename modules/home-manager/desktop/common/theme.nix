@@ -99,14 +99,6 @@ in
       gtk-cursor-theme-size = ${toString cursorSize}
     '';
 
-    catppuccin = {
-      enable = true;
-      # autoEnable must match enable to suppress catppuccin/nix migration warning
-      autoEnable = true;
-      flavor = lib.mkDefault flavor;
-      accent = lib.mkDefault accent;
-    };
-
     home = {
       pointerCursor = {
         enable = true;
