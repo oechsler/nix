@@ -631,7 +631,8 @@ as the conversation grows. OpenCode uses `16384` as the default output limit;
 override it for all Ollama models with
 `features.dev.opencode.ollama.output`, or set `output` on an individual model.
 `unloadAfter` defaults to `"5m"` and controls how long an unused model remains
-loaded. Set it to values such as `"1h"` when a model should stay warm longer.
+loaded. Set it to values such as `"1h"` when a model should stay warm longer, or
+to `"-1"` to keep it loaded indefinitely on a dedicated server.
 The defaults are intended as a balanced baseline for chat and coding.
 
 Set `server = true` only when another machine needs access to Ollama. This
