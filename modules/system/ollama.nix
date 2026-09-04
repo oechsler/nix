@@ -30,6 +30,7 @@ in
     services.ollama = {
       enable = true;
       loadModels = cfg.models;
+      syncModels = true;
       host = if cfg.server then "0.0.0.0" else "127.0.0.1";
       openFirewall = cfg.server;
     };

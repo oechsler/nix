@@ -566,7 +566,9 @@ features = {
 Ollama is disabled by default. When enabled, the Ollama server runs as a
 background system service and the `ollama` CLI is available system-wide. The
 server listens on `localhost:11434` by default. Declared models are pulled
-after the service starts; an empty list does not pull any models.
+after the service starts; models removed from the list are removed from the
+Ollama store as well. An empty list does not pull any models and removes all
+currently installed models.
 
 Models can be searched at [ollama.com/search](https://ollama.com/search). Use
 [modelfit.io](https://modelfit.io) to estimate GPU VRAM requirements, or the
