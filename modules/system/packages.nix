@@ -170,10 +170,10 @@ in
 
   options.features = {
     flatpak.enable = (lib.mkEnableOption "Flatpak support") // {
-      default = true;
+      default = config.features.hardware.formFactor != "headless";
     };
     appimage.enable = (lib.mkEnableOption "AppImage support") // {
-      default = true;
+      default = config.features.hardware.formFactor != "headless";
     };
   };
 
