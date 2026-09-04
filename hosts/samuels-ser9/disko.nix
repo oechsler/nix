@@ -1,8 +1,5 @@
 # Disk Configuration (samuels-ser9)
 #
-# WARNING: PLACEHOLDER — Replace the disk ID before installation!
-#     $ ls -l /dev/disk/by-id/ | grep nvme
-#
 # Declarative disk partitioning with disko.
 #
 # Layout:
@@ -18,12 +15,12 @@
 # - LUKS with TPM2 auto-unlock (via luks.nix)
 # - Password file at /var/lib/nixos-install/luks-password during installation
 #
-# Before installation:
-# - Replace the placeholder disk device with the real stable by-id path from:
-#   ls -l /dev/disk/by-id/ | grep nvme
-
-# NixOS supplies config.user.name; standalone Disko evaluation supplies
-# username explicitly through flake.nix because it has no NixOS config.
+# Impermanence:
+# - Root (/) is ephemeral, rolled back to blank snapshot on reboot
+# - Only /home, /nix, /persist survive reboots
+#
+# This host has no feature-specific data subvolumes and does not require
+# username arguments when Disko is evaluated standalone.
 _:
 
 {
@@ -31,7 +28,7 @@ _:
     disk = {
       main = {
         type = "disk";
-        device = "/dev/disk/by-id/nvme-BEELINK_SER9_1TB_REPLACE_WITH_ACTUAL_ID";
+        device = "/dev/disk/by-id/nvme-CT1000E100SSD8_2533EADB2554";
         content = {
           type = "gpt";
           partitions = {
