@@ -63,7 +63,7 @@ in
         echo "pulling model: $model"
         set +e
         ${ollama} pull "$model" 2>&1 \
-          | ${lib.getExe' pkgs.coreutils "tr"} -d '\000' \
+          | LC_ALL=C ${lib.getExe' pkgs.coreutils "tr"} -cd '\011\012\015\040-\176' \
           | ${lib.getExe' pkgs.coreutils "tr"} '\r' '\n'
         status=''${PIPESTATUS[0]}
         set -e
