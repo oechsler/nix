@@ -529,7 +529,7 @@ tools. JetBrains entries default to GoLand and RustRover.
 | `features.dev.opencode.formatter`    | shared defaults            | Formatters for supported source files.      |
 | `features.dev.ollama.enable`         | `false`                    | Local Ollama server and CLI.                |
 | `features.dev.ollama.server`         | `false`                    | Expose the Ollama API to other hosts.       |
-| `features.dev.ollama.models`         | `[ ]`                      | Models pulled after the server starts.      |
+| `features.dev.ollama.models`         | `{}`                      | Models pulled after the server starts.      |
 | `features.dev.jetbrains.enable`      | `dev.enable`               | JetBrains IDEs as a group.                  |
 | `features.dev.jetbrains.entries`     | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.                  |
 | `features.dev.android.enable`        | `false`                    | Android SDK and Android build tools.        |
@@ -566,8 +566,8 @@ features = {
 Ollama is disabled by default. When enabled, the Ollama server runs as a
 background system service and the `ollama` CLI is available system-wide. The
 server listens on `localhost:11434` by default. Declared models are pulled
-after the service starts; models removed from the list are removed from the
-Ollama store as well. An empty list does not pull any models and removes all
+after the service starts; models removed from the set are removed from the
+Ollama store as well. An empty set does not pull any models and removes all
 currently installed models.
 
 Models can be searched at [ollama.com/search](https://ollama.com/search). Use
@@ -577,10 +577,10 @@ required Unified Memory on APUs, before selecting a model.
 ```nix
 features.dev.ollama = {
   enable = true;
-  models = [
-    "qwen3:8b"
-    "gemma3:12b"
-  ];
+  models = {
+    "qwen3:8b".name = "Qwen3 8B";
+    "gemma3:12b".name = "Gemma 3 12B";
+  };
 };
 ```
 
@@ -597,7 +597,8 @@ features.dev.ollama = {
 
 When OpenCode is enabled on the same host, enabling Ollama automatically adds
 an `ollama` provider using the local OpenAI-compatible API. Each model listed
-in `features.dev.ollama.models` is made available in OpenCode as well.
+in `features.dev.ollama.models` is made available in OpenCode under its
+configured display name as well.
 
 The Ollama package is selected from `features.hardware.gpu`: AMD uses the ROCm
 backend and Intel uses the Vulkan backend. Hosts without a configured GPU use

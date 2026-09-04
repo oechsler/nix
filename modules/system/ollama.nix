@@ -9,6 +9,14 @@
 
 let
   cfg = config.features.dev.ollama;
+  modelType = lib.types.attrsOf (
+    lib.types.submodule {
+      options.name = lib.mkOption {
+        type = lib.types.str;
+        description = "Display name for this model in OpenCode.";
+      };
+    }
+  );
   ollamaPackage =
     if config.features.hardware.gpu == "amd" then
       pkgs.ollama-rocm
@@ -19,7 +27,7 @@ let
   ollama = lib.getExe config.services.ollama.package;
   curl = lib.getExe pkgs.curl;
   ollamaUrl = "http://127.0.0.1:${toString config.services.ollama.port}";
-  declaredModels = lib.escapeShellArgs cfg.models;
+  declaredModels = lib.escapeShellArgs (builtins.attrNames cfg.models);
 in
 {
   options.features.dev.ollama = {
@@ -30,13 +38,18 @@ in
     server = lib.mkEnableOption "Ollama API access from other hosts";
 
     models = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      example = [
-        "gemma3:12b"
-        "qwen3:8b"
-      ];
-      description = "Ollama models to pull declaratively after the server starts.";
+      type = lib.types.coercedTo (lib.types.listOf lib.types.str) (
+        models:
+        lib.genAttrs models (model: {
+          name = model;
+        })
+      ) modelType;
+      default = { };
+      example = {
+        "gemma3:12b".name = "Gemma 3 12B";
+        "qwen3:8b".name = "Qwen3 8B";
+      };
+      description = "Ollama models to pull declaratively, keyed by model ID.";
     };
   };
 
@@ -46,7 +59,7 @@ in
     services.ollama = {
       enable = true;
       package = ollamaPackage;
-      loadModels = cfg.models;
+      loadModels = builtins.attrNames cfg.models;
       syncModels = true;
       host = if cfg.server then "0.0.0.0" else "127.0.0.1";
       openFirewall = cfg.server;
