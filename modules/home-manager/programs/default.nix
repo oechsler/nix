@@ -14,6 +14,8 @@
 # - tmux.nix - Tmux terminal multiplexer
 # - tools.nix - GitHub CLI
 
+{ lib, features, ... }:
+
 {
   imports = [
     ./apps.nix
@@ -29,8 +31,8 @@
     ./opencode.nix
     ./proton-pass.nix
     ./pvetui.nix
-    ./terminal.nix
     ./tmux.nix
     ./tools.nix
-  ];
+  ]
+  ++ lib.optional features.desktop.enable ./terminal.nix;
 }

@@ -35,7 +35,17 @@ jobs:
 
       - name: Run linters
         if: steps.check.outputs.changed == 'true'
-        run: nix flake check --print-build-logs
+        run: |
+          nix build --print-build-logs \
+            .#checks.x86_64-linux.format \
+            .#checks.x86_64-linux.lint \
+            .#checks.x86_64-linux.statix \
+            .#checks.x86_64-linux.shfmt \
+            .#checks.x86_64-linux.deadnix \
+            .#checks.x86_64-linux.shellcheck \
+            .#checks.x86_64-linux.markdownlint \
+            .#checks.x86_64-linux.markdown-format \
+            .#checks.x86_64-linux.rust
 
       - name: Evaluate all host configurations
         if: steps.check.outputs.changed == 'true'

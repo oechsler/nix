@@ -96,7 +96,7 @@ in
       default = true;
     };
     agentKeys.enable = (lib.mkEnableOption "SSH-agent keys as authorized keys") // {
-      default = true;
+      default = config.features.hardware.formFactor != "headless";
     };
   };
 

@@ -13,10 +13,25 @@
 #   gh issue list
 #   gh repo clone owner/repo
 
-{ pkgs, ... }:
-
 {
-  home.packages = [ pkgs.ouch ];
+  pkgs,
+  lib,
+  features,
+  ...
+}:
+
+let
+  useTuiManagement =
+    features.hardware.formFactor == "headless"
+    || (features.desktop.enable && features.desktop.wm == "hyprland");
+in
+{
+  home.packages = [
+    pkgs.ouch
+  ]
+  ++ lib.optionals (useTuiManagement && features.bluetooth.enable) [ pkgs.bluetui ]
+  ++ lib.optionals (useTuiManagement && features.wifi.enable) [ pkgs.impala ]
+  ++ lib.optionals (useTuiManagement && features.audio.enable) [ pkgs.wiremix ];
 
   programs.gh = {
     enable = true;
