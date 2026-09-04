@@ -11,6 +11,11 @@
   ...
 }:
 
+let
+  installerCommand = pkgs.writeShellScriptBin "nixos-installer" ''
+    exec /run/wrappers/bin/sudo ${pkgs.bash}/bin/bash /etc/nixos-installer/repo/install.sh --iso "$@"
+  '';
+in
 {
   networking.networkmanager.enable = true;
 
@@ -41,14 +46,14 @@
     pkgs.git
     pkgs.jq
     pkgs.kdePackages.konsole
+    installerCommand
   ];
 
   environment.etc = {
     "nixos-installer/manifest.json".text = builtins.toJSON { hosts = hostManifest; };
-    "nixos-installer/install.sh".source = ../../install.sh;
     "nixos-installer/repo".source = ../../.;
     "profile.d/nixos-installer.sh".text = ''
-      alias install-nixos='/run/wrappers/bin/sudo ${pkgs.bash}/bin/bash /etc/nixos-installer/install.sh --iso'
+      alias install-nixos='/run/current-system/sw/bin/nixos-installer'
     '';
   };
 
