@@ -49,7 +49,7 @@
       output = model.output or null;
     in
     {
-      name = model.name;
+      inherit (model) name;
     }
     // lib.optionalAttrs (toolCall != null) { tool_call = toolCall; }
     // lib.optionalAttrs (reasoning != null) { inherit reasoning; }

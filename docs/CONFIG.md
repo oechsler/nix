@@ -613,9 +613,12 @@ declared models installed.
 features.dev.ollama = {
   enable = true;
   context = 131072;
-  models."gemma4:12b-it-q8_0".name = "Gemma 4 12B Instruct Q8";
+  models."local-chat-coding-model".name = "Local Chat and Coding Model";
 };
 ```
+
+The model IDs in these examples are placeholders; replace them with the tags
+available from your model provider.
 
 `context` is Ollama's default context size for every model it starts and
 is also used as the OpenCode context limit unless a model overrides it. Choose
@@ -673,18 +676,25 @@ OpenCode provider without enabling local Ollama:
 features.dev.opencode.ollama = {
   enable = true;
   baseURL = "https://ollama.example.com/v1";
-  apiKeySecret = "ollama-api-token";
+  apiKeySecret = "opencode/provider/ollama/api-key";
   models = {
-    "gemma4:12b-it-q8_0" = {
-      name = "Gemma 4 12B Instruct Q8";
+    "remote-chat-coding-model" = {
+      name = "Remote Chat and Coding Model";
       toolCall = true;
       reasoning = true;
       temperature = true;
       context = 131072;
-      output = 32768;
+      output = 16384;
     };
   };
 };
+```
+
+For a trusted local configuration, use the actual token instead of
+`apiKeySecret`:
+
+```nix
+features.dev.opencode.ollama.apiKey = "ollama-api-token";
 ```
 
 The local Ollama feature manages a server and its model store. The OpenCode
@@ -713,13 +723,13 @@ features.dev.opencode.provider.local = {
   name = "Local Gateway";
   npm = "@ai-sdk/openai-compatible";
   baseURL = "http://127.0.0.1:4000/v1";
-  models."qwen3.5-27b" = {
-    name = "Qwen3.5 27B";
+  models."remote-coding-model" = {
+    name = "Remote Coding Model";
     toolCall = true;
     reasoning = true;
     temperature = true;
     context = 262144;
-    output = 32768;
+    output = 16384;
   };
 };
 ```

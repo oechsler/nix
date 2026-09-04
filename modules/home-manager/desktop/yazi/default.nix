@@ -188,226 +188,252 @@ let
   ];
 in
 {
-  programs.yazi = {
-    enable = true;
-    shellWrapperName = "yy";
+  programs = {
+    yazi = {
+      enable = true;
+      shellWrapperName = "yy";
 
-    extraPackages =
-      with pkgs;
-      [
-        file
-        ouch
-        trash-cli
-        unzip
-        wl-clipboard
-        xclip
-        zip
-      ]
-      ++ lib.optionals enableAppPreviews [
-        ffmpeg
-        ffmpegthumbnailer
-        imagemagick
-        mediainfo
-        poppler-utils
-      ]
-      ++ lib.optionals enableRichPreviews [
-        jq
-        rich-cli
-      ];
+      extraPackages =
+        with pkgs;
+        [
+          file
+          ouch
+          trash-cli
+          unzip
+          wl-clipboard
+          xclip
+          zip
+        ]
+        ++ lib.optionals enableAppPreviews [
+          ffmpeg
+          ffmpegthumbnailer
+          imagemagick
+          mediainfo
+          poppler-utils
+        ]
+        ++ lib.optionals enableRichPreviews [
+          jq
+          rich-cli
+        ];
 
-    plugins = {
-      inherit (pkgs.yaziPlugins)
-        ouch
-        restore
-        wl-clipboard
-        ;
+      plugins = {
+        inherit (pkgs.yaziPlugins)
+          ouch
+          restore
+          wl-clipboard
+          ;
 
-      git = {
-        package = pkgs.yaziPlugins.git;
-        setup = true;
-        settings.order = 1500;
+        git = {
+          package = pkgs.yaziPlugins.git;
+          setup = true;
+          settings.order = 1500;
+        };
+
+        recycle-bin = {
+          package = pkgs.yaziPlugins.recycle-bin;
+          setup = true;
+        };
+      }
+      // lib.optionalAttrs enableAppPreviews {
+        inherit (pkgs.yaziPlugins)
+          mediainfo
+          office
+          ;
+      }
+      // lib.optionalAttrs enableRichPreviews {
+        rich-preview = pkgs.yaziPlugins.rich-preview;
       };
 
-      recycle-bin = {
-        package = pkgs.yaziPlugins.recycle-bin;
-        setup = true;
-      };
-    }
-    // lib.optionalAttrs enableAppPreviews {
-      inherit (pkgs.yaziPlugins)
-        mediainfo
-        office
-        ;
-    }
-    // lib.optionalAttrs enableRichPreviews {
-      rich-preview = pkgs.yaziPlugins.rich-preview;
-    };
-
-    settings = {
-      opener.extract = [
-        {
-          run = ''${pkgs.ouch}/bin/ouch d -y "$@"'';
-          desc = "Extract here with ouch";
-          for = "unix";
-        }
-      ];
-
-      plugin = {
-        prepend_fetchers = [
+      settings = {
+        opener.extract = [
           {
-            id = "git";
-            url = "*";
-            run = "git";
-            group = "git";
-          }
-          {
-            id = "git";
-            url = "*/";
-            run = "git";
-            group = "git";
+            run = ''${pkgs.ouch}/bin/ouch d -y "$@"'';
+            desc = "Extract here with ouch";
+            for = "unix";
           }
         ];
 
-        prepend_preloaders = lib.optionals enableAppPreviews appPreloaders;
-        prepend_previewers = [
+        plugin = {
+          prepend_fetchers = [
+            {
+              id = "git";
+              url = "*";
+              run = "git";
+              group = "git";
+            }
+            {
+              id = "git";
+              url = "*/";
+              run = "git";
+              group = "git";
+            }
+          ];
+
+          prepend_preloaders = lib.optionals enableAppPreviews appPreloaders;
+          prepend_previewers = [
+            {
+              mime = "application/{*zip,tar,bzip2,7z*,rar,xz,zstd,java-archive}";
+              run = "${pkgs.ouch}/bin/ouch";
+            }
+          ]
+          ++ lib.optionals enableAppPreviews appPreviewers
+          ++ lib.optionals enableRichPreviews richPreviewers;
+        };
+      };
+
+      keymap.mgr.prepend_keymap =
+        staticBookmarkKeymaps
+        ++ [
           {
-            mime = "application/{*zip,tar,bzip2,7z*,rar,xz,zstd,java-archive}";
-            run = "${pkgs.ouch}/bin/ouch";
+            on = [
+              "<Space>"
+              "i"
+            ];
+            run = "help";
+            desc = "Show yazi help";
+          }
+          {
+            on = "y";
+            run = [
+              "yank"
+              "plugin wl-clipboard -- --action=copy"
+            ];
+            desc = "Yank and copy to system clipboard";
+          }
+          {
+            on = "p";
+            run = "paste";
+            desc = "Paste yanked files";
+          }
+          {
+            on = [
+              "<Space>"
+              "."
+            ];
+            run = "hidden toggle";
+            desc = "Toggle hidden files";
+          }
+          {
+            on = [
+              "<Space>"
+              "h"
+            ];
+            run = "tab_switch -1 --relative";
+            desc = "Switch to previous tab";
+          }
+          {
+            on = [
+              "<Space>"
+              "l"
+            ];
+            run = "tab_switch 1 --relative";
+            desc = "Switch to next tab";
+          }
+          {
+            on = [
+              "<Space>"
+              "H"
+            ];
+            run = "tab_swap -1";
+            desc = "Move tab left";
+          }
+          {
+            on = [
+              "<Space>"
+              "L"
+            ];
+            run = "tab_swap 1";
+            desc = "Move tab right";
+          }
+          {
+            on = [
+              "<Space>"
+              "t"
+            ];
+            run = "tab_create --current";
+            desc = "New tab in current directory";
+          }
+          {
+            on = [
+              "<Space>"
+              "q"
+            ];
+            run = "close";
+            desc = "Close tab or quit";
           }
         ]
-        ++ lib.optionals enableAppPreviews appPreviewers
-        ++ lib.optionals enableRichPreviews richPreviewers;
-      };
+        ++ tabKeymaps
+        ++ [
+          {
+            on = [
+              "<Space>"
+              "d"
+              "m"
+            ];
+            run = "plugin recycle-bin";
+            desc = "Open recycle bin menu";
+          }
+          {
+            on = [
+              "<Space>"
+              "d"
+              "u"
+            ];
+            run = "plugin restore";
+            desc = "Restore last deleted files";
+          }
+          {
+            on = [
+              "<Space>"
+              "d"
+              "U"
+            ];
+            run = "plugin restore -- --interactive";
+            desc = "Restore deleted files interactively";
+          }
+          {
+            on = [
+              "<Space>"
+              "a"
+            ];
+            run = "shell --block '${pkgs.zip}/bin/zip -r --junk-paths archiv.zip %s'";
+            desc = "Zip selected files";
+          }
+          {
+            on = [
+              "<Space>"
+              "x"
+            ];
+            run = "shell --block '${pkgs.unzip}/bin/unzip -q %h'";
+            desc = "Extract ZIP file";
+          }
+        ]
+        ++ lib.optionals enableAppPreviews mediaKeymaps;
     };
 
-    keymap.mgr.prepend_keymap =
-      staticBookmarkKeymaps
-      ++ [
-        {
-          on = [
-            "<Space>"
-            "i"
-          ];
-          run = "help";
-          desc = "Show yazi help";
-        }
-        {
-          on = "y";
-          run = [
-            "yank"
-            "plugin wl-clipboard -- --action=copy"
-          ];
-          desc = "Yank and copy to system clipboard";
-        }
-        {
-          on = "p";
-          run = "paste";
-          desc = "Paste yanked files";
-        }
-        {
-          on = [
-            "<Space>"
-            "."
-          ];
-          run = "hidden toggle";
-          desc = "Toggle hidden files";
-        }
-        {
-          on = [
-            "<Space>"
-            "h"
-          ];
-          run = "tab_switch -1 --relative";
-          desc = "Switch to previous tab";
-        }
-        {
-          on = [
-            "<Space>"
-            "l"
-          ];
-          run = "tab_switch 1 --relative";
-          desc = "Switch to next tab";
-        }
-        {
-          on = [
-            "<Space>"
-            "H"
-          ];
-          run = "tab_swap -1";
-          desc = "Move tab left";
-        }
-        {
-          on = [
-            "<Space>"
-            "L"
-          ];
-          run = "tab_swap 1";
-          desc = "Move tab right";
-        }
-        {
-          on = [
-            "<Space>"
-            "t"
-          ];
-          run = "tab_create --current";
-          desc = "New tab in current directory";
-        }
-        {
-          on = [
-            "<Space>"
-            "q"
-          ];
-          run = "close";
-          desc = "Close tab or quit";
-        }
-      ]
-      ++ tabKeymaps
-      ++ [
-        {
-          on = [
-            "<Space>"
-            "d"
-            "m"
-          ];
-          run = "plugin recycle-bin";
-          desc = "Open recycle bin menu";
-        }
-        {
-          on = [
-            "<Space>"
-            "d"
-            "u"
-          ];
-          run = "plugin restore";
-          desc = "Restore last deleted files";
-        }
-        {
-          on = [
-            "<Space>"
-            "d"
-            "U"
-          ];
-          run = "plugin restore -- --interactive";
-          desc = "Restore deleted files interactively";
-        }
-        {
-          on = [
-            "<Space>"
-            "a"
-          ];
-          run = "shell --block '${pkgs.zip}/bin/zip -r --junk-paths archiv.zip %s'";
-          desc = "Zip selected files";
-        }
-        {
-          on = [
-            "<Space>"
-            "x"
-          ];
-          run = "shell --block '${pkgs.unzip}/bin/unzip -q %h'";
-          desc = "Extract ZIP file";
-        }
-      ]
-      ++ lib.optionals enableAppPreviews mediaKeymaps;
+    fish.functions = {
+      y = {
+        body = ''
+           set -l tmp (${pkgs.coreutils}/bin/mktemp -t yazi-cwd.XXXXXX)
+           ${config.programs.yazi.finalPackage}/bin/yazi --cwd-file="$tmp" $argv
+          if test -f "$tmp"
+             set -l cwd (${pkgs.coreutils}/bin/cat "$tmp")
+             command ${pkgs.coreutils}/bin/rm -f "$tmp"
+            if test -n "$cwd" -a "$cwd" != "$PWD"
+              builtin cd "$cwd"
+            end
+          end
+        '';
+      };
+      yy = lib.mkForce ''
+        set -l tmp (mktemp -t "yazi-cwd.XXXXX")
+        command yazi $argv --cwd-file="$tmp"
+        if read cwd < "$tmp"; and test -n "$cwd"; and test "$cwd" != "$PWD"
+          builtin cd -- "$cwd"
+        end
+        command rm -f -- "$tmp"
+      '';
+    };
   };
 
   home.sessionPath = lib.optionals enableAppPreviews [ "${pkgs.mediainfo}/bin" ];
@@ -431,27 +457,4 @@ in
     "inode/mount-point" = [ "yazi.desktop" ];
   };
 
-  programs.fish.functions.y = {
-    body = ''
-       set -l tmp (${pkgs.coreutils}/bin/mktemp -t yazi-cwd.XXXXXX)
-       ${config.programs.yazi.finalPackage}/bin/yazi --cwd-file="$tmp" $argv
-      if test -f "$tmp"
-         set -l cwd (${pkgs.coreutils}/bin/cat "$tmp")
-         command ${pkgs.coreutils}/bin/rm -f "$tmp"
-        if test -n "$cwd" -a "$cwd" != "$PWD"
-          builtin cd "$cwd"
-        end
-      end
-    '';
-  };
-
-  # Fish aliases rm to trash-put; the temporary cwd file must be removed directly.
-  programs.fish.functions.yy = lib.mkForce ''
-    set -l tmp (mktemp -t "yazi-cwd.XXXXX")
-    command yazi $argv --cwd-file="$tmp"
-    if read cwd < "$tmp"; and test -n "$cwd"; and test "$cwd" != "$PWD"
-      builtin cd -- "$cwd"
-    end
-    command rm -f -- "$tmp"
-  '';
 }

@@ -52,19 +52,17 @@ let
   ollamaCfg = cfg.ollama;
   ollamaProvider = {
     enable = true;
-    apiKeySecret = ollamaCfg.apiKeySecret;
-    apiKey = ollamaCfg.apiKey;
+    inherit (ollamaCfg) apiKeySecret apiKey baseURL;
     name = "Ollama";
     npm = "@ai-sdk/openai-compatible";
-    baseURL = ollamaCfg.baseURL;
     models = lib.mapAttrs (
       _: model:
       model
       // lib.optionalAttrs ((model.context or null) == null) {
-        context = ollamaCfg.context;
+        inherit (ollamaCfg) context;
       }
       // lib.optionalAttrs ((model.output or null) == null) {
-        output = ollamaCfg.output;
+        inherit (ollamaCfg) output;
       }
     ) ollamaCfg.models;
   };
