@@ -6,7 +6,12 @@
 #
 # These modules are loaded via system/home-manager.nix integration.
 
-{ config, secretsFile, ... }:
+{
+  config,
+  secretsFile,
+  theme,
+  ...
+}:
 
 {
   imports = [
@@ -14,6 +19,14 @@
     ./i18n.nix
     ./programs
   ];
+
+  # Keep Catppuccin's port enrollment explicit for desktop and headless profiles.
+  catppuccin = {
+    enable = true;
+    autoEnable = true;
+    flavor = theme.catppuccin.flavor;
+    accent = theme.catppuccin.accent;
+  };
 
   # SOPS configuration for home-manager secrets (uses system-level secretsFile)
   sops = {
