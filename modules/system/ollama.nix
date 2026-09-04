@@ -10,6 +10,8 @@
 let
   cfg = config.features.dev.ollama;
   ollama = lib.getExe config.services.ollama.package;
+  curl = lib.getExe pkgs.curl;
+  ollamaUrl = "http://127.0.0.1:${toString config.services.ollama.port}";
   declaredModels = lib.escapeShellArgs cfg.models;
 in
 {
@@ -42,7 +44,7 @@ in
       openFirewall = cfg.server;
     };
 
-    # Give Ollama a pseudo-TTY so it emits progress, then make it journal-safe.
+    # Consume the API's NDJSON stream so progress works without a TTY.
     systemd.services.ollama-model-loader.script = lib.mkForce ''
       installed="$(${ollama} list | ${lib.getExe pkgs.gawk} 'NR > 1 {print $1}')"
       for model in $installed; do
@@ -61,11 +63,19 @@ in
 
       for model in ${declaredModels}; do
         echo "pulling model: $model"
+        payload="$(${lib.getExe pkgs.jq} -cn --arg model "$model" '{name: $model}')"
         set +e
-        ${lib.getExe' pkgs.util-linux "script"} -qefc \
-          "${ollama} pull $(printf '%q' "$model")" /dev/null 2>&1 \
-          | LC_ALL=C ${lib.getExe' pkgs.coreutils "tr"} -cd '\011\012\015\040-\176' \
-          | ${lib.getExe' pkgs.coreutils "tr"} '\r' '\n'
+        ${curl} --no-buffer --fail-with-body -sS \
+          -X POST "${ollamaUrl}/api/pull" \
+          -H 'Content-Type: application/json' \
+          --data "$payload" \
+          | ${lib.getExe pkgs.jq} -r '
+            if .error then error(.error)
+            elif (.completed? and .total?) then
+              "\(.status): \((100 * .completed / .total) | floor)% \(.completed)/\(.total)"
+            else .status // empty
+            end
+          '
         status=''${PIPESTATUS[0]}
         set -e
         if [ "$status" -ne 0 ]; then
