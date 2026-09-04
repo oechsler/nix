@@ -123,8 +123,62 @@ apply_keyboard_layout() {
 		setxkbmap "$FEAT_KEYBOARD" 2>/dev/null || warn "Could not apply X11 keyboard layout: $FEAT_KEYBOARD"
 	fi
 	if command -v localectl &>/dev/null; then
-		localectl set-keymap "$FEAT_KEYBOARD" 2>/dev/null || true
-		localectl set-x11-keymap "$FEAT_KEYBOARD" 2>/dev/null || true
+		localectl set-keymap "$FEAT_KEYBOARD" 2>/dev/null || warn "Could not update the console keyboard layout via localectl."
+		localectl set-x11-keymap "$FEAT_KEYBOARD" 2>/dev/null || warn "Could not update the X11 keyboard layout via localectl."
 	fi
+	apply_desktop_keyboard_layout
 	success "Keyboard layout: $FEAT_KEYBOARD"
+}
+
+run_session_command() {
+	local session_user="${SUDO_USER:-}"
+	[[ -n "$session_user" && "$session_user" != "root" ]] || return 1
+	local session_uid
+	session_uid="$(id -u "$session_user" 2>/dev/null)" || return 1
+	sudo -u "$session_user" env \
+		HOME="$(getent passwd "$session_user" | cut -d: -f6)" \
+		XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$session_uid}" \
+		DISPLAY="${DISPLAY:-}" \
+		WAYLAND_DISPLAY="${WAYLAND_DISPLAY:-}" \
+		DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=/run/user/$session_uid/bus}" \
+		HYPRLAND_INSTANCE_SIGNATURE="${HYPRLAND_INSTANCE_SIGNATURE:-}" \
+		"$@"
+}
+
+apply_desktop_keyboard_layout() {
+	local desktop="${XDG_CURRENT_DESKTOP:-${DESKTOP_SESSION:-}}" normalized
+	normalized="${desktop,,}"
+	case "$normalized" in
+	*hyprland*)
+		if command -v hyprctl &>/dev/null; then
+			if ! run_session_command hyprctl eval "hl.config({ input = { kb_layout = \"$FEAT_KEYBOARD\" } })"; then
+				run_session_command hyprctl keyword input:kb_layout "$FEAT_KEYBOARD" ||
+					warn "Could not update the Hyprland keyboard layout."
+			fi
+		else
+			warn "Hyprland detected, but hyprctl is not available."
+		fi
+		;;
+	*gnome*)
+		if command -v gsettings &>/dev/null; then
+			run_session_command gsettings set org.gnome.desktop.input-sources sources "[('xkb', '$FEAT_KEYBOARD')]" ||
+				warn "Could not update the GNOME keyboard layout."
+		else
+			warn "GNOME detected, but gsettings is not available."
+		fi
+		;;
+	*kde* | *plasma*)
+		if command -v kwriteconfig6 &>/dev/null && command -v qdbus6 &>/dev/null; then
+			run_session_command kwriteconfig6 --file kxkbrc --group Layout --key LayoutList "$FEAT_KEYBOARD" ||
+				warn "Could not save the KDE keyboard layout."
+			run_session_command qdbus6 org.kde.keyboard /Layouts org.kde.KeyboardLayouts.reloadConfig ||
+				warn "Could not reload the KDE keyboard layout."
+		else
+			warn "KDE detected, but kwriteconfig6 or qdbus6 is not available."
+		fi
+		;;
+	*)
+		[[ -n "$desktop" ]] && warn "Unknown desktop session '$desktop'; using generic keyboard handling."
+		;;
+	esac
 }
