@@ -272,12 +272,12 @@
         installHost.config.system.build.toplevel
       ) nixosConfigurations;
       hostManifest = lib.mapAttrs (
-        _: host:
+        hostName: host:
         let
           cfg = host.config;
         in
         {
-          system = toString cfg.system.build.toplevel;
+          system = toString hostClosures.${hostName};
           encryption = cfg.features.encryption.enable;
           unlockMethod = cfg.features.encryption.unlockMethod;
           impermanence = cfg.features.impermanence.enable;

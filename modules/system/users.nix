@@ -144,7 +144,7 @@ in
     # AccountsService provides user icons to SDDM, system settings, etc.
     # Icons must be in /var/lib/AccountsService/icons/<username>
     # Used by desktop account settings (SDDM, system settings)
-    system.activationScripts.userIcon = ''
+    system.activationScripts.userIcon = lib.mkIf config.features.desktop.enable ''
       ${pkgs.coreutils}/bin/mkdir -p /var/lib/AccountsService/icons
       ${pkgs.coreutils}/bin/cp ${lib.escapeShellArg cfg.icon} ${lib.escapeShellArg "/var/lib/AccountsService/icons/${cfg.name}"}
     '';
