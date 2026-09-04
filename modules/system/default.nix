@@ -28,6 +28,7 @@
     ./networking/tailscale.nix
     ./networking/wifi.nix
     ./nix.nix
+    ./ollama.nix
     ./packages.nix
     ./power.nix
     ./secure-boot.nix

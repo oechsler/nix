@@ -147,6 +147,7 @@
     gaming.steamMachine.enable = true;
 
     # --- Development ---
+    dev.ollama.enable = true;
     dev.opencode = {
       mcp.homeassistant = {
         url = "https://homeassistant.at.oechsler.it/api/mcp";
