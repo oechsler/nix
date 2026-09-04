@@ -111,8 +111,7 @@ volumes below and may include additional feature-specific data subvolumes.
             │   └── /nix                                #
             ├── @persist                                # Persistent system state
             │   └── /persist                            #
-            └── @snapshots                              # Snapshot storage and access
-                └── /.snapshots                         #
+            └── ...                                      # Optional feature volumes
 ```
 
 Optional data subvolumes are only used when their feature is enabled. Whether
@@ -120,6 +119,7 @@ they are physically created is controlled by the selected host's Disko file.
 
 | Subvolume    | Mountpoint                        | Required feature                  |
 | ------------ | --------------------------------- | --------------------------------- |
+| `@snapshots` | `/.snapshots`                     | `features.snapshots.enable`       |
 | `@steam`     | `/home/<user>/.local/share/Steam` | `features.gaming.enable`          |
 | `@nextcloud` | `/home/<user>/Nextcloud`          | `features.apps.nextcloud.enable`  |
 | `@smb`       | `/home/<user>/smb`                | `features.smb.enable` with shares |
