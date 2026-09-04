@@ -11,7 +11,35 @@
 }:
 
 let
+  modelSpec = import ../../lib/opencode-model.nix { inherit lib; };
   cfg = features.dev.opencode;
+  configuredProviders =
+    enabledProviders
+    // lib.optionalAttrs ollamaCfg.enable {
+      ollama = ollamaProvider;
+    };
+  nativeToolModels = lib.flatten (
+    lib.mapAttrsToList (
+      providerName: provider:
+      lib.mapAttrsToList (
+        modelName: model: lib.optional (model.toolCall == true) "${providerName}/${modelName}"
+      ) provider.models
+    ) configuredProviders
+  );
+  nativeToolCallPlugin = pkgs.writeText "opencode-native-tool-calls.js" ''
+    const nativeToolModels = new Set(${builtins.toJSON nativeToolModels})
+
+    export const NativeToolCalls = async () => ({
+      "experimental.chat.system.transform": async (input, output) => {
+        const model = `''${input.model.providerID}/''${input.model.modelID}`
+        if (!nativeToolModels.has(model)) return
+
+        output.system.push(
+          "You are operating as an agent with native tools. When a tool is needed, you MUST call the provided tool using the native tool-calling API. Never write a shell command, tool name, JSON arguments, or Markdown code block as a substitute for a tool call."
+        )
+      },
+    })
+  '';
   opencodeTheme =
     {
       latte = "catppuccin";
@@ -21,20 +49,25 @@ let
     }
     .${theme.catppuccin.flavor};
   enabledProviders = lib.filterAttrs (_: provider: provider.enable) cfg.provider;
-  ollamaCfg = features.dev.ollama;
+  ollamaCfg = cfg.ollama;
   ollamaProvider = {
     enable = true;
-    apiKeySecret = null;
+    apiKeySecret = ollamaCfg.apiKeySecret;
+    apiKey = ollamaCfg.apiKey;
     name = "Ollama";
     npm = "@ai-sdk/openai-compatible";
-    baseURL = "http://127.0.0.1:11434/v1";
-    models = lib.mapAttrs (_model: model: { inherit (model) name; }) ollamaCfg.models;
+    baseURL = ollamaCfg.baseURL;
+    models = lib.mapAttrs (
+      _: model:
+      model
+      // lib.optionalAttrs ((model.context or null) == null) {
+        context = ollamaCfg.context;
+      }
+      // lib.optionalAttrs ((model.output or null) == null) {
+        output = ollamaCfg.output;
+      }
+    ) ollamaCfg.models;
   };
-  configuredProviders =
-    enabledProviders
-    // lib.optionalAttrs ollamaCfg.enable {
-      ollama = ollamaProvider;
-    };
   providersWithSecrets = lib.filterAttrs (
     _: provider: provider.apiKeySecret != null
   ) configuredProviders;
@@ -326,18 +359,21 @@ let
   providerSettings = lib.mapAttrs (
     name: provider:
     {
-      inherit (provider) models;
+      models = lib.mapAttrs (_model: model: modelSpec.toOpenCode model) provider.models;
       whitelist = builtins.attrNames provider.models;
     }
     // lib.optionalAttrs (provider.name != null) { inherit (provider) name; }
     // lib.optionalAttrs (provider.npm != null) { inherit (provider) npm; }
-    // lib.optionalAttrs (provider.baseURL != null || provider.apiKeySecret != null) {
-      options =
-        lib.optionalAttrs (provider.baseURL != null) { inherit (provider) baseURL; }
-        // lib.optionalAttrs (provider.apiKeySecret != null) {
-          apiKey = "{env:${providerEnvName name}}";
-        };
-    }
+    //
+      lib.optionalAttrs
+        (provider.baseURL != null || provider.apiKeySecret != null || provider.apiKey != null)
+        {
+          options =
+            lib.optionalAttrs (provider.baseURL != null) { inherit (provider) baseURL; }
+            // lib.optionalAttrs (provider.apiKeySecret != null || provider.apiKey != null) {
+              apiKey = if provider.apiKey != null then provider.apiKey else "{env:${providerEnvName name}}";
+            };
+        }
   ) configuredProviders;
   providerSopsSecrets = lib.mapAttrs' (
     _name: provider: lib.nameValuePair provider.apiKeySecret { }
@@ -367,11 +403,15 @@ let
     // lib.optionalAttrs (server.type == "local") {
       inherit (server) command;
     }
-    // lib.optionalAttrs (server.headers != { } || server.tokenSecret != null) {
+    // lib.optionalAttrs (server.headers != { } || server.tokenSecret != null || server.token != null) {
       headers =
         server.headers
-        // lib.optionalAttrs (server.tokenSecret != null) {
-          "${server.tokenHeader}" = "${server.tokenPrefix}{env:${mcpEnvName name}}";
+        // lib.optionalAttrs (server.tokenSecret != null || server.token != null) {
+          "${server.tokenHeader}" =
+            if server.token != null then
+              "${server.tokenPrefix}${server.token}"
+            else
+              "${server.tokenPrefix}{env:${mcpEnvName name}}";
         };
     }
     // lib.optionalAttrs (server.type == "remote" && server.oauth != null) {
@@ -379,9 +419,15 @@ let
         lib.optionalAttrs (server.oauth.clientId != null) {
           clientId = server.oauth.clientId;
         }
-        // lib.optionalAttrs (server.oauth.clientSecretSecret != null) {
-          clientSecret = "{env:${mcpOAuthEnvName name}}";
-        }
+        //
+          lib.optionalAttrs (server.oauth.clientSecretSecret != null || server.oauth.clientSecret != null)
+            {
+              clientSecret =
+                if server.oauth.clientSecret != null then
+                  server.oauth.clientSecret
+                else
+                  "{env:${mcpOAuthEnvName name}}";
+            }
         // lib.optionalAttrs (server.oauth.scope != null) { scope = server.oauth.scope; }
         // lib.optionalAttrs (server.oauth.callbackPort != null) {
           callbackPort = server.oauth.callbackPort;
@@ -418,6 +464,7 @@ in
       package = opencodeWithSecrets;
 
       settings = cfg.settings // {
+        plugin = [ nativeToolCallPlugin ] ++ (cfg.settings.plugin or [ ]);
         lsp = {
           # Add locally managed servers for formats not covered by the built-ins.
           markdown = {

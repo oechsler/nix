@@ -147,17 +147,30 @@
     gaming.steamMachine.enable = true;
 
     # --- Development ---
-    dev.ollama.enable = true;
-    dev.opencode = {
-      mcp.homeassistant = {
-        url = "https://homeassistant.at.oechsler.it/api/mcp";
-        tokenSecret = "opencode/mcp/homeassistant/token";
-      };
-      mcp.obsidian = {
+    dev = {
+      ollama = {
         enable = true;
-        insecureTls = true;
-        url = "https://127.0.0.1:27124/mcp/";
-        headers.Authorization = "Bearer 7319249c2c302002ec534be8f09a05a1452ec85a5c49a330308fd32824de1554";
+        context = 131072;
+        models = {
+          "gemma4:12b-it-q8_0" = {
+            name = "Gemma 4 12B Instruct Q8";
+            toolCall = true;
+            reasoning = true;
+            temperature = true;
+          };
+        };
+      };
+      opencode = {
+        mcp.homeassistant = {
+          url = "https://homeassistant.at.oechsler.it/api/mcp";
+          tokenSecret = "opencode/mcp/homeassistant/token";
+        };
+        mcp.obsidian = {
+          enable = true;
+          insecureTls = true;
+          url = "https://127.0.0.1:27124/mcp/";
+          token = "7319249c2c302002ec534be8f09a05a1452ec85a5c49a330308fd32824de1554";
+        };
       };
     };
 

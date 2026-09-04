@@ -12,6 +12,7 @@
 # Machine-type behavior (derived from features.hardware.formFactor):
 # - Desktop: Lid switch ignore, AMD GPU runpm disabled
 # - Laptop:  Lid switch suspend on battery, GPU runpm enabled
+# - Headless: no GUI power-management overrides, GPU runpm enabled
 
 {
   config,
@@ -22,6 +23,7 @@
 let
   cfg = config.features.hardware;
   isLaptop = cfg.formFactor == "laptop";
+  isDesktop = cfg.formFactor == "desktop";
   isHyprlandLaptop = isLaptop && config.features.desktop.wm == "hyprland";
   hasAmdGpu = cfg.gpu == "amd";
 in
@@ -55,7 +57,7 @@ in
   # amdgpu.runpm=0 disables GPU runtime PM.
   # On desktop/server: prevents BACO transition issues during suspend (prevents resume hangs).
   # On laptop: runtime PM must stay enabled to allow the GPU to power down on battery.
-  boot.kernelParams = lib.optionals (hasAmdGpu && !isLaptop) [
+  boot.kernelParams = lib.optionals (hasAmdGpu && isDesktop) [
     "amdgpu.runpm=0"
   ];
 }

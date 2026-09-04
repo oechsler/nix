@@ -8,15 +8,8 @@
 }:
 
 let
+  modelSpec = import ../lib/opencode-model.nix { inherit lib; };
   cfg = config.features.dev.ollama;
-  modelType = lib.types.attrsOf (
-    lib.types.submodule {
-      options.name = lib.mkOption {
-        type = lib.types.str;
-        description = "Display name for this model in OpenCode.";
-      };
-    }
-  );
   ollamaPackage =
     if config.features.hardware.gpu == "amd" then
       pkgs.ollama-rocm
@@ -37,13 +30,27 @@ in
 
     server = lib.mkEnableOption "Ollama API access from other hosts";
 
+    unloadAfter = lib.mkOption {
+      type = lib.types.str;
+      default = "5m";
+      example = "5m";
+      description = "How long Ollama keeps an inactive model loaded.";
+    };
+
+    context = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 32768;
+      example = 131072;
+      description = "Default context length in tokens for Ollama model servers.";
+    };
+
     models = lib.mkOption {
       type = lib.types.coercedTo (lib.types.listOf lib.types.str) (
         models:
         lib.genAttrs models (model: {
           name = model;
         })
-      ) modelType;
+      ) (lib.types.attrsOf modelSpec.type);
       default = { };
       example = {
         "gemma3:12b".name = "Gemma 3 12B";
@@ -63,6 +70,8 @@ in
       syncModels = true;
       host = if cfg.server then "0.0.0.0" else "127.0.0.1";
       openFirewall = cfg.server;
+      environmentVariables.OLLAMA_KEEP_ALIVE = cfg.unloadAfter;
+      environmentVariables.OLLAMA_CONTEXT_LENGTH = toString cfg.context;
     };
 
     # Consume the API's NDJSON stream so progress works without a TTY.

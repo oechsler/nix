@@ -2,6 +2,9 @@
 
 { config, lib, ... }:
 
+let
+  modelSpec = import ../../lib/opencode-model.nix { inherit lib; };
+in
 {
   options.features.dev = {
     enable = (lib.mkEnableOption "development tools") // {
@@ -15,6 +18,43 @@
         type = lib.types.str;
         default = "openai/gpt-5.6-luna";
         description = "Default OpenCode model in provider/model format.";
+      };
+      ollama = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = config.features.dev.ollama.enable;
+          description = "Enable the Ollama provider in OpenCode.";
+        };
+        baseURL = lib.mkOption {
+          type = lib.types.str;
+          default = "http://127.0.0.1:11434/v1";
+          description = "OpenAI-compatible Ollama API URL.";
+        };
+        context = lib.mkOption {
+          type = lib.types.ints.positive;
+          default = config.features.dev.ollama.context;
+          description = "Default context length advertised to OpenCode for Ollama models.";
+        };
+        output = lib.mkOption {
+          type = lib.types.ints.positive;
+          default = 32768;
+          description = "Default output length advertised to OpenCode for Ollama models.";
+        };
+        apiKeySecret = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "SOPS secret containing the Ollama API token.";
+        };
+        apiKey = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = "Plaintext Ollama API key for trusted configurations.";
+        };
+        models = lib.mkOption {
+          type = lib.types.attrsOf modelSpec.type;
+          default = config.features.dev.ollama.models;
+          description = "Models exposed by the OpenCode Ollama provider.";
+        };
       };
       settings = lib.mkOption {
         type = lib.types.attrs;
@@ -109,15 +149,13 @@
                 default = null;
                 description = "SOPS secret path for the provider API key.";
               };
+              apiKey = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Plaintext provider API key for trusted configurations.";
+              };
               models = lib.mkOption {
-                type = lib.types.attrsOf (
-                  lib.types.submodule {
-                    options.name = lib.mkOption {
-                      type = lib.types.str;
-                      description = "Model display name.";
-                    };
-                  }
-                );
+                type = lib.types.attrsOf modelSpec.type;
                 default = { };
                 description = "Models exposed by this provider.";
               };
@@ -184,6 +222,11 @@
                 default = null;
                 description = "SOPS secret path for a bearer token.";
               };
+              token = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Plaintext bearer token for trusted configurations.";
+              };
               tokenHeader = lib.mkOption {
                 type = lib.types.str;
                 default = "Authorization";
@@ -212,6 +255,11 @@
                         type = lib.types.nullOr lib.types.str;
                         default = null;
                         description = "SOPS secret path for the OAuth client secret.";
+                      };
+                      clientSecret = lib.mkOption {
+                        type = lib.types.nullOr lib.types.str;
+                        default = null;
+                        description = "Plaintext OAuth client secret for trusted configurations.";
                       };
                       scope = lib.mkOption {
                         type = lib.types.nullOr lib.types.str;
