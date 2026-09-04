@@ -36,7 +36,7 @@
       gpu = "amd";
       unifiedMemory = {
         enable = true;
-        size = 24576;
+        size = 32768;
       };
     };
 
@@ -49,19 +49,25 @@
       baseDn = "dc=oechsler,dc=it";
     };
 
-    # --- Remote Services ---
-    ssh.enable = true;
+    # --- Networking ---
     wifi.enable = false;
+
+    # --- System Services ---
+    ssh.enable = true;
     bluetooth.enable = false;
     audio.enable = false;
 
-    # --- Ollama ---
+    # --- Development ---
     dev = {
       opencode.enable = false;
       ollama = {
         enable = true;
         server = true;
-        models = { };
+        context = 49152;
+        unloadAfter = "-1";
+        models = {
+          "muse-glimmer:30b".name = "Muse Glimmer 30B";
+        };
       };
     };
   };
