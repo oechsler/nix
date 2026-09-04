@@ -93,6 +93,10 @@
       formFactor = "desktop";
       cpu = "amd"; # AMD Ryzen AI 9 HX 370
       gpu = "amd"; # Integrated Radeon 890M
+      unifiedMemory = {
+        enable = true;
+        size = 24576;
+      };
     };
 
     # --- Boot & Security ---

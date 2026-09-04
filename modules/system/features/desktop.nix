@@ -6,7 +6,7 @@
   options.features = {
     desktop = {
       enable = (lib.mkEnableOption "desktop environment (Hyprland, SDDM, LibreWolf)") // {
-        default = true;
+        default = config.features.hardware.formFactor != "headless";
       };
       wm = lib.mkOption {
         type = lib.types.enum [

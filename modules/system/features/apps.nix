@@ -5,7 +5,7 @@
 {
   options.features.apps = {
     enable = (lib.mkEnableOption "desktop applications (Discord, Spotify, etc.)") // {
-      default = true;
+      default = config.features.hardware.formFactor != "headless";
     };
 
     mumble = {

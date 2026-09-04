@@ -58,7 +58,7 @@ in
           };
         };
 
-        programs.virt-manager.enable = true;
+        programs.virt-manager.enable = config.features.desktop.enable;
         users.users.${config.user.name}.extraGroups = [ "libvirtd" ];
 
         systemd.services.libvirt-default-network = {
@@ -88,20 +88,22 @@ in
 
         # virt-manager is launched through a Nix wrapper. Keep its wrapper
         # class for window matching, but use the packaged icon directly.
-        home-manager.users.${config.user.name}.xdg.desktopEntries.virt-manager = {
-          name = "Virtual Machine Manager";
-          genericName = "Virtual machine viewer/manager";
-          comment = "Manage virtual machines";
-          exec = "virt-manager";
-          icon = "virt-manager";
-          terminal = false;
-          categories = [
-            "System"
-            "Emulator"
-            "GTK"
-          ];
-          settings.StartupWMClass = ".virt-manager-wrapped";
-        };
+        home-manager.users.${config.user.name}.xdg.desktopEntries.virt-manager =
+          lib.mkIf config.features.desktop.enable
+            {
+              name = "Virtual Machine Manager";
+              genericName = "Virtual machine viewer/manager";
+              comment = "Manage virtual machines";
+              exec = "virt-manager";
+              icon = "virt-manager";
+              terminal = false;
+              categories = [
+                "System"
+                "Emulator"
+                "GTK"
+              ];
+              settings.StartupWMClass = ".virt-manager-wrapped";
+            };
       })
     ]
   );

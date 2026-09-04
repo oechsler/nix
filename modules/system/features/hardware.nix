@@ -9,6 +9,7 @@
         type = lib.types.enum [
           "desktop"
           "laptop"
+          "headless"
         ];
         default = "desktop";
         description = ''
@@ -46,6 +47,17 @@
         );
         default = null;
         description = "GPU vendor — enables graphics support and the correct VA-API driver for hardware video decoding. AMD also gets 32-bit libs when gaming is enabled. NVIDIA is not supported.";
+      };
+      unifiedMemory = {
+        enable = (lib.mkEnableOption "AMD APU shared-memory GTT") // {
+          default = false;
+        };
+        size = lib.mkOption {
+          type = lib.types.nullOr lib.types.ints.positive;
+          default = null;
+          example = 32768;
+          description = "Explicit maximum system RAM in MiB that amdgpu may map for unified-memory graphics.";
+        };
       };
     };
 

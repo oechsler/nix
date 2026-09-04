@@ -82,8 +82,36 @@
 
   # AMD CPU: ensure active pstate driver for modern EPP-based scaling.
   # Required for power-profiles-daemon to control performance profiles on AMD.
-  boot.kernelParams = lib.mkIf (config.features.hardware.cpu == "amd") [
-    "amd_pstate=active"
+  boot.kernelParams =
+    lib.mkIf (config.features.hardware.cpu == "amd" || config.features.hardware.unifiedMemory.enable)
+      (
+        lib.optional (config.features.hardware.cpu == "amd") "amd_pstate=active"
+        ++ lib.optional (
+          config.features.hardware.unifiedMemory.enable && config.features.hardware.unifiedMemory.size != null
+        ) "amdgpu.gttsize=${toString config.features.hardware.unifiedMemory.size}"
+      );
+
+  assertions = [
+    {
+      assertion =
+        !config.features.hardware.unifiedMemory.enable
+        || (config.features.hardware.cpu == "amd" && config.features.hardware.gpu == "amd");
+      message = "features.hardware.unifiedMemory.enable requires both CPU and GPU to be AMD.";
+    }
+    {
+      assertion =
+        !config.features.hardware.unifiedMemory.enable
+        || config.features.hardware.unifiedMemory.size != null;
+      message = "features.hardware.unifiedMemory.enable requires an explicit unifiedMemory.size.";
+    }
+    {
+      assertion = config.features.hardware.formFactor != "headless" || !config.features.desktop.enable;
+      message = "headless systems cannot enable features.desktop.enable.";
+    }
+    {
+      assertion = config.features.hardware.formFactor != "headless" || !config.features.apps.enable;
+      message = "headless systems cannot enable features.apps.enable.";
+    }
   ];
 
 }

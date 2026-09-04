@@ -52,17 +52,30 @@ These options describe the machine and the guarantees required before
 userspace configuration starts. Hardware values are normally host-specific;
 the remaining options control boot-time storage and persistence.
 
-| Option                                | Default     | Description                                                                                               |
-| ------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------- |
-| `features.hardware.formFactor`        | `"desktop"` | Machine form factor: `"desktop"` or `"laptop"`.                                                           |
-| `features.hardware.cpu`               | `null`      | CPU vendor: `"amd"` or `"intel"`; selects microcode.                                                      |
-| `features.hardware.gpu`               | `null`      | GPU vendor: `"amd"` or `"intel"`; selects graphics and VA-API support. NVIDIA is not supported.           |
-| `features.kernel`                     | `"cachyos"` | Kernel variant, such as `"cachyos-v3"`, `"cachyos-v4"`, `"cachyos-lts"`, `"default"`, or `"default-lts"`. |
-| `features.secureBoot.enable`          | `false`     | UEFI Secure Boot via lanzaboote.                                                                          |
-| `features.impermanence.enable`        | `true`      | Impermanent root with btrfs rollback on boot.                                                             |
-| `features.impermanence.persistPrefix` | read-only   | Resolved persistence prefix (`/persist` when enabled).                                                    |
-| `features.impermanence.extraPaths`    | `[]`        | Additional paths to persist.                                                                              |
-| `features.snapshots.enable`           | `true`      | Automatic btrfs snapshots.                                                                                |
+| Option                                   | Default     | Description                                                                                               |
+| ---------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------- |
+| `features.hardware.formFactor`           | `"desktop"` | Machine form factor: `"desktop"`, `"laptop"`, or `"headless"`.                                            |
+| `features.hardware.cpu`                  | `null`      | CPU vendor: `"amd"` or `"intel"`; selects microcode.                                                      |
+| `features.hardware.gpu`                  | `null`      | GPU vendor: `"amd"` or `"intel"`; selects graphics and VA-API support. NVIDIA is not supported.           |
+| `features.hardware.unifiedMemory.enable` | `false`     | Enables a larger dynamic system-memory aperture for AMD APUs.                                             |
+| `features.hardware.unifiedMemory.size`   | `null`      | Required explicit maximum GTT aperture in MiB when enabled.                                               |
+| `features.kernel`                        | `"cachyos"` | Kernel variant, such as `"cachyos-v3"`, `"cachyos-v4"`, `"cachyos-lts"`, `"default"`, or `"default-lts"`. |
+| `features.secureBoot.enable`             | `false`     | UEFI Secure Boot via lanzaboote.                                                                          |
+| `features.impermanence.enable`           | `true`      | Impermanent root with btrfs rollback on boot.                                                             |
+| `features.impermanence.persistPrefix`    | read-only   | Resolved persistence prefix (`/persist` when enabled).                                                    |
+| `features.impermanence.extraPaths`       | `[]`        | Additional paths to persist.                                                                              |
+| `features.snapshots.enable`              | `true`      | Automatic btrfs snapshots.                                                                                |
+
+#### Form Factors
+
+Choose the form factor that best describes how the machine is used. It changes
+power handling and which user-facing features are enabled by default.
+
+| Value      | Use it for                         | Behavior                                      |
+| ---------- | ---------------------------------- | --------------------------------------------- |
+| `desktop`  | A permanently attached workstation | Desktop session and desktop defaults enabled. |
+| `laptop`   | A portable computer                | Battery- and lid-aware power handling.        |
+| `headless` | A machine without a monitor        | No graphical session or GUI applications.     |
 
 Example for a laptop:
 
@@ -75,6 +88,37 @@ features = {
   };
 };
 ```
+
+For AMD APUs, `unifiedMemory.enable` adds the kernel parameter
+`amdgpu.gttsize=<size>`. This does not reserve that amount of RAM or turn it
+into dedicated VRAM; it allows `amdgpu` to map up to that amount of shared
+system memory for GPU workloads. The option requires both
+`features.hardware.cpu = "amd"` and `features.hardware.gpu = "amd"`, plus an
+explicit size. It should only be enabled when the hardware and workload benefit
+from it.
+
+The size must be selected explicitly for the host:
+
+```nix
+features.hardware.unifiedMemory = {
+  enable = true;
+  size = 32768; # MiB of system RAM available through the GTT aperture
+};
+```
+
+Use `formFactor = "headless"` for a permanently running machine without a
+monitor or graphical session:
+
+```nix
+features.hardware.formFactor = "headless";
+```
+
+This disables the desktop session, display manager, Plymouth, and GUI
+applications by default. Console tools, services, networking, storage,
+development tools, and server backends remain available. GUI frontends such as
+virt-manager are omitted, while server features such as libvirt and Podman can
+still be enabled. Headless hosts keep normal GPU runtime power management so
+supported hardware can enter low-power idle states.
 
 Impermanence recreates the root filesystem on every boot. Persistent state is
 kept under `/persist` and is declared by feature modules or
@@ -517,23 +561,13 @@ diagnostics, LSP navigation, Treesitter highlighting, and format-on-save for
 the language environments above. JetBrains IDEs and DBeaver are optional GUI
 tools. JetBrains entries default to GoLand and RustRover.
 
-| Option                               | Default                    | Description                                 |
-| ------------------------------------ | -------------------------- | ------------------------------------------- |
-| `features.dev.enable`                | `true`                     | Development languages, tools, and IDEs.     |
-| `features.dev.opencode.enable`       | `dev.enable`               | OpenCode AI coding agent.                   |
-| `features.dev.opencode.defaultModel` | `openai/gpt-5.6-luna`      | Model used when no other model is selected. |
-| `features.dev.opencode.settings`     | `{}`                       | Additional OpenCode settings.               |
-| `features.dev.opencode.provider`     | shared defaults            | Available model providers and models.       |
-| `features.dev.opencode.mcp`          | none enabled               | Additional OpenCode integrations.           |
-| `features.dev.opencode.lsp`          | shared defaults            | Language servers for OpenCode.              |
-| `features.dev.opencode.formatter`    | shared defaults            | Formatters for supported source files.      |
-| `features.dev.ollama.enable`         | `false`                    | Local Ollama server and CLI.                |
-| `features.dev.ollama.server`         | `false`                    | Expose the Ollama API to other hosts.       |
-| `features.dev.ollama.models`         | `{}`                      | Models pulled after the server starts.      |
-| `features.dev.jetbrains.enable`      | `dev.enable`               | JetBrains IDEs as a group.                  |
-| `features.dev.jetbrains.entries`     | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.                  |
-| `features.dev.android.enable`        | `false`                    | Android SDK and Android build tools.        |
-| `features.dev.dbeaver.enable`        | `dev.enable`               | DBeaver database GUI.                       |
+| Option                           | Default                    | Description                             |
+| -------------------------------- | -------------------------- | --------------------------------------- |
+| `features.dev.enable`            | `true`                     | Development languages, tools, and IDEs. |
+| `features.dev.jetbrains.enable`  | `dev.enable`               | JetBrains IDEs as a group.              |
+| `features.dev.jetbrains.entries` | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.              |
+| `features.dev.android.enable`    | `false`                    | Android SDK and Android build tools.    |
+| `features.dev.dbeaver.enable`    | `dev.enable`               | DBeaver database GUI.                   |
 
 #### JetBrains IDEs
 
@@ -563,66 +597,140 @@ features = {
 
 #### Ollama
 
-Ollama is disabled by default. When enabled, the Ollama server runs as a
-background system service and the `ollama` CLI is available system-wide. The
-server listens on `localhost:11434` by default. Declared models are pulled
-after the service starts; models removed from the set are removed from the
-Ollama store as well. An empty set does not pull any models and removes all
-currently installed models.
+Ollama runs local open-weight models. It is disabled by default. Enabling it
+installs the `ollama` command, starts the local model server, and keeps the
+declared models installed.
 
-Models can be searched at [ollama.com/search](https://ollama.com/search). Use
-[modelfit.io](https://modelfit.io) to estimate GPU VRAM requirements, or the
-required Unified Memory on APUs, before selecting a model.
+| Option                            | Default | Purpose                                   |
+| --------------------------------- | ------- | ----------------------------------------- |
+| `features.dev.ollama.enable`      | `false` | Start the local Ollama server.            |
+| `features.dev.ollama.server`      | `false` | Allow connections from other machines.    |
+| `features.dev.ollama.context`     | `32768` | Default context size for model processes. |
+| `features.dev.ollama.unloadAfter` | `"5m"`  | Unload inactive models after this time.   |
+| `features.dev.ollama.models`      | `{}`    | Models to keep installed.                 |
 
 ```nix
 features.dev.ollama = {
   enable = true;
+  context = 131072;
+  models."gemma4:12b-it-q8_0".name = "Gemma 4 12B Instruct Q8";
+};
+```
+
+`context` is Ollama's default context size for every model it starts and
+is also used as the OpenCode context limit unless a model overrides it. Choose
+it according to the available RAM and GPU memory; larger values use more memory
+as the conversation grows. OpenCode uses `32768` as the default output limit;
+override it for all Ollama models with
+`features.dev.opencode.ollama.output`, or set `output` on an individual model.
+`unloadAfter` defaults to `"5m"` and controls how long an unused model remains
+loaded. Set it to values such as `"1h"` when a model should stay warm longer.
+
+Set `server = true` only when another machine needs access to Ollama. This
+opens port `11434` and should only be used on a trusted network or behind an
+authenticated HTTPS gateway.
+
+Models can be searched at [ollama.com/search](https://ollama.com/search).
+
+#### OpenCode
+
+OpenCode is the coding assistant used by this configuration. It is enabled with
+the development feature and includes model providers, MCP integrations, LSP
+servers, and formatters. The default model is
+`openai/gpt-5.6-luna`.
+
+| Option                               | Default               | Purpose                             |
+| ------------------------------------ | --------------------- | ----------------------------------- |
+| `features.dev.opencode.enable`       | `features.dev.enable` | Install and configure OpenCode.     |
+| `features.dev.opencode.defaultModel` | `openai/gpt-5.6-luna` | Model selected by default.          |
+| `features.dev.opencode.provider`     | Built-in providers    | Additional or overridden providers. |
+| `features.dev.opencode.mcp`          | `{}`                  | MCP servers for OpenCode.           |
+| `features.dev.opencode.settings`     | `{}`                  | Additional OpenCode settings.       |
+
+If local Ollama is enabled, its models are automatically available in OpenCode
+through the `ollama` provider. OpenCode connects directly to the local server;
+there is no extra setup required.
+
+The local Ollama models are taken from `features.dev.ollama.models`; they do not
+need to be listed a second time under OpenCode. Use the OpenCode-specific block
+only when OpenCode should connect to a different, usually remote, Ollama server.
+
+| Option                                      | Default                       | Purpose                              |
+| ------------------------------------------- | ----------------------------- | ------------------------------------ |
+| `features.dev.opencode.ollama.enable`       | Local Ollama setting          | Enable the OpenCode Ollama provider. |
+| `features.dev.opencode.ollama.baseURL`      | `http://127.0.0.1:11434/v1`   | Ollama API endpoint.                 |
+| `features.dev.opencode.ollama.context`      | `features.dev.ollama.context` | Context advertised to OpenCode.      |
+| `features.dev.opencode.ollama.output`       | `32768`                       | Maximum response length.             |
+| `features.dev.opencode.ollama.models`       | Local Ollama models           | Models shown in OpenCode.            |
+| `features.dev.opencode.ollama.apiKey`       | `null`                        | Inline API key.                      |
+| `features.dev.opencode.ollama.apiKeySecret` | `null`                        | SOPS secret containing the API key.  |
+
+To connect OpenCode to an Ollama server on another machine, configure the
+OpenCode provider without enabling local Ollama:
+
+```nix
+features.dev.opencode.ollama = {
+  enable = true;
+  baseURL = "https://ollama.example.com/v1";
+  apiKeySecret = "ollama-api-token";
   models = {
-    "qwen3:8b".name = "Qwen3 8B";
-    "gemma3:12b".name = "Gemma 3 12B";
+    "gemma4:12b-it-q8_0" = {
+      name = "Gemma 4 12B Instruct Q8";
+      toolCall = true;
+      reasoning = true;
+      temperature = true;
+      context = 131072;
+      output = 32768;
+    };
   };
 };
 ```
 
-Set `server = true` to listen on all interfaces and allow TCP port `11434`
-through the host firewall. This makes the API available to other hosts on the
-network, so it should only be enabled on a trusted network.
+The local Ollama feature manages a server and its model store. The OpenCode
+Ollama feature only configures where OpenCode connects; the two can therefore
+be used independently.
+
+Model capabilities are declared per model because models differ in their
+support for tools, reasoning, temperature, and context size:
+
+| Field         | Meaning                                      |
+| ------------- | -------------------------------------------- |
+| `name`        | Name shown in OpenCode.                      |
+| `toolCall`    | Model supports native tool calls.            |
+| `reasoning`   | Model provides reasoning or thinking output. |
+| `temperature` | Model accepts temperature control.           |
+| `context`     | Maximum context length in tokens.            |
+| `output`      | Maximum output length in tokens.             |
+
+The same model fields work for Ollama and custom OpenAI-compatible providers.
+Unset fields are omitted from the generated OpenCode configuration.
+
+The same model fields can be used with an external OpenAI-compatible provider:
 
 ```nix
-features.dev.ollama = {
-  enable = true;
-  server = true;
+features.dev.opencode.provider.local = {
+  name = "Local Gateway";
+  npm = "@ai-sdk/openai-compatible";
+  baseURL = "http://127.0.0.1:4000/v1";
+  models."qwen3.5-27b" = {
+    name = "Qwen3.5 27B";
+    toolCall = true;
+    reasoning = true;
+    temperature = true;
+    context = 262144;
+    output = 32768;
+  };
 };
 ```
 
-When OpenCode is enabled on the same host, enabling Ollama automatically adds
-an `ollama` provider using the local OpenAI-compatible API. Each model listed
-in `features.dev.ollama.models` is made available in OpenCode under its
-configured display name as well.
+Providers can be enabled or disabled individually. The generated configuration
+only exposes configured providers and models, keeping the model picker focused
+on the declared setup.
 
-The Ollama package is selected from `features.hardware.gpu`: AMD uses the ROCm
-backend and Intel uses the Vulkan backend. Hosts without a configured GPU use
-the default Ollama package.
-
-#### OpenCode
-
-OpenCode uses shared model and provider defaults. The default model is
-`openai/gpt-5.6-luna`. OpenAI provides `gpt-5.6-luna`, `gpt-5.6-terra`, and
-`gpt-5.6-sol`; OpenCode Go provides the configured DeepSeek, GPT, and Qwen
-models.
-
-A host normally only adds its own MCP servers. MCPs are present but disabled by
-default, and can be enabled from OpenCode. Set `enable = true` when an MCP
-should start enabled. MCPs can use no authentication, a SOPS-backed token, or
-OAuth/OIDC. Provider credentials and MCP credentials are always kept in SOPS.
-
-Existing providers and models can be adjusted by using the same name; unrelated
-defaults remain available. Providers can be enabled or disabled individually.
-The generated configuration allowlists enabled providers and configured models,
-so models from other providers or from the remote model registry are not shown.
-Additional OpenCode settings can be placed in `settings`. The `lsp` and
-`formatter` attributes have shared defaults and can be extended or overridden
-by name. Set `enable = false` to disable an individual entry.
+A host normally only adds its own MCP servers. MCPs are disabled by default; set
+`enable = true` when one should be active at startup. MCPs can use no
+authentication, a SOPS-backed token, or OAuth/OIDC. Provider and MCP
+credentials can be kept in SOPS or supplied inline where explicitly supported.
 
 The OpenCode LSP and formatter defaults apply to the applicable entries above.
 Formatters run after OpenCode writes or edits a matching file.
@@ -644,6 +752,37 @@ features.dev.opencode = {
 };
 ```
 
+Provider credentials can be supplied in two ways:
+
+```nix
+# SOPS (recommended)
+apiKeySecret = "opencode/provider/example/api-key";
+
+# Inline plaintext (only for trusted configurations)
+apiKey = "known-local-token";
+```
+
+For MCP OAuth, OpenCode handles the authorization-code flow and PKCE natively.
+Use a public client without a secret, a SOPS-managed confidential client, or a
+plaintext confidential client as appropriate:
+
+```nix
+# Public client: dynamic registration and PKCE
+oauth = { };
+
+# Confidential client with SOPS secret
+oauth = {
+  clientId = "opencode-client";
+  clientSecretSecret = "opencode/mcp/example/client-secret";
+};
+
+# Trusted confidential client with inline secret
+oauth = {
+  clientId = "opencode-client";
+  clientSecret = "known-local-secret";
+};
+```
+
 For example, a host can add a provider and an MCP while keeping the defaults:
 
 ```nix
@@ -658,6 +797,7 @@ features.dev.opencode = {
     };
   };
   mcp.homeassistant = {
+    enable = true;
     url = "https://ha.example/api/mcp";
     tokenSecret = "opencode/mcp/homeassistant/token";
   };
@@ -665,8 +805,8 @@ features.dev.opencode = {
 ```
 
 Use `settings.small_model` to choose a separate small model. Remote MCPs can
-configure OAuth/OIDC with `oauth`; its client secret is referenced through
-`clientSecretSecret`. See
+configure OAuth/OIDC with `oauth`; use either `clientSecretSecret` or
+`clientSecret` for the client credential. See
 [sops/README.md](../sops/README.md) for the credential layout and workflow.
 
 ### Operations
