@@ -260,7 +260,17 @@
       diskoConfigurations = lib.genAttrs hostNames mkDisko;
 
       # Complete system closures embedded into the offline installer ISO.
-      hostClosures = lib.mapAttrs (_: host: host.config.system.build.toplevel) nixosConfigurations;
+      hostClosures = lib.mapAttrs (
+        _: host:
+        let
+          installHost = host.extendModules {
+            modules = lib.optionals host.config.features.secureBoot.enable [
+              { features.secureBoot.enable = lib.mkForce false; }
+            ];
+          };
+        in
+        installHost.config.system.build.toplevel
+      ) nixosConfigurations;
       hostManifest = lib.mapAttrs (
         _: host:
         let
