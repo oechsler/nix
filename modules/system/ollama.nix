@@ -74,5 +74,6 @@ in
         echo "finished model: $model"
       done
     '';
+    systemd.services.ollama-model-loader.environment.SHELL = lib.getExe pkgs.bash;
   };
 }
