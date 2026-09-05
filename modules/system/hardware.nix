@@ -76,8 +76,8 @@
   services.printing.enable = false;
   zramSwap = {
     enable = true;
-    memoryPercent = 100;
-    memoryMax = 32 * 1024 * 1024 * 1024; # 32 GiB hard cap
+    memoryPercent = 50;
+    memoryMax = 32 * 1024 * 1024 * 1024; # 32 GiB hard cap after the 50% limit
   };
 
   # AMD CPU: ensure active pstate driver for modern EPP-based scaling.
