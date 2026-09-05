@@ -56,9 +56,9 @@
     bluetooth.enable = false;
     audio.enable = false;
 
-    # --- Development ---
-    dev = {
-      opencode.enable = false;
+    # --- LLM ---
+    llm = {
+      enable = true;
       ollama = {
         enable = true;
         server = true;
@@ -69,6 +69,9 @@
         };
       };
     };
+
+    # --- Development ---
+    dev.enable = false;
 
     # --- Operations ---
     ops.enable = false;

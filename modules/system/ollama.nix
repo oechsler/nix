@@ -11,8 +11,7 @@
 }:
 
 let
-  modelSpec = import ../lib/opencode.nix { inherit lib; };
-  cfg = config.features.dev.ollama;
+  cfg = config.features.llm.ollama;
   ollamaPackage =
     if config.features.hardware.gpu == "amd" then
       pkgs.ollama-rocm
@@ -26,44 +25,7 @@ let
   declaredModels = lib.escapeShellArgs (builtins.attrNames cfg.models);
 in
 {
-  options.features.dev.ollama = {
-    enable = (lib.mkEnableOption "Ollama local model server") // {
-      default = false;
-    };
-
-    server = lib.mkEnableOption "Ollama API access from other hosts";
-
-    unloadAfter = lib.mkOption {
-      type = lib.types.str;
-      default = "5m";
-      example = "5m";
-      description = "How long Ollama keeps an inactive model loaded.";
-    };
-
-    context = lib.mkOption {
-      type = lib.types.ints.positive;
-      default = 32768;
-      example = 131072;
-      description = "Default context length in tokens for Ollama model servers.";
-    };
-
-    models = lib.mkOption {
-      type = lib.types.coercedTo (lib.types.listOf lib.types.str) (
-        models:
-        lib.genAttrs models (model: {
-          name = model;
-        })
-      ) (lib.types.attrsOf modelSpec.type);
-      default = { };
-      example = {
-        "gemma3:12b".name = "Gemma 3 12B";
-        "qwen3:8b".name = "Qwen3 8B";
-      };
-      description = "Ollama models to pull declaratively, keyed by model ID.";
-    };
-  };
-
-  config = lib.mkIf (config.features.dev.enable && cfg.enable) {
+  config = lib.mkIf (config.features.llm.enable && cfg.enable) {
     environment.systemPackages = [ config.services.ollama.package ];
 
     services.ollama = {

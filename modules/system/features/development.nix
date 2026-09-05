@@ -22,7 +22,7 @@ in
       ollama = {
         enable = lib.mkOption {
           type = lib.types.bool;
-          default = config.features.dev.ollama.enable;
+          default = config.features.llm.enable && config.features.llm.ollama.enable;
           description = "Enable the Ollama provider in OpenCode.";
         };
         baseURL = lib.mkOption {
@@ -32,7 +32,7 @@ in
         };
         context = lib.mkOption {
           type = lib.types.ints.positive;
-          default = config.features.dev.ollama.context;
+          default = config.features.llm.ollama.context;
           description = "Default context length advertised to OpenCode for Ollama models.";
         };
         output = lib.mkOption {
@@ -52,7 +52,7 @@ in
         };
         models = lib.mkOption {
           type = lib.types.attrsOf modelSpec.type;
-          default = config.features.dev.ollama.models;
+          default = config.features.llm.ollama.models;
           description = "Models exposed by the OpenCode Ollama provider.";
         };
       };

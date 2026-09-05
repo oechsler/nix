@@ -112,7 +112,7 @@ in
       ++ lib.optionals config.features.desktop.enable [
         "/var/lib/sddm" # SDDM state
       ]
-      ++ lib.optionals config.features.dev.ollama.enable [
+      ++ lib.optionals (config.features.llm.enable && config.features.llm.ollama.enable) [
         "/var/lib/ollama" # Ollama models and server state
       ]
       ++ lib.optionals config.features.auth.ldap.enable [

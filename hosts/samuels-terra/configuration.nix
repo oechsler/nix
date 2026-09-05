@@ -147,7 +147,6 @@
 
     # --- Development ---
     dev = {
-      ollama.enable = false;
       opencode = {
         defaultModel = "ollama/qwen3.6:35b-a3b-coding-mtp-q4_K_M";
         ollama = {
