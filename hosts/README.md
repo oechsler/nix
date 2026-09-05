@@ -17,18 +17,20 @@ Follow the authoritative [installation guide](../docs/INSTALL.md).
 ## Adding a New Host
 
 The local flake discovers every directory below `hosts/` and creates the
-corresponding `nixosConfigurations.<name>` and `diskoConfigurations.<name>`
-outputs automatically. No host entry needs to be added to `flake.nix`.
+corresponding `nixosConfigurations.<name>` automatically. No host entry needs
+to be added to `flake.nix`; the shared main-disk layout is included by the host
+configuration.
 
 1. Create `hosts/new-host/` with:
    - `configuration.nix` — host-specific config
-   - `disko.nix` — disk layout (copy from an existing host and update the device ID)
+   - `disko.nix` — main-disk device ID; the shared layout is automatic
    - `hardware-configuration.nix` — wrapper for generated config
    - `luks.nix` — LUKS device declaration
    - `home.nix` — optional host-specific home-manager overrides (e.g. idle timeouts)
 
    `disko.nix` contains destructive partitioning assumptions. Review the
-   target device and layout before running the installer.
+   target device ID before running the installer. The main layout is shared
+   and generated from the host features.
 
 2. Generate the hardware configuration:
 
