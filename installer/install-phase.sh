@@ -14,7 +14,9 @@ phase_hardware_config() {
   host_dir="$REPO_DIR/hosts/$HOST"
   [[ -d "$host_dir" ]] || error "Host directory not found: $host_dir"
   command -v nixos-generate-config &>/dev/null || error "Required command not found: nixos-generate-config"
+  echo ""
   info "Generating hardware configuration for $HOST..."
+  echo ""
   nixos-generate-config --show-hardware-config \
     2> >(sed '/^ERROR: Not a Btrfs subvolume: Invalid argument$/d' >&2) \
     >"$host_dir/hardware-configuration.generated.nix" ||
