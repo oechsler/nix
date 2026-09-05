@@ -18,12 +18,6 @@ let
   gamingEnabled = features.gaming.enable or false;
   nextcloudEnabled = features.apps.nextcloud.enable or false;
   smbEnabled = (features.smb.enable or false) && (features.smb.shares or [ ]) != [ ];
-  sshEnabled = !impermanenceEnabled && (features.ssh.enable or false);
-  libvirtEnabled =
-    !impermanenceEnabled
-    && (features.virtualisation.enable or false)
-    && (features.virtualisation.vm.enable or false);
-
   mountOptions = [
     "compress=zstd"
     "noatime"
@@ -60,30 +54,6 @@ let
               mountpoint = "/persist";
               inherit mountOptions;
             };
-          }
-        else
-          {
-            name = "@var";
-            value = {
-              mountpoint = "/var";
-              inherit mountOptions;
-            };
-          }
-      )
-      (
-        if sshEnabled then
-          {
-            name = "@ssh";
-            value.mountpoint = "/etc/ssh";
-          }
-        else
-          null
-      )
-      (
-        if libvirtEnabled then
-          {
-            name = "@libvirt";
-            value.mountpoint = "/etc/libvirt";
           }
         else
           null

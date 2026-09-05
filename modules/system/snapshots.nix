@@ -10,7 +10,7 @@
 #
 # Snapshot schedule:
 #   - Runs: Every hour
-#   - Subvolumes: @home, @persist, @var
+#   - Subvolumes: @home and @persist (or @ when Impermanence is disabled)
 #   - Nested data subvolumes excluded from @home: @steam, @nextcloud, @smb
 #   - Storage: /mnt/btrfs-root/@snapshots/
 #
@@ -72,7 +72,7 @@ in
             # - @persist: Only if impermanence enabled (otherwise unused)
             subvolume = lib.mkMerge [
               (lib.mkIf (!config.features.impermanence.enable) {
-                "@var" = {
+                "@" = {
                   snapshot_create = "always";
                 };
               })

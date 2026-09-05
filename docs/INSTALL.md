@@ -117,14 +117,14 @@ and feature-specific data areas are selected from the host's feature settings.
             │   └── /home                               #
             ├── @nix                                    # Nix store
             │   └── /nix                                #
-            ├── @persist or @var                         # Persistent system state
+            ├── @persist (Impermanence only)              # Persistent system state
             │   └── /persist or /var                     # Depends on Impermanence
             └── ...                                      # Optional feature volumes
 ```
 
 The root partition is encrypted when `features.encryption.enable` is enabled.
 With Impermanence, `/persist` stores the selected state that must survive a
-reboot. Without Impermanence, `/var` is kept separately instead. The EFI
+reboot. Without Impermanence, the root subvolume remains persistent. The EFI
 partition, encryption wrapper, and Btrfs layout are all generated for you.
 
 | Subvolume    | Mountpoint                        | Required feature                  |
@@ -133,11 +133,9 @@ partition, encryption wrapper, and Btrfs layout are all generated for you.
 | `@steam`     | `/home/<user>/.local/share/Steam` | `features.gaming.enable`          |
 | `@nextcloud` | `/home/<user>/Nextcloud`          | `features.apps.nextcloud.enable`  |
 | `@smb`       | `/home/<user>/smb`                | `features.smb.enable` with shares |
-| `@ssh`       | `/etc/ssh`                        | SSH without Impermanence          |
-| `@libvirt`   | `/etc/libvirt`                    | VMs without Impermanence          |
 
 With Impermanence enabled, `@` is reset on boot while `/home`, `/nix`, and
-selected data under `/persist` remain available. Without Impermanence, `/var`
+selected data under `/persist` remain available. Without Impermanence, the root
 and any feature-specific areas remain persistent. The Btrfs top-level is also
 mounted at `/mnt/btrfs-root` for snapshot operations; `/.snapshots` is the
 normal path for browsing snapshots.
@@ -254,7 +252,7 @@ Feature-dependent state:
 - `/var/lib/pam-lldap` (LDAP authentication)
 - `/var/lib/sbctl` (Secure Boot)
 - `/var/lib/tailscale` (Tailscale)
-- `/etc/ssh` (SSH host keys, when SSH is enabled; separate storage without Impermanence)
+- `/etc/ssh` (SSH host keys, when SSH is enabled)
 
 Headless hosts do not persist desktop state. Additional paths can be configured
 through `features.impermanence.extraPaths`.

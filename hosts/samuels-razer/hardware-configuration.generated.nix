@@ -60,7 +60,7 @@
   fileSystems."/var" = {
     device = "/dev/disk/by-uuid/19b5750b-2f44-4b3c-9db3-d2476c7e7080";
     fsType = "btrfs";
-    options = [ "subvol=@var" ];
+    options = [ "subvol=@" ];
   };
 
   swapDevices = [ ];
