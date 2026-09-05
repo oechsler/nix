@@ -109,7 +109,7 @@ in
         "/var/lib/sddm" # SDDM state
       ]
       ++ lib.optionals config.features.dev.ollama.enable [
-        "/var/lib/private/ollama" # Ollama models and server state
+        "/var/lib/ollama" # Ollama models and server state
       ]
       ++ lib.optionals config.features.auth.ldap.enable [
         "/var/lib/pam-lldap" # Cached LDAP password verifier
