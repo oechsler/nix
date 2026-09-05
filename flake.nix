@@ -294,7 +294,10 @@
           keyboard = cfg.locale.keyboard;
           language = cfg.locale.language;
           userName = cfg.user.name;
-          passwordLocked = cfg.user.hashedPassword == "!" && !(cfg.sops.secrets ? "user/password");
+          passwordLocked =
+            cfg.user.hashedPassword == "!"
+            && !(cfg.sops.secrets ? "user/password")
+            && !cfg.features.auth.ldap.enable;
           luksDevices = builtins.attrValues (
             builtins.mapAttrs (_name: dev: dev.device) cfg.boot.initrd.luks.devices
           );
