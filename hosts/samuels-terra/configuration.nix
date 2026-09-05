@@ -149,14 +149,14 @@
     dev = {
       ollama.enable = false;
       opencode = {
-        defaultModel = "ollama/gemma4:26b-a4b-it-mtp-q4_K_M";
+        defaultModel = "ollama/qwen3.6:35b-a3b-coding-mtp-q4_K_M";
         ollama = {
           enable = true;
           baseURL = "http://172.22.0.118:11434/v1";
           context = 32768;
           models = {
-            "gemma4:26b-a4b-it-mtp-q4_K_M" = {
-              name = "Gemma 4 26B A4B Instruct";
+            "qwen3.6:35b-a3b-coding-mtp-q4_K_M" = {
+              name = "Qwen 3.6 35B A3B Coding";
               toolCall = true;
               reasoning = true;
               temperature = true;
