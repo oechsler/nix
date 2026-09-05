@@ -8,6 +8,7 @@
 #   - @ subvolume: / (root, ephemeral - rolled back on boot)
 #   - @home subvolume: /home (persistent)
 #   - @nix subvolume: /nix (persistent)
+#   - @var subvolume: /var when impermanence is disabled
 #   - @persist subvolume: /persist (persistent)
 #   - @steam subvolume: Steam library, persistent but excluded from @home snapshots
 #   - @nextcloud subvolume: sync client data, persistent and resyncable
@@ -38,6 +39,10 @@ let
       else
         throw "samuels-razer/disko.nix requires the global user.name option"
     );
+  impermanenceEnabled =
+    moduleArgs ? config
+    && moduleArgs.config ? features
+    && moduleArgs.config.features.impermanence.enable;
 in
 
 {
@@ -100,12 +105,12 @@ in
                       ];
                     };
                     "@var" = {
-                      mountpoint = "/var";
                       mountOptions = [
                         "compress=zstd"
                         "noatime"
                       ];
-                    };
+                    }
+                    // (if impermanenceEnabled then { } else { mountpoint = "/var"; });
                     "@persist" = {
                       mountpoint = "/persist";
                       mountOptions = [
