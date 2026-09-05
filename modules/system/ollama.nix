@@ -80,6 +80,7 @@ in
     };
     systemd.services = {
       ollama.serviceConfig.DynamicUser = lib.mkForce false;
+      ollama.serviceConfig.StateDirectory = lib.mkForce "ollama/models";
 
       # Consume the API's NDJSON stream so progress works without a TTY.
       ollama-model-loader = {
