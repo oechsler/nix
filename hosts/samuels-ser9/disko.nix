@@ -8,7 +8,7 @@
 #   - @ subvolume: / (root, ephemeral - rolled back on boot)
 #   - @home subvolume: /home (persistent)
 #   - @nix subvolume: /nix (persistent)
-#   - @var subvolume: /var (persistent)
+#   - @var subvolume: /var (only without impermanence)
 #   - @persist subvolume: /persist (persistent)
 #   - @snapshots subvolume: /.snapshots (persistent snapshot storage)
 #
@@ -90,13 +90,6 @@ in
                         "noatime"
                       ];
                     };
-                    "@var" = {
-                      mountOptions = [
-                        "compress=zstd"
-                        "noatime"
-                      ];
-                    }
-                    // (if impermanenceEnabled then { } else { mountpoint = "/var"; });
                     "@persist" = {
                       mountpoint = "/persist";
                       mountOptions = [
@@ -111,7 +104,21 @@ in
                         "noatime"
                       ];
                     };
-                  };
+                  }
+                  // (
+                    if impermanenceEnabled then
+                      { }
+                    else
+                      {
+                        "@var" = {
+                          mountpoint = "/var";
+                          mountOptions = [
+                            "compress=zstd"
+                            "noatime"
+                          ];
+                        };
+                      }
+                  );
                 };
               };
             };
