@@ -60,7 +60,7 @@ phase_detect_features() {
         && !(cfg.sops.secrets ? "user/password");
       luksDevices = builtins.attrValues (builtins.mapAttrs (name: dev: dev.device) cfg.boot.initrd.luks.devices);
     }
-  }') || error "Failed to evaluate configuration. Check flake syntax."
+  ') || error "Failed to evaluate configuration. Check flake syntax."
 	fi
 	FEAT_ENCRYPTION=$(jq -r '.encryption' <<<"$json")
 	FEAT_UNLOCK_METHOD=$(jq -r '.unlockMethod' <<<"$json")
