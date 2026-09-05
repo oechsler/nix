@@ -103,6 +103,22 @@ in
                         "noatime"
                       ];
                     };
+                  }
+                  // (
+                    if impermanenceEnabled then
+                      { }
+                    else
+                      {
+                        "@var" = {
+                          mountpoint = "/var";
+                          mountOptions = [
+                            "compress=zstd"
+                            "noatime"
+                          ];
+                        };
+                      }
+                  )
+                  // {
                     "@persist" = {
                       mountpoint = "/persist";
                       mountOptions = [
@@ -126,21 +142,7 @@ in
                         "noatime"
                       ];
                     };
-                  }
-                  // (
-                    if impermanenceEnabled then
-                      { }
-                    else
-                      {
-                        "@var" = {
-                          mountpoint = "/var";
-                          mountOptions = [
-                            "compress=zstd"
-                            "noatime"
-                          ];
-                        };
-                      }
-                  );
+                  };
                 };
               };
             };
