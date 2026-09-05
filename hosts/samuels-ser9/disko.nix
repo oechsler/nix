@@ -93,7 +93,15 @@ in
                   }
                   // (
                     if impermanenceEnabled then
-                      { }
+                      {
+                        "@persist" = {
+                          mountpoint = "/persist";
+                          mountOptions = [
+                            "compress=zstd"
+                            "noatime"
+                          ];
+                        };
+                      }
                     else
                       {
                         "@var" = {
@@ -106,13 +114,6 @@ in
                       }
                   )
                   // {
-                    "@persist" = {
-                      mountpoint = "/persist";
-                      mountOptions = [
-                        "compress=zstd"
-                        "noatime"
-                      ];
-                    };
                     "@snapshots" = {
                       mountpoint = "/.snapshots";
                       mountOptions = [

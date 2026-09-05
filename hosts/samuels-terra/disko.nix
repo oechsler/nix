@@ -103,7 +103,15 @@ in
                   }
                   // (
                     if impermanenceEnabled then
-                      { }
+                      {
+                        "@persist" = {
+                          mountpoint = "/persist";
+                          mountOptions = [
+                            "compress=zstd"
+                            "noatime"
+                          ];
+                        };
+                      }
                     else
                       {
                         "@var" = {
@@ -116,13 +124,6 @@ in
                       }
                   )
                   // {
-                    "@persist" = {
-                      mountpoint = "/persist";
-                      mountOptions = [
-                        "compress=zstd"
-                        "noatime"
-                      ];
-                    };
                     "@steam" = {
                       mountpoint = "/home/${username}/.local/share/Steam";
                     };
