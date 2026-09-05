@@ -95,11 +95,11 @@ phase_install() {
     system_path=$(jq -r --arg host "$HOST" '.hosts[$host].system // empty' "$ISO_MANIFEST")
     [[ -n "$system_path" && -e "$system_path" ]] || error "Prebuilt system closure for $HOST is missing from the installer ISO."
     nixos-install --system "$system_path" --no-root-password --max-jobs "$max_jobs" || error "nixos-install failed. Check the output above."
-  elif [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
+  elif [[ "$FEAT_SECURE_BOOT" == "true" || ("$FEAT_ENCRYPTION" == "true" && "$FEAT_UNLOCK_METHOD" != "password") ]]; then
     local override_nix="$host_dir/secure-boot-install-override.nix"
     SECURE_BOOT_OVERRIDE_FILE="$override_nix"
     SECURE_BOOT_CONFIG_FILE="$host_dir/configuration.nix"
-    printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }\n' >"$override_nix"
+    printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; features.encryption.unlockMethod = lib.mkForce "password"; }\n' >"$override_nix"
     sed -i "/imports = \[/a\\    ./secure-boot-install-override.nix" "$host_dir/configuration.nix"
     git -C "$REPO_DIR" add "$override_nix" "$host_dir/configuration.nix"
     local install_ok=true
