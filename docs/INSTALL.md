@@ -155,12 +155,12 @@ only the system data needed across boots is kept under `/persist`.
 
 Core state kept on every host (some directories may remain empty):
 
-- `/var/lib/NetworkManager`
+- `/var/lib/NetworkManager` (network connections)
 - `/var/lib/backgrounds` (prepared wallpapers and blur cache)
-- `/var/lib/nixos`
-- `/var/lib/power-profiles-daemon`
-- `/var/lib/sops`
-- `/var/lib/systemd`
+- `/var/lib/nixos` (NixOS users and groups)
+- `/var/lib/power-profiles-daemon` (active power profile)
+- `/var/lib/sops` (SOPS state)
+- `/var/lib/systemd` (systemd state)
 - `/persist/etc/ssh/*` (SSH host keys)
 
 Feature-dependent state:
