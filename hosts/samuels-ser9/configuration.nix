@@ -1,6 +1,6 @@
 # samuels-ser9 Host Configuration
 #
-# Beelink SER9 headless Ollama server configuration.
+# Beelink SER9 Mini PC headless server configuration.
 #
 # Hardware:
 # - AMD Ryzen AI 9 HX 370 (Zen 5/Zen 5c, 12C/24T, up to 5.1GHz)
@@ -9,10 +9,10 @@
 # - 1TB PCIe 4.0 NVMe SSD
 # - 2.5G LAN, WiFi 6, Bluetooth 5.2
 #
-# Features:
+# Purpose:
 # - Headless Ollama server with AMD GPU acceleration
-# - SSH administration with synchronized public keys
-# - Secure Boot + TPM2-backed LUKS unlock
+# - Remote SSH administration with synchronized public keys
+# - Secure Boot with TPM2-backed LUKS unlock
 
 { ... }:
 

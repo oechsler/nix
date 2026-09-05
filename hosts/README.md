@@ -4,11 +4,11 @@ Host-specific configurations. Installation and disk-layout procedures are
 documented in [docs/INSTALL.md](../docs/INSTALL.md); this file only summarizes
 the host variants.
 
-| Host            | Device                        | Notes                                                                  |
-| --------------- | ----------------------------- | ---------------------------------------------------------------------- |
-| `samuels-terra` | Desktop workstation           | Ryzen 9 9950X3D + RX 9070 XT, dual 1440p, ASUS ROG Strix X870-I        |
-| `samuels-ser9`  | Beelink SER9 Mini PC          | Ryzen AI 9 HX 370 + Radeon 890M, dual 1440p desktop monitors, 1TB NVMe |
-| `samuels-razer` | Razer Blade Stealth 13 (2018) | Intel i7-8550U + UHD 620, 3200×1800 HiDPI, KDE, no Secure Boot         |
+| Host            | Device                        | Notes                                                               |
+| --------------- | ----------------------------- | ------------------------------------------------------------------- |
+| `samuels-terra` | Desktop workstation           | Ryzen 9 9950X3D + RX 9070 XT, dual 1440p, ASUS ROG Strix X870-I     |
+| `samuels-ser9`  | Beelink SER9 Mini PC          | Headless Ollama server, SSH administration, Secure Boot + TPM2 LUKS |
+| `samuels-razer` | Razer Blade Stealth 13 (2018) | Intel i7-8550U + UHD 620, 3200×1800 HiDPI, KDE, no Secure Boot      |
 
 ## Installation
 
