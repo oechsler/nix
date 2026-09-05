@@ -149,6 +149,10 @@ Persistent data goes in `/persist`.
 When Impermanence is disabled, the root filesystem and its state remain
 persistent across reboots as usual.
 
+You only need the separate `/var` storage when Impermanence is disabled. With
+Impermanence enabled, `/var` is reset together with the root filesystem and
+only the system data needed across boots is kept under `/persist`.
+
 Always-persistent core state:
 
 - `/var/lib/NetworkManager`
