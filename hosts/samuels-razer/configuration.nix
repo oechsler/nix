@@ -162,7 +162,7 @@
     };
   };
 
-  fonts.defaults.terminalSize = 10;
+  fonts.terminal.size = 10;
 
   system.stateVersion = "25.11";
 }

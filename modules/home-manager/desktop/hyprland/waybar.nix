@@ -24,7 +24,7 @@
 # Styling:
 # - Uses waybar-style.scss with template variables
 # - @blue → @${accent} (theme accent color)
-# - system_font → fonts.ui (UI font name)
+# - system_font → fonts.ui.font (UI font name)
 # - separator_alpha → 0.5 for dark, 0.15 for light themes
 
 {
@@ -47,7 +47,7 @@ let
   papirusText = if isLight then "#444444" else "#dfdfdf";
   # Small Waybar-specific refinement while staying tied to shared theme spacing.
   fineSpacing = theme.spacing.compact / 2;
-  iconSize = fonts.uiPixelSize;
+  iconSize = fonts.ui.pixelSize;
   trayIconSize = iconSize + theme.spacing.control;
   iconOpticalSpacing = builtins.floor (iconSize / 7);
 
@@ -85,7 +85,7 @@ let
       [
         "@${accent}"
         papirusText
-        fonts.ui
+        fonts.ui.font
         (if isLight then "0.15" else "0.5")
         (lib.strings.floatToString theme.alpha.container)
         (lib.strings.floatToString theme.alpha.inactive)
@@ -105,8 +105,8 @@ let
         "${toString theme.sizes.launcher}px"
         "${toString theme.gaps.outer}px"
         "${toString theme.gaps.outer}px"
-        "${toString fonts.uiPixelSize}px"
-        "${toString (fonts.uiPixelSize + 6)}px"
+        "${toString fonts.ui.pixelSize}px"
+        "${toString (fonts.ui.pixelSize + 6)}px"
         "${toString theme.border.width}px"
       ]
       rawStyle;

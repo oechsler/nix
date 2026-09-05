@@ -58,7 +58,7 @@ let
     }
 
     * {
-      font-family: "${fonts.ui}";
+      font-family: "${fonts.ui.font}";
     }
 
     .window {

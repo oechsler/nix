@@ -67,7 +67,7 @@ in
         separator_color = "frame";
         gap_size = theme.gaps.inner;
 
-        font = "${fonts.ui} 10";
+        font = "${fonts.ui.font} 10";
         icon_theme = theme.icons.name;
         icon_path = lib.mkForce (
           lib.concatStringsSep ":" [

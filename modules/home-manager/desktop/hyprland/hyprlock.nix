@@ -41,8 +41,8 @@ let
   scale = value: builtins.floor (value * monitorScale);
   lockInputWidth = scale (theme.spacing.panel * 12);
   lockInputHeight = scale (theme.spacing.control * 4 + theme.spacing.compact);
-  lockTimeSize = scale (fonts.uiPixelSize * 8);
-  lockDateSize = scale (fonts.uiPixelSize + theme.spacing.control / 2);
+  lockTimeSize = scale (fonts.ui.pixelSize * 8);
+  lockDateSize = scale (fonts.ui.pixelSize + theme.spacing.control / 2);
 in
 {
   #===========================
@@ -105,7 +105,7 @@ in
           capslock_color = "$peach";
           placeholder_text = "${i18n.translate "Password" "Passwort"}";
           fail_text = "$FAIL ($ATTEMPTS)";
-          font_family = "${fonts.ui}";
+          font_family = "${fonts.ui.font}";
         }
       ];
 
@@ -119,7 +119,7 @@ in
           text = "$TIME";
           color = "$text";
           font_size = lockTimeSize;
-          font_family = "${fonts.ui}";
+          font_family = "${fonts.ui.font}";
           position = "0, ${toString (scale (theme.spacing.panel * 2 + theme.spacing.compact))}";
           halign = "center";
           valign = "center";
@@ -128,7 +128,7 @@ in
           text = "cmd[update:60000] date +'%A, %-d. %B'";
           color = "$subtext0";
           font_size = lockDateSize;
-          font_family = "${fonts.ui}";
+          font_family = "${fonts.ui.font}";
           position = "0, ${toString (scale (theme.gaps.outer * 5 * -1))}";
           halign = "center";
           valign = "center";

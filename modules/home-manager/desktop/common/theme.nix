@@ -94,7 +94,7 @@ in
     xdg.configFile.".gtkrc-2.0".text = ''
       gtk-theme-name = "${themeName}"
       gtk-icon-theme-name = "${iconName}"
-      gtk-font-name = "${fonts.ui} ${toString fonts.size}"
+      gtk-font-name = "${fonts.ui.font} ${toString fonts.ui.size}"
       gtk-cursor-theme-name = "${cursorName}"
       gtk-cursor-theme-size = ${toString cursorSize}
     '';
@@ -152,8 +152,8 @@ in
     gtk = {
       enable = true;
       font = {
-        inherit (fonts) size;
-        name = fonts.ui;
+        size = fonts.ui.size;
+        name = fonts.ui.font;
       };
       theme = {
         name = themeName;

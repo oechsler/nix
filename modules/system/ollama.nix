@@ -66,11 +66,6 @@ in
   config = lib.mkIf (config.features.dev.enable && cfg.enable) {
     environment.systemPackages = [ config.services.ollama.package ];
 
-    systemd.tmpfiles.rules = [
-      "d /var/lib/ollama 0750 ollama ollama -"
-      "d /var/lib/ollama/models 0750 ollama ollama -"
-    ];
-
     services.ollama = {
       enable = true;
       package = ollamaPackage;

@@ -103,7 +103,7 @@ in
         enable = true;
         font = {
           name = fonts.monospace;
-          size = fonts.terminalSize;
+          size = fonts.terminal.size;
         };
         settings = {
           window_padding_width = theme.gaps.outer;

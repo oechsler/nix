@@ -149,8 +149,8 @@ in
           custom_palette=false
 
           [Fonts]
-          fixed="${fonts.monospace},${toString fonts.size},-1,5,50,0,0,0,0,0"
-          general="${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0"
+          fixed="${fonts.monospace},${toString fonts.ui.size},-1,5,50,0,0,0,0,0"
+          general="${fonts.ui.font},${toString fonts.ui.size},-1,5,50,0,0,0,0,0"
         '';
 
         "qt6ct/qt6ct.conf".text = ''
@@ -161,8 +161,8 @@ in
           custom_palette=false
 
           [Fonts]
-          fixed="${fonts.monospace},${toString fonts.size},-1,5,50,0,0,0,0,0"
-          general="${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0"
+            fixed="${fonts.monospace},${toString fonts.ui.size},-1,5,50,0,0,0,0,0"
+            general="${fonts.ui.font},${toString fonts.ui.size},-1,5,50,0,0,0,0,0"
         '';
 
         # KDE-runtime Flatpaks use this as a fallback when their application
@@ -183,12 +183,12 @@ in
             widgetStyle=Breeze
 
             [General]
-            font=${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0
-            menuFont=${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0
-            smallestReadableFont=${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0
-            toolBarFont=${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0
-            toolTipFont=${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0
-            fixed=${fonts.monospace},${toString fonts.size},-1,5,50,0,0,0,0,0
+            font=${fonts.ui.font},${toString fonts.ui.size},-1,5,50,0,0,0,0,0
+            menuFont=${fonts.ui.font},${toString fonts.ui.size},-1,5,50,0,0,0,0,0
+            smallestReadableFont=${fonts.ui.font},${toString fonts.ui.size},-1,5,50,0,0,0,0,0
+            toolBarFont=${fonts.ui.font},${toString fonts.ui.size},-1,5,50,0,0,0,0,0
+            toolTipFont=${fonts.ui.font},${toString fonts.ui.size},-1,5,50,0,0,0,0,0
+            fixed=${fonts.monospace},${toString fonts.ui.size},-1,5,50,0,0,0,0,0
 
             # Do not apply KDE's inactive-window tint to Qt Quick controls.
             # It makes the dark palette appear lighter when focus changes.
