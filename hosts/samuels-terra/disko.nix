@@ -5,7 +5,8 @@
 moduleArgs:
 
 let
-  rootLayout = import ../../modules/lib/disko.nix moduleArgs;
+  diskLayout = import ../../modules/lib/disko.nix moduleArgs;
+  inherit (diskLayout) efiLayout rootLayout;
 in
 {
   disko.devices.disk.main = {
@@ -14,20 +15,7 @@ in
     content = {
       type = "gpt";
       partitions = {
-        BOOT = {
-          size = "512M";
-          type = "EF00";
-          content = {
-            type = "filesystem";
-            format = "vfat";
-            mountpoint = "/boot";
-            mountOptions = [ "umask=0077" ];
-            extraArgs = [
-              "-n"
-              "BOOT"
-            ];
-          };
-        };
+        BOOT = efiLayout;
         root = {
           size = "100%";
           content = rootLayout;

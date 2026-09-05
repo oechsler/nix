@@ -139,14 +139,34 @@ let
     ];
     inherit subvolumes;
   };
+
+  efiLayout = {
+    size = "512M";
+    type = "EF00";
+    content = {
+      type = "filesystem";
+      format = "vfat";
+      mountpoint = "/boot";
+      mountOptions = [ "umask=0077" ];
+      extraArgs = [
+        "-n"
+        "BOOT"
+      ];
+    };
+  };
+
+  rootLayout =
+    if encryptionEnabled then
+      {
+        type = "luks";
+        name = "cryptroot";
+        settings.allowDiscards = true;
+        passwordFile = "/var/lib/nixos-install/luks-password";
+        content = btrfsContent;
+      }
+    else
+      btrfsContent;
 in
-if encryptionEnabled then
-  {
-    type = "luks";
-    name = "cryptroot";
-    settings.allowDiscards = true;
-    passwordFile = "/var/lib/nixos-install/luks-password";
-    content = btrfsContent;
-  }
-else
-  btrfsContent
+{
+  inherit efiLayout rootLayout;
+}
