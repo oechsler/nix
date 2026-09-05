@@ -146,6 +146,9 @@ normal path for browsing snapshots.
 When `features.impermanence.enable = true`, root (`@`) is wiped on every boot.
 Persistent data goes in `/persist`.
 
+When Impermanence is disabled, the root filesystem and its state remain
+persistent across reboots as usual.
+
 Always-persistent core state:
 
 - `/var/lib/NetworkManager`
