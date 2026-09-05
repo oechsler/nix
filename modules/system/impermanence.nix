@@ -109,8 +109,6 @@ in
         "/var/lib/sddm" # SDDM state
       ]
       ++ lib.optionals config.features.dev.ollama.enable [
-        # Ollama uses DynamicUser + StateDirectory, so /var/lib/ollama is a
-        # symlink to this real directory.
         "/var/lib/private/ollama" # Ollama models and server state
       ]
       ++ lib.optionals config.features.auth.ldap.enable [
