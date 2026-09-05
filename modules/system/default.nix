@@ -12,7 +12,7 @@
     ./bluetooth.nix
     ./boot.nix
     ./compat.nix
-    ./data-subvolumes.nix
+    ./mount.nix
     ./desktop
     ./displays.nix
     ./features.nix
