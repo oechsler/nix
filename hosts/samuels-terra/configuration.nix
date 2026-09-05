@@ -159,6 +159,7 @@
               toolCall = true;
               reasoning = true;
               temperature = true;
+              context = 32768;
             };
           };
         };

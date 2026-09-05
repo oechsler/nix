@@ -566,8 +566,11 @@ available from your model provider.
 `context` is Ollama's default context size for every model it starts and
 is also used as the OpenCode context limit unless a model overrides it. Choose
 it according to the available RAM and GPU memory; larger values use more memory
-as the conversation grows. OpenCode uses `16384` as the default output limit;
-set `output` on an individual model when a different limit is needed.
+as the conversation grows. OpenCode uses `16384` as the default output limit.
+This is separate from the conversation context: `context` controls how much
+conversation an agent can keep before compaction. For the SER9 setup, use
+`32768` for the context limit; set `output` on an individual model only when a
+different response limit is needed.
 `unloadAfter` defaults to `"5m"` and controls how long an unused model remains
 loaded. Set it to values such as `"1h"` when a model should stay warm longer, or
 to `"-1"` to keep it loaded indefinitely on a dedicated server.
@@ -724,6 +727,9 @@ support for tools, reasoning, temperature, and context size:
 
 The same model fields work for Ollama and custom OpenAI-compatible providers.
 Unset fields are omitted from the generated OpenCode configuration.
+
+For current model comparisons, see [Artificial Analysis](https://artificialanalysis.ai/)
+and the [Arena agent leaderboard](https://arena.ai/leaderboard/agent).
 
 The same model fields can be used with an external OpenAI-compatible provider:
 

@@ -62,7 +62,7 @@
       ollama = {
         enable = true;
         server = true;
-        context = 65536;
+        context = 32768;
         unloadAfter = "-1";
         models = {
           "gemma4:26b-a4b-it-mtp-q4_K_M".name = "Gemma 4 26B A4B Instruct";
