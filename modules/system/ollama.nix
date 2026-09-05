@@ -75,8 +75,14 @@ in
       syncModels = true;
       host = if cfg.server then "0.0.0.0" else "127.0.0.1";
       openFirewall = cfg.server;
-      environmentVariables.OLLAMA_KEEP_ALIVE = cfg.unloadAfter;
-      environmentVariables.OLLAMA_CONTEXT_LENGTH = toString cfg.context;
+      environmentVariables = {
+        OLLAMA_KEEP_ALIVE = cfg.unloadAfter;
+        OLLAMA_CONTEXT_LENGTH = toString cfg.context;
+      }
+      // lib.optionalAttrs config.features.hardware.unifiedMemory.enable {
+        # Ollama disables integrated GPUs by default, including AMD APUs.
+        OLLAMA_IGPU_ENABLE = "1";
+      };
     };
     systemd.services = {
       ollama.serviceConfig.DynamicUser = lib.mkForce false;
