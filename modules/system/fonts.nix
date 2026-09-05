@@ -46,6 +46,16 @@ let
     "15" = "ter-124n";
     "16" = "ter-128n";
   };
+  consoleFontSize =
+    let
+      requested = config.fonts.terminal.size;
+    in
+    if requested < 10 then
+      10
+    else if requested > 16 then
+      16
+    else
+      requested;
 in
 
 {
@@ -119,7 +129,7 @@ in
   config = {
     console = {
       packages = [ pkgs.terminus_font ];
-      font = consoleFont.${toString config.fonts.terminal.size} or consoleFont."11";
+      font = consoleFont.${toString consoleFontSize};
     };
 
     fonts = {
