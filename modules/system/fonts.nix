@@ -1,10 +1,8 @@
 # Font Configuration
 #
-# This module configures:
-# 1. System-wide font packages (JetBrainsMono Nerd Font, Noto fonts)
-# 2. Fontconfig defaults (monospace, sans-serif, serif, emoji)
-# 3. Linux VT font generated from the configured monospace font
-# 4. UI font style toggle (monospace vs sans-serif)
+# This module configures the shared font family options, installs the font
+# packages needed by the system, configures desktop Fontconfig defaults, and
+# generates the Linux VT font from the selected monospace family.
 #
 # Configuration options:
 #   fonts.defaults.uiStyle = "monospace";      # UI font style (default: "monospace")
@@ -16,9 +14,9 @@
 #   "monospace"  → Uses fonts.defaults.monospace (hacker/terminal aesthetic)
 #   "sans-serif" → Uses fonts.defaults.sansSerif (traditional desktop aesthetic)
 #
-# The resolved UI font is available as fonts.defaults.ui (read-only).
-# Used by: waybar, dunst, rofi, hyprlock, SDDM, GTK, and Qt apps.
-# Linux VTs use a generated PSF2 bitmap based on the configured monospace font.
+# The resolved UI font is available as fonts.defaults.ui (read-only) and is
+# used by waybar, dunst, rofi, hyprlock, SDDM, GTK, and Qt apps.
+# Linux VTs use a generated PSF2 bitmap based on fonts.defaults.monospace.
 #
 # Note: Terminal (kitty) and code editors always use fonts.defaults.monospace,
 # regardless of uiStyle setting.
@@ -31,6 +29,8 @@
 }:
 
 let
+  # Keep these packages available on headless hosts as well: the VT font is
+  # generated from the installed font collection during the system build.
   fontPackages = with pkgs; [
     nerd-fonts.jetbrains-mono
     nerd-fonts.symbols-only
@@ -39,7 +39,9 @@ let
     noto-fonts-color-emoji
   ];
   fontConfig = pkgs.makeFontsConf { fontDirectories = config.fonts.packages; };
-  monospaceFamily = lib.escapeShellArg config.fonts.defaults.monospace;
+  # Fontconfig resolves the configured family to the actual font file. This
+  # means changing fonts.defaults.monospace also changes the generated VT font.
+  monospaceFamilyQuery = lib.escapeShellArg config.fonts.defaults.monospace;
   consoleFont =
     pkgs.runCommand "linux-vt-consolefont"
       {
@@ -52,10 +54,10 @@ let
       }
       ''
         mkdir -p $out/share/consolefonts
-        sourceFont="$(fc-match -f '%{file}' ${monospaceFamily})"
+        sourceFont="$(fc-match -f '%{file}' ${monospaceFamilyQuery})"
         test -s "$sourceFont"
-        # Linux VTs require a fixed-width PSF font. The 9pt raster is the closest
-        # stable 8-column rendering of the default 11pt terminal font.
+        # Linux VTs require a fixed-width PSF font. A VT cannot reproduce the
+        # terminal's point size exactly, so use a stable 8-column/16-row raster.
         otf2bdf -p 9 -r 100 -c C -l '0_255' \
           -o font.bdf \
           "$sourceFont" \
@@ -75,7 +77,7 @@ in
   #===========================
 
   options.fonts.defaults = {
-    # Font Family Options
+    # Font Family
     monospace = lib.mkOption {
       type = lib.types.str;
       default = "JetBrainsMono Nerd Font";
@@ -94,7 +96,7 @@ in
       description = "Serif font (fontconfig default)";
     };
 
-    # UI Font Style Toggle
+    # UI Style
     uiStyle = lib.mkOption {
       type = lib.types.enum [
         "monospace"
@@ -115,7 +117,7 @@ in
       description = "Resolved UI font name based on uiStyle (do not set manually)";
     };
 
-    # Font Size Options
+    # Font Sizes
     size = lib.mkOption {
       type = lib.types.int;
       default = 11;
@@ -132,7 +134,7 @@ in
     terminalSize = lib.mkOption {
       type = lib.types.int;
       default = config.fonts.defaults.size;
-      description = "Terminal (kitty) font size (defaults to fonts.defaults.size)";
+      description = "Terminal (Kitty) font size; Linux VT uses its own fixed pixel grid";
     };
   };
 
@@ -146,15 +148,10 @@ in
     };
 
     fonts = {
-
-      #---------------------------
-      # 1. Font Packages
-      #---------------------------
+      # Font packages are installed on all hosts because the VT font is built
+      # from this collection. Fontconfig itself is desktop-only.
       packages = fontPackages;
 
-      #---------------------------
-      # 2. Fontconfig Defaults
-      #---------------------------
       fontconfig = lib.mkIf config.features.desktop.enable {
         enable = true;
         defaultFonts = {
