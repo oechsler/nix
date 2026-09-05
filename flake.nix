@@ -237,7 +237,13 @@
         };
 
       # Internal mkDisko for this repo's hosts
-      mkDisko = hostName: import ./hosts/${hostName}/disko.nix { username = primaryUser; };
+      mkDisko =
+        hostName:
+        import ./hosts/${hostName}/disko.nix {
+          username = primaryUser;
+          inherit lib;
+          config = nixosConfigurations.${hostName}.config;
+        };
 
       # Exported mkDisko for external use
       mkDiskoExternal = hostPath: import (hostPath + "/disko.nix");
