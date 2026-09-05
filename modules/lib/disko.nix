@@ -166,7 +166,22 @@ let
       }
     else
       btrfsContent;
+
+  mainDisk = device: {
+    type = "disk";
+    inherit device;
+    content = {
+      type = "gpt";
+      partitions = {
+        BOOT = efiLayout;
+        root = {
+          size = "100%";
+          content = rootLayout;
+        };
+      };
+    };
+  };
 in
 {
-  inherit efiLayout rootLayout;
+  inherit efiLayout mainDisk rootLayout;
 }
