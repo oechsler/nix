@@ -118,7 +118,7 @@ volumes below and may include additional feature-specific data subvolumes.
             ├── @nix                                    # Nix store
             │   └── /nix                                #
             ├── @var                                    # Variable system state
-            │   └── /var (when Impermanence is disabled) #
+            │   └── /var                                #
             ├── @persist                                # Persistent system state
             │   └── /persist                            #
             └── ...                                      # Optional feature volumes
@@ -127,11 +127,10 @@ volumes below and may include additional feature-specific data subvolumes.
 Optional data subvolumes are only used when their feature is enabled. Whether
 they are physically created is controlled by the selected host's Disko file.
 
-`@var` is part of the required base layout and is always created. It is mounted
-at `/var` only when Impermanence is disabled. With Impermanence enabled, `/var`
-remains part of the ephemeral `@` root while the specific persistent directories
-managed by Impermanence are mounted from `/persist`. This keeps the Disko layout
-unchanged when switching Impermanence on or off.
+`@var` is part of the required base layout and is always mounted at `/var`.
+It is kept separate so Impermanence can be disabled without changing the Disko
+layout or reinstalling the host. The additional persistent directories managed
+by Impermanence are stored under `/persist`.
 
 | Subvolume    | Mountpoint                        | Required feature                  |
 | ------------ | --------------------------------- | --------------------------------- |

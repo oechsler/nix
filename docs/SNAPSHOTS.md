@@ -18,7 +18,7 @@ and cleaning snapshots. For the required disk layout, see
 | ---------- | ---------- | ------------------------------------------------------ | ---------------------------------------------- |
 | `@`        | `/`        | Root filesystem                                        | Only if `features.impermanence.enable = false` |
 | `@home`    | `/home`    | User data, dotfiles                                    | Always                                         |
-| `@var`     | `/var`     | Variable system state                                  | Only if `features.impermanence.enable = false` |
+| `@var`     | `/var`     | Variable system state                                  | Always                                         |
 | `@persist` | `/persist` | System state (bluetooth, docker, NetworkManager, etc.) | Only if `features.impermanence.enable = true`  |
 
 The root subvolume is not snapshotted while impermanence is enabled because it
