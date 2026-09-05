@@ -185,9 +185,10 @@ in
         # subvol=/ means mount the btrfs root (not @ subvolume)
         ${pkgs.util-linux}/bin/mount -t btrfs -o subvol=/ ${lib.escapeShellArg rootDevice} /mnt
 
-        # Delete all nested subvolumes under @ (e.g., snapshots)
-        # cut -f9: Extract subvolume path from btrfs output
-        ${pkgs.btrfs-progs}/bin/btrfs subvolume list -o /mnt/@ | ${pkgs.uutils-coreutils-noprefix}/bin/cut -f9 -d' ' | while read -r subvol; do
+        # Delete all nested subvolumes under @ (e.g., snapshots).
+        # Read whitespace-separated btrfs output to obtain the final path field.
+        ${pkgs.btrfs-progs}/bin/btrfs subvolume list -o /mnt/@ | while read -r _ _ _ _ _ _ _ _ subvol; do
+          [ -n "$subvol" ] || continue
           ${pkgs.btrfs-progs}/bin/btrfs subvolume delete "/mnt/$subvol"
         done
 
