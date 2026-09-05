@@ -170,45 +170,50 @@ in
     # Only /persist and /nix survive (separate subvolumes)
     #
     # Device detection: Uses config.fileSystems."/".device (works with LUKS and direct devices)
-    boot.initrd.systemd.services.rollback = {
-      description = "Rollback btrfs root to empty snapshot";
-      wantedBy = [ "initrd.target" ];
-      after = lib.mkIf config.features.encryption.enable [ systemdDevice ]; # Wait for LUKS unlock if encrypted
-      before = [ "sysroot.mount" ]; # Must complete before mounting root
-      unitConfig.DefaultDependencies = "no";
-      serviceConfig.Type = "oneshot";
-      script = ''
-        set -euo pipefail
+    boot.initrd.systemd = {
+      enable = true;
+      storePaths = [
+        pkgs.btrfs-progs
+        pkgs.uutils-coreutils-noprefix
+        pkgs.util-linux
+      ];
+      services.rollback = {
+        description = "Rollback btrfs root to empty snapshot";
+        wantedBy = [ "initrd.target" ];
+        after = lib.mkIf config.features.encryption.enable [ systemdDevice ]; # Wait for LUKS unlock if encrypted
+        before = [ "sysroot.mount" ]; # Must complete before mounting root
+        unitConfig.DefaultDependencies = "no";
+        serviceConfig.Type = "oneshot";
+        script = ''
+          set -euo pipefail
 
-        ${pkgs.uutils-coreutils-noprefix}/bin/mkdir -p /mnt
+          ${pkgs.uutils-coreutils-noprefix}/bin/mkdir -p /mnt
 
-        # Mount btrfs root to access subvolumes
-        # subvol=/ means mount the btrfs root (not @ subvolume)
-        ${pkgs.util-linux}/bin/mount -t btrfs -o subvol=/ ${lib.escapeShellArg rootDevice} /mnt
+          # Mount btrfs root to access subvolumes
+          # subvol=/ means mount the btrfs root (not @ subvolume)
+          ${pkgs.util-linux}/bin/mount -t btrfs -o subvol=/ ${lib.escapeShellArg rootDevice} /mnt
 
-        # Delete all nested subvolumes under @ (e.g., snapshots).
-        # Read whitespace-separated btrfs output to obtain the final path field.
-        ${pkgs.btrfs-progs}/bin/btrfs subvolume list -o /mnt/@ | while read -r _ _ _ _ _ _ _ _ subvol; do
-          [ -n "$subvol" ] || continue
-          ${pkgs.btrfs-progs}/bin/btrfs subvolume delete "/mnt/$subvol"
-        done
+          # Delete all nested subvolumes under @ (e.g., snapshots).
+          # Read whitespace-separated btrfs output to obtain the final path field.
+          ${pkgs.btrfs-progs}/bin/btrfs subvolume list -o /mnt/@ | while read -r _ _ _ _ _ _ _ _ subvol; do
+            [ -n "$subvol" ] || continue
+            ${pkgs.btrfs-progs}/bin/btrfs subvolume delete "/mnt/$subvol"
+          done
 
-        # Delete @ subvolume (the root filesystem)
-        ${pkgs.btrfs-progs}/bin/btrfs subvolume delete /mnt/@
+          # Delete @ subvolume (the root filesystem)
+          ${pkgs.btrfs-progs}/bin/btrfs subvolume delete /mnt/@
 
-        # Create new empty @ subvolume
-        ${pkgs.btrfs-progs}/bin/btrfs subvolume create /mnt/@
+          # Create new empty @ subvolume
+          ${pkgs.btrfs-progs}/bin/btrfs subvolume create /mnt/@
 
-        ${pkgs.util-linux}/bin/umount /mnt
-      '';
+          ${pkgs.util-linux}/bin/umount /mnt
+        '';
+      };
     };
 
     #---------------------------
     # 4. Boot Configuration
     #---------------------------
-    # Enable systemd in initrd (required for rollback service)
-    boot.initrd.systemd.enable = true;
-
     # /persist must be available before impermanence binds directories
     fileSystems."/persist".neededForBoot = true;
   };
