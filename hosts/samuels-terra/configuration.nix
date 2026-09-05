@@ -147,19 +147,22 @@
 
     # --- Development ---
     dev = {
-      ollama = {
-        enable = true;
-        context = 131072;
-        models = {
-          "gemma4:12b-it-q8_0" = {
-            name = "Gemma 4 12B Instruct Q8";
-            toolCall = true;
-            reasoning = true;
-            temperature = true;
+      ollama.enable = false;
+      opencode = {
+        defaultModel = "ollama/qwen3.8:27b";
+        ollama = {
+          enable = true;
+          baseURL = "http://172.22.0.118:11434/v1";
+          context = 262144;
+          models = {
+            "qwen3.8:27b" = {
+              name = "Qwen 3.8 27B";
+              toolCall = true;
+              reasoning = true;
+              temperature = true;
+            };
           };
         };
-      };
-      opencode = {
         mcp.homeassistant = {
           url = "https://homeassistant.at.oechsler.it/api/mcp";
           tokenSecret = "opencode/mcp/homeassistant/token";
