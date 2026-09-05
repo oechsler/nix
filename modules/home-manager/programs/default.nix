@@ -33,7 +33,6 @@
     ./proton-pass.nix
     ./pvetui.nix
     ./tmux.nix
-    ./tools.nix
   ]
   ++ lib.optional features.desktop.enable ./terminal.nix;
 }
