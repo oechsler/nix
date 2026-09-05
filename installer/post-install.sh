@@ -130,7 +130,7 @@ phase_post_install() {
       warn "TOTP setup failed. Run 'totp-init' after first boot."
     fi
   fi
-  if [[ "$FEAT_ENCRYPTION" == "true" && ${#LUKS_DEVICES[@]} -gt 0 && "$FEAT_YUBIKEY_LUKS" != "true" ]]; then
+  if [[ "$FEAT_HAS_LUKS" == "true" && "$FEAT_YUBIKEY_LUKS" != "true" ]]; then
     if [[ "$FEAT_SECURE_BOOT" != "true" ]]; then
       setup_tpm || warn "TPM enrollment skipped. Run 'sudo tpm-luks-init' after first boot."
     fi

@@ -102,6 +102,7 @@ save_state() {
       printf 'SSH_KEY_CONTENT=%q\n' "${SSH_KEY_CONTENT:-}"
     fi
     printf 'FEAT_ENCRYPTION=%q\n' "${FEAT_ENCRYPTION:-false}"
+    printf 'FEAT_HAS_LUKS=%q\n' "${FEAT_HAS_LUKS:-false}"
     printf 'FEAT_UNLOCK_METHOD=%q\n' "${FEAT_UNLOCK_METHOD:-}"
     printf 'FEAT_IMPERMANENCE=%q\n' "${FEAT_IMPERMANENCE:-false}"
     printf 'PERSIST_PREFIX=%q\n' "${PERSIST_PREFIX:-}"

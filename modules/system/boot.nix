@@ -76,7 +76,7 @@ in
     }
 
     (lib.mkIf
-      (config.features.encryption.enable && config.features.encryption.unlockMethod == "yubikey")
+      (config.boot.initrd.luks.devices != { } && config.features.encryption.unlockMethod == "yubikey")
       {
         # Load USB HID before systemd-cryptsetup scans for FIDO2 devices.
         # Otherwise a YubiKey can appear after the LUKS prompt has already timed out.

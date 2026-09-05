@@ -1,7 +1,8 @@
 # TPM Enrollment for LUKS Auto-Unlock
 #
 # Provides `tpm-luks-init` script to enroll/re-enroll/wipe TPM2 keys
-# for all LUKS partitions. Active when features.encryption.unlockMethod = "tpm2".
+# for all LUKS partitions. Active when the host has LUKS devices and
+# features.encryption.unlockMethod = "tpm2".
 #
 # Usage: sudo tpm-luks-init
 # PCR policy: 0+7 (firmware + Secure Boot state).
@@ -152,7 +153,8 @@ let
 in
 {
   config =
-    lib.mkIf (config.features.encryption.enable && config.features.encryption.unlockMethod == "tpm2")
+    lib.mkIf
+      (config.boot.initrd.luks.devices != { } && config.features.encryption.unlockMethod == "tpm2")
       {
         environment.systemPackages = [ tpm-luks-init ];
       };

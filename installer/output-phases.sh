@@ -15,7 +15,7 @@ phase_summary() {
   echo ""
   if [[ "$DO_FORMAT" == true ]]; then
     echo -e "    ${BOLD}Disk Setup:${RESET}"
-    if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
+    if [[ "$FEAT_HAS_LUKS" == "true" ]]; then
       echo -e "      Encryption:   LUKS (password set)"
     else
       echo -e "      Encryption:   none"
@@ -67,10 +67,10 @@ phase_complete() {
   INSTALL_SUCCESS=true
   local post_boot_tasks=() tpm_deferred=false oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"
   [[ "$FEAT_SECURE_BOOT" == "true" ]] && post_boot_tasks+=("sudo secure-boot-init    — sign boot files and enroll Secure Boot keys")
-  [[ "$FEAT_YUBIKEY_LUKS" == "true" && "$FEAT_ENCRYPTION" == "true" ]] && post_boot_tasks+=("sudo yubikey-luks-init   — enroll YubiKey FIDO2 for LUKS unlock at boot")
+  [[ "$FEAT_YUBIKEY_LUKS" == "true" && "$FEAT_HAS_LUKS" == "true" ]] && post_boot_tasks+=("sudo yubikey-luks-init   — enroll YubiKey FIDO2 for LUKS unlock at boot")
   [[ "$FEAT_YUBIKEY" == "true" ]] && post_boot_tasks+=("sudo yubikey-init        — register YubiKey for sudo / SSH")
   [[ "$FEAT_TOTP" == "true" && ! -f "$oath_file" ]] && post_boot_tasks+=("sudo totp-init           — configure TOTP 2FA for sudo / SSH")
-  if [[ "$TPM_ENROLLED" != "true" && "$FEAT_ENCRYPTION" == "true" && "$FEAT_UNLOCK_METHOD" == "tpm2" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
+  if [[ "$TPM_ENROLLED" != "true" && "$FEAT_HAS_LUKS" == "true" && "$FEAT_UNLOCK_METHOD" == "tpm2" ]]; then
     tpm_deferred=true
     post_boot_tasks+=("sudo tpm-luks-init       — enroll TPM2 for automatic LUKS unlock at boot")
   fi
@@ -88,7 +88,7 @@ phase_complete() {
   echo -e "  ${BOLD}What was set up:${RESET}"
   echo ""
   echo -e "    NixOS installed for ${BOLD}$HOST${RESET} (${CONFIG_USERNAME})"
-  if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
+  if [[ "$FEAT_HAS_LUKS" == "true" ]]; then
     if [[ "$TPM_ENROLLED" == "true" ]]; then
       echo -e "    Disk encryption:  ${GREEN}LUKS + TPM2 auto-unlock${RESET}  ${DIM}(password fallback works)${RESET}"
     elif [[ "$FEAT_YUBIKEY_LUKS" == "true" ]]; then
@@ -121,7 +121,7 @@ phase_complete() {
     echo ""
     if [[ "$tpm_deferred" == "true" ]]; then
       echo -e "    ${DIM}Until TPM enrollment is complete, LUKS always requires the install password.${RESET}"
-    elif [[ "$FEAT_YUBIKEY_LUKS" == "true" && "$FEAT_ENCRYPTION" == "true" ]]; then
+    elif [[ "$FEAT_YUBIKEY_LUKS" == "true" && "$FEAT_HAS_LUKS" == "true" ]]; then
       echo -e "    ${DIM}Until YubiKey enrollment is complete, LUKS always requires the install password.${RESET}"
     else
       echo -e "    ${DIM}LUKS uses the configured unlock method at boot.${RESET}"

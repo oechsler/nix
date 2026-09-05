@@ -81,6 +81,8 @@ phase_detect_features() {
   CONFIG_USERNAME=$(jq -r '.userName' <<<"$json")
   CONFIG_PASSWORD_LOCKED=$(jq -r '.passwordLocked' <<<"$json")
   mapfile -t LUKS_DEVICES < <(jq -r '.luksDevices[]' <<<"$json")
+  FEAT_HAS_LUKS=false
+  [[ "${#LUKS_DEVICES[@]}" -gt 0 ]] && FEAT_HAS_LUKS=true
   echo -e "    Host:          ${BOLD}$HOST${RESET}"
   echo -e "    Username:      ${BOLD}$CONFIG_USERNAME${RESET}"
   [[ -n "$FEAT_FORM_FACTOR" && "$FEAT_FORM_FACTOR" != "null" ]] && echo -e "    Form factor:   ${BOLD}$FEAT_FORM_FACTOR${RESET}"
@@ -93,7 +95,7 @@ phase_detect_features() {
   echo -e "    TOTP 2FA:      $(label_bool "$FEAT_TOTP")"
   echo -e "    YubiKey:       $(label_bool "$FEAT_YUBIKEY")"
   echo -e "    Secure Boot:   $(label_bool "$FEAT_SECURE_BOOT")"
-  if [[ "$FEAT_ENCRYPTION" == "true" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
+  if [[ "$FEAT_HAS_LUKS" == "true" ]]; then
     echo -e "    LUKS devices:  ${DIM}${#LUKS_DEVICES[@]} partition(s)${RESET}"
     case "$FEAT_UNLOCK_METHOD" in
       tpm2) unlock_label="TPM2" ;;
