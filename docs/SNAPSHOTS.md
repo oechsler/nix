@@ -20,10 +20,11 @@ and cleaning snapshots. For the required disk layout, see
 | `@var`     | `/var`     | Variable system state                                  | Only if `features.impermanence.enable = false` |
 | `@persist` | `/persist` | System state (bluetooth, docker, NetworkManager, etc.) | Only if `features.impermanence.enable = true`  |
 
-The root subvolume is not snapshotted while impermanence is enabled because it
-is recreated on boot. It is also excluded when Impermanence is disabled because
-the declarative NixOS configuration is reproducible independently. The Nix store
-is excluded because it is immutable and managed by Nix.
+The root subvolume is intentionally excluded in both modes. With Impermanence
+it is recreated on every boot; without Impermanence, NixOS can reproduce the
+system configuration and persistent state is kept in the dedicated data
+subvolumes above. The Nix store is excluded because it is immutable and managed
+by Nix.
 
 The `@steam`, `@nextcloud`, and `@smb` subvolumes are separate from `@home` so
 large or independently managed data does not enter hourly home snapshots. They
