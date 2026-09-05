@@ -66,13 +66,13 @@ phase_summary() {
 phase_complete() {
   INSTALL_SUCCESS=true
   local post_boot_tasks=() tpm_deferred=false oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"
-  [[ "$FEAT_SECURE_BOOT" == "true" ]] && post_boot_tasks+=("secure-boot-init    — sign boot files and enroll Secure Boot keys")
-  [[ "$FEAT_YUBIKEY_LUKS" == "true" && "$FEAT_ENCRYPTION" == "true" ]] && post_boot_tasks+=("yubikey-luks-init   — enroll YubiKey FIDO2 for LUKS unlock at boot")
-  [[ "$FEAT_YUBIKEY" == "true" ]] && post_boot_tasks+=("yubikey-init        — register YubiKey for sudo / SSH")
-  [[ "$FEAT_TOTP" == "true" && ! -f "$oath_file" ]] && post_boot_tasks+=("totp-init           — configure TOTP 2FA for sudo / SSH")
+  [[ "$FEAT_SECURE_BOOT" == "true" ]] && post_boot_tasks+=("sudo secure-boot-init    — sign boot files and enroll Secure Boot keys")
+  [[ "$FEAT_YUBIKEY_LUKS" == "true" && "$FEAT_ENCRYPTION" == "true" ]] && post_boot_tasks+=("sudo yubikey-luks-init   — enroll YubiKey FIDO2 for LUKS unlock at boot")
+  [[ "$FEAT_YUBIKEY" == "true" ]] && post_boot_tasks+=("sudo yubikey-init        — register YubiKey for sudo / SSH")
+  [[ "$FEAT_TOTP" == "true" && ! -f "$oath_file" ]] && post_boot_tasks+=("sudo totp-init           — configure TOTP 2FA for sudo / SSH")
   if [[ "$TPM_ENROLLED" != "true" && "$FEAT_ENCRYPTION" == "true" && "$FEAT_UNLOCK_METHOD" == "tpm2" && ${#LUKS_DEVICES[@]} -gt 0 ]]; then
     tpm_deferred=true
-    post_boot_tasks+=("tpm-luks-init       — enroll TPM2 for automatic LUKS unlock at boot")
+    post_boot_tasks+=("sudo tpm-luks-init       — enroll TPM2 for automatic LUKS unlock at boot")
   fi
   local board_vendor="" sys_vendor="" is_asus=false board_vendor_file=/sys/class/dmi/id/board_vendor sys_vendor_file=/sys/class/dmi/id/sys_vendor
   [[ -r "$board_vendor_file" ]] && board_vendor=$(<"$board_vendor_file")
