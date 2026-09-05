@@ -156,12 +156,15 @@ only the system data needed across boots is kept under `/persist`.
 Core state kept on every host (some directories may remain empty):
 
 - `/var/lib/NetworkManager` (network connections)
-- `/var/lib/backgrounds` (prepared wallpapers and blur cache)
 - `/var/lib/nixos` (NixOS users and groups)
-- `/var/lib/power-profiles-daemon` (active power profile)
 - `/var/lib/sops` (SOPS state)
 - `/var/lib/systemd` (systemd state)
-- `/persist/etc/ssh/*` (SSH host keys)
+
+Desktop state:
+
+- `/var/lib/backgrounds` (prepared wallpapers and blur cache)
+- `/var/lib/power-profiles-daemon` (active power profile)
+- `/var/lib/sddm` (desktop login)
 
 Feature-dependent state:
 
@@ -173,13 +176,11 @@ Feature-dependent state:
 - `/var/lib/ollama` (Ollama models and server state)
 - `/var/lib/pam-lldap` (LDAP authentication)
 - `/var/lib/sbctl` (Secure Boot)
-- `/var/lib/sddm` (desktop login)
 - `/var/lib/tailscale` (Tailscale)
+- `/persist/etc/ssh/*` (SSH host keys, when SSH is enabled)
 
-Only state required by enabled features is added to the feature-dependent list.
-Headless hosts therefore do not need desktop-specific state such as SDDM or
-wallpaper data. Additional paths can be configured through
-`features.impermanence.extraPaths`.
+Headless hosts do not persist desktop state. Additional paths can be configured
+through `features.impermanence.extraPaths`.
 
 ### SOPS Secrets
 

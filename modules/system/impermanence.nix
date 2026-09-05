@@ -73,12 +73,13 @@ in
       directories = [
         # Core state
         "/var/lib/NetworkManager" # Network connections
-        "/var/lib/backgrounds" # Prepared wallpaper and blur cache
-
         "/var/lib/nixos" # NixOS state (users, groups, etc.)
         "/var/lib/sops" # SOPS secrets
-        "/var/lib/power-profiles-daemon" # Active power profile
         "/var/lib/systemd" # Systemd state, including the credentials host key
+      ]
+      ++ lib.optionals config.features.desktop.enable [
+        "/var/lib/backgrounds" # Prepared wallpaper and blur cache
+        "/var/lib/power-profiles-daemon" # Active power profile
       ]
       ++ lib.optionals config.features.wifi.enable [
         "/var/lib/iwd" # WiFi credentials
@@ -136,7 +137,7 @@ in
     #
     # When impermanence is enabled: /persist/etc/ssh/
     # When impermanence is disabled: /etc/ssh/ (standard NixOS location)
-    services.openssh.hostKeys = [
+    services.openssh.hostKeys = lib.mkIf config.features.ssh.enable [
       {
         path = "/persist/etc/ssh/ssh_host_ed25519_key";
         type = "ed25519";
