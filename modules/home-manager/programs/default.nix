@@ -1,6 +1,7 @@
 # User Programs Configuration
 #
 # This module imports all user-level program configurations:
+# - cli.nix - Shared command-line tools for desktop and headless hosts
 # - apps.nix - Desktop applications (Discord, Spotify, etc.)
 # - browsers.nix - LibreWolf configuration
 # - development.nix - Development tools and languages
@@ -10,9 +11,8 @@
 # - neovim.nix - Neovim editor
 # - opencode.nix - OpenCode terminal coding agent configuration
 # - proton-pass.nix - Proton Pass password manager and SSH agent
-# - terminal.nix - Kitty terminal emulator
+# - terminal.nix - Kitty terminal emulator (desktop only)
 # - tmux.nix - Tmux terminal multiplexer
-# - tools.nix - GitHub CLI
 
 { lib, features, ... }:
 

@@ -1,4 +1,7 @@
 # Ollama local model server feature.
+#
+# The model loader keeps declared models synchronized and reports the streaming
+# pull status returned by Ollama.
 
 {
   config,

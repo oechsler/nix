@@ -10,7 +10,7 @@
 # - Trash-cli for safe file deletion
 #
 # Aliases:
-#   cat → bat, Kitty image preview for images
+#   cat → bat, with Kitty image previews on desktop hosts
 #   ff → fastfetch (system info tool)
 #   ll → eza --long (better ls)
 #   lt → eza --tree --level 1 (tree view)
@@ -24,7 +24,7 @@
 #
 # Tmux behavior:
 # - SSH: Auto-attach to "ssh" session
-# - Kitty: Auto-attach to first non-SSH session or create new
+# - Kitty desktop sessions: Auto-attach to first non-SSH session or create new
 
 {
   features,
