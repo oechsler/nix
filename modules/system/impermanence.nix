@@ -212,7 +212,7 @@ in
     };
 
     #---------------------------
-    # 4. Boot Configuration
+    # 4. Persistent Mount Configuration
     #---------------------------
     # /persist must be available before impermanence binds directories
     fileSystems."/persist".neededForBoot = true;
