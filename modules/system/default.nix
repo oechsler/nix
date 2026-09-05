@@ -5,7 +5,7 @@
 
 {
   imports = [
-    ../lib/service-logging.nix
+    ../lib/log.nix
     ./audio.nix
     ./auth.nix
     ./backgrounds.nix

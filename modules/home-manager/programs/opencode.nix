@@ -11,7 +11,7 @@
 }:
 
 let
-  modelSpec = import ../../lib/opencode-model.nix { inherit lib; };
+  modelSpec = import ../../lib/opencode.nix { inherit lib; };
   cfg = features.dev.opencode;
   configuredProviders =
     enabledProviders

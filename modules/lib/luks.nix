@@ -44,7 +44,6 @@ in
     }:
     lib.mkIf config.features.encryption.enable {
       luks.devices = lib.mapAttrs (_: mkDevice) devices;
-      # Do not reboot the machine when FIDO2 unlock fails or times out.
       systemd.services = lib.listToAttrs (map mkNoFailureService noFailureDevices);
     };
 }
