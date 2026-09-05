@@ -57,7 +57,7 @@ in
         gh = {
           enable = true;
           gitCredentialHelper.enable = false;
-          settings.git_protocol = "ssh";
+          settings.git_protocol = "https";
         };
         gitui.enable = true;
       };
