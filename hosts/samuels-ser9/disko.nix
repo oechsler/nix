@@ -8,7 +8,6 @@
 #   - @ subvolume: / (root, ephemeral - rolled back on boot)
 #   - @home subvolume: /home (persistent)
 #   - @nix subvolume: /nix (persistent)
-#   - @var subvolume: /var (persistent)
 #   - @persist subvolume: /persist (persistent)
 #   - @snapshots subvolume: /.snapshots (persistent snapshot storage)
 #
@@ -78,13 +77,6 @@ _:
                     };
                     "@nix" = {
                       mountpoint = "/nix";
-                      mountOptions = [
-                        "compress=zstd"
-                        "noatime"
-                      ];
-                    };
-                    "@var" = {
-                      mountpoint = "/var";
                       mountOptions = [
                         "compress=zstd"
                         "noatime"
