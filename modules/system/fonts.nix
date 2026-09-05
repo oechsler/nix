@@ -3,7 +3,8 @@
 # This module configures:
 # 1. System-wide font packages (JetBrainsMono Nerd Font, Noto fonts)
 # 2. Fontconfig defaults (monospace, sans-serif, serif, emoji)
-# 3. UI font style toggle (monospace vs sans-serif)
+# 3. Linux VT font generated from the configured monospace font
+# 4. UI font style toggle (monospace vs sans-serif)
 #
 # Configuration options:
 #   fonts.defaults.uiStyle = "monospace";      # UI font style (default: "monospace")
@@ -17,6 +18,7 @@
 #
 # The resolved UI font is available as fonts.defaults.ui (read-only).
 # Used by: waybar, dunst, rofi, hyprlock, SDDM, GTK, and Qt apps.
+# Linux VTs use a generated PSF2 bitmap based on the configured monospace font.
 #
 # Note: Terminal (kitty) and code editors always use fonts.defaults.monospace,
 # regardless of uiStyle setting.
@@ -27,6 +29,45 @@
   lib,
   ...
 }:
+
+let
+  fontPackages = with pkgs; [
+    nerd-fonts.jetbrains-mono
+    nerd-fonts.symbols-only
+    noto-fonts
+    noto-fonts-cjk-sans
+    noto-fonts-color-emoji
+  ];
+  fontConfig = pkgs.makeFontsConf { fontDirectories = config.fonts.packages; };
+  monospaceFamily = lib.escapeShellArg config.fonts.defaults.monospace;
+  consoleFont =
+    pkgs.runCommand "linux-vt-consolefont"
+      {
+        nativeBuildInputs = [
+          pkgs.fontconfig
+          pkgs.otf2bdf
+          pkgs.bdf2psf
+        ];
+        FONTCONFIG_FILE = fontConfig;
+      }
+      ''
+        mkdir -p $out/share/consolefonts
+        sourceFont="$(fc-match -f '%{file}' ${monospaceFamily})"
+        test -s "$sourceFont"
+        # Linux VTs require a fixed-width PSF font. The 9pt raster is the closest
+        # stable 8-column rendering of the default 11pt terminal font.
+        otf2bdf -p 9 -r 100 -c C -l '0_255' \
+          -o font.bdf \
+          "$sourceFont" \
+          || test -s font.bdf
+        bdf2psf --fb \
+          font.bdf \
+          ${pkgs.bdf2psf}/share/bdf2psf/standard.equivalents \
+          ${pkgs.bdf2psf}/share/bdf2psf/ascii.set \
+          256 \
+          $out/share/consolefonts/linux-vt-consolefont.psf
+      '';
+in
 
 {
   #===========================
@@ -99,27 +140,22 @@
   # Configuration
   #===========================
 
-  config = lib.mkIf config.features.desktop.enable {
+  config = {
+    console = {
+      font = "${consoleFont}/share/consolefonts/linux-vt-consolefont.psf";
+    };
+
     fonts = {
 
       #---------------------------
       # 1. Font Packages
       #---------------------------
-      packages = with pkgs; [
-        # Nerd Fonts (patched with icons and glyphs)
-        nerd-fonts.jetbrains-mono # Primary monospace font
-        nerd-fonts.symbols-only # Icon font (used by waybar, etc.)
-
-        # Noto Fonts (Google's universal font family)
-        noto-fonts # Sans-serif and serif fonts
-        noto-fonts-cjk-sans # CJK (Chinese, Japanese, Korean) support
-        noto-fonts-color-emoji # Color emoji support
-      ];
+      packages = fontPackages;
 
       #---------------------------
       # 2. Fontconfig Defaults
       #---------------------------
-      fontconfig = {
+      fontconfig = lib.mkIf config.features.desktop.enable {
         enable = true;
         defaultFonts = {
           monospace = [
