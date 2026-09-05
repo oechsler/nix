@@ -117,6 +117,8 @@ volumes below and may include additional feature-specific data subvolumes.
             │   └── /home                               #
             ├── @nix                                    # Nix store
             │   └── /nix                                #
+            ├── @var                                    # Variable system state
+            │   └── /var                                #
             ├── @persist                                # Persistent system state
             │   └── /persist                            #
             └── ...                                      # Optional feature volumes
@@ -132,8 +134,8 @@ they are physically created is controlled by the selected host's Disko file.
 | `@nextcloud` | `/home/<user>/Nextcloud`          | `features.apps.nextcloud.enable`  |
 | `@smb`       | `/home/<user>/smb`                | `features.smb.enable` with shares |
 
-When impermanence is enabled, `@` is reset on boot while `/home`, `/nix`, and
-`/persist` retain their declared state. Optional data subvolumes keep large or
+When impermanence is enabled, `@` is reset on boot while `/home`, `/nix`, `/var`,
+and `/persist` retain their declared state. Optional data subvolumes keep large or
 independently managed data outside `@home` snapshots. The Btrfs top-level is
 also mounted at `/mnt/btrfs-root` as a convenience view of all subvolumes.
 `btrbk` uses this view for snapshot operations, while `/.snapshots` remains the

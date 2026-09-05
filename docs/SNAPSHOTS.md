@@ -18,11 +18,12 @@ and cleaning snapshots. For the required disk layout, see
 | ---------- | ---------- | ------------------------------------------------------ | ---------------------------------------------- |
 | `@`        | `/`        | Root filesystem                                        | Only if `features.impermanence.enable = false` |
 | `@home`    | `/home`    | User data, dotfiles                                    | Always                                         |
+| `@var`     | `/var`     | Variable system state                                  | Always                                         |
 | `@persist` | `/persist` | System state (bluetooth, docker, NetworkManager, etc.) | Only if `features.impermanence.enable = true`  |
 
 The root subvolume is not snapshotted while impermanence is enabled because it
-is recreated on boot. The Nix store is also excluded because it is immutable
-and managed by Nix.
+is recreated on boot. The Nix store and `/var` are also excluded because they
+are managed separately from the standard home and persist snapshots.
 
 The `@steam`, `@nextcloud`, and `@smb` subvolumes are separate from `@home` so
 large or independently managed data does not enter hourly home snapshots. They
