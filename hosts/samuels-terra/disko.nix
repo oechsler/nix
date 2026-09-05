@@ -5,7 +5,7 @@
 moduleArgs:
 
 let
-  diskoLayout = import ../../modules/lib/disko-layout.nix moduleArgs;
+  diskoLayout = import ../../modules/lib/disko.nix moduleArgs;
 in
 {
   disko.devices.disk.main = {

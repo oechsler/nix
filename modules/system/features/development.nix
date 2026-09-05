@@ -3,7 +3,7 @@
 { config, lib, ... }:
 
 let
-  modelSpec = import ../../lib/opencode-model.nix { inherit lib; };
+  modelSpec = import ../../lib/opencode.nix { inherit lib; };
 in
 {
   options.features.dev = {

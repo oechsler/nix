@@ -5,7 +5,7 @@
 moduleArgs:
 
 let
-  diskoLayout = import ../../modules/lib/disko-layout.nix (
+  diskoLayout = import ../../modules/lib/disko.nix (
     moduleArgs
     // {
       username = moduleArgs.username or "samuel";
