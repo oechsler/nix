@@ -14,11 +14,10 @@ and cleaning snapshots. For the required disk layout, see
 
 ## What Gets Snapshotted
 
-| Subvolume  | Mountpoint | Purpose                                                | Condition                                      |
-| ---------- | ---------- | ------------------------------------------------------ | ---------------------------------------------- |
-| `@home`    | `/home`    | User data, dotfiles                                    | Always                                         |
-| `@var`     | `/var`     | Variable system state                                  | Only if `features.impermanence.enable = false` |
-| `@persist` | `/persist` | System state (bluetooth, docker, NetworkManager, etc.) | Only if `features.impermanence.enable = true`  |
+| Subvolume  | Mountpoint | Purpose                                                | Condition                                     |
+| ---------- | ---------- | ------------------------------------------------------ | --------------------------------------------- |
+| `@home`    | `/home`    | User data, dotfiles                                    | Always                                        |
+| `@persist` | `/persist` | System state (bluetooth, docker, NetworkManager, etc.) | Only if `features.impermanence.enable = true` |
 
 The root subvolume is intentionally excluded in both modes. With Impermanence
 it is recreated on every boot; without Impermanence, NixOS can reproduce the
@@ -84,7 +83,7 @@ sudo mount -o subvol=/ /dev/nvme0n1p2 /mnt/btrfs-root
 
 ls /mnt/btrfs-root/
 # With Impermanence: @home  @nix  @persist  @snapshots
-# Without Impermanence: @home  @nix  @var  @snapshots
+# Without Impermanence: @home  @nix  @snapshots
 ls /mnt/btrfs-root/@snapshots/
 ```
 

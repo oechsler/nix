@@ -34,15 +34,5 @@ in
         )
         {
           "${userHome}/smb" = subvolume "@smb";
-        }
-    //
-      lib.optionalAttrs
-        (
-          !config.features.impermanence.enable
-          && config.features.virtualisation.enable
-          && config.features.virtualisation.vm.enable
-        )
-        {
-          "/etc/libvirt" = subvolume "@libvirt";
         };
 }
