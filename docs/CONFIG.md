@@ -528,8 +528,8 @@ features = {
 
 ### LLM
 
-`features.llm.enable` controls the complete LLM feature and is disabled by
-default. Individual LLM services such as Ollama also have their own options.
+The LLM feature provides local model services. It is disabled by default; enable
+it together with the service you want to run.
 
 | Option                | Default | Purpose                            |
 | --------------------- | ------- | ---------------------------------- |
@@ -554,43 +554,35 @@ features.llm = {
   enable = true;
   ollama = {
     enable = true;
-    context = 131072;
-    models."local-chat-coding-model".name = "Local Chat and Coding Model";
+    models."gemma3:12b".name = "Gemma 3 12B";
   };
 };
 ```
 
-The model IDs in these examples are placeholders; replace them with the tags
-available from your model provider.
+The model key is the exact Ollama tag to install. Search available tags at
+[ollama.com/search](https://ollama.com/search).
 
-`context` is Ollama's default context size for every model it starts and
-is also used as the OpenCode context limit unless a model overrides it. Choose
-it according to the available RAM and GPU memory; larger values use more memory
-as the conversation grows. OpenCode uses `16384` as the default output limit.
-This is separate from the conversation context: `context` controls how much
-conversation an agent can keep before compaction. For the SER9 setup, use
-`32768` for the context limit; set `output` on an individual model only when a
-different response limit is needed.
-`unloadAfter` defaults to `"5m"` and controls how long an unused model remains
-loaded. Set it to values such as `"1h"` when a model should stay warm longer, or
-to `"-1"` to keep it loaded indefinitely on a dedicated server.
-The defaults are intended as a balanced baseline for chat and coding.
+`context` is the conversation window in tokens. Larger values use more memory
+as the conversation grows and delay compaction. `32768` is a balanced default
+for chat and coding. OpenCode separately limits generated output to `16384`
+tokens by default; set `output` on a model only when needed.
 
-Set `server = true` only when another machine needs access to Ollama. This
-opens port `11434` and should only be used on a trusted network or behind an
-authenticated HTTPS gateway.
+`unloadAfter` controls how long an inactive model stays loaded. Use values such
+as `"1h"` or `"-1"` when a dedicated server should keep a model warm.
 
-Models can be searched at [ollama.com/search](https://ollama.com/search).
+Set `server = true` only when another machine needs access. This opens port
+`11434`; use it only on a trusted network or behind an authenticated HTTPS
+gateway.
 
 ### Development
 
-`features.dev.enable` controls the complete command-line development
-environment. Desktop applications and Android tooling have separate options.
+The Development feature provides the command-line tools, language servers,
+formatters, editors, and optional IDE integrations used for software work.
 
 #### Language Toolchains
 
-The default language environments include compilers or runtimes, language
-servers, diagnostics, and formatters where available:
+The default setup includes toolchains, language servers, diagnostics, and
+formatters for:
 
 - C/C++: Clang, LLD, `clangd`, `clang-format`
 - Fish: `fish-lsp`, `fish_indent`
@@ -607,20 +599,11 @@ servers, diagnostics, and formatters where available:
 - TOML: `taplo`
 - YAML: `yaml-language-server`, `prettierd`
 
-#### Infrastructure Tools
-
-Enabled with `features.dev.enable`:
-
-- Ansible
-- OpenTofu
-- Distrobox when container support is enabled
-
 #### Editors and IDEs
 
-Neovim is configured as the default terminal editor and provides completion,
-diagnostics, LSP navigation, Treesitter highlighting, and format-on-save for
-the language environments above. JetBrains IDEs and DBeaver are optional GUI
-tools. JetBrains entries default to GoLand and RustRover.
+Neovim is the default terminal editor with completion, diagnostics, LSP
+navigation, syntax highlighting, and format-on-save. JetBrains IDEs and DBeaver
+are optional GUI tools; GoLand and RustRover are selected by default.
 
 | Option                           | Default                    | Description                             |
 | -------------------------------- | -------------------------- | --------------------------------------- |
@@ -632,23 +615,21 @@ tools. JetBrains entries default to GoLand and RustRover.
 
 #### JetBrains IDEs
 
-Available values are `android-studio`, `clion`, `datagrip`, `dataspell`,
-`gateway`, `goland`, `idea-oss`, `idea-ultimate`, `mps`, `phpstorm`, `pycharm`,
-`rider`, `rubymine`, `rustrover`, and `webstorm`. `android-studio` requires
-`features.dev.android.enable = true`.
+Available JetBrains values include `clion`, `datagrip`, `goland`, `idea-oss`,
+`idea-ultimate`, `phpstorm`, `pycharm`, `rider`, `rustrover`, and `webstorm`.
+`android-studio` additionally requires `features.dev.android.enable = true`.
 
 #### Android Development
 
-Android tooling is disabled by default. Enable it independently of Android
-Studio to install the Android SDK, platform tools, build tools, NDK, emulator,
-and an x86_64 Google APIs system image:
+Android tooling is disabled by default. Enable it to install the Android SDK,
+platform tools, build tools, NDK, emulator, and a Google APIs system image:
 
 ```nix
 features.dev.android.enable = true;
 ```
 
 Add `android-studio` to `features.dev.jetbrains.entries` when the IDE is also
-needed. The configuration rejects that IDE entry when Android tooling is off.
+needed.
 
 ```nix
 features = {
@@ -731,7 +712,7 @@ Unset fields are omitted from the generated OpenCode configuration.
 For current model comparisons, see [Artificial Analysis](https://artificialanalysis.ai/)
 and the [Arena agent leaderboard](https://arena.ai/leaderboard/agent).
 
-The same model fields can be used with an external OpenAI-compatible provider:
+Other OpenAI-compatible services use the same provider format:
 
 ```nix
 features.dev.opencode.provider.local = {
@@ -749,67 +730,11 @@ features.dev.opencode.provider.local = {
 };
 ```
 
-Providers can be enabled or disabled individually. The generated configuration
-only exposes configured providers and models, keeping the model picker focused
-on the declared setup.
+Providers are enabled by default when configured. Credentials should use SOPS
+with `apiKeySecret`; inline `apiKey` values are intended only for trusted hosts.
+MCP servers are disabled by default and can use a URL, token, or OAuth.
 
-A host normally only adds its own MCP servers. MCPs are disabled by default; set
-`enable = true` when one should be active at startup. MCPs can use no
-authentication, a SOPS-backed token, or OAuth/OIDC. Provider and MCP
-credentials can be kept in SOPS or supplied inline where explicitly supported.
-
-The OpenCode LSP and formatter defaults apply to the applicable entries above.
-Formatters run after OpenCode writes or edits a matching file.
-
-For example, a host can override an LSP, disable a formatter, and add a custom
-formatter while keeping all unrelated defaults:
-
-```nix
-features.dev.opencode = {
-  lsp.markdown = {
-    command = [ "marksman" "server" ];
-    extensions = [ ".md" ];
-  };
-  formatter.prettier.enable = false;
-  formatter.custom = {
-    command = [ "my-formatter" "$FILE" ];
-    extensions = [ ".custom" ];
-  };
-};
-```
-
-Provider credentials can be supplied in two ways:
-
-```nix
-# SOPS (recommended)
-apiKeySecret = "opencode/provider/example/api-key";
-
-# Inline plaintext (only for trusted configurations)
-apiKey = "known-local-token";
-```
-
-For MCP OAuth, OpenCode handles the authorization-code flow and PKCE natively.
-Use a public client without a secret, a SOPS-managed confidential client, or a
-plaintext confidential client as appropriate:
-
-```nix
-# Public client: dynamic registration and PKCE
-oauth = { };
-
-# Confidential client with SOPS secret
-oauth = {
-  clientId = "opencode-client";
-  clientSecretSecret = "opencode/mcp/example/client-secret";
-};
-
-# Trusted confidential client with inline secret
-oauth = {
-  clientId = "opencode-client";
-  clientSecret = "known-local-secret";
-};
-```
-
-For example, a host can add a provider and an MCP while keeping the defaults:
+For example, a host can add a provider and an MCP:
 
 ```nix
 features.dev.opencode = {
@@ -830,10 +755,9 @@ features.dev.opencode = {
 };
 ```
 
-Use `settings.small_model` to choose a separate small model. Remote MCPs can
-configure OAuth/OIDC with `oauth`; use either `clientSecretSecret` or
-`clientSecret` for the client credential. See
-[sops/README.md](../sops/README.md) for the credential layout and workflow.
+Use `settings.small_model` to choose a separate small model. LSP servers and
+formatters have sensible defaults and can be overridden under `lsp` and
+`formatter` when needed.
 
 ### Operations
 
