@@ -62,7 +62,7 @@
       ollama = {
         enable = true;
         server = true;
-        context = 49152;
+        context = 16384;
         unloadAfter = "-1";
         models = {
           "qwen3.8:27b".name = "Qwen 3.8 27B";
