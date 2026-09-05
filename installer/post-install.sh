@@ -93,7 +93,7 @@ copy_config() {
   if [[ ! -d "$dest" ]]; then
     mkdir -p "/mnt/home/$CONFIG_USERNAME/repos"
     if [[ "$INSTALLER_ISO" != true ]]; then
-      git -C "$REPO_DIR" add --all
+      repo_git add --all
     fi
     cp -aL "$REPO_DIR" "$dest"
     if [[ "$INSTALLER_ISO" == true ]] && command -v git &>/dev/null && timeout 10 git ls-remote "$REPO_URL" HEAD &>/dev/null; then

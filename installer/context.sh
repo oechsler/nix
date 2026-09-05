@@ -38,6 +38,16 @@ if [[ ! -f "$REPO_DIR/flake.nix" ]]; then
   fi
 fi
 
+repo_git() {
+  local repo_owner
+  repo_owner="$(stat -c '%U' "$REPO_DIR")"
+  if [[ $EUID -eq 0 && "$repo_owner" != root ]]; then
+    sudo -u "$repo_owner" -- git -C "$REPO_DIR" "$@"
+  else
+    git -C "$REPO_DIR" "$@"
+  fi
+}
+
 STATE_DIR="/var/lib/nixos-install"
 STATE_FILE="$STATE_DIR/state.env"
 LUKS_PASSWORD_FILE=""

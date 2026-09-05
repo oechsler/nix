@@ -82,7 +82,7 @@ phase_upgrade() {
   done
   info "Syncing repository..."
   echo ""
-  if git -C "$REPO_DIR" remote get-url origin &>/dev/null; then
+  if repo_git remote get-url origin &>/dev/null; then
     sudo -u "$invoking_user" git -C "$REPO_DIR" checkout flake.lock
     sudo -u "$invoking_user" git -C "$REPO_DIR" pull --ff-only
     success "Repository up to date"
@@ -133,12 +133,12 @@ phase_upgrade() {
     SECURE_BOOT_CONFIG_FILE="$host_dir/configuration.nix"
     printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; }\n' >"$override_nix"
     sed -i "/imports = \[/a\\    ./secure-boot-upgrade-override.nix" "$host_dir/configuration.nix"
-    git -C "$REPO_DIR" add "$override_nix" "$host_dir/configuration.nix"
+    repo_git add "$override_nix" "$host_dir/configuration.nix"
     nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" || rebuild_ok=false
     sed -i '/secure-boot-upgrade-override\.nix/d' "$host_dir/configuration.nix"
     rm -f "$override_nix"
-    git -C "$REPO_DIR" rm --cached "$override_nix" 2>/dev/null || true
-    git -C "$REPO_DIR" add "$host_dir/configuration.nix"
+    repo_git rm --cached "$override_nix" 2>/dev/null || true
+    repo_git add "$host_dir/configuration.nix"
   else
     nixos-rebuild switch --flake "$REPO_DIR#$HOST" --max-jobs "$max_jobs" || rebuild_ok=false
   fi

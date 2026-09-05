@@ -21,8 +21,8 @@ phase_hardware_config() {
     2> >(sed '/^ERROR: Not a Btrfs subvolume: Invalid argument$/d' >&2) \
     >"$host_dir/hardware-configuration.generated.nix" ||
     error "Hardware configuration generation failed."
-  if git -C "$REPO_DIR" rev-parse --is-inside-work-tree &>/dev/null; then
-    git -C "$REPO_DIR" add "$host_dir/hardware-configuration.generated.nix"
+  if repo_git rev-parse --is-inside-work-tree &>/dev/null; then
+    repo_git add "$host_dir/hardware-configuration.generated.nix"
   fi
   success "Hardware configuration written to $host_dir/hardware-configuration.generated.nix"
 }
@@ -54,7 +54,7 @@ phase_state_version() {
     fi
     success "Password hash written to configuration.nix"
   fi
-  git -C "$REPO_DIR" add "$host_dir/"
+  repo_git add "$host_dir/"
 }
 
 phase_install() {
@@ -84,7 +84,7 @@ phase_install() {
       2> >(sed '/^ERROR: Not a Btrfs subvolume: Invalid argument$/d' >&2) \
       >"$host_dir/hardware-configuration.generated.nix"
     nix flake lock "$REPO_DIR"
-    git -C "$REPO_DIR" add "$host_dir/hardware-configuration.generated.nix" "$REPO_DIR/flake.lock"
+    repo_git add "$host_dir/hardware-configuration.generated.nix" "$REPO_DIR/flake.lock"
     success "Hardware configuration generated"
     echo ""
   fi
@@ -101,13 +101,13 @@ phase_install() {
     SECURE_BOOT_CONFIG_FILE="$host_dir/configuration.nix"
     printf '{ lib, ... }: { features.secureBoot.enable = lib.mkForce false; features.encryption.unlockMethod = lib.mkForce "password"; }\n' >"$override_nix"
     sed -i "/imports = \[/a\\    ./secure-boot-install-override.nix" "$host_dir/configuration.nix"
-    git -C "$REPO_DIR" add "$override_nix" "$host_dir/configuration.nix"
+    repo_git add "$override_nix" "$host_dir/configuration.nix"
     local install_ok=true
     nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs" || install_ok=false
     sed -i '/secure-boot-install-override\.nix/d' "$host_dir/configuration.nix"
     rm -f "$override_nix"
-    git -C "$REPO_DIR" add "$host_dir/configuration.nix"
-    git -C "$REPO_DIR" rm --cached "$override_nix" 2>/dev/null || true
+    repo_git add "$host_dir/configuration.nix"
+    repo_git rm --cached "$override_nix" 2>/dev/null || true
     [[ "$install_ok" == true ]] || error "nixos-install failed. Check the output above."
   else
     nixos-install --flake "$REPO_DIR#$HOST" --no-root-password --max-jobs "$max_jobs" || error "nixos-install failed. Check the output above."
