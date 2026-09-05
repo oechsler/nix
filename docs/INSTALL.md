@@ -153,7 +153,7 @@ You only need the separate `/var` storage when Impermanence is disabled. With
 Impermanence enabled, `/var` is reset together with the root filesystem and
 only the system data needed across boots is kept under `/persist`.
 
-Always-persistent core state:
+Core state kept on every host (some directories may remain empty):
 
 - `/var/lib/NetworkManager`
 - `/var/lib/backgrounds` (prepared wallpapers and blur cache)
@@ -161,6 +161,7 @@ Always-persistent core state:
 - `/var/lib/power-profiles-daemon`
 - `/var/lib/sops`
 - `/var/lib/systemd`
+- `/persist/etc/ssh/*` (SSH host keys)
 
 Feature-dependent state:
 
@@ -174,10 +175,11 @@ Feature-dependent state:
 - `/var/lib/sbctl` (Secure Boot)
 - `/var/lib/sddm` (desktop login)
 - `/var/lib/tailscale` (Tailscale)
-- `/persist/etc/ssh/*` (SSH host keys)
 
-Only state required by enabled features is kept automatically. Additional paths
-can be configured through `features.impermanence.extraPaths`.
+Only state required by enabled features is added to the feature-dependent list.
+Headless hosts therefore do not need desktop-specific state such as SDDM or
+wallpaper data. Additional paths can be configured through
+`features.impermanence.extraPaths`.
 
 ### SOPS Secrets
 
