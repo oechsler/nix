@@ -295,6 +295,8 @@ When Secure Boot is active and all keys are enrolled, `secure-boot-init` detects
 
 If you use TPM2 auto-unlock **and** Secure Boot, always enroll TPM **after** Secure Boot is fully active. PCR 7 seals against the Secure Boot state — enrolling before activation produces a seal that breaks once Secure Boot is turned on.
 
+Until both steps are complete, unlock LUKS with the installation password:
+
 ```
 1. sudo secure-boot-init   # activate Secure Boot first
 2. sudo tpm-luks-init      # then enroll TPM
