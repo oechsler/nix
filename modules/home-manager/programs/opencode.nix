@@ -13,10 +13,12 @@
 let
   modelSpec = import ../../lib/opencode.nix { inherit lib; };
   cfg = features.dev.opencode;
+  localOllamaCfg = features.llm.ollama;
+  localOllamaEnabled = features.llm.enable && localOllamaCfg.enable;
   configuredProviders =
     enabledProviders
-    // lib.optionalAttrs ollamaCfg.enable {
-      ollama = ollamaProvider;
+    // lib.optionalAttrs localOllamaEnabled {
+      ollama = localOllamaProvider;
     };
   nativeToolModels = lib.flatten (
     lib.mapAttrsToList (
@@ -49,22 +51,21 @@ let
     }
     .${theme.catppuccin.flavor};
   enabledProviders = lib.filterAttrs (_: provider: provider.enable) cfg.provider;
-  ollamaCfg = cfg.ollama;
-  ollamaProvider = {
+  localOllamaProvider = {
     enable = true;
-    inherit (ollamaCfg) apiKeySecret apiKey baseURL;
+    baseURL = "http://127.0.0.1:11434/v1";
     name = "Ollama";
     npm = "@ai-sdk/openai-compatible";
     models = lib.mapAttrs (
       _: model:
       model
       // lib.optionalAttrs ((model.context or null) == null) {
-        inherit (ollamaCfg) context;
+        inherit (localOllamaCfg) context;
       }
       // lib.optionalAttrs ((model.output or null) == null) {
-        inherit (ollamaCfg) output;
+        output = 16384;
       }
-    ) ollamaCfg.models;
+    ) localOllamaCfg.models;
   };
   providersWithSecrets = lib.filterAttrs (
     _: provider: provider.apiKeySecret != null

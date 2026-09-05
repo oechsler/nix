@@ -567,8 +567,7 @@ available from your model provider.
 is also used as the OpenCode context limit unless a model overrides it. Choose
 it according to the available RAM and GPU memory; larger values use more memory
 as the conversation grows. OpenCode uses `16384` as the default output limit;
-override it for all Ollama models with
-`features.dev.opencode.ollama.output`, or set `output` on an individual model.
+set `output` on an individual model when a different limit is needed.
 `unloadAfter` defaults to `"5m"` and controls how long an unused model remains
 loaded. Set it to values such as `"1h"` when a model should stay warm longer, or
 to `"-1"` to keep it loaded indefinitely on a dedicated server.
@@ -669,32 +668,20 @@ servers, and formatters. The default model is
 | `features.dev.opencode.mcp`          | `{}`                  | MCP servers for OpenCode.           |
 | `features.dev.opencode.settings`     | `{}`                  | Additional OpenCode settings.       |
 
-If the LLM feature and local Ollama are enabled, its models are automatically
-available in OpenCode through the `ollama` provider. OpenCode connects directly
-to the local server; there is no extra setup required.
+When local Ollama is enabled, OpenCode automatically shows it as `Ollama`. The
+models and context come directly from `features.llm.ollama`, so the local model
+list only needs to be maintained in one place.
 
-The local Ollama models are taken from `features.llm.ollama.models`; they do not
-need to be listed a second time under OpenCode. Use the OpenCode-specific block
-only when OpenCode should connect to a different, usually remote, Ollama server.
-
-| Option                                      | Default                       | Purpose                              |
-| ------------------------------------------- | ----------------------------- | ------------------------------------ |
-| `features.dev.opencode.ollama.enable`       | Local Ollama setting          | Enable the OpenCode Ollama provider. |
-| `features.dev.opencode.ollama.baseURL`      | `http://127.0.0.1:11434/v1`   | Ollama API endpoint.                 |
-| `features.dev.opencode.ollama.context`      | `features.llm.ollama.context` | Context advertised to OpenCode.      |
-| `features.dev.opencode.ollama.output`       | `16384`                       | Maximum response length.             |
-| `features.dev.opencode.ollama.models`       | Local Ollama models           | Models shown in OpenCode.            |
-| `features.dev.opencode.ollama.apiKey`       | `null`                        | Inline API key.                      |
-| `features.dev.opencode.ollama.apiKeySecret` | `null`                        | SOPS secret containing the API key.  |
-
-To connect OpenCode to an Ollama server on another machine, configure the
-OpenCode provider without enabling local Ollama:
+To add another Ollama server, configure an OpenCode provider named
+`ollama-remote`. It is shown as `Ollama (Remote)` and always needs its own
+endpoint and model list:
 
 ```nix
-features.dev.opencode.ollama = {
-  enable = true;
+features.dev.opencode.provider."ollama-remote" = {
+  name = "Ollama (Remote)";
+  npm = "@ai-sdk/openai-compatible";
   baseURL = "https://ollama.example.com/v1";
-  apiKeySecret = "opencode/provider/ollama/api-key";
+  apiKeySecret = "opencode/provider/ollama-remote/api-key";
   models = {
     "remote-chat-coding-model" = {
       name = "Remote Chat and Coding Model";
@@ -708,16 +695,20 @@ features.dev.opencode.ollama = {
 };
 ```
 
-For a trusted local configuration, use the actual token instead of
+Local and remote Ollama can be enabled at the same time. Choose models with the
+provider prefix `ollama/...` for the local server and
+`ollama-remote/...` for the remote server.
+
+For a trusted remote configuration, use the actual token instead of
 `apiKeySecret`:
 
 ```nix
-features.dev.opencode.ollama.apiKey = "ollama-api-token";
+features.dev.opencode.provider."ollama-remote".apiKey = "ollama-api-token";
 ```
 
 The local Ollama feature manages a server and its model store. The OpenCode
-Ollama feature only configures where OpenCode connects; the two can therefore
-be used independently.
+provider entry only describes an additional remote server. They can therefore
+be used independently or together.
 
 Model capabilities are declared per model because models differ in their
 support for tools, reasoning, temperature, and context size:

@@ -19,43 +19,6 @@ in
         default = "openai/gpt-5.6-luna";
         description = "Default OpenCode model in provider/model format.";
       };
-      ollama = {
-        enable = lib.mkOption {
-          type = lib.types.bool;
-          default = config.features.llm.enable && config.features.llm.ollama.enable;
-          description = "Enable the Ollama provider in OpenCode.";
-        };
-        baseURL = lib.mkOption {
-          type = lib.types.str;
-          default = "http://127.0.0.1:11434/v1";
-          description = "OpenAI-compatible Ollama API URL.";
-        };
-        context = lib.mkOption {
-          type = lib.types.ints.positive;
-          default = config.features.llm.ollama.context;
-          description = "Default context length advertised to OpenCode for Ollama models.";
-        };
-        output = lib.mkOption {
-          type = lib.types.ints.positive;
-          default = 16384;
-          description = "Default output length advertised to OpenCode for Ollama models.";
-        };
-        apiKeySecret = lib.mkOption {
-          type = lib.types.nullOr lib.types.str;
-          default = null;
-          description = "SOPS secret containing the Ollama API token.";
-        };
-        apiKey = lib.mkOption {
-          type = lib.types.nullOr lib.types.str;
-          default = null;
-          description = "Plaintext Ollama API key for trusted configurations.";
-        };
-        models = lib.mkOption {
-          type = lib.types.attrsOf modelSpec.type;
-          default = config.features.llm.ollama.models;
-          description = "Models exposed by the OpenCode Ollama provider.";
-        };
-      };
       settings = lib.mkOption {
         type = lib.types.attrs;
         default = { };
@@ -335,5 +298,12 @@ in
         default = config.features.dev.enable;
       };
     };
+  };
+
+  config.assertions = lib.optional (config.features.dev.opencode.provider ? "ollama-remote") {
+    assertion =
+      !config.features.dev.opencode.provider."ollama-remote".enable
+      || config.features.dev.opencode.provider."ollama-remote".baseURL != null;
+    message = "The OpenCode provider 'ollama-remote' requires a baseURL endpoint.";
   };
 }
