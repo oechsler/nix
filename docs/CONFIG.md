@@ -35,16 +35,17 @@ flake command, for example `sudo nixos-rebuild switch --flake .#samuels-terra`.
 - [System Requirements](#system-requirements): installation constraints and required storage layout.
 
 The feature section follows the order in which a host is usually designed:
-hardware and security, networking, desktop, virtualization, gaming,
+hardware and security, networking, desktop, virtualization, gaming, LLM,
 development, operations, and applications. The shared options section then
 covers session behavior, identity, appearance, locale, displays, input, and
 autostart.
 
 ## Feature Toggles
 
-Most desktop-oriented features default to enabled. Child features usually
-inherit their parent switch and can be overridden independently. Examples are
-shown in the section for each feature.
+Most desktop-oriented features default to enabled. LLM services are an explicit
+exception and remain disabled until enabled. Child features usually inherit
+their parent switch and can be overridden independently. Examples are shown in
+the section for each feature.
 
 ### Hardware & Boot
 
@@ -525,6 +526,60 @@ features = {
 };
 ```
 
+### LLM
+
+`features.llm.enable` controls the complete LLM feature and is disabled by
+default. Individual LLM services such as Ollama also have their own options.
+
+| Option                | Default | Purpose                            |
+| --------------------- | ------- | ---------------------------------- |
+| `features.llm.enable` | `false` | Enable LLM services and providers. |
+
+#### Ollama
+
+Ollama runs local open-weight models. It is disabled by default. Enable both
+`features.llm.enable` and `features.llm.ollama.enable` to install the `ollama`
+command, start the local model server, and keep the declared models installed.
+
+| Option                            | Default | Purpose                                   |
+| --------------------------------- | ------- | ----------------------------------------- |
+| `features.llm.ollama.enable`      | `false` | Start the local Ollama server.            |
+| `features.llm.ollama.server`      | `false` | Allow connections from other machines.    |
+| `features.llm.ollama.context`     | `32768` | Default context size for model processes. |
+| `features.llm.ollama.unloadAfter` | `"5m"`  | Unload inactive models after this time.   |
+| `features.llm.ollama.models`      | `{}`    | Models to keep installed.                 |
+
+```nix
+features.llm = {
+  enable = true;
+  ollama = {
+    enable = true;
+    context = 131072;
+    models."local-chat-coding-model".name = "Local Chat and Coding Model";
+  };
+};
+```
+
+The model IDs in these examples are placeholders; replace them with the tags
+available from your model provider.
+
+`context` is Ollama's default context size for every model it starts and
+is also used as the OpenCode context limit unless a model overrides it. Choose
+it according to the available RAM and GPU memory; larger values use more memory
+as the conversation grows. OpenCode uses `16384` as the default output limit;
+override it for all Ollama models with
+`features.dev.opencode.ollama.output`, or set `output` on an individual model.
+`unloadAfter` defaults to `"5m"` and controls how long an unused model remains
+loaded. Set it to values such as `"1h"` when a model should stay warm longer, or
+to `"-1"` to keep it loaded indefinitely on a dedicated server.
+The defaults are intended as a balanced baseline for chat and coding.
+
+Set `server = true` only when another machine needs access to Ollama. This
+opens port `11434` and should only be used on a trusted network or behind an
+authenticated HTTPS gateway.
+
+Models can be searched at [ollama.com/search](https://ollama.com/search).
+
 ### Development
 
 `features.dev.enable` controls the complete command-line development
@@ -599,48 +654,6 @@ features = {
 };
 ```
 
-#### Ollama
-
-Ollama runs local open-weight models. It is disabled by default. Enabling it
-installs the `ollama` command, starts the local model server, and keeps the
-declared models installed.
-
-| Option                            | Default | Purpose                                   |
-| --------------------------------- | ------- | ----------------------------------------- |
-| `features.dev.ollama.enable`      | `false` | Start the local Ollama server.            |
-| `features.dev.ollama.server`      | `false` | Allow connections from other machines.    |
-| `features.dev.ollama.context`     | `32768` | Default context size for model processes. |
-| `features.dev.ollama.unloadAfter` | `"5m"`  | Unload inactive models after this time.   |
-| `features.dev.ollama.models`      | `{}`    | Models to keep installed.                 |
-
-```nix
-features.dev.ollama = {
-  enable = true;
-  context = 131072;
-  models."local-chat-coding-model".name = "Local Chat and Coding Model";
-};
-```
-
-The model IDs in these examples are placeholders; replace them with the tags
-available from your model provider.
-
-`context` is Ollama's default context size for every model it starts and
-is also used as the OpenCode context limit unless a model overrides it. Choose
-it according to the available RAM and GPU memory; larger values use more memory
-as the conversation grows. OpenCode uses `16384` as the default output limit;
-override it for all Ollama models with
-`features.dev.opencode.ollama.output`, or set `output` on an individual model.
-`unloadAfter` defaults to `"5m"` and controls how long an unused model remains
-loaded. Set it to values such as `"1h"` when a model should stay warm longer, or
-to `"-1"` to keep it loaded indefinitely on a dedicated server.
-The defaults are intended as a balanced baseline for chat and coding.
-
-Set `server = true` only when another machine needs access to Ollama. This
-opens port `11434` and should only be used on a trusted network or behind an
-authenticated HTTPS gateway.
-
-Models can be searched at [ollama.com/search](https://ollama.com/search).
-
 #### OpenCode
 
 OpenCode is the coding assistant used by this configuration. It is enabled with
@@ -656,11 +669,11 @@ servers, and formatters. The default model is
 | `features.dev.opencode.mcp`          | `{}`                  | MCP servers for OpenCode.           |
 | `features.dev.opencode.settings`     | `{}`                  | Additional OpenCode settings.       |
 
-If local Ollama is enabled, its models are automatically available in OpenCode
-through the `ollama` provider. OpenCode connects directly to the local server;
-there is no extra setup required.
+If the LLM feature and local Ollama are enabled, its models are automatically
+available in OpenCode through the `ollama` provider. OpenCode connects directly
+to the local server; there is no extra setup required.
 
-The local Ollama models are taken from `features.dev.ollama.models`; they do not
+The local Ollama models are taken from `features.llm.ollama.models`; they do not
 need to be listed a second time under OpenCode. Use the OpenCode-specific block
 only when OpenCode should connect to a different, usually remote, Ollama server.
 
@@ -668,7 +681,7 @@ only when OpenCode should connect to a different, usually remote, Ollama server.
 | ------------------------------------------- | ----------------------------- | ------------------------------------ |
 | `features.dev.opencode.ollama.enable`       | Local Ollama setting          | Enable the OpenCode Ollama provider. |
 | `features.dev.opencode.ollama.baseURL`      | `http://127.0.0.1:11434/v1`   | Ollama API endpoint.                 |
-| `features.dev.opencode.ollama.context`      | `features.dev.ollama.context` | Context advertised to OpenCode.      |
+| `features.dev.opencode.ollama.context`      | `features.llm.ollama.context` | Context advertised to OpenCode.      |
 | `features.dev.opencode.ollama.output`       | `16384`                       | Maximum response length.             |
 | `features.dev.opencode.ollama.models`       | Local Ollama models           | Models shown in OpenCode.            |
 | `features.dev.opencode.ollama.apiKey`       | `null`                        | Inline API key.                      |
