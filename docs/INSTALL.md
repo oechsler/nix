@@ -127,6 +127,11 @@ volumes below and may include additional feature-specific data subvolumes.
 Optional data subvolumes are only used when their feature is enabled. Whether
 they are physically created is controlled by the selected host's Disko file.
 
+`@var` is part of the required base layout and is always mounted at `/var`.
+It is kept separate so Impermanence can be disabled without changing the Disko
+layout or reinstalling the host. The additional persistent directories managed
+by Impermanence are stored under `/persist`.
+
 | Subvolume    | Mountpoint                        | Required feature                  |
 | ------------ | --------------------------------- | --------------------------------- |
 | `@snapshots` | `/.snapshots`                     | `features.snapshots.enable`       |
