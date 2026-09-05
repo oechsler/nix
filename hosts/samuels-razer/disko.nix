@@ -38,10 +38,13 @@ let
       else
         throw "samuels-razer/disko.nix requires the global user.name option"
     );
-  impermanenceEnabled =
-    moduleArgs ? config
-    && moduleArgs.config ? features
-    && moduleArgs.config.features.impermanence.enable;
+  features =
+    if moduleArgs ? config && moduleArgs.config ? features then moduleArgs.config.features else { };
+  impermanenceEnabled = features.impermanence.enable or false;
+  snapshotsEnabled = features.snapshots.enable or false;
+  gamingEnabled = features.gaming.enable or false;
+  nextcloudEnabled = features.apps.nextcloud.enable or false;
+  smbEnabled = (features.smb.enable or false) && (features.smb.shares or [ ]) != [ ];
 in
 
 {
@@ -126,24 +129,50 @@ in
                         };
                       }
                   )
-                  // {
-                    "@steam" = {
-                      mountpoint = "/home/${username}/.local/share/Steam";
-                    };
-                    "@nextcloud" = {
-                      mountpoint = "/home/${username}/Nextcloud";
-                    };
-                    "@smb" = {
-                      mountpoint = "/home/${username}/smb";
-                    };
-                    "@snapshots" = {
-                      mountpoint = "/.snapshots";
-                      mountOptions = [
-                        "compress=zstd"
-                        "noatime"
-                      ];
-                    };
-                  };
+                  // (
+                    if snapshotsEnabled then
+                      {
+                        "@snapshots" = {
+                          mountpoint = "/.snapshots";
+                          mountOptions = [
+                            "compress=zstd"
+                            "noatime"
+                          ];
+                        };
+                      }
+                    else
+                      { }
+                  )
+                  // (
+                    if gamingEnabled then
+                      {
+                        "@steam" = {
+                          mountpoint = "/home/${username}/.local/share/Steam";
+                        };
+                      }
+                    else
+                      { }
+                  )
+                  // (
+                    if nextcloudEnabled then
+                      {
+                        "@nextcloud" = {
+                          mountpoint = "/home/${username}/Nextcloud";
+                        };
+                      }
+                    else
+                      { }
+                  )
+                  // (
+                    if smbEnabled then
+                      {
+                        "@smb" = {
+                          mountpoint = "/home/${username}/smb";
+                        };
+                      }
+                    else
+                      { }
+                  );
                 };
               };
             };
