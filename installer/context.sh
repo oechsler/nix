@@ -10,6 +10,7 @@ DRY_RUN=false
 DO_FORMAT=false
 DO_INSTALL=false
 DO_POST_INSTALL=false
+DO_HARDWARE_CONFIG=false
 SKIP_TOTP=false
 QUIET_UPGRADE=false
 REPAIR=false

@@ -5,6 +5,10 @@ main() {
   phase_validate
   load_state
   phase_select_host
+  if [[ "$DO_HARDWARE_CONFIG" == true ]]; then
+    phase_hardware_config
+    exit 0
+  fi
   if [[ "$IS_LIVE" != true && "$INSTALLER_ISO" != true ]]; then
     echo -e "    ${DIM}Pulls the latest configuration from git and rebuilds the system.${RESET}"
     echo -e "    ${DIM}Activates immediately — no reboot required.${RESET}"
