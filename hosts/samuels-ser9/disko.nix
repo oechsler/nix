@@ -5,27 +5,14 @@
 moduleArgs:
 
 let
-  diskLayout = import ../../modules/lib/disko.nix (
+  layout = import ../../modules/lib/disko.nix (
     moduleArgs
     // {
       username = moduleArgs.username or "samuel";
     }
   );
-  inherit (diskLayout) efiLayout rootLayout;
+  inherit (layout) mainDisk;
 in
 {
-  disko.devices.disk.main = {
-    type = "disk";
-    device = "/dev/disk/by-id/nvme-CT1000E100SSD8_2533EADB2554";
-    content = {
-      type = "gpt";
-      partitions = {
-        BOOT = efiLayout;
-        root = {
-          size = "100%";
-          content = rootLayout;
-        };
-      };
-    };
-  };
+  disko.devices.disk.main = mainDisk "/dev/disk/by-id/nvme-CT1000E100SSD8_2533EADB2554";
 }

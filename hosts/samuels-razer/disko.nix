@@ -5,22 +5,9 @@
 moduleArgs:
 
 let
-  diskLayout = import ../../modules/lib/disko.nix moduleArgs;
-  inherit (diskLayout) efiLayout rootLayout;
+  layout = import ../../modules/lib/disko.nix moduleArgs;
+  inherit (layout) mainDisk;
 in
 {
-  disko.devices.disk.main = {
-    type = "disk";
-    device = "/dev/disk/by-id/nvme-Samsung_SSD_980_1TB_S649NL0W348323A";
-    content = {
-      type = "gpt";
-      partitions = {
-        BOOT = efiLayout;
-        root = {
-          size = "100%";
-          content = rootLayout;
-        };
-      };
-    };
-  };
+  disko.devices.disk.main = mainDisk "/dev/disk/by-id/nvme-Samsung_SSD_980_1TB_S649NL0W348323A";
 }
