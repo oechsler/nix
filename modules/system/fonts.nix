@@ -2,7 +2,7 @@
 #
 # This module configures the shared font family options, installs the font
 # packages needed by the system, configures desktop Fontconfig defaults, and
-# generates the Linux VT font from the selected monospace family.
+# selects a stable console font size for Linux VTs.
 #
 # Configuration options:
 #   fonts.ui.style = "monospace";      # UI font style (default: "monospace")
@@ -17,7 +17,7 @@
 #
 # The resolved UI font is available as fonts.ui.font (read-only) and is
 # used by waybar, dunst, rofi, hyprlock, SDDM, GTK, and Qt apps.
-# Linux VTs use a generated PSF2 bitmap based on fonts.monospace.
+# Linux VTs use the packaged Terminus console font at the closest fixed size.
 #
 # Note: Terminal (kitty) and code editors always use fonts.monospace,
 # regardless of fonts.ui.style.
@@ -30,8 +30,6 @@
 }:
 
 let
-  # Keep these packages available on headless hosts as well: the VT font is
-  # generated from the installed font collection during the system build.
   fontPackages = with pkgs; [
     nerd-fonts.jetbrains-mono
     nerd-fonts.symbols-only
@@ -39,37 +37,15 @@ let
     noto-fonts-cjk-sans
     noto-fonts-color-emoji
   ];
-  fontConfig = pkgs.makeFontsConf { fontDirectories = config.fonts.packages; };
-  # Fontconfig resolves the configured family to the actual font file. This
-  # means changing fonts.monospace also changes the generated VT font.
-  monospaceFamilyQuery = lib.escapeShellArg config.fonts.monospace;
-  consoleFont =
-    pkgs.runCommand "linux-vt-consolefont"
-      {
-        nativeBuildInputs = [
-          pkgs.fontconfig
-          pkgs.otf2bdf
-          pkgs.bdf2psf
-        ];
-        FONTCONFIG_FILE = fontConfig;
-      }
-      ''
-        mkdir -p $out/share/consolefonts
-        sourceFont="$(fc-match -f '%{file}' ${monospaceFamilyQuery})"
-        test -s "$sourceFont"
-        # Linux VTs require a fixed-width PSF font. A VT cannot reproduce the
-        # terminal's point size exactly, so use a stable 8-column/16-row raster.
-        otf2bdf -p 9 -r 100 -c C -l '0_255' \
-          -o font.bdf \
-          "$sourceFont" \
-          || test -s font.bdf
-        bdf2psf --fb \
-          font.bdf \
-          ${pkgs.bdf2psf}/share/bdf2psf/standard.equivalents \
-          ${pkgs.bdf2psf}/share/bdf2psf/ascii.set \
-          256 \
-          $out/share/consolefonts/linux-vt-consolefont.psf
-      '';
+  consoleFont = {
+    "10" = "ter-114n";
+    "11" = "ter-116n";
+    "12" = "ter-118n";
+    "13" = "ter-120n";
+    "14" = "ter-122n";
+    "15" = "ter-124n";
+    "16" = "ter-128n";
+  };
 in
 
 {
@@ -142,12 +118,12 @@ in
 
   config = {
     console = {
-      font = "${consoleFont}/share/consolefonts/linux-vt-consolefont.psf";
+      packages = [ pkgs.terminus_font ];
+      font = consoleFont.${toString config.fonts.terminal.size} or consoleFont."11";
     };
 
     fonts = {
-      # Font packages are installed on all hosts because the VT font is built
-      # from this collection. Fontconfig itself is desktop-only.
+      # Font packages are installed on all hosts. Fontconfig itself is desktop-only.
       packages = fontPackages;
 
       fontconfig = lib.mkIf config.features.desktop.enable {
