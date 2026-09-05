@@ -9,7 +9,7 @@
 # What gets stripped:
 # - fileSystems (managed by disko.nix)
 # - swapDevices (managed by disko.nix)
-# - boot.initrd.luks (managed by luks.nix)
+# - boot.initrd.luks (derived from disko.nix)
 
 {
   config,

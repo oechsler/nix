@@ -181,7 +181,57 @@ let
       };
     };
   };
+
+  additionalDisk =
+    diskName:
+    {
+      device,
+      partitionName ? "data",
+      filesystem ? "btrfs",
+      mountpoint ? null,
+      mountOptions ? [
+        "compress=zstd"
+        "noatime"
+      ],
+      content ? null,
+      encryption ? encryptionEnabled,
+    }:
+    let
+      filesystemContent =
+        if content != null then
+          content
+        else if mountpoint != null then
+          {
+            type = "filesystem";
+            format = filesystem;
+            inherit mountpoint mountOptions;
+          }
+        else
+          throw "additionalDisk requires either content or mountpoint";
+      encryptedContent =
+        if encryption then
+          {
+            type = "luks";
+            name = "crypt${diskName}";
+            settings.allowDiscards = true;
+            passwordFile = "/var/lib/nixos-install/luks-password";
+            content = filesystemContent;
+          }
+        else
+          filesystemContent;
+    in
+    {
+      type = "disk";
+      inherit device;
+      content = {
+        type = "gpt";
+        partitions.${partitionName} = {
+          size = "100%";
+          content = encryptedContent;
+        };
+      };
+    };
 in
 {
-  inherit efiLayout mainDisk rootLayout;
+  inherit additionalDisk mainDisk;
 }

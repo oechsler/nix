@@ -4,7 +4,7 @@
 #   nixos-generate-config --show-hardware-config > hardware-configuration.generated.nix
 #
 # Disk-related options are stripped by hardware-configuration.nix because disko
-# and luks.nix manage filesystems and encrypted devices.
+# and the shared Disko system module manages filesystems and encrypted devices.
 
 { modulesPath, ... }:
 

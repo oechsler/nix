@@ -14,7 +14,7 @@
 # What gets stripped:
 # - fileSystems (managed by disko.nix)
 # - swapDevices (managed by disko.nix)
-# - boot.initrd.luks (managed by luks.nix)
+# - boot.initrd.luks (derived from disko.nix)
 #
 # What gets kept:
 # - CPU/GPU drivers
@@ -47,7 +47,7 @@ let
     "fileSystems"
     "swapDevices"
   ];
-  # Strip boot.initrd.luks if present (disko handles LUKS devices)
+  # Strip generated boot.initrd.luks; the shared Disko module derives it.
   hasLuks = cleaned ? boot && cleaned.boot ? initrd && cleaned.boot.initrd ? luks;
   withoutLuks =
     if hasLuks then

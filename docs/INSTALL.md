@@ -145,26 +145,74 @@ normal path for browsing snapshots.
 ### Additional Disks
 
 The main disk is managed automatically. If a host has another physical disk,
-add it separately to that host's `disko.nix` and choose its mountpoint. For
-example, a complete additional data disk can look like this:
+describe it in the host's `disko.nix` with `additionalDisk`. Choose the device
+and the directory where it should appear. The definition takes care of
+partitioning, optional encryption, formatting, and mounting. No manual mount
+command is needed.
+
+For example, a separate Games SSD is mounted at `/home/samuel/Games`. Its
+encryption follows `features.encryption.enable`:
 
 ```nix
-disko.devices.disk.data = {
-  type = "disk";
-  device = "/dev/disk/by-id/REPLACE_WITH_THE_DISK_ID";
+let
+  layout = import ../../modules/lib/disko.nix moduleArgs;
+  inherit (layout) additionalDisk;
+in
+{
+  disko.devices.disk.games = additionalDisk "games" {
+    device = "/dev/disk/by-id/GAMES_SSD_ID";
+    mountpoint = "/home/samuel/Games";
+  };
+};
+```
+
+When encryption is enabled, this disk is unlocked automatically during boot.
+Its name is generated from the disk name (`cryptgames` here); no extra LUKS
+file is needed. To encrypt only this disk while the main disk remains
+unencrypted, set `encryption = true` in the helper arguments.
+
+After installation, add `/home/samuel/Games/SteamLibrary` as a Steam library.
+
+If you want separate Steam and Heroic libraries on the same disk, use this
+layout instead of a single `mountpoint`:
+
+```nix
+disko.devices.disk.games = additionalDisk "games" {
+  device = "/dev/disk/by-id/GAMES_SSD_ID";
   content = {
-    type = "gpt";
-    partitions.data = {
-      size = "100%";
-      content = {
-        type = "filesystem";
-        format = "btrfs";
-        mountpoint = "/data";
+    type = "btrfs";
+    subvolumes = {
+      "@games" = {
+        mountpoint = "/home/samuel/Games";
+      };
+      "@steam-library" = {
+        mountpoint = "/home/samuel/SteamLibrary";
+      };
+      "@heroic-library" = {
+        mountpoint = "/home/samuel/HeroicLibrary";
       };
     };
   };
 };
 ```
+
+Each listed directory is mounted automatically after the disk is unlocked. You
+do not need to add separate mount configuration. Use absolute paths that do not
+overlap other mounts.
+
+New mountpoints normally belong to `root`. If games should be writable by your
+desktop user, set the ownership explicitly in the host configuration:
+
+```nix
+systemd.tmpfiles.rules = [
+  "z /home/samuel/Games 0755 samuel users -"
+  "z /home/samuel/SteamLibrary 0755 samuel users -"
+  "z /home/samuel/HeroicLibrary 0755 samuel users -"
+];
+```
+
+Replace `samuel` and `users` if needed. These rules change the mountpoint
+directories, not every file inside them.
 
 Always verify the disk ID before using it. Disko formatting is destructive.
 
