@@ -14,6 +14,7 @@
     ./compat.nix
     ./mount.nix
     ./desktop
+    ./disko-luks.nix
     ./displays.nix
     ./features.nix
     ./fonts.nix

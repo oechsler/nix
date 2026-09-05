@@ -25,7 +25,6 @@ configuration.
    - `configuration.nix` — host-specific config
    - `disko.nix` — main-disk device ID; the shared layout is automatic
    - `hardware-configuration.nix` — wrapper for generated config
-   - `luks.nix` — LUKS device declaration
    - `home.nix` — optional host-specific home-manager overrides (e.g. idle timeouts)
 
    `disko.nix` contains destructive partitioning assumptions. Review the
@@ -47,8 +46,12 @@ configuration.
 4. Build the new host:
 
    ```bash
-   nix build .#nixosConfigurations.new-host.config.system.build.toplevel
+    nix build .#nixosConfigurations.new-host.config.system.build.toplevel
    ```
+
+Additional physical disks belong in the host's `disko.nix`, using the shared
+`additionalDisk` helper. It partitions, optionally encrypts, formats, and mounts
+the disk. See [INSTALL.md](../docs/INSTALL.md#additional-disks) for examples.
 
 When using this repository as a flake input from another repository, use the
 exported `lib.mkHost` function instead. See [docs/QUICKSTART.md](../docs/QUICKSTART.md).
