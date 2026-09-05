@@ -119,10 +119,10 @@ phase_complete() {
       echo -e "    ${BOLD}$((i++)).${RESET} ${BOLD}${cmd}${RESET} ${DIM}—${desc}${RESET}"
     done
     echo ""
-    if [[ "$tpm_deferred" == "true" && "$FEAT_SECURE_BOOT" == "true" ]]; then
+    if [[ "$tpm_deferred" == "true" ]]; then
       echo -e "    ${DIM}Until TPM enrollment is complete, LUKS always requires the install password.${RESET}"
-    elif [[ "$tpm_deferred" == "true" ]]; then
-      echo -e "    ${DIM}Until TPM enrollment is complete, LUKS always requires the install password.${RESET}"
+    elif [[ "$FEAT_YUBIKEY_LUKS" == "true" && "$FEAT_ENCRYPTION" == "true" ]]; then
+      echo -e "    ${DIM}Until YubiKey enrollment is complete, LUKS always requires the install password.${RESET}"
     else
       echo -e "    ${DIM}LUKS uses the configured unlock method at boot.${RESET}"
     fi
