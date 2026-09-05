@@ -5,7 +5,7 @@
 moduleArgs:
 
 let
-  diskoLayout = import ../../modules/lib/disko.nix (
+  rootLayout = import ../../modules/lib/disko.nix (
     moduleArgs
     // {
       username = moduleArgs.username or "samuel";
@@ -35,7 +35,7 @@ in
         };
         root = {
           size = "100%";
-          content = diskoLayout;
+          content = rootLayout;
         };
       };
     };

@@ -5,7 +5,7 @@
 moduleArgs:
 
 let
-  diskoLayout = import ../../modules/lib/disko.nix moduleArgs;
+  rootLayout = import ../../modules/lib/disko.nix moduleArgs;
 in
 {
   disko.devices.disk.main = {
@@ -30,7 +30,7 @@ in
         };
         root = {
           size = "100%";
-          content = diskoLayout;
+          content = rootLayout;
         };
       };
     };
