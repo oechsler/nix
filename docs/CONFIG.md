@@ -1214,23 +1214,29 @@ theme = {
 
 Font options are set in `configuration.nix` and shared with Home Manager.
 
-| Option                        | Default                     | Description                                                                                  |
-| ----------------------------- | --------------------------- | -------------------------------------------------------------------------------------------- |
-| `fonts.defaults.monospace`    | `"JetBrainsMono Nerd Font"` | Monospace font (terminal, code editors, UI when `uiStyle = "monospace"`)                     |
-| `fonts.defaults.sansSerif`    | `"Noto Sans"`               | Sans-serif font (UI when `uiStyle = "sans-serif"`)                                           |
-| `fonts.defaults.serif`        | `"Noto Serif"`              | Serif font (fontconfig default)                                                              |
-| `fonts.defaults.uiStyle`      | `"monospace"`               | Font style for UI elements: `"monospace"` or `"sans-serif"`                                  |
-| `fonts.defaults.ui`           | _(read-only)_               | Resolved font name based on `uiStyle` — used by waybar, dunst, rofi, hyprlock, SDDM, GTK, Qt |
-| `fonts.defaults.size`         | `11`                        | Default font size for UI elements                                                            |
-| `fonts.defaults.terminalSize` | `fonts.defaults.size`       | Terminal (kitty) font size                                                                   |
-| `fonts.defaults.uiPixelSize`  | `floor(size * 4 / 3)`       | Resolved pixel size used by Waybar and other UI components (read-only).                      |
+| Option                | Default                     | Description                                                               |
+| --------------------- | --------------------------- | ------------------------------------------------------------------------- |
+| `fonts.monospace`     | `"JetBrainsMono Nerd Font"` | Monospace font (terminal, code editors, UI when `ui.style = "monospace"`) |
+| `fonts.sansSerif`     | `"Noto Sans"`               | Sans-serif font (UI when `ui.style = "sans-serif"`)                       |
+| `fonts.serif`         | `"Noto Serif"`              | Serif font (fontconfig default)                                           |
+| `fonts.ui.style`      | `"monospace"`               | Font style for UI elements: `"monospace"` or `"sans-serif"`               |
+| `fonts.ui.font`       | _(read-only)_               | Resolved UI font name                                                     |
+| `fonts.ui.size`       | `11`                        | Default font size for UI elements                                         |
+| `fonts.ui.pixelSize`  | `floor(size * 4 / 3)`       | Resolved pixel size used by UI components (read-only)                     |
+| `fonts.terminal.size` | `fonts.ui.size`             | Terminal (Kitty) font size                                                |
 
 ```nix
-fonts.defaults = {
-  monospace = "JetBrainsMono Nerd Font";
-  uiStyle = "sans-serif";
-  size = 11;
-  terminalSize = 12;
+fonts = {
+  # Install the font package first.
+  packages = [ pkgs.nerd-fonts.fira-code ];
+
+  # Then select the installed families and sizes.
+  monospace = "FiraCode Nerd Font";
+  ui = {
+    style = "sans-serif";
+    size = 11;
+  };
+  terminal.size = 12;
 };
 ```
 

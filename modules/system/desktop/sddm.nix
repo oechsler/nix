@@ -21,7 +21,7 @@ let
 
   cursorTheme = config.theme.cursor.name;
   cursorSize = config.theme.cursor.size;
-  uiFont = config.fonts.defaults.ui;
+  uiFont = config.fonts.ui.font;
 
   capitalize =
     s: (lib.toUpper (builtins.substring 0 1 s)) + (builtins.substring 1 (builtins.stringLength s) s);

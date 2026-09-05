@@ -62,8 +62,8 @@ let
 
   # KDE configuration tools
   kwriteconfig = "${pkgs.kdePackages.kconfig}/bin/kwriteconfig6";
-  kdeUiFont = "${fonts.ui},${toString fonts.size},-1,5,50,0,0,0,0,0";
-  kdeMonospaceFont = "${fonts.monospace},${toString fonts.size},-1,5,50,0,0,0,0,0";
+  kdeUiFont = "${fonts.ui.font},${toString fonts.ui.size},-1,5,50,0,0,0,0,0";
+  kdeMonospaceFont = "${fonts.monospace},${toString fonts.ui.size},-1,5,50,0,0,0,0,0";
 
   # Pinned applications for KDE taskbar
   # Format: "applications:firefox.desktop,applications:kitty.desktop,..."

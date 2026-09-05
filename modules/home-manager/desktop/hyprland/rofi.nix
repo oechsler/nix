@@ -355,7 +355,7 @@ in
 
     programs.rofi = {
       enable = true;
-      font = "${fonts.ui} ${toString fonts.size}";
+      font = "${fonts.ui.font} ${toString fonts.ui.size}";
       extraConfig = {
         show-icons = true;
         icon-theme = theme.icons.name;
@@ -408,14 +408,14 @@ in
           };
           "prompt" = {
             text-color = mkLiteral accentColor;
-            font = "${fonts.ui} Bold ${toString fonts.size}";
+            font = "${fonts.ui.font} Bold ${toString fonts.ui.size}";
             background-color = mkLiteral "transparent";
           };
           "entry" = {
             placeholder = "${searchPlaceholder}";
             placeholder-color = mkLiteral "@overlay1";
             text-color = mkLiteral "@subtext1";
-            font = "${fonts.ui} Medium ${toString fonts.size}";
+            font = "${fonts.ui.font} Medium ${toString fonts.ui.size}";
             background-color = mkLiteral "transparent";
           };
           "listview" = {
@@ -472,7 +472,7 @@ in
             background-color = mkLiteral "transparent";
           };
           "element-text" = {
-            font = "${fonts.ui} Medium ${toString fonts.size}";
+            font = "${fonts.ui.font} Medium ${toString fonts.ui.size}";
             text-color = mkLiteral "inherit";
             background-color = mkLiteral "transparent";
           };

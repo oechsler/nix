@@ -9,7 +9,7 @@
 # - Passes system config to home-manager (fonts, theme, features, etc.)
 #
 # Passed to Home Manager modules:
-# - fonts: config.fonts.defaults (UI/monospace fonts, sizes)
+# - fonts: config.fonts (UI/monospace fonts, sizes, and installed packages)
 # - theme: config.theme (Catppuccin, wallpaper, gaps, borders)
 # - locale: config.locale (timezone, language, keyboard)
 # - user: config.user (name, fullName, email, keys)
@@ -59,9 +59,8 @@ in
         displays
         input
         ;
-      inherit (config) theme;
+      inherit (config) theme fonts;
       inherit (config.sops) secretsFile;
-      fonts = config.fonts.defaults;
     };
     users.${config.user.name} = {
       imports = lib.optional hasHostHomeNix hostHomeNix;

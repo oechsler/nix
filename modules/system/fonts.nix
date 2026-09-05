@@ -5,21 +5,22 @@
 # generates the Linux VT font from the selected monospace family.
 #
 # Configuration options:
-#   fonts.defaults.uiStyle = "monospace";      # UI font style (default: "monospace")
-#   fonts.defaults.monospace = "JetBrainsMono Nerd Font";  # Monospace font (default)
-#   fonts.defaults.sansSerif = "Noto Sans";    # Sans-serif font (default)
-#   fonts.defaults.size = 11;                  # Default font size (default: 11)
+#   fonts.ui.style = "monospace";      # UI font style (default: "monospace")
+#   fonts.monospace = "JetBrainsMono Nerd Font";  # Monospace font (default)
+#   fonts.sansSerif = "Noto Sans";    # Sans-serif font (default)
+#   fonts.ui.size = 11;               # Default UI font size (default: 11)
+#   fonts.terminal.size = 11;         # Terminal font size (default: UI size)
 #
-# UI font style (fonts.defaults.uiStyle):
-#   "monospace"  → Uses fonts.defaults.monospace (hacker/terminal aesthetic)
-#   "sans-serif" → Uses fonts.defaults.sansSerif (traditional desktop aesthetic)
+# UI font style (fonts.ui.style):
+#   "monospace"  → Uses fonts.monospace (hacker/terminal aesthetic)
+#   "sans-serif" → Uses fonts.sansSerif (traditional desktop aesthetic)
 #
-# The resolved UI font is available as fonts.defaults.ui (read-only) and is
+# The resolved UI font is available as fonts.ui.font (read-only) and is
 # used by waybar, dunst, rofi, hyprlock, SDDM, GTK, and Qt apps.
-# Linux VTs use a generated PSF2 bitmap based on fonts.defaults.monospace.
+# Linux VTs use a generated PSF2 bitmap based on fonts.monospace.
 #
-# Note: Terminal (kitty) and code editors always use fonts.defaults.monospace,
-# regardless of uiStyle setting.
+# Note: Terminal (kitty) and code editors always use fonts.monospace,
+# regardless of fonts.ui.style.
 
 {
   pkgs,
@@ -40,8 +41,8 @@ let
   ];
   fontConfig = pkgs.makeFontsConf { fontDirectories = config.fonts.packages; };
   # Fontconfig resolves the configured family to the actual font file. This
-  # means changing fonts.defaults.monospace also changes the generated VT font.
-  monospaceFamilyQuery = lib.escapeShellArg config.fonts.defaults.monospace;
+  # means changing fonts.monospace also changes the generated VT font.
+  monospaceFamilyQuery = lib.escapeShellArg config.fonts.monospace;
   consoleFont =
     pkgs.runCommand "linux-vt-consolefont"
       {
@@ -76,18 +77,18 @@ in
   # Options
   #===========================
 
-  options.fonts.defaults = {
+  options.fonts = {
     # Font Family
     monospace = lib.mkOption {
       type = lib.types.str;
       default = "JetBrainsMono Nerd Font";
-      description = "Monospace font (terminal, code editors, UI when uiStyle = monospace)";
+      description = "Monospace font (terminal, code editors, UI when fonts.ui.style = monospace)";
     };
 
     sansSerif = lib.mkOption {
       type = lib.types.str;
       default = "Noto Sans";
-      description = "Sans-serif font (UI when uiStyle = sans-serif)";
+      description = "Sans-serif font (UI when fonts.ui.style = sans-serif)";
     };
 
     serif = lib.mkOption {
@@ -96,44 +97,41 @@ in
       description = "Serif font (fontconfig default)";
     };
 
-    # UI Style
-    uiStyle = lib.mkOption {
-      type = lib.types.enum [
-        "monospace"
-        "sans-serif"
-      ];
-      default = "monospace";
-      description = "Font style for UI elements (waybar, dunst, rofi, hyprlock, SDDM, GTK, Qt)";
+    ui = {
+      style = lib.mkOption {
+        type = lib.types.enum [
+          "monospace"
+          "sans-serif"
+        ];
+        default = "monospace";
+        description = "Font style for UI elements";
+      };
+
+      font = lib.mkOption {
+        type = lib.types.str;
+        default =
+          if config.fonts.ui.style == "monospace" then config.fonts.monospace else config.fonts.sansSerif;
+        readOnly = true;
+        description = "Resolved UI font name based on fonts.ui.style";
+      };
+
+      size = lib.mkOption {
+        type = lib.types.int;
+        default = 11;
+        description = "Default font size for UI elements";
+      };
+
+      pixelSize = lib.mkOption {
+        type = lib.types.int;
+        default = builtins.floor (config.fonts.ui.size * 4 / 3);
+        readOnly = true;
+        description = "CSS pixel equivalent of the UI font size";
+      };
     };
 
-    ui = lib.mkOption {
-      type = lib.types.str;
-      default =
-        if config.fonts.defaults.uiStyle == "monospace" then
-          config.fonts.defaults.monospace
-        else
-          config.fonts.defaults.sansSerif;
-      readOnly = true;
-      description = "Resolved UI font name based on uiStyle (do not set manually)";
-    };
-
-    # Font Sizes
-    size = lib.mkOption {
+    terminal.size = lib.mkOption {
       type = lib.types.int;
-      default = 11;
-      description = "Default font size for UI elements";
-    };
-
-    uiPixelSize = lib.mkOption {
-      type = lib.types.int;
-      default = builtins.floor (config.fonts.defaults.size * 4 / 3);
-      readOnly = true;
-      description = "CSS pixel equivalent of the typographic UI size";
-    };
-
-    terminalSize = lib.mkOption {
-      type = lib.types.int;
-      default = config.fonts.defaults.size;
+      default = config.fonts.ui.size;
       description = "Terminal (Kitty) font size; Linux VT uses its own fixed pixel grid";
     };
   };
@@ -156,11 +154,11 @@ in
         enable = true;
         defaultFonts = {
           monospace = [
-            config.fonts.defaults.monospace
+            config.fonts.monospace
             "Noto Sans Mono"
           ];
-          sansSerif = [ config.fonts.defaults.sansSerif ];
-          serif = [ config.fonts.defaults.serif ];
+          sansSerif = [ config.fonts.sansSerif ];
+          serif = [ config.fonts.serif ];
           emoji = [ "Noto Color Emoji" ];
         };
       };
