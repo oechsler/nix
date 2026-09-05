@@ -22,7 +22,14 @@
 #
 # This host has no feature-specific data subvolumes and does not require
 # username arguments when Disko is evaluated standalone.
-_:
+moduleArgs:
+
+let
+  impermanenceEnabled =
+    moduleArgs ? config
+    && moduleArgs.config ? features
+    && moduleArgs.config.features.impermanence.enable;
+in
 
 {
   disko.devices = {
@@ -84,12 +91,12 @@ _:
                       ];
                     };
                     "@var" = {
-                      mountpoint = "/var";
                       mountOptions = [
                         "compress=zstd"
                         "noatime"
                       ];
-                    };
+                    }
+                    // (if impermanenceEnabled then { } else { mountpoint = "/var"; });
                     "@persist" = {
                       mountpoint = "/persist";
                       mountOptions = [
