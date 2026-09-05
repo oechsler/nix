@@ -149,14 +149,14 @@
     dev = {
       ollama.enable = false;
       opencode = {
-        defaultModel = "ollama/qwen3.6:35b-a3b-mtp-q4_K_M";
+        defaultModel = "ollama/qwen3.6:35b-a3b-coding-mtp-q4_K_M";
         ollama = {
           enable = true;
           baseURL = "http://172.22.0.118:11434/v1";
           context = 16384;
           models = {
-            "qwen3.6:35b-a3b-mtp-q4_K_M" = {
-              name = "Qwen 3.6 35B A3B";
+            "qwen3.6:35b-a3b-coding-mtp-q4_K_M" = {
+              name = "Qwen 3.6 35B A3B Coding";
               toolCall = true;
               reasoning = true;
               temperature = true;
