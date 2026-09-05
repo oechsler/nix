@@ -172,9 +172,8 @@ Feature-dependent state:
 - `/var/lib/tailscale` (Tailscale)
 - `/persist/etc/ssh/*` (SSH host keys)
 
-The exact conditional list is defined in `modules/system/impermanence.nix`.
-
-User password is declarative in `modules/system/users.nix`.
+Only state required by enabled features is kept automatically. Additional paths
+can be configured through `features.impermanence.extraPaths`.
 
 ### SOPS Secrets
 
