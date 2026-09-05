@@ -2,6 +2,27 @@
 # shellcheck disable=SC2034
 # NixOS installation and configuration versioning.
 
+phase_hardware_config() {
+  local host_dir writable_repo
+  if [[ "$INSTALLER_ISO" == true ]]; then
+    writable_repo="/tmp/nixos-installer-hardware-config"
+    rm -rf -- "$writable_repo"
+    mkdir -p -- "$writable_repo"
+    cp -aL "$REPO_DIR"/. "$writable_repo"/
+    REPO_DIR="$writable_repo"
+  fi
+  host_dir="$REPO_DIR/hosts/$HOST"
+  [[ -d "$host_dir" ]] || error "Host directory not found: $host_dir"
+  command -v nixos-generate-config &>/dev/null || error "Required command not found: nixos-generate-config"
+  info "Generating hardware configuration for $HOST..."
+  nixos-generate-config --show-hardware-config >"$host_dir/hardware-configuration.generated.nix" ||
+    error "Hardware configuration generation failed."
+  if git -C "$REPO_DIR" rev-parse --is-inside-work-tree &>/dev/null; then
+    git -C "$REPO_DIR" add "$host_dir/hardware-configuration.generated.nix"
+  fi
+  success "Hardware configuration written to $host_dir/hardware-configuration.generated.nix"
+}
+
 phase_state_version() {
   local host_dir="$REPO_DIR/hosts/$HOST"
   if [[ "$INSTALLER_ISO" == true ]]; then

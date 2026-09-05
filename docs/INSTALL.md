@@ -74,6 +74,7 @@ git clone https://github.com/oechsler/nix.git /tmp/nix-config
 ./install.sh --host HOST -s KEY -p PWD -y # Fully automated
 ./install.sh --install --post-install     # Reinstall without formatting
 ./install.sh --post-install               # Re-run post-install only
+./install.sh --hardware-config --host HOST # Generate hardware config only
 ./install.sh --dry-run                    # Show summary and exit
 ./install.sh -h                           # Show help
 ```
@@ -87,6 +88,7 @@ git clone https://github.com/oechsler/nix.git /tmp/nix-config
 | `--format`                       | Partition and format disks (disko)                            |
 | `--install`                      | Install NixOS (nixos-install)                                 |
 | `--post-install`                 | Post-install setup (SSH, SOPS, TOTP, YubiKey, TPM/FIDO2)      |
+| `--hardware-config`              | Generate hardware configuration for the selected host         |
 | `--skip-totp`                    | Skip TOTP setup for this run                                  |
 | `--quiet`                        | Suppress upgrade prompts on installed systems                 |
 | `--repair`                       | Verify/repair the Nix store before an upgrade                 |
@@ -94,7 +96,7 @@ git clone https://github.com/oechsler/nix.git /tmp/nix-config
 | `--dry-run`                      | Show summary and exit without making changes                  |
 | `-h`, `--help`                   | Show help                                                     |
 
-Steps are combinable. Without step flags, all three run. The installer reads host feature flags from the local flake or, in ISO mode, from the embedded manifest.
+Steps are combinable. Without step flags, the full install runs. `--hardware-config` is standalone and only generates the selected host's hardware configuration. The installer reads host feature flags from the local flake or, in ISO mode, from the embedded manifest.
 
 ## Disk Layout
 

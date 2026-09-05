@@ -12,6 +12,7 @@ Steps (combinable, default: all):
   --format              Partition and format disks (disko)
   --install             Install NixOS (nixos-install)
   --post-install        Post-install setup (SSH, SOPS, TOTP, TPM/FIDO2)
+  --hardware-config     Generate hardware-configuration.generated.nix only
 
 Options:
   --host HOST                Pre-select host configuration
@@ -99,6 +100,10 @@ parse_args() {
         DO_POST_INSTALL=true
         shift
         ;;
+      --hardware-config)
+        DO_HARDWARE_CONFIG=true
+        shift
+        ;;
       --iso)
         INSTALLER_ISO=true
         shift
@@ -120,7 +125,7 @@ parse_args() {
     echo "Installer ISO manifest not found: $ISO_MANIFEST" >&2
     exit 1
   fi
-  if [[ "$DO_FORMAT" == false && "$DO_INSTALL" == false && "$DO_POST_INSTALL" == false ]]; then
+  if [[ "$DO_FORMAT" == false && "$DO_INSTALL" == false && "$DO_POST_INSTALL" == false && "$DO_HARDWARE_CONFIG" == false ]]; then
     DO_FORMAT=true
     DO_INSTALL=true
     DO_POST_INSTALL=true
