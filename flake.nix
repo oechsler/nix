@@ -264,9 +264,17 @@
         _: host:
         let
           installHost = host.extendModules {
-            modules = lib.optionals host.config.features.secureBoot.enable [
-              { features.secureBoot.enable = lib.mkForce false; }
-            ];
+            modules =
+              lib.optionals
+                (
+                  host.config.features.secureBoot.enable || host.config.features.encryption.unlockMethod != "password"
+                )
+                [
+                  {
+                    features.secureBoot.enable = lib.mkForce false;
+                    features.encryption.unlockMethod = lib.mkForce "password";
+                  }
+                ];
           };
         in
         installHost.config.system.build.toplevel
