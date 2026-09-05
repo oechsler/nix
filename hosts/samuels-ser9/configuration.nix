@@ -65,7 +65,7 @@
         context = 16384;
         unloadAfter = "-1";
         models = {
-          "qwen3.6:35b-a3b-mtp-q4_K_M".name = "Qwen 3.6 35B A3B";
+          "qwen3.6:35b-a3b-coding-mtp-q4_K_M".name = "Qwen 3.6 35B A3B Coding";
         };
       };
     };
