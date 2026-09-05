@@ -1388,17 +1388,20 @@ autostart entries; Hyprland starts the commands with `exec-once`.
 
 ## System Requirements
 
-The default installation expects a Btrfs layout with `@` for `/`, `@home` for
-`/home`, `@nix` for `/nix`, and separate `@persist`, `@steam`, `@nextcloud`, and
-`@smb` data subvolumes. Without Impermanence, `@var` is mounted at `/var`. The
-`@snapshots` subvolume is
-listed last because it is
-used for snapshot storage rather than normal application data. Full-disk
-encryption is also enabled by default.
+The installer manages the main disk from the selected host features. Users do
+not need to maintain the EFI, partition, encryption, or Btrfs subvolume layout
+by hand. The relevant choices are:
 
-These requirements are installation constraints rather than runtime feature
-settings. Changing the impermanence or encryption defaults requires a matching
-disk layout:
+- `features.encryption.enable` selects encrypted or unencrypted root storage.
+- `features.impermanence.enable` selects `/persist` or `/var` for persistent state.
+- `features.snapshots.enable` creates snapshot storage.
+- Enabled applications add only the data areas they need.
+
+Changing these options affects the layout used by a new installation. The
+configuration remains declarative; do not change the main disk manually in a
+host file.
+
+For example, to use a traditional persistent root without encryption:
 
 ```nix
 features = {
@@ -1414,4 +1417,4 @@ features = {
 };
 ```
 
-See [INSTALL.md](INSTALL.md#disk-layout) for the required partition and subvolume structure.
+See [INSTALL.md](INSTALL.md#additional-disks) for the additional-disk example.

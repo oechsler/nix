@@ -100,9 +100,9 @@ Steps are combinable. Without step flags, the full install runs. `--hardware-con
 
 ## Disk Layout
 
-The base layout consists of an unencrypted EFI system partition and one
-LUKS-encrypted Btrfs partition. The host's Disko definition creates the core
-volumes below and may include additional feature-specific data subvolumes.
+The installer manages the selected main disk completely. You do not need to
+edit its partition or subvolume layout. Encryption, Impermanence, snapshots,
+and feature-specific data areas are selected from the host's feature settings.
 
 ```
 /dev/nvme...                                            # Physical disk
@@ -117,13 +117,15 @@ volumes below and may include additional feature-specific data subvolumes.
             │   └── /home                               #
             ├── @nix                                    # Nix store
             │   └── /nix                                #
-            ├── @persist                                # Persistent system state
-            │   └── /persist                            #
+            ├── @persist or @var                         # Persistent system state
+            │   └── /persist or /var                     # Depends on Impermanence
             └── ...                                      # Optional feature volumes
 ```
 
-Optional data subvolumes are only used when their feature is enabled. Whether
-they are physically created is controlled by the selected host's Disko file.
+The root partition is encrypted when `features.encryption.enable` is enabled.
+With Impermanence, `/persist` stores the selected state that must survive a
+reboot. Without Impermanence, `/var` is kept separately instead. The EFI
+partition, encryption wrapper, and Btrfs layout are all generated for you.
 
 | Subvolume    | Mountpoint                        | Required feature                  |
 | ------------ | --------------------------------- | --------------------------------- |
@@ -131,13 +133,40 @@ they are physically created is controlled by the selected host's Disko file.
 | `@steam`     | `/home/<user>/.local/share/Steam` | `features.gaming.enable`          |
 | `@nextcloud` | `/home/<user>/Nextcloud`          | `features.apps.nextcloud.enable`  |
 | `@smb`       | `/home/<user>/smb`                | `features.smb.enable` with shares |
+| `@ssh`       | `/etc/ssh`                        | SSH without Impermanence          |
+| `@libvirt`   | `/etc/libvirt`                    | VMs without Impermanence          |
 
-When impermanence is enabled, `@` is reset on boot while `/home`, `/nix`, and
-`/persist` retain their declared state. Optional data subvolumes keep large or
-independently managed data outside `@home` snapshots. The Btrfs top-level is
-also mounted at `/mnt/btrfs-root` as a convenience view of all subvolumes.
-`btrbk` uses this view for snapshot operations, while `/.snapshots` remains the
+With Impermanence enabled, `@` is reset on boot while `/home`, `/nix`, and
+selected data under `/persist` remain available. Without Impermanence, `/var`
+and any feature-specific areas remain persistent. The Btrfs top-level is also
+mounted at `/mnt/btrfs-root` for snapshot operations; `/.snapshots` is the
 normal path for browsing snapshots.
+
+### Additional Disks
+
+The main disk is managed automatically. If a host has another physical disk,
+add it separately to that host's `disko.nix` and choose its mountpoint. For
+example, a complete additional data disk can look like this:
+
+```nix
+disko.devices.disk.data = {
+  type = "disk";
+  device = "/dev/disk/by-id/REPLACE_WITH_THE_DISK_ID";
+  content = {
+    type = "gpt";
+    partitions.data = {
+      size = "100%";
+      content = {
+        type = "filesystem";
+        format = "btrfs";
+        mountpoint = "/data";
+      };
+    };
+  };
+};
+```
+
+Always verify the disk ID before using it. Disko formatting is destructive.
 
 ## Post-Install State
 
@@ -178,7 +207,6 @@ Feature-dependent state:
 - `/var/lib/sbctl` (Secure Boot)
 - `/var/lib/tailscale` (Tailscale)
 - `/etc/ssh` (SSH host keys, when SSH is enabled; separate storage without Impermanence)
-- `/etc/libvirt` (VM configuration, when virtual machines are enabled; separate storage without Impermanence)
 
 Headless hosts do not persist desktop state. Additional paths can be configured
 through `features.impermanence.extraPaths`.

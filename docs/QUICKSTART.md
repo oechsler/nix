@@ -102,7 +102,7 @@ features = {
 
 - Impermanence: `features.impermanence.enable = true`
 - LUKS encryption: `features.encryption.enable = true`
-- The Btrfs subvolume layout must match the selected installation mode.
+- The main-disk layout is generated from the selected feature settings.
 
 To disable:
 
