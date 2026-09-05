@@ -117,8 +117,6 @@ volumes below and may include additional feature-specific data subvolumes.
             │   └── /home                               #
             ├── @nix                                    # Nix store
             │   └── /nix                                #
-            ├── @var                                    # Variable system state
-            │   └── /var                                #
             ├── @persist                                # Persistent system state
             │   └── /persist                            #
             └── ...                                      # Optional feature volumes
@@ -127,11 +125,6 @@ volumes below and may include additional feature-specific data subvolumes.
 Optional data subvolumes are only used when their feature is enabled. Whether
 they are physically created is controlled by the selected host's Disko file.
 
-`@var` is part of the required base layout and is always mounted at `/var`.
-It is kept separate so Impermanence can be disabled without changing the Disko
-layout or reinstalling the host. The additional persistent directories managed
-by Impermanence are stored under `/persist`.
-
 | Subvolume    | Mountpoint                        | Required feature                  |
 | ------------ | --------------------------------- | --------------------------------- |
 | `@snapshots` | `/.snapshots`                     | `features.snapshots.enable`       |
@@ -139,8 +132,8 @@ by Impermanence are stored under `/persist`.
 | `@nextcloud` | `/home/<user>/Nextcloud`          | `features.apps.nextcloud.enable`  |
 | `@smb`       | `/home/<user>/smb`                | `features.smb.enable` with shares |
 
-When impermanence is enabled, `@` is reset on boot while `/home`, `/nix`, `/var`,
-and `/persist` retain their declared state. Optional data subvolumes keep large or
+When impermanence is enabled, `@` is reset on boot while `/home`, `/nix`, and
+`/persist` retain their declared state. Optional data subvolumes keep large or
 independently managed data outside `@home` snapshots. The Btrfs top-level is
 also mounted at `/mnt/btrfs-root` as a convenience view of all subvolumes.
 `btrbk` uses this view for snapshot operations, while `/.snapshots` remains the
