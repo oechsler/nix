@@ -1,4 +1,7 @@
 # Shared command-line tools for desktop and headless hosts.
+#
+# These programs do not require a graphical terminal emulator and are available
+# in both interactive shells and headless sessions.
 
 { pkgs, ... }:
 
@@ -36,6 +39,7 @@
     dust
     fd
     jq
+    ouch
     procs
     ripgrep
     sd
