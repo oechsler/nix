@@ -65,7 +65,7 @@
         context = 16384;
         unloadAfter = "-1";
         models = {
-          "qwen3.8:27b".name = "Qwen 3.8 27B";
+          "qwen3.6:35b-a3b-mtp-q4_K_M".name = "Qwen 3.6 35B A3B";
         };
       };
     };
