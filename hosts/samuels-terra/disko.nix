@@ -39,6 +39,7 @@ let
   features =
     if moduleArgs ? config && moduleArgs.config ? features then moduleArgs.config.features else { };
   impermanenceEnabled = features.impermanence.enable or false;
+  encryptionEnabled = features.encryption.enable or false;
   snapshotsEnabled = features.snapshots.enable or false;
   gamingEnabled = features.gaming.enable or false;
   nextcloudEnabled = features.apps.nextcloud.enable or false;
@@ -70,109 +71,116 @@ in
             };
             root = {
               size = "100%";
-              content = {
-                type = "luks";
-                name = "cryptroot";
-                settings.allowDiscards = true;
-                passwordFile = "/var/lib/nixos-install/luks-password";
-                content = {
-                  type = "btrfs";
-                  extraArgs = [
-                    "-f"
-                    "-L"
-                    "nixos"
-                  ];
-                  subvolumes = {
-                    "@" = {
-                      mountpoint = "/";
-                      mountOptions = [
-                        "compress=zstd"
-                        "noatime"
-                      ];
-                    };
-                    "@home" = {
-                      mountpoint = "/home";
-                      mountOptions = [
-                        "compress=zstd"
-                        "noatime"
-                      ];
-                    };
-                    "@nix" = {
-                      mountpoint = "/nix";
-                      mountOptions = [
-                        "compress=zstd"
-                        "noatime"
-                      ];
-                    };
+              content =
+                let
+                  btrfsContent = {
+                    type = "btrfs";
+                    extraArgs = [
+                      "-f"
+                      "-L"
+                      "nixos"
+                    ];
+                    subvolumes = {
+                      "@" = {
+                        mountpoint = "/";
+                        mountOptions = [
+                          "compress=zstd"
+                          "noatime"
+                        ];
+                      };
+                      "@home" = {
+                        mountpoint = "/home";
+                        mountOptions = [
+                          "compress=zstd"
+                          "noatime"
+                        ];
+                      };
+                      "@nix" = {
+                        mountpoint = "/nix";
+                        mountOptions = [
+                          "compress=zstd"
+                          "noatime"
+                        ];
+                      };
+                    }
+                    // (
+                      if impermanenceEnabled then
+                        {
+                          "@persist" = {
+                            mountpoint = "/persist";
+                            mountOptions = [
+                              "compress=zstd"
+                              "noatime"
+                            ];
+                          };
+                        }
+                      else
+                        {
+                          "@var" = {
+                            mountpoint = "/var";
+                            mountOptions = [
+                              "compress=zstd"
+                              "noatime"
+                            ];
+                          };
+                        }
+                    )
+                    // (
+                      if snapshotsEnabled then
+                        {
+                          "@snapshots" = {
+                            mountpoint = "/.snapshots";
+                            mountOptions = [
+                              "compress=zstd"
+                              "noatime"
+                            ];
+                          };
+                        }
+                      else
+                        { }
+                    )
+                    // (
+                      if gamingEnabled then
+                        {
+                          "@steam" = {
+                            mountpoint = "/home/${username}/.local/share/Steam";
+                          };
+                        }
+                      else
+                        { }
+                    )
+                    // (
+                      if nextcloudEnabled then
+                        {
+                          "@nextcloud" = {
+                            mountpoint = "/home/${username}/Nextcloud";
+                          };
+                        }
+                      else
+                        { }
+                    )
+                    // (
+                      if smbEnabled then
+                        {
+                          "@smb" = {
+                            mountpoint = "/home/${username}/smb";
+                          };
+                        }
+                      else
+                        { }
+                    );
+                  };
+                in
+                if encryptionEnabled then
+                  {
+                    type = "luks";
+                    name = "cryptroot";
+                    settings.allowDiscards = true;
+                    passwordFile = "/var/lib/nixos-install/luks-password";
+                    content = btrfsContent;
                   }
-                  // (
-                    if impermanenceEnabled then
-                      {
-                        "@persist" = {
-                          mountpoint = "/persist";
-                          mountOptions = [
-                            "compress=zstd"
-                            "noatime"
-                          ];
-                        };
-                      }
-                    else
-                      {
-                        "@var" = {
-                          mountpoint = "/var";
-                          mountOptions = [
-                            "compress=zstd"
-                            "noatime"
-                          ];
-                        };
-                      }
-                  )
-                  // (
-                    if snapshotsEnabled then
-                      {
-                        "@snapshots" = {
-                          mountpoint = "/.snapshots";
-                          mountOptions = [
-                            "compress=zstd"
-                            "noatime"
-                          ];
-                        };
-                      }
-                    else
-                      { }
-                  )
-                  // (
-                    if gamingEnabled then
-                      {
-                        "@steam" = {
-                          mountpoint = "/home/${username}/.local/share/Steam";
-                        };
-                      }
-                    else
-                      { }
-                  )
-                  // (
-                    if nextcloudEnabled then
-                      {
-                        "@nextcloud" = {
-                          mountpoint = "/home/${username}/Nextcloud";
-                        };
-                      }
-                    else
-                      { }
-                  )
-                  // (
-                    if smbEnabled then
-                      {
-                        "@smb" = {
-                          mountpoint = "/home/${username}/smb";
-                        };
-                      }
-                    else
-                      { }
-                  );
-                };
-              };
+                else
+                  btrfsContent;
             };
           };
         };
