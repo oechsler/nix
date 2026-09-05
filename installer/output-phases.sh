@@ -121,8 +121,6 @@ phase_complete() {
     echo ""
     if [[ "$tpm_deferred" == "true" && "$FEAT_SECURE_BOOT" == "true" ]]; then
       echo -e "    ${DIM}Until TPM enrollment is complete, LUKS always requires the install password.${RESET}"
-      echo -e "    ${DIM}Required order: 1. secure-boot-init, 2. tpm-luks-init.${RESET}"
-      echo -e "    ${DIM}TPM enrollment seals against the active Secure Boot state (PCR 7).${RESET}"
     elif [[ "$tpm_deferred" == "true" ]]; then
       echo -e "    ${DIM}Until TPM enrollment is complete, LUKS always requires the install password.${RESET}"
     else
