@@ -99,6 +99,13 @@ in
                         "noatime"
                       ];
                     };
+                    "@var" = {
+                      mountpoint = "/var";
+                      mountOptions = [
+                        "compress=zstd"
+                        "noatime"
+                      ];
+                    };
                     "@persist" = {
                       mountpoint = "/persist";
                       mountOptions = [
