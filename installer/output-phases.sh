@@ -119,14 +119,14 @@ phase_complete() {
       echo -e "    ${BOLD}$((i++)).${RESET} ${BOLD}${cmd}${RESET} ${DIM}—${desc}${RESET}"
     done
     echo ""
-    if [[ "$tpm_deferred" == "true" ]]; then
+    if [[ "$tpm_deferred" == "true" && "$FEAT_SECURE_BOOT" == "true" ]]; then
       echo -e "    ${DIM}Until TPM enrollment is complete, LUKS always requires the install password.${RESET}"
-      if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
-        echo -e "    ${DIM}Required order: 1. secure-boot-init, 2. tpm-luks-init.${RESET}"
-        echo -e "    ${DIM}TPM enrollment seals against the active Secure Boot state (PCR 7).${RESET}"
-      fi
+      echo -e "    ${DIM}Required order: 1. secure-boot-init, 2. tpm-luks-init.${RESET}"
+      echo -e "    ${DIM}TPM enrollment seals against the active Secure Boot state (PCR 7).${RESET}"
+    elif [[ "$tpm_deferred" == "true" ]]; then
+      echo -e "    ${DIM}Until TPM enrollment is complete, LUKS always requires the install password.${RESET}"
     else
-      echo -e "    ${DIM}Until enrolled: LUKS uses password, sudo uses password fallback.${RESET}"
+      echo -e "    ${DIM}LUKS uses the configured unlock method at boot.${RESET}"
     fi
   fi
   if [[ "$FEAT_SECURE_BOOT" == "true" ]]; then
