@@ -77,6 +77,9 @@ in
         "/var/lib/sops" # SOPS secrets
         "/var/lib/systemd" # Systemd state, including the credentials host key
       ]
+      ++ lib.optionals config.features.ssh.enable [
+        "/etc/ssh" # SSH host keys and server configuration
+      ]
       ++ lib.optionals config.features.desktop.enable [
         "/var/lib/backgrounds" # Prepared wallpaper and blur cache
         "/var/lib/power-profiles-daemon" # Active power profile
@@ -130,27 +133,7 @@ in
     };
 
     #---------------------------
-    # 2. SSH Host Keys
-    #---------------------------
-    # Store SSH host keys in /persist to maintain server identity across reboots
-    # Without this, SSH clients would see "WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED"
-    #
-    # When impermanence is enabled: /persist/etc/ssh/
-    # When impermanence is disabled: /etc/ssh/ (standard NixOS location)
-    services.openssh.hostKeys = lib.mkIf config.features.ssh.enable [
-      {
-        path = "/persist/etc/ssh/ssh_host_ed25519_key";
-        type = "ed25519";
-      }
-      {
-        path = "/persist/etc/ssh/ssh_host_rsa_key";
-        type = "rsa";
-        bits = 4096;
-      }
-    ];
-
-    #---------------------------
-    # 3. Root Subvolume Rollback
+    # 2. Root Subvolume Rollback
     #---------------------------
     # Why: Wipe root filesystem on every boot for impermanence
     #
@@ -212,7 +195,7 @@ in
     };
 
     #---------------------------
-    # 4. Persistent Mount Configuration
+    # 3. Persistent Mount Configuration
     #---------------------------
     # /persist must be available before impermanence binds directories
     fileSystems."/persist".neededForBoot = true;

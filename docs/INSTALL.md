@@ -177,7 +177,8 @@ Feature-dependent state:
 - `/var/lib/pam-lldap` (LDAP authentication)
 - `/var/lib/sbctl` (Secure Boot)
 - `/var/lib/tailscale` (Tailscale)
-- `/persist/etc/ssh/*` (SSH host keys, when SSH is enabled)
+- `/etc/ssh` (SSH host keys, when SSH is enabled; separate storage without Impermanence)
+- `/etc/libvirt` (VM configuration, when virtual machines are enabled; separate storage without Impermanence)
 
 Headless hosts do not persist desktop state. Additional paths can be configured
 through `features.impermanence.extraPaths`.

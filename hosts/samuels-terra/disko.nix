@@ -10,6 +10,8 @@
 #   - @nix subvolume: /nix (persistent)
 #   - @persist subvolume: /persist (only with impermanence)
 #   - @var subvolume: /var (only without impermanence)
+#   - @ssh subvolume: /etc/ssh (SSH, only without impermanence)
+#   - @libvirt subvolume: /etc/libvirt (VMs, only without impermanence)
 #   - @snapshots subvolume: /.snapshots (persistent snapshot storage)
 #   - @steam subvolume: Steam library (when gaming is enabled)
 #   - @nextcloud subvolume: sync client data (when Nextcloud is enabled)
@@ -44,6 +46,11 @@ let
   gamingEnabled = features.gaming.enable or false;
   nextcloudEnabled = features.apps.nextcloud.enable or false;
   smbEnabled = (features.smb.enable or false) && (features.smb.shares or [ ]) != [ ];
+  sshEnabled = !impermanenceEnabled && (features.ssh.enable or false);
+  libvirtEnabled =
+    !impermanenceEnabled
+    && (features.virtualisation.enable or false)
+    && (features.virtualisation.vm.enable or false);
 in
 
 {
@@ -154,6 +161,26 @@ in
                         {
                           "@nextcloud" = {
                             mountpoint = "/home/${username}/Nextcloud";
+                          };
+                        }
+                      else
+                        { }
+                    )
+                    // (
+                      if sshEnabled then
+                        {
+                          "@ssh" = {
+                            mountpoint = "/etc/ssh";
+                          };
+                        }
+                      else
+                        { }
+                    )
+                    // (
+                      if libvirtEnabled then
+                        {
+                          "@libvirt" = {
+                            mountpoint = "/etc/libvirt";
                           };
                         }
                       else
