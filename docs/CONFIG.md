@@ -1389,8 +1389,8 @@ autostart entries; Hyprland starts the commands with `exec-once`.
 ## System Requirements
 
 The default installation expects a Btrfs layout with `@` for `/`, `@home` for
-`/home`, `@nix` for `/nix`, and separate `@persist`, `@steam`, `@nextcloud`, and
-`@smb` data subvolumes. The `@snapshots` subvolume is
+`/home`, `@nix` for `/nix`, `@var` for `/var`, and separate `@persist`,
+`@steam`, `@nextcloud`, and `@smb` data subvolumes. The `@snapshots` subvolume is
 listed last because it is
 used for snapshot storage rather than normal application data. Full-disk
 encryption is also enabled by default.
