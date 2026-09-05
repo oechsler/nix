@@ -3,6 +3,7 @@
 # This module provides the development environment and optional GUI tooling:
 #
 # - Language toolchains and build tools (features.dev.enable = true)
+# - GitHub CLI and GitUI (features.dev.enable = true)
 # - Infrastructure tools (features.dev.enable = true)
 # - JetBrains IDEs, DBeaver, and optional Android tooling
 #
