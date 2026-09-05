@@ -16,14 +16,14 @@ and cleaning snapshots. For the required disk layout, see
 
 | Subvolume  | Mountpoint | Purpose                                                | Condition                                      |
 | ---------- | ---------- | ------------------------------------------------------ | ---------------------------------------------- |
-| `@`        | `/`        | Root filesystem                                        | Only if `features.impermanence.enable = false` |
 | `@home`    | `/home`    | User data, dotfiles                                    | Always                                         |
 | `@var`     | `/var`     | Variable system state                                  | Only if `features.impermanence.enable = false` |
 | `@persist` | `/persist` | System state (bluetooth, docker, NetworkManager, etc.) | Only if `features.impermanence.enable = true`  |
 
 The root subvolume is not snapshotted while impermanence is enabled because it
-is recreated on boot. The Nix store is excluded because it is immutable and
-managed by Nix.
+is recreated on boot. It is also excluded when Impermanence is disabled because
+the declarative NixOS configuration is reproducible independently. The Nix store
+is excluded because it is immutable and managed by Nix.
 
 The `@steam`, `@nextcloud`, and `@smb` subvolumes are separate from `@home` so
 large or independently managed data does not enter hourly home snapshots. They
@@ -82,7 +82,8 @@ sudo mount -o subvol=/ /dev/mapper/cryptroot /mnt/btrfs-root
 sudo mount -o subvol=/ /dev/nvme0n1p2 /mnt/btrfs-root
 
 ls /mnt/btrfs-root/
-# @  @home  @nix  @persist  @snapshots
+# With Impermanence: @home  @nix  @persist  @snapshots
+# Without Impermanence: @home  @nix  @var  @snapshots
 ls /mnt/btrfs-root/@snapshots/
 ```
 
