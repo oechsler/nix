@@ -19,7 +19,6 @@
     };
 
     bat.enable = true;
-    gitui.enable = true;
     bottom.enable = true;
 
     fzf = {
