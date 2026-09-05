@@ -109,13 +109,14 @@ in
               -X POST "${ollamaUrl}/api/pull" \
               -H 'Content-Type: application/json' \
               --data "$payload" \
-              | ${lib.getExe pkgs.jq} -r '
-                if .error then error(.error)
-                elif (.completed? and .total?) then
-                  "\(.status): \((100 * .completed / .total) | floor)% \(.completed)/\(.total)"
-                else .status // empty
-                end
-              '
+               | ${lib.getExe pkgs.jq} -r '
+                 objects
+                 | if (.error? != null) then error(.error | tostring)
+                   elif (.completed? != null and .total? != null and (.total | tonumber) > 0) then
+                     "\(.status): \((100 * (.completed | tonumber) / (.total | tonumber)) | floor)% \(.completed)/\(.total)"
+                   else .status? // empty
+                   end
+               '
             status=''${PIPESTATUS[0]}
             set -e
             if [ "$status" -ne 0 ]; then

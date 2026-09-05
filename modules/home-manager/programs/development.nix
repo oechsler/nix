@@ -53,6 +53,15 @@ in
   config = lib.mkMerge [
     # CLI Development Tools (always useful, even on servers)
     (lib.mkIf features.dev.enable {
+      programs = {
+        gh = {
+          enable = true;
+          gitCredentialHelper.enable = false;
+          settings.git_protocol = "ssh";
+        };
+        gitui.enable = true;
+      };
+
       home = {
         packages = with pkgs; [
           # General development utilities

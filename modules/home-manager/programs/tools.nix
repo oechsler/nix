@@ -33,10 +33,4 @@ in
   ++ lib.optionals (useTuiManagement && features.wifi.enable) [ pkgs.impala ]
   ++ lib.optionals (useTuiManagement && features.audio.enable) [ pkgs.wiremix ];
 
-  programs.gh = {
-    enable = true;
-    gitCredentialHelper.enable = false;
-    settings.git_protocol = "ssh";
-  };
-
 }
