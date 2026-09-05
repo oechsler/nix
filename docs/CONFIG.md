@@ -1223,7 +1223,7 @@ Font options are set in `configuration.nix` and shared with Home Manager.
 | `fonts.ui.font`       | _(read-only)_               | Resolved UI font name                                                     |
 | `fonts.ui.size`       | `11`                        | Default font size for UI elements                                         |
 | `fonts.ui.pixelSize`  | `floor(size * 4 / 3)`       | Resolved pixel size used by UI components (read-only)                     |
-| `fonts.terminal.size` | `fonts.ui.size`             | Terminal (Kitty) font size                                                |
+| `fonts.terminal.size` | `fonts.ui.size`             | Terminal (Kitty) size and closest packaged Linux-VT font size             |
 
 ```nix
 fonts = {
