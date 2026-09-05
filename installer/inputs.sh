@@ -6,11 +6,11 @@ phase_collect_inputs() {
   [[ -z "$SSH_KEY" && -n "${NIXOS_SSH_KEY:-}" ]] && SSH_KEY="$NIXOS_SSH_KEY"
   local need_luks=false
   [[ "$DO_FORMAT" == true || "$DO_INSTALL" == true ]] && need_luks=true
-  if [[ "$DO_POST_INSTALL" == true && "$FEAT_ENCRYPTION" == "true" &&
+  if [[ "$DO_POST_INSTALL" == true && "$FEAT_HAS_LUKS" == "true" &&
     "$FEAT_YUBIKEY_LUKS" != "true" && "$FEAT_SECURE_BOOT" != "true" ]]; then
     need_luks=true
   fi
-  if [[ "$FEAT_ENCRYPTION" == "true" && "$need_luks" == true ]]; then
+  if [[ "$FEAT_HAS_LUKS" == "true" && "$need_luks" == true ]]; then
     echo ""
     if [[ -n "$LUKS_PASSWORD" ]]; then
       success "LUKS password ready (cached)"

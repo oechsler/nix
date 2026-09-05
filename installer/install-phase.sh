@@ -74,7 +74,7 @@ phase_install() {
   echo ""
   success "RAM available: ${avail_gb} GB — using --max-jobs ${max_jobs}"
   echo ""
-  [[ "$FEAT_ENCRYPTION" == "true" ]] && luks_password_file >/dev/null
+  [[ "$FEAT_HAS_LUKS" == "true" ]] && luks_password_file >/dev/null
   if [[ "$INSTALLER_ISO" == true ]]; then
     success "Using prebuilt system closure from installer ISO"
   else
@@ -95,7 +95,7 @@ phase_install() {
     system_path=$(jq -r --arg host "$HOST" '.hosts[$host].system // empty' "$ISO_MANIFEST")
     [[ -n "$system_path" && -e "$system_path" ]] || error "Prebuilt system closure for $HOST is missing from the installer ISO."
     nixos-install --system "$system_path" --no-root-password --max-jobs "$max_jobs" || error "nixos-install failed. Check the output above."
-  elif [[ "$FEAT_SECURE_BOOT" == "true" || ("$FEAT_ENCRYPTION" == "true" && "$FEAT_UNLOCK_METHOD" != "password") ]]; then
+  elif [[ "$FEAT_SECURE_BOOT" == "true" || ("$FEAT_HAS_LUKS" == "true" && "$FEAT_UNLOCK_METHOD" != "password") ]]; then
     local override_nix="$host_dir/secure-boot-install-override.nix"
     SECURE_BOOT_OVERRIDE_FILE="$override_nix"
     SECURE_BOOT_CONFIG_FILE="$host_dir/configuration.nix"

@@ -2,7 +2,7 @@
 # Disko partitioning and mounting.
 
 phase_partition() {
-  [[ "$FEAT_ENCRYPTION" == "true" ]] && luks_password_file >/dev/null
+  [[ "$FEAT_HAS_LUKS" == "true" ]] && luks_password_file >/dev/null
   echo ""
   # shellcheck disable=SC2054
   local disko_args=(--mode destroy,format,mount --flake "$REPO_DIR#$HOST" --yes-wipe-all-disks)
@@ -15,7 +15,7 @@ phase_partition() {
     [[ -n "$disko_ref" && "$disko_ref" != "null" ]] || disko_ref="github:nix-community/disko"
     nix run "$disko_ref" -- "${disko_args[@]}" || error "Disko failed. Check disk IDs in hosts/$HOST/disko.nix"
   fi
-  if [[ "$FEAT_ENCRYPTION" == "true" ]]; then
+  if [[ "$FEAT_HAS_LUKS" == "true" ]]; then
     command -v cryptsetup &>/dev/null || error "Required command not found: cryptsetup"
     for device in "${LUKS_DEVICES[@]}"; do
       cryptsetup open --test-passphrase --key-file "$(luks_password_file)" "$device" ||

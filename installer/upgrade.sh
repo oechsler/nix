@@ -11,7 +11,8 @@ show_pending_setup() {
     cfg: {
       secureBoot = cfg.features.secureBoot.enable;
       yubikey = cfg.features.auth.yubikey.enable;
-      yubikeyLuks = cfg.features.encryption.unlockMethod == "yubikey";
+       yubikeyLuks = cfg.features.encryption.unlockMethod == "yubikey";
+       luksDevices = builtins.attrValues (builtins.mapAttrs (name: dev: dev.device) cfg.boot.initrd.luks.devices);
       totp = cfg.features.auth.totp.enable;
       encryption = cfg.features.encryption.enable;
       unlockMethod = cfg.features.encryption.unlockMethod;
@@ -25,6 +26,8 @@ show_pending_setup() {
   feat_yubikey_luks=$(jq -r '.yubikeyLuks // false' <<<"$json")
   feat_totp=$(jq -r '.totp // false' <<<"$json")
   feat_enc=$(jq -r '.encryption // false' <<<"$json")
+  local has_luks
+  has_luks=$(jq -r '(.luksDevices // []) | length > 0' <<<"$json")
   feat_unlock_method=$(jq -r '.unlockMethod // "password"' <<<"$json")
   persist_prefix=$(jq -r '.persistPrefix // ""' <<<"$json")
   local sb_active=false yubikey_luks_enrolled=false yubikey_pam_enrolled=false totp_enrolled=false invoking_username="${SUDO_USER:-$USER}"
@@ -33,13 +36,13 @@ show_pending_setup() {
     sb_state=$(bootctl status 2>/dev/null | awk '/Secure Boot:/{print $3}')
     [[ "$sb_state" == "enabled" ]] && sb_active=true
   fi
-  if [[ "$feat_yubikey_luks" == "true" && "$feat_enc" == "true" ]]; then
+  if [[ "$feat_yubikey_luks" == "true" && "$has_luks" == "true" ]]; then
     local first_dev
     first_dev=$(lsblk -rno NAME,TYPE,PKNAME | awk '$2=="crypt" && $3!="" {print "/dev/"$3; exit}')
     [[ -n "$first_dev" ]] && systemd-cryptenroll "$first_dev" 2>/dev/null | grep -q "fido2" && yubikey_luks_enrolled=true
   fi
   local tpm_enrolled=false
-  if [[ "$feat_unlock_method" == "tpm2" && "$feat_enc" == "true" ]]; then
+  if [[ "$feat_unlock_method" == "tpm2" && "$has_luks" == "true" ]]; then
     local tpm_first_dev
     tpm_first_dev=$(lsblk -rno NAME,TYPE,PKNAME | awk '$2=="crypt" && $3!="" {print "/dev/"$3; exit}')
     [[ -n "$tpm_first_dev" ]] && systemd-cryptenroll "$tpm_first_dev" 2>/dev/null | grep -q "tpm2" && tpm_enrolled=true
@@ -57,7 +60,7 @@ show_pending_setup() {
   [[ "$feat_yubikey_luks" == "true" && "$yubikey_luks_enrolled" != "true" ]] && pending+=("yubikey-luks-init   — enroll YubiKey FIDO2 for automatic disk unlock at boot")
   [[ "$feat_yubikey" == "true" && "$yubikey_pam_enrolled" != "true" ]] && pending+=("yubikey-init        — register YubiKey for sudo and SSH authentication")
   [[ "$feat_totp" == "true" && "$totp_enrolled" != "true" ]] && pending+=("totp-init           — set up TOTP two-factor authentication for sudo and SSH")
-  [[ "$feat_unlock_method" == "tpm2" && "$feat_enc" == "true" && "$tpm_enrolled" != "true" ]] && pending+=("tpm-luks-init       — enroll TPM2 for automatic disk unlock at boot")
+  [[ "$feat_unlock_method" == "tpm2" && "$has_luks" == "true" && "$tpm_enrolled" != "true" ]] && pending+=("tpm-luks-init       — enroll TPM2 for automatic disk unlock at boot")
   if [[ ${#pending[@]} -eq 0 ]]; then success "All features are fully set up."; else
     echo -e "  ${BOLD}${YELLOW}Pending setup:${RESET}"
     echo ""
