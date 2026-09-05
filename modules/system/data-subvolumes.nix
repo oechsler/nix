@@ -20,16 +20,29 @@ let
   };
 in
 {
-  config = lib.mkIf config.features.snapshots.enable {
-    fileSystems =
-      lib.optionalAttrs config.features.gaming.enable {
-        "${userHome}/.local/share/Steam" = subvolume "@steam";
-      }
-      // lib.optionalAttrs config.features.apps.nextcloud.enable {
-        "${userHome}/Nextcloud" = subvolume "@nextcloud";
-      }
-      // lib.optionalAttrs (config.features.smb.enable && config.features.smb.shares != [ ]) {
-        "${userHome}/smb" = subvolume "@smb";
-      };
-  };
+  config.fileSystems =
+    lib.optionalAttrs (config.features.snapshots.enable && config.features.gaming.enable) {
+      "${userHome}/.local/share/Steam" = subvolume "@steam";
+    }
+    // lib.optionalAttrs (config.features.snapshots.enable && config.features.apps.nextcloud.enable) {
+      "${userHome}/Nextcloud" = subvolume "@nextcloud";
+    }
+    //
+      lib.optionalAttrs
+        (
+          config.features.snapshots.enable && config.features.smb.enable && config.features.smb.shares != [ ]
+        )
+        {
+          "${userHome}/smb" = subvolume "@smb";
+        }
+    //
+      lib.optionalAttrs
+        (
+          !config.features.impermanence.enable
+          && config.features.virtualisation.enable
+          && config.features.virtualisation.vm.enable
+        )
+        {
+          "/etc/libvirt" = subvolume "@libvirt";
+        };
 }
