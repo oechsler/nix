@@ -62,10 +62,10 @@
       ollama = {
         enable = true;
         server = true;
-        context = 32768;
+        context = 65536;
         unloadAfter = "-1";
         models = {
-          "qwen3.6:35b-a3b-coding-mtp-q4_K_M".name = "Qwen 3.6 35B A3B Coding";
+          "gemma4:26b-a4b-it-mtp-q4_K_M".name = "Gemma 4 26B A4B Instruct";
         };
       };
     };
