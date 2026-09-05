@@ -35,6 +35,10 @@ let
       else
         throw "samuels-terra/disko.nix requires the global user.name option"
     );
+  impermanenceEnabled =
+    moduleArgs ? config
+    && moduleArgs.config ? features
+    && moduleArgs.config.features.impermanence.enable;
 in
 
 {
@@ -97,12 +101,12 @@ in
                       ];
                     };
                     "@var" = {
-                      mountpoint = "/var";
                       mountOptions = [
                         "compress=zstd"
                         "noatime"
                       ];
-                    };
+                    }
+                    // (if impermanenceEnabled then { } else { mountpoint = "/var"; });
                     "@persist" = {
                       mountpoint = "/persist";
                       mountOptions = [
