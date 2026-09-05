@@ -20,6 +20,7 @@
   imports = [
     ./apps.nix
     ./browsers.nix
+    ./cli.nix
     ./development.nix
     ./fish.nix
     ./git.nix

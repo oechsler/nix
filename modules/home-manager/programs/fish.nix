@@ -26,7 +26,12 @@
 # - SSH: Auto-attach to "ssh" session
 # - Kitty: Auto-attach to first non-SSH session or create new
 
-{ lib, pkgs, ... }:
+{
+  features,
+  lib,
+  pkgs,
+  ...
+}:
 
 {
   home.packages = with pkgs; [
@@ -81,7 +86,11 @@
     };
     functions = {
       fastfetch = {
-        body = "~/.local/bin/fastfetch-image $argv";
+        body =
+          if features.desktop.enable then
+            "~/.local/bin/fastfetch-image $argv"
+          else
+            "${pkgs.fastfetch}/bin/fastfetch $argv";
       };
       ff = {
         body = "fastfetch $argv";

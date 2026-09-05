@@ -69,6 +69,9 @@
         };
       };
     };
+
+    # --- Operations ---
+    ops.enable = false;
   };
 
   system.stateVersion = "26.11";

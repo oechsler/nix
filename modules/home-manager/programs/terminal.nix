@@ -80,7 +80,11 @@ in
 
   options.terminal.exec = lib.mkOption {
     type = lib.types.str;
-    default = "${pkgs.kitty}/bin/kitty -e";
+    default =
+      if features.desktop.enable then
+        "${pkgs.kitty}/bin/kitty -e"
+      else
+        "${pkgs.tmux}/bin/tmux new-window";
     readOnly = true;
     description = "Command prefix to launch a TUI app in the terminal (usage: exec <command>)";
   };
@@ -88,7 +92,6 @@ in
   config = {
     programs = {
       fastfetch = {
-        enable = true;
         settings = {
           logo.type = "none";
           display.separator = "  ";
@@ -96,7 +99,7 @@ in
         };
       };
 
-      kitty = {
+      kitty = lib.mkIf features.desktop.enable {
         enable = true;
         font = {
           name = fonts.monospace;
@@ -117,35 +120,9 @@ in
         };
       };
 
-      starship = {
-        enable = true;
-        enableFishIntegration = true;
-      };
-
-      eza = {
-        enable = true;
-        enableFishIntegration = false;
-        icons = "auto";
-        extraOptions = [ "--group-directories-first" ];
-      };
-
-      bat.enable = true;
-      gitui.enable = true;
-
-      bottom.enable = true;
-
-      fzf = {
-        enable = true;
-        enableFishIntegration = true;
-      };
-
-      zoxide = {
-        enable = true;
-        enableFishIntegration = true;
-      };
     };
 
-    home.file.".local/bin/fastfetch-image" = {
+    home.file.".local/bin/fastfetch-image" = lib.mkIf features.desktop.enable {
       executable = true;
       text = ''
         #!${pkgs.fish}/bin/fish
@@ -184,13 +161,5 @@ in
       '';
     };
 
-    home.packages = with pkgs; [
-      dust
-      fd
-      jq
-      procs
-      ripgrep
-      sd
-    ];
   };
 }
