@@ -8,9 +8,12 @@
 #   - @ subvolume: / (root, ephemeral - rolled back on boot)
 #   - @home subvolume: /home (persistent)
 #   - @nix subvolume: /nix (persistent)
+#   - @persist subvolume: /persist (only with impermanence)
 #   - @var subvolume: /var (only without impermanence)
-#   - @persist subvolume: /persist (persistent)
 #   - @snapshots subvolume: /.snapshots (persistent snapshot storage)
+#   - @steam subvolume: Steam library (when gaming is enabled)
+#   - @nextcloud subvolume: sync client data (when Nextcloud is enabled)
+#   - @smb subvolume: network shares (when SMB shares are enabled)
 #
 # Encryption:
 # - LUKS with TPM2 auto-unlock (via luks.nix)
@@ -20,8 +23,8 @@
 # - Root (/) is ephemeral, rolled back to blank snapshot on reboot
 # - Only /home, /nix, /persist survive reboots
 #
-# This host has no feature-specific data subvolumes and does not require
-# username arguments when Disko is evaluated standalone.
+# Feature-specific data subvolumes are created only when their features are
+# enabled.
 moduleArgs:
 
 let

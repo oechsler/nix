@@ -8,11 +8,12 @@
 #   - @ subvolume: / (root, ephemeral - rolled back on boot)
 #   - @home subvolume: /home (persistent)
 #   - @nix subvolume: /nix (persistent)
-#   - @persist subvolume: /persist (persistent)
-#   - @steam subvolume: Steam library, persistent but excluded from @home snapshots
-#   - @nextcloud subvolume: sync client data, persistent and resyncable
-#   - @smb subvolume: persistent mount root for network shares
+#   - @persist subvolume: /persist (only with impermanence)
+#   - @var subvolume: /var (only without impermanence)
 #   - @snapshots subvolume: /.snapshots (persistent snapshot storage)
+#   - @steam subvolume: Steam library (when gaming is enabled)
+#   - @nextcloud subvolume: sync client data (when Nextcloud is enabled)
+#   - @smb subvolume: network shares (when SMB shares are enabled)
 #
 # Encryption:
 # - LUKS with YubiKey FIDO2 unlock (via luks.nix)
