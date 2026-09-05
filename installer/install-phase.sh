@@ -15,7 +15,9 @@ phase_hardware_config() {
   [[ -d "$host_dir" ]] || error "Host directory not found: $host_dir"
   command -v nixos-generate-config &>/dev/null || error "Required command not found: nixos-generate-config"
   info "Generating hardware configuration for $HOST..."
-  nixos-generate-config --no-filesystems --show-hardware-config >"$host_dir/hardware-configuration.generated.nix" ||
+  nixos-generate-config --show-hardware-config \
+    2> >(sed '/^ERROR: Not a Btrfs subvolume: Invalid argument$/d' >&2) \
+    >"$host_dir/hardware-configuration.generated.nix" ||
     error "Hardware configuration generation failed."
   if git -C "$REPO_DIR" rev-parse --is-inside-work-tree &>/dev/null; then
     git -C "$REPO_DIR" add "$host_dir/hardware-configuration.generated.nix"
@@ -76,7 +78,9 @@ phase_install() {
   else
     info "Generating hardware configuration..."
     echo ""
-    nixos-generate-config --root /mnt --no-filesystems --show-hardware-config >"$host_dir/hardware-configuration.generated.nix"
+    nixos-generate-config --root /mnt --show-hardware-config \
+      2> >(sed '/^ERROR: Not a Btrfs subvolume: Invalid argument$/d' >&2) \
+      >"$host_dir/hardware-configuration.generated.nix"
     nix flake lock "$REPO_DIR"
     git -C "$REPO_DIR" add "$host_dir/hardware-configuration.generated.nix" "$REPO_DIR/flake.lock"
     success "Hardware configuration generated"
