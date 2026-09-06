@@ -24,6 +24,7 @@ let
       systemd
       uutils-coreutils-noprefix
       gnugrep
+      sbctl
       sudo
     ];
     text = ''
@@ -48,6 +49,17 @@ let
       TPM_DEVICE="/dev/tpmrm0"
       DEVICES=(${deviceList})
       PCRS="0+7"
+
+      if [[ "${lib.boolToString config.features.secureBoot.enable}" == true ]]; then
+        if ! ${pkgs.systemd}/bin/bootctl status 2>/dev/null \
+          | ${pkgs.gnugrep}/bin/grep -qi 'Secure Boot:[[:space:]]*enabled'; then
+          error "Secure Boot is required by the configuration but is not enabled. Run secure-boot-init first."
+        fi
+        if ! ${pkgs.sbctl}/bin/sbctl --debug status 2>&1 \
+          | ${pkgs.gnugrep}/bin/grep -q 'db is fine'; then
+          error "Secure Boot is enabled, but the configured Secure Boot keys are not enrolled. Run secure-boot-init first."
+        fi
+      fi
 
       if [[ ! -c "$TPM_DEVICE" ]]; then
         error "No TPM2 device found. Make sure TPM2 is enabled in UEFI/BIOS."
