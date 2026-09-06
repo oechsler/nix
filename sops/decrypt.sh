@@ -15,6 +15,6 @@ fi
 printf 'Decrypting sops.encrypted.yaml -> sops.decrypted.yaml\n'
 tmp_file=$(mktemp -- "sops.decrypted.yaml.XXXXXX")
 trap 'rm -f "$tmp_file"' EXIT
-sops -d sops.encrypted.yaml >"$tmp_file"
+sops -d sops.encrypted.yaml > "$tmp_file"
 mv "$tmp_file" sops.decrypted.yaml
 printf 'Done! Edit sops.decrypted.yaml, then run ./encrypt.sh\n'

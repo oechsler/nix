@@ -36,9 +36,9 @@
   echo ""
 
   # Guard: must run on NixOS and as root before doing anything else
-  command -v nixos-version &>/dev/null || error "Not a NixOS system."
+  command -v nixos-version &> /dev/null || error "Not a NixOS system."
   for command_name in curl getent cut systemctl grep awk sed; do
-    command -v "$command_name" &>/dev/null || error "Required command not found: $command_name"
+    command -v "$command_name" &> /dev/null || error "Required command not found: $command_name"
   done
 
   # Self-elevate when run as a file; error when piped (curl | bash needs sudo explicitly)
@@ -61,7 +61,7 @@
   # Falls back to asking the user if the unit is absent or disabled.
   find_installed_repo() {
     local flake_dir
-    flake_dir=$(systemctl show nixos-upgrade.service --property=ExecStart 2>/dev/null |
+    flake_dir=$(systemctl show nixos-upgrade.service --property=ExecStart 2> /dev/null |
       grep -o -- '--flake [^ ]*' | awk '{print $2}' | sed 's/#.*//' || true)
     if [[ -n "$flake_dir" && -f "$flake_dir/flake.nix" ]]; then
       echo "$flake_dir" && return
@@ -84,25 +84,25 @@
     success "Existing installation found at $INSTALLED_REPO"
 
     if [[ ! -t 0 ]]; then
-      exec </dev/tty || error "Cannot reopen terminal for interactive input."
+      exec < /dev/tty || error "Cannot reopen terminal for interactive input."
     fi
 
     echo ""
     exec bash "$INSTALLED_REPO/install.sh" "$@"
   fi
 
-  if ! curl -sf --max-time 5 https://github.com >/dev/null 2>&1; then
+  if ! curl -sf --max-time 5 https://github.com > /dev/null 2>&1; then
     error "No network. Connect to the internet first (nmtui or iwctl)."
   fi
   success "Network OK"
 
-  if ! command -v git &>/dev/null; then
+  if ! command -v git &> /dev/null; then
     info "Installing git..."
     echo ""
-    command -v nix-env &>/dev/null || error "Git is missing and nix-env is unavailable to install it."
+    command -v nix-env &> /dev/null || error "Git is missing and nix-env is unavailable to install it."
     nix-env -iA nixos.git
   fi
-  command -v git &>/dev/null || error "Git is unavailable after installation."
+  command -v git &> /dev/null || error "Git is unavailable after installation."
   success "Git available"
 
   echo ""
@@ -122,7 +122,7 @@
   # When piped (curl | bash), stdin is at EOF after the { } block is read.
   # Reopen from /dev/tty so the installer can prompt interactively.
   if [[ ! -t 0 ]]; then
-    exec </dev/tty || error "Cannot reopen terminal for interactive input."
+    exec < /dev/tty || error "Cannot reopen terminal for interactive input."
   fi
 
   echo ""

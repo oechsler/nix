@@ -8,7 +8,7 @@ system="x86_64-linux"
 output="installerIso"
 
 usage() {
-  cat <<'EOF'
+  cat << 'EOF'
 Usage: ./build-iso.sh
 
 Builds one graphical installer ISO containing all prebuilt hosts.

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 for command_name in find grep nix-shell mktemp cp mkdir chmod mv cat; do
-  command -v "$command_name" >/dev/null || {
+  command -v "$command_name" > /dev/null || {
     printf 'ERROR: Required command not found: %s\n' "$command_name" >&2
     exit 1
   }
@@ -28,7 +28,7 @@ echo ""
 mapfile -t SSH_KEYS < <(
   find "$SSH_DIR" -maxdepth 1 -type f \
     ! -name '*.pub' ! -name 'known_hosts*' ! -name 'config' \
-    ! -name 'authorized_keys*' -print 2>/dev/null |
+    ! -name 'authorized_keys*' -print 2> /dev/null |
     grep -E 'id_[a-z0-9]+$' || true
 )
 
@@ -76,7 +76,7 @@ echo "✓ Age public key: $AGE_PUBLIC_KEY"
 
 # Convert private key
 AGE_PRIVATE_KEY=$(nix-shell -p ssh-to-age --run "ssh-to-age -private-key -i $(printf '%q' "$SSH_KEY")")
-printf '%s\n' "$AGE_PRIVATE_KEY" >"$AGE_DIR/keys.txt"
+printf '%s\n' "$AGE_PRIVATE_KEY" > "$AGE_DIR/keys.txt"
 chmod 600 "$AGE_DIR/keys.txt"
 printf 'Age private key saved to %s\n' "$AGE_DIR/keys.txt"
 
@@ -84,10 +84,10 @@ printf 'Age private key saved to %s\n' "$AGE_DIR/keys.txt"
 SYSTEM_KEY_DIR="/persist/var/lib/sops/age"
 if [ -d "/persist" ]; then
   for command_name in sudo tee; do
-    command -v "$command_name" >/dev/null || die "Required command not found: $command_name"
+    command -v "$command_name" > /dev/null || die "Required command not found: $command_name"
   done
   sudo mkdir -p "$SYSTEM_KEY_DIR"
-  echo "$AGE_PRIVATE_KEY" | sudo tee "$SYSTEM_KEY_DIR/keys.txt" >/dev/null
+  echo "$AGE_PRIVATE_KEY" | sudo tee "$SYSTEM_KEY_DIR/keys.txt" > /dev/null
   sudo chmod 600 "$SYSTEM_KEY_DIR/keys.txt"
   echo "✓ Age private key saved to $SYSTEM_KEY_DIR/keys.txt"
 fi
@@ -105,7 +105,7 @@ if [[ -f "$CONFIG_FILE" ]]; then
   echo "✓ Existing .sops.yaml backed up to .sops.yaml.bak"
 fi
 
-cat >"$TEMP_CONFIG" <<EOF
+cat > "$TEMP_CONFIG" << EOF
 keys:
   - &${USER_ALIAS} $AGE_PUBLIC_KEY
 
