@@ -127,9 +127,7 @@ let
       echo -e "    Keys generated: $([ "$keys_exist" = true ] && echo "yes" || echo "no")"
       echo -e "    Keys enrolled:  $([ "$keys_enrolled" = true ] && echo "yes" || echo "no")"
        echo -e "    Board:          ''${board_vendor:-unknown} ''${board_name:-unknown}"
-       [[ "$ASUS_BOARD" == "true" ]] && \
-         echo -e "    Firmware mode:  ''${DIM}ASUS compatibility handling''${RESET}"
-      echo ""
+       echo ""
 
       #--- Already fully set up? ---
       if [[ "$sb_enabled" == "enabled" ]] && [[ "$keys_enrolled" == true ]]; then
