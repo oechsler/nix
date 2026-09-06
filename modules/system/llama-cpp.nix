@@ -47,7 +47,7 @@ let
     shopt -s nullglob
     for path in ${modelDir}/*.gguf; do
       name="''${path##*/}"
-      case " $declaredIds " in
+      case " ${declaredIds} " in
         *" ''${name%.gguf} "*) ;;
         *) echo "removing undeclared llama.cpp model: $name"; ${pkgs.coreutils}/bin/rm -f -- "$path" ;;
       esac
@@ -137,6 +137,10 @@ in
         RestartSec = 5;
         StateDirectory = "llama.cpp";
         LimitNOFILE = 65536;
+      };
+      environment = {
+        GGML_BACKEND_PATH = "${package}/bin/libggml-vulkan.so";
+        HOME = "/var/lib/llama.cpp";
       };
     };
   };

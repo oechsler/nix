@@ -121,6 +121,8 @@ let
   providersWithSecrets = lib.filterAttrs (
     _: provider: provider.apiKeySecret != null
   ) configuredProviders;
+  # MCP enablement is runtime-configurable in OpenCode, so prepare credentials
+  # and process-wide TLS behavior even for entries disabled by default.
   mcpWithSecrets = lib.filterAttrs (_: server: server.tokenSecret != null) cfg.mcp;
   mcpWithInsecureTls = lib.any (server: server.insecureTls) (lib.attrValues cfg.mcp);
   mcpWithOAuthSecrets = lib.filterAttrs (

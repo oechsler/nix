@@ -29,6 +29,10 @@ in
           assertion = !config.features.encryption.enable || config.boot.initrd.luks.devices != { };
           message = "features.encryption.enable = true requires a LUKS device in the host's disko.nix. If the host uses no encryption, set features.encryption.enable = false.";
         }
+        {
+          assertion = !config.features.impermanence.enable || config.fileSystems."/".fsType == "btrfs";
+          message = "features.impermanence.enable requires the root filesystem to use Btrfs because the initrd rollback service manages Btrfs subvolumes.";
+        }
       ];
     }
   ];

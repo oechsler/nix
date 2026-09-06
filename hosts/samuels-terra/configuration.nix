@@ -170,6 +170,8 @@
         };
         mcp.obsidian = {
           enable = true;
+          # Local-only token enforced by Obsidian's local MCP endpoint; it is not
+          # a remotely usable credential.
           insecureTls = true;
           url = "https://127.0.0.1:27124/mcp/";
           token = "7319249c2c302002ec534be8f09a05a1452ec85a5c49a330308fd32824de1554";

@@ -96,7 +96,7 @@ git clone https://github.com/oechsler/nix.git /tmp/nix-config
 | `--dry-run`                      | Show summary and exit without making changes                  |
 | `-h`, `--help`                   | Show help                                                     |
 
-Steps are combinable. Without step flags, the full install runs. `--hardware-config` is standalone and only generates the selected host's hardware configuration. The installer reads host feature flags from the local flake or, in ISO mode, from the embedded manifest.
+Steps are combinable. Without step flags, the full install runs. `--hardware-config` is standalone and only generates the selected host's hardware configuration. On the ISO, mount a writable target at `/mnt` first; the generated file is written to `/mnt/hardware-configuration-HOST.nix`. The installer reads host feature flags from the local flake or, in ISO mode, from the embedded manifest.
 
 ## Disk Layout
 

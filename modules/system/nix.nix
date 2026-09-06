@@ -188,8 +188,20 @@ in
           # build succeeds. The override file lives inside the flake source (so Nix can
           # find it in pure eval) but is never git-added — cleaned up after build.
           updateFlake = pkgs.writeShellScript "nixos-upgrade-update-flake" ''
+            cleanup() {
+              if [ -f "${flakeDir}/hosts/${config.networking.hostName}/secure-boot-upgrade-override.nix" ]; then
+                ${pkgs.gnused}/bin/sed -i '/secure-boot-upgrade-override\.nix/d' \
+                  ${lib.escapeShellArg flakeDir}/hosts/${config.networking.hostName}/configuration.nix
+                ${pkgs.coreutils}/bin/rm -f "${flakeDir}/hosts/${config.networking.hostName}/secure-boot-upgrade-override.nix"
+              fi
+            }
+            trap cleanup EXIT
             cd ${lib.escapeShellArg flakeDir}
-            ${pkgs.sudo}/bin/sudo -u ${lib.escapeShellArg user} ${pkgs.git}/bin/git -C ${lib.escapeShellArg flakeDir} checkout flake.lock
+            if ! ${pkgs.sudo}/bin/sudo -u ${lib.escapeShellArg user} ${pkgs.git}/bin/git -C ${lib.escapeShellArg flakeDir} diff --quiet \
+              || ! ${pkgs.sudo}/bin/sudo -u ${lib.escapeShellArg user} ${pkgs.git}/bin/git -C ${lib.escapeShellArg flakeDir} diff --cached --quiet; then
+              echo "Refusing automatic upgrade: the configuration checkout has local changes." >&2
+              exit 1
+            fi
             ${pkgs.sudo}/bin/sudo -u ${lib.escapeShellArg user} ${pkgs.git}/bin/git -C ${lib.escapeShellArg flakeDir} pull --ff-only
 
             # Write Secure Boot override when sbctl keys are missing.

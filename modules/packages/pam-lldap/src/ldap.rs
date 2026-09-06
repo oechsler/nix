@@ -16,13 +16,13 @@ pub(crate) fn check_password(options: &Options, password: &[u8]) -> i32 {
 
     let status = unsafe {
         if options.connection_mode.uses_tls() {
-            let status = ffi::ldap_set_option(
+            let ca_status = ffi::ldap_set_option(
                 ptr::null_mut(),
                 ffi::LDAP_OPT_X_TLS_CACERTFILE,
                 c"/etc/ssl/certs/ca-certificates.crt".as_ptr() as *const c_void,
             );
-            if status != ffi::LDAP_SUCCESS {
-                ffi::log_status(b"ldap_set_option(CACERTFILE)\0", status);
+            if ca_status != ffi::LDAP_SUCCESS {
+                ffi::log_status(b"ldap_set_option(CACERTFILE)\0", ca_status);
             }
         }
 

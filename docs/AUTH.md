@@ -35,7 +35,7 @@ features = {
 };
 ```
 
-When enabled, a dedicated PAM module uses LLDAP only as the password provider for the locally declared `user.name`. It binds directly as that user, so no LLDAP bind account, UID/GID attributes, groups, or NSS lookups are needed. Successful LDAP passwords are cached locally as an Argon2id verifier and used only when LDAP is unreachable; an online LDAP password failure never falls back to the cache. When disabled, the local SOPS password is used again.
+When enabled, a dedicated PAM module uses LLDAP only as the password provider for the locally declared `user.name`. It binds directly as that user, so no LLDAP bind account, UID/GID attributes, groups, or NSS lookups are needed. Use `ldaps://` for encrypted transport; `ldap://` is also accepted for trusted test networks where the operator accepts plaintext password transport. Successful LDAP passwords are cached locally as an Argon2id verifier and used only when LDAP is unreachable; an online LDAP password failure never falls back to the cache. When disabled, the local SOPS password is used again.
 
 > **Note:** SDDM, polkit, and hyprlock always use **password only**, regardless of which 2FA method is enabled. This is required so that `pam_gnome_keyring` can capture the login password at SDDM and auto-unlock the GNOME Keyring. YubiKey login skips `pam_gnome_keyring`'s auth phase, leaving the keyring locked.
 

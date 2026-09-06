@@ -220,9 +220,13 @@ let
       pkgs.clippy
       pkgs.rustfmt
     ];
-    dontBuild = true;
+    buildInputs = [
+      pkgs.linux-pam
+      pkgs.openldap
+    ];
     checkPhase = ''
       cargo fmt --check
+      cargo test --offline --all-targets
       cargo clippy --offline --all-targets -- -D warnings
     '';
     installPhase = "touch $out";

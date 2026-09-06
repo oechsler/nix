@@ -3,6 +3,7 @@ use std::fs::{self, OpenOptions};
 use std::io::Write;
 use std::os::unix::fs::OpenOptionsExt;
 use std::path::Path;
+use std::process;
 
 use crate::ffi;
 
@@ -36,10 +37,11 @@ pub(crate) fn update(path: &Path, password: &[u8]) -> bool {
         return false;
     };
 
-    let temporary = path.with_extension("new");
+    // create_new makes a pre-created symlink fail safely instead of following
+    // it. Include the PID so concurrent PAM requests do not share a pathname.
+    let temporary = path.with_extension(format!("new.{}", process::id()));
     let Ok(mut file) = OpenOptions::new()
-        .create(true)
-        .truncate(true)
+        .create_new(true)
         .write(true)
         .mode(0o600)
         .open(&temporary)

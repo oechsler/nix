@@ -105,7 +105,10 @@ Secrets such as WiFi passwords, SMB credentials, API keys, and Mumble
 certificates are encrypted with SOPS and age. The repository uses an
 SSH-derived Age identity. Secrets are never stored in plain text in the
 repository, but are necessarily materialized on the installed system at
-runtime; see [sops/README.md](../sops/README.md).
+runtime; see [sops/README.md](../sops/README.md). The installer keeps resumable
+progress under `/var/lib/nixos-install` with mode `0700`, but does not persist
+LUKS passphrases or SSH private-key contents. Remove that directory after a
+completed or abandoned installation if it contains operational metadata.
 
 ## Summary
 

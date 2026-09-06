@@ -54,7 +54,6 @@ LUKS_PASSWORD_FILE=""
 INSTALL_SUCCESS=false
 
 SSH_KEY_FILE=""
-SSH_KEY_CONTENT=""
 AGE_KEY=""
 USER_PASSWORD_HASH=""
 IS_LIVE=false
@@ -83,14 +82,12 @@ load_state() {
     # shellcheck source=/dev/null
     source "$STATE_FILE"
     [[ -n "$cli_host" ]] && HOST="$cli_host"
-    [[ -n "$cli_luks" ]] && LUKS_PASSWORD="$cli_luks"
+    # Credentials are intentionally not resumed from state.env. Re-enter them
+    # for each resumed operation instead of keeping them on disk.
+    LUKS_PASSWORD="$cli_luks"
     if [[ -n "$cli_ssh" ]]; then
       SSH_KEY="$cli_ssh"
       SSH_KEY_FILE=""
-    elif [[ -n "${SSH_KEY_CONTENT:-}" ]]; then
-      SSH_KEY_FILE="$(mktemp)"
-      printf '%s\n' "$SSH_KEY_CONTENT" >"$SSH_KEY_FILE"
-      chmod 600 "$SSH_KEY_FILE"
     fi
     success "Loaded: host=$HOST"
     echo ""
@@ -104,13 +101,7 @@ save_state() {
   trap 'rm -f "$temporary"' RETURN
   {
     printf 'HOST=%q\n' "$HOST"
-    printf 'LUKS_PASSWORD=%q\n' "${LUKS_PASSWORD:-}"
     printf 'USER_PASSWORD_HASH=%q\n' "${USER_PASSWORD_HASH:-}"
-    if [[ -n "${SSH_KEY_FILE:-}" && -f "$SSH_KEY_FILE" ]]; then
-      printf 'SSH_KEY_CONTENT=%q\n' "$(<"$SSH_KEY_FILE")"
-    else
-      printf 'SSH_KEY_CONTENT=%q\n' "${SSH_KEY_CONTENT:-}"
-    fi
     printf 'FEAT_ENCRYPTION=%q\n' "${FEAT_ENCRYPTION:-false}"
     printf 'FEAT_HAS_LUKS=%q\n' "${FEAT_HAS_LUKS:-false}"
     printf 'FEAT_UNLOCK_METHOD=%q\n' "${FEAT_UNLOCK_METHOD:-}"

@@ -3,7 +3,7 @@
 # NixOS installation and configuration versioning.
 
 phase_hardware_config() {
-  local host_dir writable_repo
+  local host_dir writable_repo output_file
   if [[ "$INSTALLER_ISO" == true ]]; then
     writable_repo="/tmp/nixos-installer-hardware-config"
     rm -rf -- "$writable_repo"
@@ -17,14 +17,20 @@ phase_hardware_config() {
   echo ""
   info "Generating hardware configuration for $HOST..."
   echo ""
+  if [[ "$INSTALLER_ISO" == true ]]; then
+    output_file="/mnt/hardware-configuration-$HOST.nix"
+    [[ -d /mnt && -w /mnt ]] || error "Mount /mnt before generating hardware configuration from the ISO."
+  else
+    output_file="$host_dir/hardware-configuration.generated.nix"
+  fi
   nixos-generate-config --show-hardware-config \
     2> >(sed '/^ERROR: Not a Btrfs subvolume: Invalid argument$/d' >&2) \
-    >"$host_dir/hardware-configuration.generated.nix" ||
+    >"$output_file" ||
     error "Hardware configuration generation failed."
-  if repo_git rev-parse --is-inside-work-tree &>/dev/null; then
+  if [[ "$INSTALLER_ISO" != true ]] && repo_git rev-parse --is-inside-work-tree &>/dev/null; then
     repo_git add "$host_dir/hardware-configuration.generated.nix"
   fi
-  success "Hardware configuration written to $host_dir/hardware-configuration.generated.nix"
+  success "Hardware configuration written to $output_file"
 }
 
 phase_state_version() {
