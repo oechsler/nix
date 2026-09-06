@@ -122,11 +122,11 @@ let
          keys_enrolled=true
        fi
 
-      echo -e "    Secure Boot:    ''${sb_enabled:-unknown}"
-      echo -e "    Setup Mode:     ''${setup_mode:-unknown}"
-      echo -e "    Keys generated: $([ "$keys_exist" = true ] && echo "yes" || echo "no")"
-      echo -e "    Keys enrolled:  $([ "$keys_enrolled" = true ] && echo "yes" || echo "no")"
        echo -e "    Board:          ''${board_vendor:-unknown} ''${board_name:-unknown}"
+       echo -e "    Secure Boot:    ''${sb_enabled:-unknown}"
+       echo -e "    Setup Mode:     ''${setup_mode:-unknown}"
+       echo -e "    Keys generated: $([ "$keys_exist" = true ] && echo "yes" || echo "no")"
+       echo -e "    Keys enrolled:  $([ "$keys_enrolled" = true ] && echo "yes" || echo "no")"
        echo ""
 
       #--- Already fully set up? ---
