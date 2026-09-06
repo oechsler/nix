@@ -679,11 +679,11 @@ features.dev.opencode.provider."ollama-remote" = {
 };
 ```
 
-The model limits are written under `limit`. The whole `limit` section is
-optional. If it is used, both `context` and `output` are required; `input` can
-be added when a provider has a separate input limit. Local Ollama uses `32768`
-context tokens and `16384` output tokens by default; custom remote providers
-should set both values.
+For a custom model, set both `context` and `output` in the model definition.
+They control the conversation window and maximum response length. An optional
+`input` limit can be added for providers that distinguish it from the context
+window. Local Ollama uses `32768` context tokens and `16384` output tokens by
+default; custom remote providers should set both values.
 
 Local and remote Ollama can be enabled at the same time. Choose models with the
 provider prefix `ollama/...` for the local server and
@@ -700,18 +700,14 @@ The local Ollama feature manages a server and its model store. The OpenCode
 provider entry only describes an additional remote server. They can therefore
 be used independently or together.
 
-Model capabilities are declared per model because models differ in their
-support for tools, reasoning, temperature, and context size:
+The following optional flags describe what a model supports:
 
-| Field         | Meaning                                      |
-| ------------- | -------------------------------------------- |
-| `name`        | Name shown in OpenCode.                      |
-| `toolCall`    | Model supports native tool calls.            |
-| `reasoning`   | Model provides reasoning or thinking output. |
-| `temperature` | Model accepts temperature control.           |
-| `context`     | Maximum context length in tokens.            |
-| `input`       | Optional maximum input length in tokens.     |
-| `output`      | Maximum output length in tokens.             |
+| Field         | Meaning                           |
+| ------------- | --------------------------------- |
+| `name`        | Name shown in OpenCode.           |
+| `toolCall`    | Native tool calls are supported.  |
+| `reasoning`   | Reasoning output is supported.    |
+| `temperature` | Temperature control is supported. |
 
 The same model fields work for Ollama and custom OpenAI-compatible providers.
 Unset fields are omitted from the generated OpenCode configuration.
