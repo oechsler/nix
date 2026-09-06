@@ -78,6 +78,7 @@ let
       # Workaround: set OS Type = Other OS + Secure Boot Mode = Custom in UEFI,
       # which allows sbctl to enroll keys without requiring explicit Setup Mode.
        board_vendor="$(${pkgs.coreutils}/bin/cat /sys/class/dmi/id/board_vendor 2>/dev/null || true)"
+       board_name="$(${pkgs.coreutils}/bin/cat /sys/class/dmi/id/board_name 2>/dev/null || true)"
        sys_vendor="$(${pkgs.coreutils}/bin/cat /sys/class/dmi/id/sys_vendor 2>/dev/null || true)"
       ASUS_BOARD=false
       if [[ "$board_vendor" == *"ASUSTeK"* || "$board_vendor" == *"ASUS"* || \
@@ -125,8 +126,9 @@ let
       echo -e "    Setup Mode:     ''${setup_mode:-unknown}"
       echo -e "    Keys generated: $([ "$keys_exist" = true ] && echo "yes" || echo "no")"
       echo -e "    Keys enrolled:  $([ "$keys_enrolled" = true ] && echo "yes" || echo "no")"
-      [[ "$ASUS_BOARD" == "true" ]] && \
-        echo -e "    Board:          ''${DIM}ASUS (non-standard Setup Mode)''${RESET}"
+       echo -e "    Board:          ''${board_vendor:-unknown} ''${board_name:-unknown}"
+       [[ "$ASUS_BOARD" == "true" ]] && \
+         echo -e "    Firmware mode:  ''${DIM}ASUS compatibility handling''${RESET}"
       echo ""
 
       #--- Already fully set up? ---
