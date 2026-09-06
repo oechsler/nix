@@ -49,8 +49,9 @@ let
       TPM_DEVICE="/dev/tpmrm0"
       DEVICES=(${deviceList})
       PCRS="0+7"
+      SECURE_BOOT_ENABLED=${lib.boolToString config.features.secureBoot.enable}
 
-      if [[ "${lib.boolToString config.features.secureBoot.enable}" == true ]]; then
+      if [[ "$SECURE_BOOT_ENABLED" == true ]]; then
         if ! ${pkgs.systemd}/bin/bootctl status 2>/dev/null \
           | ${pkgs.gnugrep}/bin/grep -qi 'Secure Boot:[[:space:]]*enabled'; then
           error "Secure Boot is required by the configuration but is not enabled. Run secure-boot-init first."
