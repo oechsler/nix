@@ -163,7 +163,7 @@ in
       text = ''
         password_file=${lib.escapeShellArg config.sops.secrets."user/password".path}
         if [ -f "$password_file" ]; then
-            printf '%s:%s\n' ${lib.escapeShellArg cfg.name} "$(${pkgs.coreutils}/bin/cat "$password_file")" \
+          printf '%s:%s\n' ${lib.escapeShellArg cfg.name} "$(${pkgs.coreutils}/bin/cat "$password_file")" \
             | ${pkgs.shadow}/bin/chpasswd
         fi
       '';

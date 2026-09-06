@@ -96,8 +96,8 @@ let
         done <<< "$removable_mounts"
 
         ${placesEntries}
-         } | ${pkgs.rofi}/bin/rofi -dmenu -p ${lib.escapeShellArg placesPrompt} -i -no-custom -show-icons \
-          -theme-str 'element-icon { size: 22px; }'
+       } | ${pkgs.rofi}/bin/rofi -dmenu -p ${lib.escapeShellArg placesPrompt} -i -no-custom -show-icons \
+         -theme-str 'element-icon { size: 22px; }'
     )
 
     case "$choice" in
@@ -175,11 +175,11 @@ let
     ${pkgs.procps}/bin/pgrep -x rofi > /dev/null && exit 0
     choice="$(printf '%s\n' "${powerLock}" "${powerSuspend}" "${powerLogout}" "${powerReboot}" "${powerOff}" "${powerFirmware}" | ${pkgs.rofi}/bin/rofi -dmenu -p "${powerPrompt}" -i -no-custom -no-show-icons -lines 6)"
     case "$choice" in
-       "${powerLock}")     exec ${pkgs.hyprlock}/bin/hyprlock ;;
-      "${powerSuspend}")  suspend ;;
-      "${powerLogout}")   ${pkgs.uwsm}/bin/uwsm stop ;;
-       "${powerReboot}")   ${pkgs.systemd}/bin/systemctl reboot ;;
-       "${powerOff}")      ${pkgs.systemd}/bin/systemctl poweroff ;;
+       "${powerLock}") exec ${pkgs.hyprlock}/bin/hyprlock ;;
+       "${powerSuspend}") suspend ;;
+       "${powerLogout}") ${pkgs.uwsm}/bin/uwsm stop ;;
+       "${powerReboot}") ${pkgs.systemd}/bin/systemctl reboot ;;
+       "${powerOff}") ${pkgs.systemd}/bin/systemctl poweroff ;;
        "${powerFirmware}") ${pkgs.systemd}/bin/systemctl reboot --firmware-setup ;;
     esac
   '';
@@ -292,7 +292,7 @@ let
         ;;
     esac
 
-     choice=$(printf '%b' "$profiles" | ${pkgs.rofi}/bin/rofi -dmenu -p "${profilePrompt}" -i -no-custom -no-show-icons)
+    choice=$(printf '%b' "$profiles" | ${pkgs.rofi}/bin/rofi -dmenu -p "${profilePrompt}" -i -no-custom -no-show-icons)
     case "$choice" in
       "${profileBalanced}")   ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set balanced ;;
       "${profileSaver}")      ${pkgs.power-profiles-daemon}/bin/powerprofilesctl set power-saver ;;

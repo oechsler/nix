@@ -166,7 +166,7 @@ let
 
     # pkill returns 1 when no instance exists; that is a valid reload state.
     ${pkgs.procps}/bin/pkill -x waybar || true
-     exec ${pkgs.uwsm}/bin/uwsm-app -- ${pkgs.waybar}/bin/waybar
+    exec ${pkgs.uwsm}/bin/uwsm-app -- ${pkgs.waybar}/bin/waybar
   '';
 
   waybar = pkgs.waybar.overrideAttrs (old: {

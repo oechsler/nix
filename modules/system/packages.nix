@@ -117,9 +117,9 @@ let
               printf '%s\n' "$candidate"
               return 0
             fi
-            done
           done
         done
+      done
       printf '%s\n' "${packageIcon}"
     }
     notification_id() {
@@ -159,7 +159,7 @@ let
     else
       log app baseline "apps=$(${pkgs.coreutils}/bin/wc -l < "$current_state")"
     fi
-     ${pkgs.coreutils}/bin/mv "$current_state" "$previous_state"
+    ${pkgs.coreutils}/bin/mv "$current_state" "$previous_state"
     log sync ok "apps=$(${pkgs.coreutils}/bin/wc -l < "$previous_state")"
   '';
 in

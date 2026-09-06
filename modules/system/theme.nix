@@ -131,7 +131,7 @@ in
               postInstall = (old.postInstall or "") + ''
                 for size in 16x16 22x22 24x24 32x32 48x48 64x64; do
                   ${pkgs.coreutils}/bin/ln -s rustrover.svg "$out/share/icons/Papirus/$size"/apps/rust-rover.svg
-                  done
+                done
               '';
             });
         description = "Icon theme package (Catppuccin Papirus)";

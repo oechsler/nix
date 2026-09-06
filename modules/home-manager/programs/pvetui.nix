@@ -98,13 +98,13 @@ let
     umask 077
     CONFIG_DIR="$HOME/.config/pvetui"
     CONFIG_FILE="$CONFIG_DIR/config.yml"
-     ${pkgs.coreutils}/bin/mkdir -p "$CONFIG_DIR"
-     temporary=$(${pkgs.coreutils}/bin/mktemp "$CONFIG_DIR/config.yml.XXXXXX")
-     trap '${pkgs.coreutils}/bin/rm -f "$temporary"' EXIT
+    ${pkgs.coreutils}/bin/mkdir -p "$CONFIG_DIR"
+    temporary=$(${pkgs.coreutils}/bin/mktemp "$CONFIG_DIR/config.yml.XXXXXX")
+    trap '${pkgs.coreutils}/bin/rm -f "$temporary"' EXIT
 
     # Generate config with secrets in a private temporary file, then replace
     # the visible config atomically.
-     ${pkgs.coreutils}/bin/cat > "$temporary" << EOF
+    ${pkgs.coreutils}/bin/cat > "$temporary" << EOF
     profiles:
     ${lib.concatMapStringsSep "\n" (
       profile:

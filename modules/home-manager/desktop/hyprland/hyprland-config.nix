@@ -107,7 +107,7 @@ let
     declare -A initialized_players=()
     cache_dir="''${XDG_CACHE_HOME:-$HOME/.cache}/media-track-notify"
     fallback_icon="${theme.icons.package}/share/icons/Papirus/32x32/mimetypes/audio-x-generic.svg"
-     ${pkgs.coreutils}/bin/mkdir -p "$cache_dir"
+    ${pkgs.coreutils}/bin/mkdir -p "$cache_dir"
     player_icon() {
       local player="$1"
       local icon_name

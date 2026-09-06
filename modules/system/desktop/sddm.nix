@@ -191,15 +191,15 @@ let
     config_dir=/var/lib/sddm/.config
     config_file=$config_dir/kwinoutputconfig.json
 
-     ${pkgs.coreutils}/bin/mkdir -p "$config_dir"
-     ${pkgs.coreutils}/bin/chown sddm:sddm "$config_dir"
-     ${pkgs.coreutils}/bin/chmod 0755 "$config_dir"
+    ${pkgs.coreutils}/bin/mkdir -p "$config_dir"
+    ${pkgs.coreutils}/bin/chown sddm:sddm "$config_dir"
+    ${pkgs.coreutils}/bin/chmod 0755 "$config_dir"
 
     all_connected=1
     for output in ${configuredOutputNames}; do
       connected=0
       for status_file in /sys/class/drm/*-"$output"/status; do
-         if [ -e "$status_file" ] && [ "$(${pkgs.coreutils}/bin/cat "$status_file")" = connected ]; then
+        if [ -e "$status_file" ] && [ "$(${pkgs.coreutils}/bin/cat "$status_file")" = connected ]; then
           connected=1
         fi
       done
@@ -212,9 +212,9 @@ let
     ${configuredOutputEdidChecks}
 
     if [ "$all_connected" -eq 1 ]; then
-       ${pkgs.coreutils}/bin/install -o sddm -g sddm -m 0644 ${sddmDisplayConfigFile} "$config_file"
+      ${pkgs.coreutils}/bin/install -o sddm -g sddm -m 0644 ${sddmDisplayConfigFile} "$config_file"
     else
-       ${pkgs.coreutils}/bin/rm -f "$config_file"
+      ${pkgs.coreutils}/bin/rm -f "$config_file"
     fi
   '';
 

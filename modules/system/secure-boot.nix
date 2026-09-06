@@ -133,7 +133,7 @@ let
       if [[ "$sb_enabled" == "enabled" ]] && [[ "$keys_enrolled" == true ]]; then
         info "Verifying boot files..."
         echo ""
-         ${pkgs.sbctl}/bin/sbctl verify
+        ${pkgs.sbctl}/bin/sbctl verify
         echo ""
         success "Secure Boot is active. lanzaboote UKIs are signed."
         warn "Unsigned entries above are old systemd-boot EFI files — expected, never booted directly."

@@ -176,7 +176,7 @@ in
               if ! ${pkgs.systemd}/bin/systemctl is-active --quiet nixos-rebuild-switch-to-configuration.service; then
                 exit 0
               fi
-               ${pkgs.coreutils}/bin/sleep 2
+             ${pkgs.coreutils}/bin/sleep 2
             done
             echo "Timed out waiting for another NixOS rebuild to finish." >&2
             exit 1
@@ -219,16 +219,16 @@ in
           # If different: Reboot recommended
           # If same: System already up-to-date
           successScript = pkgs.writeShellScript "nixos-upgrade-success" ''
-             current=$(${pkgs.coreutils}/bin/readlink /nix/var/nix/profiles/system)
-             booted=$(${pkgs.coreutils}/bin/readlink /run/booted-system)
+            current=$(${pkgs.coreutils}/bin/readlink /nix/var/nix/profiles/system)
+            booted=$(${pkgs.coreutils}/bin/readlink /run/booted-system)
             if [ "$current" != "$booted" ]; then
               # New system generation built, reboot needed to activate
-                ${notify} -u normal -t 7000 -i "${updateIcon}" \
+               ${notify} -u normal -t 7000 -i "${updateIcon}" \
                  "${updateTitle}" \
                  "${translate "Update completed. A reboot is recommended." "Aktualisierung abgeschlossen. Ein Neustart wird empfohlen."}"
             else
               # No changes, system already up-to-date
-                ${notify} -u low -t 5000 -i "${currentIcon}" \
+               ${notify} -u low -t 5000 -i "${currentIcon}" \
                  "${updateTitle}" \
                  "${translate "The system is already up to date." "Das System ist bereits auf dem neuesten Stand."}"
             fi

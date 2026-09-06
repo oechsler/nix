@@ -217,12 +217,12 @@ in
                 passwordPath = config.sops.secrets."wifi/${net.name}/password".path;
               in
               ''
-                 ssid_hex=$(printf '%s' ${lib.escapeShellArg net.ssid} | ${pkgs.coreutils}/bin/od -An -tx1 | ${pkgs.coreutils}/bin/tr -d ' \n')
-                 ${pkgs.coreutils}/bin/mkdir -p /var/lib/iwd
+                ssid_hex=$(printf '%s' ${lib.escapeShellArg net.ssid} | ${pkgs.coreutils}/bin/od -An -tx1 | ${pkgs.coreutils}/bin/tr -d ' \n')
+                ${pkgs.coreutils}/bin/mkdir -p /var/lib/iwd
                 printf '[Security]\nEAP-Method=PEAP\nEAP-Identity=%s\nEAP-PEAP-Phase2-Method=MSCHAPV2\nEAP-PEAP-Phase2-Password=%s\n' \
                    ${lib.escapeShellArg net.identity} "$(${pkgs.coreutils}/bin/cat ${lib.escapeShellArg passwordPath})" \
                   > "/var/lib/iwd/=$ssid_hex.8021x"
-                 ${pkgs.coreutils}/bin/chmod 0600 "/var/lib/iwd/=$ssid_hex.8021x"
+                ${pkgs.coreutils}/bin/chmod 0600 "/var/lib/iwd/=$ssid_hex.8021x"
               ''
             ) cfg.enterpriseNetworks;
         };
