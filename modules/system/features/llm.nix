@@ -1,6 +1,6 @@
 # Local and remote large language model feature options.
 
-{ lib, ... }:
+{ lib, pkgs, ... }:
 
 let
   modelSpec = import ../../lib/opencode.nix { inherit lib; };
@@ -45,6 +45,45 @@ in
           "qwen3:8b".name = "Qwen3 8B";
         };
         description = "Ollama models to pull declaratively, keyed by model ID.";
+      };
+    };
+
+    llamaCpp = {
+      enable = (lib.mkEnableOption "llama.cpp local model server") // {
+        default = false;
+      };
+
+      server = lib.mkEnableOption "llama.cpp API access from other hosts";
+
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 8080;
+        description = "TCP port for the llama.cpp OpenAI-compatible API.";
+      };
+
+      context = lib.mkOption {
+        type = lib.types.ints.positive;
+        default = 32768;
+        description = "Context length in tokens passed to llama-server.";
+      };
+
+      output = lib.mkOption {
+        type = lib.types.ints.positive;
+        default = 16384;
+        description = "Maximum generated tokens advertised to OpenCode.";
+      };
+
+      package = lib.mkOption {
+        type = lib.types.package;
+        default = pkgs.llama-cpp-vulkan;
+        defaultText = lib.literalExpression "pkgs.llama-cpp-vulkan";
+        description = "llama.cpp package; the default is the Vulkan build.";
+      };
+
+      models = lib.mkOption {
+        type = lib.types.attrsOf modelSpec.llamaType;
+        default = { };
+        description = "Hash-pinned GGUF models indexed by OpenCode model ID.";
       };
     };
   };

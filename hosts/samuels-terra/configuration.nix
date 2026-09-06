@@ -148,14 +148,14 @@
     # --- Development ---
     dev = {
       opencode = {
-        defaultModel = "ollama-remote/gemma4:26b-a4b-it-mtp-q4_K_M";
-        provider."ollama-remote" = {
-          name = "Ollama (Remote)";
+        defaultModel = "llama-cpp-remote/qwen3.8-27b";
+        provider."llama-cpp-remote" = {
+          name = "llama.cpp (Remote)";
           npm = "@ai-sdk/openai-compatible";
-          baseURL = "http://172.22.0.118:11434/v1";
+          baseURL = "http://172.22.0.118:8080/v1";
           models = {
-            "gemma4:26b-a4b-it-mtp-q4_K_M" = {
-              name = "Gemma 4 26B A4B Instruct";
+            "qwen3.8-27b" = {
+              name = "Qwen 3.8 27B";
               toolCall = true;
               reasoning = true;
               temperature = true;

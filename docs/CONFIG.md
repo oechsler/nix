@@ -528,18 +528,33 @@ features = {
 
 ### LLM
 
-The LLM feature provides local model services. It is disabled by default; enable
-it together with the service you want to run.
+The LLM feature provides local model backends. It is disabled by default. The
+parent option and the backend options are independent, so a host can use Ollama,
+llama.cpp, or both:
 
-| Option                | Default | Purpose                            |
-| --------------------- | ------- | ---------------------------------- |
-| `features.llm.enable` | `false` | Enable LLM services and providers. |
+```nix
+features.llm.enable = true;
+```
+
+In the current module, `features.llm.enable` enables the feature namespace but
+does not start a backend by itself. The usual local setup is Ollama, enabled
+explicitly as shown below. This keeps backend choice clear for hosts that need
+the more directly configurable llama.cpp backend instead.
+
+| Backend   | Recommended when                                                       |
+| --------- | ---------------------------------------------------------------------- |
+| Ollama    | You want the normal, convenient local model setup                      |
+| llama.cpp | You want direct control over GGUF files and inference settings         |
+| Both      | You intentionally need comparison, migration, or different model needs |
+
+Both backends can use the same GPU and system memory. Running both is therefore
+usually unnecessary on a small or unified-memory system.
 
 #### Ollama
 
-Ollama runs local open-weight models. It is disabled by default. Enable both
-`features.llm.enable` and `features.llm.ollama.enable` to install the `ollama`
-command, start the local model server, and keep the declared models installed.
+Ollama is the convenient default backend for local models. It uses model tags,
+provides sensible runtime defaults, and needs little configuration. Enable it
+explicitly together with the parent feature:
 
 | Option                            | Default | Purpose                                   |
 | --------------------------------- | ------- | ----------------------------------------- |
@@ -554,7 +569,7 @@ features.llm = {
   enable = true;
   ollama = {
     enable = true;
-    models."gemma3:12b".name = "Gemma 3 12B";
+    models."example-model:latest".name = "Example Model";
   };
 };
 ```
@@ -563,16 +578,85 @@ The model key is the exact Ollama tag to install. Search available tags at
 [ollama.com/search](https://ollama.com/search).
 
 `context` is the conversation window in tokens. Larger values use more memory
-as the conversation grows and delay compaction. `32768` is a balanced default
-for chat and coding. OpenCode separately limits generated output to `16384`
-tokens by default; set `output` on a model only when needed.
+as the conversation grows. `32768` is a balanced default for chat and coding.
+OpenCode advertises a default output limit of `16384` tokens for this local
+backend.
 
 `unloadAfter` controls how long an inactive model stays loaded. Use values such
 as `"1h"` or `"-1"` when a dedicated server should keep a model warm.
 
-Set `server = true` only when another machine needs access. This opens port
-`11434`; use it only on a trusted network or behind an authenticated HTTPS
-gateway.
+Set `server = true` only when another machine needs access. Ollama then listens
+on port `11434`. The endpoint has no authentication, so use it only on a trusted
+network or behind an authenticated HTTPS gateway.
+
+#### llama.cpp
+
+llama.cpp is an optional lower-level backend. Choose it when the exact GGUF
+file, quantization, model revision, memory use, or inference settings need to
+be controlled explicitly. Its models are configured with a repository, file,
+revision, and SHA256 instead of an Ollama tag.
+
+Suitable models can be found with the
+[Hugging Face model search](https://huggingface.co/models). It covers GGUF,
+llama.cpp, and many other model formats and applications. Copy the filename
+from the selected repository and pin its revision and SHA256 in `source`.
+
+| Option                          | Default | Purpose                                 |
+| ------------------------------- | ------- | --------------------------------------- |
+| `features.llm.llamaCpp.enable`  | `false` | Start the local llama.cpp backend.      |
+| `features.llm.llamaCpp.server`  | `false` | Allow connections from other machines.  |
+| `features.llm.llamaCpp.port`    | `8080`  | Local API port.                         |
+| `features.llm.llamaCpp.context` | `32768` | Context size in tokens.                 |
+| `features.llm.llamaCpp.output`  | `16384` | Output limit exposed to OpenCode.       |
+| `features.llm.llamaCpp.models`  | `{}`    | Explicit GGUF models to make available. |
+
+When llama.cpp is enabled, declare at least one model. The `source` contains
+the exact GGUF repository, filename, revision, and SHA256.
+
+The following example uses a pinned GGUF model:
+
+```nix
+features.llm = {
+  enable = true;
+  ollama.enable = false;
+  llamaCpp = {
+    enable = true;
+    context = 32768;
+    models."example-model" = {
+      name = "Example Coding Model";
+      toolCall = true;
+      reasoning = true;
+      temperature = true;
+      source = {
+        repo = "example-org/example-model-GGUF";
+        file = "example-model-Q4_K_M.gguf";
+        revision = "main";
+        sha256 = "0000000000000000000000000000000000000000000000000000000000000000";
+      };
+    };
+  };
+};
+```
+
+The default llama.cpp port is `8080`; `server = true` makes it reachable from
+other hosts without authentication. Use that only on a trusted network or
+behind an authenticated HTTPS gateway. The model source is fetched and
+hash-checked declaratively. With Impermanence enabled, the llama.cpp model
+state is kept under `/var/lib/llama.cpp`; see [INSTALL.md](INSTALL.md#impermanence)
+for the general persistence rules.
+
+For a host that intentionally uses both backends, enable both child options:
+
+```nix
+features.llm = {
+  enable = true;
+  ollama.enable = true;
+  llamaCpp.enable = true;
+};
+```
+
+This is useful for comparison or migration, but both backends consume resources
+independently and may compete for the same memory and accelerator.
 
 ### Development
 
@@ -639,10 +723,9 @@ features = {
 
 #### OpenCode
 
-OpenCode is the coding assistant used by this configuration. It is enabled with
-the development feature and includes model providers, MCP integrations, LSP
-servers, and formatters. The default model is
-`openai/gpt-5.6-luna`.
+OpenCode is the coding assistant configured by the development feature. It
+includes model providers, MCP integrations, LSP servers, and formatters. Its
+default model is `openai/gpt-5.6-luna`.
 
 | Option                               | Default               | Purpose                             |
 | ------------------------------------ | --------------------- | ----------------------------------- |
@@ -652,9 +735,29 @@ servers, and formatters. The default model is
 | `features.dev.opencode.mcp`          | `{}`                  | MCP servers for OpenCode.           |
 | `features.dev.opencode.settings`     | `{}`                  | Additional OpenCode settings.       |
 
-When local Ollama is enabled, OpenCode automatically shows it as `Ollama`. The
-models and context come directly from `features.llm.ollama`, so the local model
-list only needs to be maintained in one place.
+Each enabled local backend contributes a separate OpenCode provider. The model
+registry remains in `features.llm`, so a model is configured once and selected
+in OpenCode with `provider/model`:
+
+| Backend   | OpenCode model example        |
+| --------- | ----------------------------- |
+| Ollama    | `ollama/example-model:latest` |
+| llama.cpp | `llama-cpp/example-model`     |
+
+The provider identifies the backend and the model identifies the model declared
+under that backend. If both backends are enabled, both provider prefixes are
+available. Set `features.dev.opencode.defaultModel` to choose the initial model.
+
+For example:
+
+```nix
+features.dev.opencode.defaultModel = "ollama/example-model:latest";
+```
+
+The shared model metadata `name`, `toolCall`, `reasoning`, `temperature`,
+`context`, `input`, and `output` describes capabilities and limits exposed to
+OpenCode. Backend-specific model configuration remains with the backend: Ollama
+uses tags, while llama.cpp uses its explicit GGUF `source`.
 
 To add another Ollama server, configure an OpenCode provider named
 `ollama-remote`. It is shown as `Ollama (Remote)` and always needs its own
@@ -682,12 +785,42 @@ features.dev.opencode.provider."ollama-remote" = {
 For a custom model, set both `context` and `output` in the model definition.
 They control the conversation window and maximum response length. An optional
 `input` limit can be added for providers that distinguish it from the context
-window. Local Ollama uses `32768` context tokens and `16384` output tokens by
-default; custom remote providers should set both values.
+window. The built-in local backends use `32768` context tokens and `16384`
+output tokens by default; custom remote providers should set both values.
 
-Local and remote Ollama can be enabled at the same time. Choose models with the
-provider prefix `ollama/...` for the local server and
-`ollama-remote/...` for the remote server.
+Local and remote providers can be enabled at the same time. Choose models with
+the provider prefix for the endpoint where inference should run:
+
+| Endpoint         | OpenCode provider example            |
+| ---------------- | ------------------------------------ |
+| Local Ollama     | `ollama/example-model:latest`        |
+| Local llama.cpp  | `llama-cpp/example-model`            |
+| Remote Ollama    | `ollama-remote/example-model:latest` |
+| Remote llama.cpp | `llama-cpp-remote/example-model`     |
+
+The local llama.cpp provider is generated automatically when
+`features.llm.llamaCpp.enable = true`. A remote llama.cpp endpoint is configured
+as a separate OpenCode provider, just like a remote Ollama endpoint:
+
+```nix
+features.dev.opencode.provider."llama-cpp-remote" = {
+  name = "llama.cpp (Remote)";
+  npm = "@ai-sdk/openai-compatible";
+  baseURL = "http://llama-host.example:8080/v1";
+  models."example-model" = {
+    name = "Example Coding Model";
+    toolCall = true;
+    reasoning = true;
+    temperature = true;
+    context = 32768;
+    output = 16384;
+  };
+};
+```
+
+On the host running llama.cpp, set `features.llm.llamaCpp.server = true` to
+listen beyond localhost. This opens port `8080` without authentication; use it
+only on a trusted network or through an authenticated HTTPS gateway.
 
 For a trusted remote configuration, use the actual token instead of
 `apiKeySecret`:
@@ -696,20 +829,24 @@ For a trusted remote configuration, use the actual token instead of
 features.dev.opencode.provider."ollama-remote".apiKey = "ollama-api-token";
 ```
 
-The local Ollama feature manages a server and its model store. The OpenCode
-provider entry only describes an additional remote server. They can therefore
-be used independently or together.
+Local backends manage their own model stores; the OpenCode provider only exposes
+the configured models and endpoint. Remote providers are configured separately
+and do not add models to the local backend registries.
 
 The following optional flags describe what a model supports:
 
-| Field         | Meaning                           |
-| ------------- | --------------------------------- |
-| `name`        | Name shown in OpenCode.           |
-| `toolCall`    | Native tool calls are supported.  |
-| `reasoning`   | Reasoning output is supported.    |
-| `temperature` | Temperature control is supported. |
+| Field         | Meaning                                 |
+| ------------- | --------------------------------------- |
+| `name`        | Name shown in OpenCode.                 |
+| `toolCall`    | Native tool calls are supported.        |
+| `reasoning`   | Reasoning output is supported.          |
+| `temperature` | Temperature control is supported.       |
+| `context`     | Maximum conversation context in tokens. |
+| `input`       | Optional maximum input size in tokens.  |
+| `output`      | Maximum generated output in tokens.     |
 
-The same model fields work for Ollama and custom OpenAI-compatible providers.
+The same capability fields work for both local backends and custom OpenAI-
+compatible providers. Backend source fields remain backend-specific.
 Unset fields are omitted from the generated OpenCode configuration.
 The built-in OpenAI and OpenCode Go providers remain available when adding a
 custom provider. Disable one explicitly with `enable = false` if it should not

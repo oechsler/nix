@@ -10,7 +10,7 @@
 # - 2.5G LAN, WiFi 6, Bluetooth 5.2
 #
 # Purpose:
-# - Headless Ollama server with AMD GPU acceleration
+# - Headless llama.cpp Vulkan server with AMD GPU acceleration
 # - Remote SSH administration with synchronized public keys
 # - Secure Boot with TPM2-backed LUKS unlock
 
@@ -59,13 +59,21 @@
     # --- LLM ---
     llm = {
       enable = true;
-      ollama = {
+      ollama.enable = false;
+      llamaCpp = {
         enable = true;
         server = true;
         context = 65536;
-        unloadAfter = "-1";
-        models = {
-          "gemma4:26b-a4b-it-mtp-q4_K_M".name = "Gemma 4 26B A4B Instruct";
+        models."qwen3.8-27b" = {
+          name = "Qwen 3.8 27B";
+          toolCall = true;
+          reasoning = true;
+          temperature = true;
+          source = {
+            repo = "unsloth/Qwen3.8-27B-GGUF";
+            file = "Qwen3.8-27B-UD-Q4_K_M.gguf";
+            sha256 = "322e194ff79741c7baa497c240f677f54b201b0efab44ca8e50f122b39123482";
+          };
         };
       };
     };

@@ -15,6 +15,8 @@ let
   cfg = features.dev.opencode;
   localOllamaCfg = features.llm.ollama;
   localOllamaEnabled = features.llm.enable && localOllamaCfg.enable;
+  localLlamaCppCfg = features.llm.llamaCpp;
+  localLlamaCppEnabled = features.llm.enable && localLlamaCppCfg.enable;
   defaultProviders = {
     openai = {
       enable = true;
@@ -47,6 +49,7 @@ let
   configuredProviders = lib.filterAttrs (_: provider: provider.enable) (
     defaultProviders
     // lib.optionalAttrs localOllamaEnabled { ollama = localOllamaProvider; }
+    // lib.optionalAttrs localLlamaCppEnabled { "llama-cpp" = localLlamaCppProvider; }
     // cfg.provider
   );
   nativeToolModels = lib.flatten (
@@ -96,6 +99,24 @@ let
         output = 16384;
       }
     ) localOllamaCfg.models;
+  };
+  localLlamaCppProvider = {
+    enable = true;
+    apiKeySecret = null;
+    apiKey = null;
+    baseURL = "http://127.0.0.1:${toString localLlamaCppCfg.port}/v1";
+    name = "llama.cpp";
+    npm = "@ai-sdk/openai-compatible";
+    models = lib.mapAttrs (
+      _: model:
+      model
+      // lib.optionalAttrs ((model.context or null) == null) {
+        inherit (localLlamaCppCfg) context;
+      }
+      // lib.optionalAttrs ((model.output or null) == null) {
+        inherit (localLlamaCppCfg) output;
+      }
+    ) localLlamaCppCfg.models;
   };
   providersWithSecrets = lib.filterAttrs (
     _: provider: provider.apiKeySecret != null

@@ -23,6 +23,7 @@
     ./home-manager.nix
     ./impermanence.nix
     ./input.nix
+    ./llama-cpp.nix
     ./ldap.nix
     ./locale.nix
     ./networking/base.nix
