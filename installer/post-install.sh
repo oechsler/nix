@@ -33,6 +33,7 @@ setup_totp() {
   for command_name in od tr sed xargs base32 dirname install; do
     command -v "$command_name" &>/dev/null || error "Required command not found: $command_name"
   done
+  # users.oath stores the raw hex secret, while the QR code needs Base32.
   secret_hex=$(od -An -tx1 -N20 /dev/urandom | tr -d ' \n')
   secret_b32=$(printf '%s' "$secret_hex" | sed 's/../\\x&/g' | xargs -0 printf '%b' | base32 | tr -d '\n')
   oath_file="/mnt${PERSIST_PREFIX}/etc/users.oath"
@@ -78,7 +79,9 @@ setup_tpm() {
   password_file="$(luks_password_file)"
   for dev in "${LUKS_DEVICES[@]}"; do
     info "Enrolling TPM2 on $(basename "$dev")..."
-    if systemd-cryptenroll "$dev" --tpm2-device=auto --tpm2-pcrs="$pcrs" --unlock-key-file="$password_file"; then success "$(basename "$dev") enrolled"; else
+    if systemd-cryptenroll "$dev" --tpm2-device=auto --tpm2-pcrs="$pcrs" --unlock-key-file="$password_file"; then
+      success "$(basename "$dev") enrolled"
+    else
       warn "$(basename "$dev") failed"
       return 1
     fi

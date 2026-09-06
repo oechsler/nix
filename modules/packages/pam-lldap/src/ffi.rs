@@ -24,6 +24,7 @@ pub(crate) const LDAP_OPT_X_TLS_REQUIRE_CERT: c_int = 0x6006;
 pub(crate) const LDAP_OPT_X_TLS_DEMAND: c_int = 2;
 
 const LOG_AUTH: c_int = 32 << 3;
+const LOG_PID: c_int = 0x01;
 const LOG_ERR: c_int = 3;
 const LOG_INFO: c_int = 6;
 
@@ -68,14 +69,14 @@ unsafe extern "C" {
 
 pub(crate) fn log_info(message: &'static [u8]) {
     unsafe {
-        openlog(ptr::null(), 0x01, LOG_AUTH);
+        openlog(ptr::null(), LOG_PID, LOG_AUTH);
         syslog(LOG_INFO, message.as_ptr() as *const c_char);
     }
 }
 
 pub(crate) fn log_error(message: &'static [u8]) {
     unsafe {
-        openlog(ptr::null(), 0x01, LOG_AUTH);
+        openlog(ptr::null(), LOG_PID, LOG_AUTH);
         syslog(LOG_ERR, message.as_ptr() as *const c_char);
     }
 }
@@ -83,7 +84,7 @@ pub(crate) fn log_error(message: &'static [u8]) {
 pub(crate) fn log_status(step: &'static [u8], status: c_int) {
     static FORMAT: &[u8] = b"pam_lldap: %s returned %d (%s)\0";
     unsafe {
-        openlog(ptr::null(), 0x01, LOG_AUTH);
+        openlog(ptr::null(), LOG_PID, LOG_AUTH);
         syslog(
             LOG_ERR,
             FORMAT.as_ptr() as *const c_char,

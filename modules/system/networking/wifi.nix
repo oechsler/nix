@@ -25,38 +25,41 @@ let
     in
     "${lib.substring 0 8 hash}-${lib.substring 8 4 hash}-${lib.substring 12 4 hash}-${lib.substring 16 4 hash}-${lib.substring 20 12 hash}";
 
+  commonWifiProfile = net: {
+    connection = {
+      id = net.ssid;
+      type = "wifi";
+      uuid = stableUuid "wifi-${net.name}";
+      autoconnect = true;
+    };
+    wifi = {
+      mode = "infrastructure";
+      inherit (net) ssid;
+    };
+    ipv4 = {
+      method = "auto";
+      route-metric = 600;
+      dns-priority = 50;
+      ignore-auto-dns = false;
+    };
+    ipv6 = {
+      method = "auto";
+      ip6-privacy = ip6Privacy;
+      route-metric = 600;
+      dns-priority = 50;
+      ignore-auto-dns = false;
+    };
+  };
+
   # WPA2-PSK profiles — SSID comes directly from config, PSK from sops placeholder
   wifiProfiles = lib.listToAttrs (
     map (net: {
       name = "wifi-${net.name}";
-      value = {
-        connection = {
-          id = net.ssid;
-          type = "wifi";
-          uuid = stableUuid "wifi-${net.name}";
-          autoconnect = true;
-        };
-        wifi = {
-          mode = "infrastructure";
-          inherit (net) ssid;
-        };
+      value = commonWifiProfile net // {
         wifi-security = {
           auth-alg = "open";
           key-mgmt = "wpa-psk";
           psk = "\${WIFI_${lib.toUpper net.name}_PSK}";
-        };
-        ipv4 = {
-          method = "auto";
-          route-metric = 600;
-          dns-priority = 50;
-          ignore-auto-dns = false;
-        };
-        ipv6 = {
-          method = "auto";
-          ip6-privacy = ip6Privacy;
-          route-metric = 600;
-          dns-priority = 50;
-          ignore-auto-dns = false;
         };
       };
     }) cfg.networks
@@ -66,17 +69,7 @@ let
   enterpriseWifiProfiles = lib.listToAttrs (
     map (net: {
       name = "wifi-${net.name}";
-      value = {
-        connection = {
-          id = net.ssid;
-          type = "wifi";
-          uuid = stableUuid "wifi-${net.name}";
-          autoconnect = true;
-        };
-        wifi = {
-          mode = "infrastructure";
-          inherit (net) ssid;
-        };
+      value = commonWifiProfile net // {
         wifi-security = {
           key-mgmt = "wpa-eap";
         };
@@ -85,19 +78,6 @@ let
           inherit (net) identity;
           password = "\${WIFI_${lib.toUpper net.name}_PASSWORD}";
           phase2-auth = "mschapv2";
-        };
-        ipv4 = {
-          method = "auto";
-          route-metric = 600;
-          dns-priority = 50;
-          ignore-auto-dns = false;
-        };
-        ipv6 = {
-          method = "auto";
-          ip6-privacy = ip6Privacy;
-          route-metric = 600;
-          dns-priority = 50;
-          ignore-auto-dns = false;
         };
       };
     }) cfg.enterpriseNetworks

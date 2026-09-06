@@ -130,6 +130,21 @@
       primaryUser = "samuel";
       inherit (nixpkgs) lib;
 
+      # The patched driver requests the MT6639 blob under mt7927/.
+      mt7927FirmwareModule =
+        { pkgs, ... }:
+        {
+          hardware.firmware = [
+            (pkgs.runCommand "mt7927-firmware-path" { } ''
+              install -d $out/lib/firmware/mediatek/mt7927
+              cp ${
+                inputs.mt7927.packages.${pkgs.stdenv.hostPlatform.system}.firmware
+              }/lib/firmware/mediatek/mt6639/BT_RAM_CODE_MT6639_2_1_hdr.bin \
+                $out/lib/firmware/mediatek/mt7927/
+            '')
+          ];
+        };
+
       # Base host builder with shared configuration
       mkHostBase =
         {
@@ -153,21 +168,7 @@
             inputs.disko.nixosModules.disko
             inputs.impermanence.nixosModules.impermanence
             inputs.mt7927.nixosModules.default
-            (
-              { pkgs, ... }:
-              {
-                # The patched driver requests the MT6639 blob under mt7927/.
-                hardware.firmware = [
-                  (pkgs.runCommand "mt7927-firmware-path" { } ''
-                    install -d $out/lib/firmware/mediatek/mt7927
-                    cp ${
-                      inputs.mt7927.packages.${pkgs.stdenv.hostPlatform.system}.firmware
-                    }/lib/firmware/mediatek/mt6639/BT_RAM_CODE_MT6639_2_1_hdr.bin \
-                      $out/lib/firmware/mediatek/mt7927/
-                  '')
-                ];
-              }
-            )
+            mt7927FirmwareModule
 
             # Shared overlays (always included)
             inputs.nix-flatpak.nixosModules.nix-flatpak
@@ -269,18 +270,16 @@
       hostClosures = lib.mapAttrs (
         _: host:
         let
+          requiresInstallerSafeDefaults =
+            host.config.features.secureBoot.enable
+            || host.config.features.encryption.unlockMethod != "password";
           installHost = host.extendModules {
-            modules =
-              lib.optionals
-                (
-                  host.config.features.secureBoot.enable || host.config.features.encryption.unlockMethod != "password"
-                )
-                [
-                  {
-                    features.secureBoot.enable = lib.mkForce false;
-                    features.encryption.unlockMethod = lib.mkForce "password";
-                  }
-                ];
+            modules = lib.optionals requiresInstallerSafeDefaults [
+              {
+                features.secureBoot.enable = lib.mkForce false;
+                features.encryption.unlockMethod = lib.mkForce "password";
+              }
+            ];
           };
         in
         installHost.config.system.build.toplevel

@@ -35,6 +35,16 @@ let
       </ip>
     </network>
   '';
+  ensureLibvirtDefaultNetwork = pkgs.writeShellScript "libvirt-default-network" ''
+    if ! ${pkgs.libvirt}/bin/virsh -c qemu:///system net-info default >/dev/null 2>&1; then
+      ${pkgs.libvirt}/bin/virsh -c qemu:///system net-define ${defaultNetworkXml}
+    fi
+
+    ${pkgs.libvirt}/bin/virsh -c qemu:///system net-autostart default
+    if ! ${pkgs.libvirt}/bin/virsh -c qemu:///system net-info default | ${pkgs.gnugrep}/bin/grep -q 'Active:.*yes'; then
+      ${pkgs.libvirt}/bin/virsh -c qemu:///system net-start default
+    fi
+  '';
 in
 {
   config = lib.mkIf cfg.enable (
@@ -73,16 +83,7 @@ in
           serviceConfig = {
             Type = "oneshot";
             RemainAfterExit = true;
-            ExecStart = pkgs.writeShellScript "libvirt-default-network" ''
-              if ! ${pkgs.libvirt}/bin/virsh -c qemu:///system net-info default >/dev/null 2>&1; then
-                ${pkgs.libvirt}/bin/virsh -c qemu:///system net-define ${defaultNetworkXml}
-              fi
-
-              ${pkgs.libvirt}/bin/virsh -c qemu:///system net-autostart default
-              if ! ${pkgs.libvirt}/bin/virsh -c qemu:///system net-info default | ${pkgs.gnugrep}/bin/grep -q 'Active:.*yes'; then
-                ${pkgs.libvirt}/bin/virsh -c qemu:///system net-start default
-              fi
-            '';
+            ExecStart = ensureLibvirtDefaultNetwork;
           };
         };
 
