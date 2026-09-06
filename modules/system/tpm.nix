@@ -98,7 +98,8 @@ let
       # Check if any device already has a TPM2 slot (for contextual menu label)
       TPM2_EXISTS=false
       for dev in "''${DEVICES[@]}"; do
-         systemd-cryptenroll "$dev" 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q "tpm2" && TPM2_EXISTS=true && break
+        systemd-cryptenroll "$dev" 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q "tpm2" \
+          && TPM2_EXISTS=true && break
       done
 
       echo ""
@@ -123,7 +124,7 @@ let
           chmod 600 "$PASS_FILE"
           ENROLL_OK=true
           for dev in "''${DEVICES[@]}"; do
-             if systemd-cryptenroll "$dev" 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q "tpm2"; then
+            if systemd-cryptenroll "$dev" 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q "tpm2"; then
               echo -e "    ''${DIM}$(basename "$dev"):''${RESET} wiping existing TPM2 slot..."
               systemd-cryptenroll "$dev" --wipe-slot=tpm2 || true
             fi
@@ -154,7 +155,7 @@ let
             exit 0
           fi
           for dev in "''${DEVICES[@]}"; do
-             if systemd-cryptenroll "$dev" 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q "tpm2"; then
+            if systemd-cryptenroll "$dev" 2>/dev/null | ${pkgs.gnugrep}/bin/grep -q "tpm2"; then
               echo -e "    ''${DIM}$(basename "$dev"):''${RESET} wiping TPM2 slot..."
               systemd-cryptenroll "$dev" --wipe-slot=tpm2 || true
             else
