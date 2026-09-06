@@ -114,8 +114,10 @@ let
          keys_exist=true
        fi
        keys_enrolled=false
-       if [ -x ${pkgs.sbctl}/bin/sbctl ] && ${pkgs.sbctl}/bin/sbctl --debug status 2>&1 \
-         | ${pkgs.gnugrep}/bin/grep -q 'db is fine'; then
+       sbctl_status=$(${pkgs.sbctl}/bin/sbctl --debug status 2>/dev/null || true)
+       enrolled_keys=$(${pkgs.sbctl}/bin/sbctl list-enrolled-keys 2>/dev/null || true)
+       if printf '%s\n' "$sbctl_status" | ${pkgs.gnugrep}/bin/grep -q 'db is fine' \
+         || printf '%s\n' "$enrolled_keys" | ${pkgs.gnugrep}/bin/grep -Eq '^[[:space:]]+Database Key[[:space:]]*$'; then
          keys_enrolled=true
        fi
 
@@ -138,15 +140,14 @@ let
         exit 0
       fi
 
-      #--- Step 1: generate keys ---
-       # Keep existing keys: firmware enrollment may still be pending, but replacing
-       # the matching private keys would make the existing certificates unusable.
-       if [[ "$keys_exist" == true || "$keys_enrolled" == true ]]; then
-         step 1 3 "Existing Secure Boot keys found — skipping key generation."
-        echo ""
-      else
-        step 1 3 "Generating Secure Boot keys..."
-        echo ""
+       #--- Step 1: generate keys ---
+       step 1 3 "Generating Secure Boot keys..."
+       echo ""
+       # Firmware enrollment may still be pending, but replacing the matching
+       # private keys would make the existing certificates unusable.
+       if [[ "$keys_exist" == true ]]; then
+         success "Secure Boot keys already exist. Reusing existing keys."
+       else
         # Unmount the impermanence bind-mount first if active, then wipe both
         # sides. If we only rm -rf the mount point, the mount stub survives and
         # sbctl cannot mkdir keys/ inside it.
@@ -176,8 +177,9 @@ let
               error "Secure Boot keys were not persisted to /persist/var/lib/sbctl."
             fi
         fi
-        echo ""
-      fi
+         success "Secure Boot keys generated."
+       fi
+       echo ""
 
       #--- Step 2: rebuild with lanzaboote active + sign boot entries ---
       # Rebuild directly without install.sh so git pull / state checks don't
@@ -198,87 +200,47 @@ let
        ${pkgs.sbctl}/bin/sbctl sign-all
       echo ""
 
-      #--- Step 3: enroll keys ---
-      if [[ "$keys_enrolled" != true ]]; then
-        if [[ "$ASUS_BOARD" == "true" ]]; then
-          # ASUS firmware sets SetupMode=0 after key deletion even though EFI vars
-          # are still writable. sbctl's full enrollment rejects this, but --partial
-          # bypasses the SetupMode check and writes directly to each EFI hierarchy.
-          # Enroll db and KEK first, PK last (PK activates Secure Boot protection).
-          step 3 3 "Enrolling keys (ASUS board)..."
-          echo ""
-          echo -e "    Before continuing, configure your UEFI (Boot → Secure Boot):"
-          echo ""
-          echo -e "      OS Type:          ''${BOLD}Other OS''${RESET}"
-          echo -e "      Secure Boot Mode: ''${BOLD}Custom''${RESET}"
-          echo -e "      Key Management:   ''${BOLD}Clear Secure Boot Keys''${RESET}"
-          echo -e "      ''${DIM}Save and reboot into NixOS before pressing Enter.''${RESET}"
-          echo ""
-          read -rp "    Confirm keys are cleared and you are back in NixOS, then press Enter..." _
-          echo ""
-           ${pkgs.sbctl}/bin/sbctl enroll-keys --partial db  --microsoft --firmware-builtin --ignore-immutable --yes-this-might-brick-my-machine
-           ${pkgs.sbctl}/bin/sbctl enroll-keys --partial KEK --microsoft --firmware-builtin --ignore-immutable --yes-this-might-brick-my-machine
-           ${pkgs.sbctl}/bin/sbctl enroll-keys --partial PK  --ignore-immutable --yes-this-might-brick-my-machine
-          echo ""
-          success "Keys enrolled."
-          echo ""
-          echo -e "    Step B complete. Now activate Secure Boot (Step C) in UEFI:"
-          echo ""
-          echo -e "      OS Type:          ''${BOLD}Windows UEFI mode''${RESET}"
-          echo -e "      Secure Boot Mode: ''${BOLD}Standard''${RESET}  ''${DIM}(or keep Custom)''${RESET}"
-          echo -e "      ''${DIM}→ Secure Boot state will show: On''${RESET}"
-          echo ""
-          echo -e "    Then run: ''${BOLD}secure-boot-init''${RESET}  ''${DIM}(to verify all files are signed)''${RESET}"
-          reboot_to_uefi
-        elif [[ "$setup_mode" != "yes" ]]; then
-          step 3 3 "Enrolling keys into firmware..."
-          echo ""
-          echo -e "    UEFI is not in Setup Mode — cannot enroll keys."
-          echo ""
-          echo -e "    To enter Setup Mode, reboot into UEFI and:"
-          echo ""
-          echo -e "      1. Disable Secure Boot"
-          echo -e "      2. Enable ''${BOLD}Setup Mode''${RESET}  ''${DIM}(or 'Reset to Setup Mode' — clears existing keys)''${RESET}"
-          echo -e "      3. Save and reboot into NixOS"
-          echo -e "      4. Run: ''${BOLD}secure-boot-init''${RESET}"
-          echo ""
-          reboot_to_uefi
-          error "Enroll aborted — UEFI not in Setup Mode."
-        else
-          step 3 3 "Enrolling keys into firmware..."
-          echo ""
-           ${pkgs.sbctl}/bin/sbctl enroll-keys --microsoft --firmware-builtin
-          echo ""
-          success "Keys enrolled."
-          echo ""
-          echo -e "    Step B complete. Now activate Secure Boot (Step C) in UEFI:"
-          echo ""
-          echo -e "      1. Enable ''${BOLD}Secure Boot''${RESET}"
-          echo -e "      2. Save and reboot into NixOS"
-          echo ""
-          echo -e "    Then run: ''${BOLD}secure-boot-init''${RESET}  ''${DIM}(to verify all files are signed)''${RESET}"
-          reboot_to_uefi
-        fi
-      else
-        step 3 3 "Keys already enrolled."
-        echo ""
-        if [[ "$ASUS_BOARD" == "true" ]]; then
-          echo -e "    Step B complete. Now activate Secure Boot (Step C) in UEFI (Boot → Secure Boot):"
-          echo ""
-          echo -e "      OS Type:          ''${BOLD}Windows UEFI mode''${RESET}"
-          echo -e "      Secure Boot Mode: ''${BOLD}Standard''${RESET}  ''${DIM}(or keep Custom)''${RESET}"
-          echo -e "      ''${DIM}→ Secure Boot state will show: On''${RESET}"
-        else
-          echo -e "    Step B complete. Now activate Secure Boot (Step C) in UEFI:"
-          echo ""
-          echo -e "      1. Enable ''${BOLD}Secure Boot''${RESET}"
-          echo -e "      2. Save and reboot into NixOS"
-        fi
-        echo ""
-           echo -e "    Then run: ''${BOLD}secure-boot-init''${RESET}  ''${DIM}(to verify all files are signed)''${RESET}"
-        reboot_to_uefi
-      fi
-      echo ""
+       #--- Step 3: enroll keys ---
+       step 3 3 "Enrolling Secure Boot keys..."
+       echo ""
+       if [[ "$keys_enrolled" == true ]]; then
+         success "Secure Boot keys are already enrolled."
+       elif [[ "$ASUS_BOARD" == true ]]; then
+         # Some ASUS firmware reports SetupMode=0 while its EFI variables remain
+         # writable. Enroll db and KEK first, then PK to activate Secure Boot.
+         warn "Using ASUS firmware compatibility mode (partial enrollment)."
+         echo "    Ensure the firmware is configured as follows before continuing:"
+         echo "      OS Type:          Other OS"
+         echo "      Secure Boot Mode: Custom"
+         echo "      Key Management:   Clear Secure Boot Keys"
+         echo ""
+         read -rp "    Confirm the keys are cleared and press Enter..." _
+         ${pkgs.sbctl}/bin/sbctl enroll-keys --partial db --microsoft --firmware-builtin \
+           --ignore-immutable --yes-this-might-brick-my-machine
+         ${pkgs.sbctl}/bin/sbctl enroll-keys --partial KEK --microsoft --firmware-builtin \
+           --ignore-immutable --yes-this-might-brick-my-machine
+         ${pkgs.sbctl}/bin/sbctl enroll-keys --partial PK --ignore-immutable \
+           --yes-this-might-brick-my-machine
+         success "Secure Boot keys enrolled using ASUS compatibility mode."
+       elif [[ "$setup_mode" == yes ]]; then
+         ${pkgs.sbctl}/bin/sbctl enroll-keys --microsoft --firmware-builtin
+         success "Secure Boot keys enrolled."
+       else
+         error "UEFI is not in Setup Mode. Clear the existing keys in UEFI, reboot, and run secure-boot-init again."
+       fi
+
+       echo ""
+       if [[ "$sb_enabled" != "enabled" ]]; then
+         echo "    Activate Secure Boot in UEFI, then boot back into NixOS."
+         if [[ "$ASUS_BOARD" == true ]]; then
+           echo "    ASUS: use Windows UEFI mode and Standard Secure Boot mode."
+         fi
+         echo "    Run secure-boot-init again to verify the result."
+         reboot_to_uefi
+       else
+         success "Secure Boot is active. Run secure-boot-init again to verify signed boot files."
+       fi
+       echo ""
     '';
   };
 in

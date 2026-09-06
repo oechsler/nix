@@ -61,8 +61,11 @@ let
           | ${pkgs.gnugrep}/bin/grep -qi 'Secure Boot:[[:space:]]*enabled'; then
           error "Secure Boot is required by the configuration but is not enabled. Run secure-boot-init first."
         fi
-        if ! ${pkgs.sbctl}/bin/sbctl --debug status 2>&1 \
-          | ${pkgs.gnugrep}/bin/grep -q 'db is fine'; then
+        sbctl_status=$(${pkgs.sbctl}/bin/sbctl --debug status 2>/dev/null || true)
+        enrolled_keys=$(${pkgs.sbctl}/bin/sbctl list-enrolled-keys 2>/dev/null || true)
+        if ! printf '%s\n' "$sbctl_status" | ${pkgs.gnugrep}/bin/grep -q 'db is fine' \
+          && ! printf '%s\n' "$enrolled_keys" | ${pkgs.gnugrep}/bin/grep -Eq \
+            '^[[:space:]]+Database Key[[:space:]]*$'; then
           error "Secure Boot is enabled, but the configured Secure Boot keys are not enrolled. Run secure-boot-init first."
         fi
       fi
