@@ -63,7 +63,9 @@
       llamaCpp = {
         enable = true;
         server = true;
-        context = 65536;
+        # The pinned Vulkan server drops from ~5.25 to ~0.26 tok/s at ctx=4096.
+        # 2048 is the largest measured context below that regression threshold.
+        context = 2048;
         models."qwen3.8-27b" = {
           name = "Qwen 3.8 27B";
           toolCall = true;
