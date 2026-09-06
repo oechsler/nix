@@ -19,7 +19,7 @@ let
       pkgs.sbctl
       pkgs.systemd
       pkgs.uutils-coreutils-noprefix
-      pkgs.jq
+      pkgs.sudo
     ];
     text = ''
       if [[ $EUID -ne 0 ]]; then
@@ -91,14 +91,11 @@ let
        setup_mode=$(printf '%s\n' "$bootctl_out" | ${pkgs.gawk}/bin/awk '/Setup Mode:/{print $3}')
       keys_exist=false
       [[ -f /var/lib/sbctl/keys/db/db.pem && -f /var/lib/sbctl/keys/db/db.key ]] && keys_exist=true
-      keys_enrolled=false
-       if [ -x ${pkgs.sbctl}/bin/sbctl ]; then
-         sbctl_json=$(${pkgs.sbctl}/bin/sbctl status --json 2>/dev/null || true)
-        if [[ -n "$sbctl_json" ]]; then
-           vendor_count=$(echo "$sbctl_json" | ${pkgs.jq}/bin/jq '.vendors | length' 2>/dev/null || echo "0")
-          [[ "$vendor_count" != "0" ]] && keys_enrolled=true
-        fi
-      fi
+       keys_enrolled=false
+       if [ -x ${pkgs.sbctl}/bin/sbctl ] && ${pkgs.sbctl}/bin/sbctl --debug status 2>&1 \
+         | ${pkgs.gnugrep}/bin/grep -q 'db is fine'; then
+         keys_enrolled=true
+       fi
 
       echo -e "    Secure Boot:    ''${sb_enabled:-unknown}"
       echo -e "    Setup Mode:     ''${setup_mode:-unknown}"
@@ -136,16 +133,23 @@ let
         fi
          ${pkgs.coreutils}/bin/rm -rf /var/lib/sbctl /persist/var/lib/sbctl 2>/dev/null || true
          ${pkgs.coreutils}/bin/mkdir -p /var/lib/sbctl
-        if [ -x ${pkgs.sbctl}/bin/sbctl ]; then
-           ${pkgs.sbctl}/bin/sbctl create-keys 2>&1 | ${pkgs.gnused}/bin/sed 's/^/    /'
-        else
-           ${pkgs.nix}/bin/nix run nixpkgs#sbctl -- create-keys 2>&1 | ${pkgs.gnused}/bin/sed 's/^/    /'
-        fi
-        # Copy entire sbctl dir (keys/ + GUID) to /persist so it survives
+         if [ -x ${pkgs.sbctl}/bin/sbctl ]; then
+            ${pkgs.sbctl}/bin/sbctl create-keys 2>&1 | ${pkgs.gnused}/bin/sed 's/^/    /'
+         else
+            ${pkgs.nix}/bin/nix run nixpkgs#sbctl -- create-keys 2>&1 | ${pkgs.gnused}/bin/sed 's/^/    /'
+         fi
+         if [[ ! -f /var/lib/sbctl/keys/db/db.pem || ! -f /var/lib/sbctl/keys/db/db.key ]]; then
+           error "sbctl did not create the expected db.pem/db.key files under /var/lib/sbctl."
+         fi
+         keys_exist=true
+         # Copy entire sbctl dir (keys/ + GUID) to /persist so it survives
         # the next rebuild (which re-activates the impermanence bind-mount).
         if [[ -d /persist ]]; then
-           ${pkgs.coreutils}/bin/mkdir -p /persist/var/lib
-           ${pkgs.coreutils}/bin/cp -a /var/lib/sbctl /persist/var/lib/
+            ${pkgs.coreutils}/bin/mkdir -p /persist/var/lib
+            ${pkgs.coreutils}/bin/cp -a /var/lib/sbctl /persist/var/lib/
+            if [[ ! -f /persist/var/lib/sbctl/keys/db/db.pem ]]; then
+              error "Secure Boot keys were not persisted to /persist/var/lib/sbctl."
+            fi
         fi
         echo ""
       fi
@@ -161,7 +165,7 @@ let
 
       step 2 3 "Rebuilding system with Secure Boot active..."
       echo ""
-       ${pkgs.nixos-rebuild}/bin/nixos-rebuild switch --flake "$REPO_DIR#$(${pkgs.coreutils}/bin/hostname)" --max-jobs "$max_jobs"
+        ${pkgs.nixos-rebuild}/bin/nixos-rebuild switch --flake "$REPO_DIR#${config.networking.hostName}" --max-jobs "$max_jobs"
       echo ""
       # sbctl sign-all signs lanzaboote's UKI images.
       # Do NOT sign raw kernel EFI files from previous systemd-boot generations —
