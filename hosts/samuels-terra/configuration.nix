@@ -160,6 +160,7 @@
               reasoning = true;
               temperature = true;
               context = 32768;
+              output = 16384;
             };
           };
         };
