@@ -125,29 +125,7 @@ in
             };
           }
         );
-        default = {
-          openai = {
-            models = {
-              "gpt-5.6-luna".name = "GPT-5.6 Luna";
-              "gpt-5.6-terra".name = "GPT-5.6 Terra";
-              "gpt-5.6-sol".name = "GPT-5.6 Sol";
-            };
-          };
-          "opencode-go" = {
-            name = "OpenCode Go";
-            npm = "@ai-sdk/openai-compatible";
-            baseURL = "https://opencode.ai/zen/go/v1";
-            apiKeySecret = "opencode/provider/opencode-go/api-key";
-            models = {
-              "deepseek-v4-flash".name = "DeepSeek V4 Flash";
-              "deepseek-v4-pro".name = "DeepSeek V4 Pro";
-              "gpt-5.6-luna".name = "GPT-5.6 Luna";
-              "qwen3.7-plus".name = "Qwen3.7 Plus";
-              "qwen3.7-max".name = "Qwen3.7 Max";
-              "qwen3.8-max".name = "Qwen3.8 Max";
-            };
-          };
-        };
+        default = { };
         description = "OpenCode model providers configured per host.";
       };
       mcp = lib.mkOption {

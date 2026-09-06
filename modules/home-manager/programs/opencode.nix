@@ -15,16 +15,45 @@ let
   cfg = features.dev.opencode;
   localOllamaCfg = features.llm.ollama;
   localOllamaEnabled = features.llm.enable && localOllamaCfg.enable;
-  configuredProviders =
-    enabledProviders
-    // lib.optionalAttrs localOllamaEnabled {
-      ollama = localOllamaProvider;
+  defaultProviders = {
+    openai = {
+      enable = true;
+      name = null;
+      npm = null;
+      baseURL = null;
+      apiKeySecret = null;
+      apiKey = null;
+      models = {
+        "gpt-5.6-luna".name = "GPT-5.6 Luna";
+        "gpt-5.6-terra".name = "GPT-5.6 Terra";
+        "gpt-5.6-sol".name = "GPT-5.6 Sol";
+      };
     };
+    "opencode-go" = {
+      enable = true;
+      name = "OpenCode Go";
+      npm = "@ai-sdk/openai-compatible";
+      baseURL = "https://opencode.ai/zen/go/v1";
+      apiKeySecret = "opencode/provider/opencode-go/api-key";
+      apiKey = null;
+      models = {
+        "deepseek-v4-flash".name = "DeepSeek V4 Flash";
+        "deepseek-v4-pro".name = "DeepSeek V4 Pro";
+        "gpt-5.6-luna".name = "GPT-5.6 Luna";
+        "qwen3.8-max".name = "Qwen3.8 Max";
+      };
+    };
+  };
+  configuredProviders = lib.filterAttrs (_: provider: provider.enable) (
+    defaultProviders
+    // lib.optionalAttrs localOllamaEnabled { ollama = localOllamaProvider; }
+    // cfg.provider
+  );
   nativeToolModels = lib.flatten (
     lib.mapAttrsToList (
       providerName: provider:
       lib.mapAttrsToList (
-        modelName: model: lib.optional (model.toolCall == true) "${providerName}/${modelName}"
+        modelName: model: lib.optional ((model.toolCall or null) == true) "${providerName}/${modelName}"
       ) provider.models
     ) configuredProviders
   );
@@ -50,9 +79,10 @@ let
       mocha = "catppuccin";
     }
     .${theme.catppuccin.flavor};
-  enabledProviders = lib.filterAttrs (_: provider: provider.enable) cfg.provider;
   localOllamaProvider = {
     enable = true;
+    apiKeySecret = null;
+    apiKey = null;
     baseURL = "http://127.0.0.1:11434/v1";
     name = "Ollama";
     npm = "@ai-sdk/openai-compatible";

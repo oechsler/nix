@@ -679,6 +679,12 @@ features.dev.opencode.provider."ollama-remote" = {
 };
 ```
 
+The model limits are written under `limit`. The whole `limit` section is
+optional. If it is used, both `context` and `output` are required; `input` can
+be added when a provider has a separate input limit. Local Ollama uses `32768`
+context tokens and `16384` output tokens by default; custom remote providers
+should set both values.
+
 Local and remote Ollama can be enabled at the same time. Choose models with the
 provider prefix `ollama/...` for the local server and
 `ollama-remote/...` for the remote server.
@@ -704,10 +710,14 @@ support for tools, reasoning, temperature, and context size:
 | `reasoning`   | Model provides reasoning or thinking output. |
 | `temperature` | Model accepts temperature control.           |
 | `context`     | Maximum context length in tokens.            |
+| `input`       | Optional maximum input length in tokens.     |
 | `output`      | Maximum output length in tokens.             |
 
 The same model fields work for Ollama and custom OpenAI-compatible providers.
 Unset fields are omitted from the generated OpenCode configuration.
+The built-in OpenAI and OpenCode Go providers remain available when adding a
+custom provider. Disable one explicitly with `enable = false` if it should not
+appear in OpenCode.
 
 For current model comparisons, see [Artificial Analysis](https://artificialanalysis.ai/)
 and the [Arena agent leaderboard](https://arena.ai/leaderboard/agent).

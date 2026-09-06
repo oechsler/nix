@@ -159,7 +159,7 @@
               toolCall = true;
               reasoning = true;
               temperature = true;
-              context = 32768;
+              context = 65536;
               output = 16384;
             };
           };
