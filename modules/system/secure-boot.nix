@@ -87,8 +87,23 @@ let
 
       #--- Read current state ---
        bootctl_out=$(${pkgs.systemd}/bin/bootctl status 2>/dev/null || true)
-       sb_enabled=$(printf '%s\n' "$bootctl_out" | ${pkgs.gawk}/bin/awk '/Secure Boot:/{print $3}')
-       setup_mode=$(printf '%s\n' "$bootctl_out" | ${pkgs.gawk}/bin/awk '/Setup Mode:/{print $3}')
+       sb_enabled=$(printf '%s\n' "$bootctl_out" | ${pkgs.gnused}/bin/sed -nE 's/^[[:space:]]*Secure Boot:[[:space:]]*([^[:space:]]+).*/\L\1/p' | ${pkgs.coreutils}/bin/head -n1)
+       setup_mode_raw=$(printf '%s\n' "$bootctl_out" | ${pkgs.gnused}/bin/sed -nE 's/^[[:space:]]*Setup Mode:[[:space:]]*([^[:space:]]+).*/\L\1/p' | ${pkgs.coreutils}/bin/head -n1)
+       setup_mode=unknown
+       case "$setup_mode_raw" in
+         yes|true|enabled|enable|setup|on) setup_mode=yes ;;
+         no|false|disabled|disable|off) setup_mode=no ;;
+       esac
+       if [[ "$setup_mode" == unknown ]]; then
+         sbctl_status=$(${pkgs.sbctl}/bin/sbctl --debug status 2>/dev/null || true)
+         if printf '%s\n' "$sbctl_status" | ${pkgs.gnugrep}/bin/grep -Eiq \
+           'Setup Mode:.*(yes|true|enabled|enable|setup|on)'; then
+           setup_mode=yes
+         elif printf '%s\n' "$sbctl_status" | ${pkgs.gnugrep}/bin/grep -Eiq \
+           'Setup Mode:.*(no|false|disabled|disable|off)'; then
+           setup_mode=no
+         fi
+       fi
       keys_exist=false
       [[ -f /var/lib/sbctl/keys/db/db.pem && -f /var/lib/sbctl/keys/db/db.key ]] && keys_exist=true
        keys_enrolled=false
