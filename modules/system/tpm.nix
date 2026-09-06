@@ -49,9 +49,15 @@ let
       TPM_DEVICE="/dev/tpmrm0"
       DEVICES=(${deviceList})
       PCRS="0+7"
-      SECURE_BOOT_ENABLED=${lib.boolToString config.features.secureBoot.enable}
+      REPO_DIR=${lib.escapeShellArg "${config.users.users.${config.user.name}.home}/repos/nix"}
+      HOST_CONFIG="$REPO_DIR/hosts/${config.networking.hostName}/configuration.nix"
+      SECURE_BOOT_REQUIRED=${lib.boolToString config.features.secureBoot.enable}
+      if [[ -f "$HOST_CONFIG" ]] && ${pkgs.gnugrep}/bin/grep -Eq \
+        '^[[:space:]]*secureBoot\.enable[[:space:]]*=[[:space:]]*true[[:space:]]*;' "$HOST_CONFIG"; then
+        SECURE_BOOT_REQUIRED=true
+      fi
 
-      if [[ "$SECURE_BOOT_ENABLED" == true ]]; then
+      if [[ "$SECURE_BOOT_REQUIRED" == true ]]; then
         if ! ${pkgs.systemd}/bin/bootctl status 2>/dev/null \
           | ${pkgs.gnugrep}/bin/grep -qi 'Secure Boot:[[:space:]]*enabled'; then
           error "Secure Boot is required by the configuration but is not enabled. Run secure-boot-init first."
