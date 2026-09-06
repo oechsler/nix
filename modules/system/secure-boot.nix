@@ -45,6 +45,7 @@ let
       # does not permanently disable this script on the installed system.
        REPO_DIR=${lib.escapeShellArg "${config.users.users.${config.user.name}.home}/repos/nix"}
        HOST_CONFIG="$REPO_DIR/hosts/${config.networking.hostName}/configuration.nix"
+       IMPERMANENCE_ENABLED=${lib.boolToString config.features.impermanence.enable}
 
        sb_in_config=false
        if [[ -f "$HOST_CONFIG" ]] && ${pkgs.gnugrep}/bin/grep -Eq \
@@ -128,10 +129,13 @@ let
         # Unmount the impermanence bind-mount first if active, then wipe both
         # sides. If we only rm -rf the mount point, the mount stub survives and
         # sbctl cannot mkdir keys/ inside it.
-         if ${pkgs.util-linux}/bin/mountpoint -q /var/lib/sbctl 2>/dev/null; then
-           ${pkgs.util-linux}/bin/umount /var/lib/sbctl
-        fi
-         ${pkgs.coreutils}/bin/rm -rf /var/lib/sbctl /persist/var/lib/sbctl 2>/dev/null || true
+         if [[ "$IMPERMANENCE_ENABLED" == true ]] && ${pkgs.util-linux}/bin/mountpoint -q /var/lib/sbctl 2>/dev/null; then
+            ${pkgs.util-linux}/bin/umount /var/lib/sbctl
+         fi
+         ${pkgs.coreutils}/bin/rm -rf /var/lib/sbctl 2>/dev/null || true
+         if [[ "$IMPERMANENCE_ENABLED" == true ]]; then
+           ${pkgs.coreutils}/bin/rm -rf /persist/var/lib/sbctl 2>/dev/null || true
+         fi
          ${pkgs.coreutils}/bin/mkdir -p /var/lib/sbctl
          if [ -x ${pkgs.sbctl}/bin/sbctl ]; then
             ${pkgs.sbctl}/bin/sbctl create-keys 2>&1 | ${pkgs.gnused}/bin/sed 's/^/    /'
@@ -144,7 +148,7 @@ let
          keys_exist=true
          # Copy entire sbctl dir (keys/ + GUID) to /persist so it survives
         # the next rebuild (which re-activates the impermanence bind-mount).
-        if [[ -d /persist ]]; then
+         if [[ "$IMPERMANENCE_ENABLED" == true ]]; then
             ${pkgs.coreutils}/bin/mkdir -p /persist/var/lib
             ${pkgs.coreutils}/bin/cp -a /var/lib/sbctl /persist/var/lib/
             if [[ ! -f /persist/var/lib/sbctl/keys/db/db.pem ]]; then
