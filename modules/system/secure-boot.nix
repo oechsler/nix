@@ -104,8 +104,15 @@ let
            setup_mode=no
          fi
        fi
-      keys_exist=false
-      [[ -f /var/lib/sbctl/keys/db/db.pem && -f /var/lib/sbctl/keys/db/db.key ]] && keys_exist=true
+       keys_exist=false
+       [[ -f /var/lib/sbctl/keys/db/db.pem && -f /var/lib/sbctl/keys/db/db.key ]] && keys_exist=true
+       if [[ "$keys_exist" != true && "$IMPERMANENCE_ENABLED" == true ]] \
+         && [[ -f /persist/var/lib/sbctl/keys/db/db.pem && -f /persist/var/lib/sbctl/keys/db/db.key ]] \
+         && ! ${pkgs.util-linux}/bin/mountpoint -q /var/lib/sbctl 2>/dev/null; then
+         ${pkgs.coreutils}/bin/mkdir -p /var/lib
+         ${pkgs.coreutils}/bin/cp -a /persist/var/lib/sbctl /var/lib/
+         keys_exist=true
+       fi
        keys_enrolled=false
        if [ -x ${pkgs.sbctl}/bin/sbctl ] && ${pkgs.sbctl}/bin/sbctl --debug status 2>&1 \
          | ${pkgs.gnugrep}/bin/grep -q 'db is fine'; then
@@ -132,10 +139,10 @@ let
       fi
 
       #--- Step 1: generate keys ---
-      # Skip if keys are already enrolled — EFI vars are immutable after enrollment
-      # and cannot be overwritten. Only regenerate when starting fresh.
-      if [[ "$keys_enrolled" == true ]]; then
-        step 1 3 "Keys already enrolled — skipping key generation."
+       # Keep existing keys: firmware enrollment may still be pending, but replacing
+       # the matching private keys would make the existing certificates unusable.
+       if [[ "$keys_exist" == true || "$keys_enrolled" == true ]]; then
+         step 1 3 "Existing Secure Boot keys found — skipping key generation."
         echo ""
       else
         step 1 3 "Generating Secure Boot keys..."
