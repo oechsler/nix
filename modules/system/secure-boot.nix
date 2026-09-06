@@ -43,16 +43,20 @@ let
       # Guard: refuse to run if Secure Boot is not enabled in the flake config.
       # Read at runtime from the flake so the install-time override (mkForce false)
       # does not permanently disable this script on the installed system.
-      REPO_DIR=${lib.escapeShellArg "${config.users.users.${config.user.name}.home}/repos/nix"}
+       REPO_DIR=${lib.escapeShellArg "${config.users.users.${config.user.name}.home}/repos/nix"}
+       HOST_CONFIG="$REPO_DIR/hosts/${config.networking.hostName}/configuration.nix"
 
-      sb_in_config=false
-       ${pkgs.gnugrep}/bin/grep -q 'secureBoot\.enable\s*=\s*true' "$REPO_DIR/hosts/$(${pkgs.coreutils}/bin/hostname)/configuration.nix" 2>/dev/null \
-        && sb_in_config=true
-      if [[ "$sb_in_config" != "true" ]]; then
-        warn "features.secureBoot.enable is not set for this host."
-        warn ""
-        warn "To fix:"
-        warn "  1. Edit $REPO_DIR/hosts/$(hostname)/configuration.nix"
+       sb_in_config=false
+       if [[ -f "$HOST_CONFIG" ]] && ${pkgs.gnugrep}/bin/grep -Eq \
+         '^[[:space:]]*secureBoot\.enable[[:space:]]*=[[:space:]]*true[[:space:]]*;' "$HOST_CONFIG"; then
+         sb_in_config=true
+       fi
+       if [[ "$sb_in_config" != "true" ]]; then
+         warn "features.secureBoot.enable is not set for this host."
+         warn "Checked: $HOST_CONFIG"
+         warn ""
+         warn "To fix:"
+         warn "  1. Edit $HOST_CONFIG"
         warn "     and set: features.secureBoot.enable = true;"
         warn "  2. Re-run the installer to apply the change:"
         warn "     sudo $REPO_DIR/install.sh"
