@@ -17,7 +17,6 @@ let
       gnugrep
       gnused
       uutils-coreutils-noprefix
-      sudo
     ];
     text = ''
       if [[ $EUID -ne 0 ]]; then exec sudo "$0" "$@"; fi

@@ -18,7 +18,6 @@ let
       gnused
       oath-toolkit
       qrencode
-      sudo
     ];
     text = ''
       if [[ $EUID -ne 0 ]]; then exec sudo "$0" "$@"; fi

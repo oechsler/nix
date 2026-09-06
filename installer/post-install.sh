@@ -132,7 +132,7 @@ phase_post_install() {
   fi
   if [[ "$FEAT_HAS_LUKS" == "true" && "$FEAT_YUBIKEY_LUKS" != "true" ]]; then
     if [[ "$FEAT_SECURE_BOOT" != "true" ]]; then
-      setup_tpm || warn "TPM enrollment skipped. Run 'sudo tpm-luks-init' after first boot."
+      setup_tpm || warn "TPM enrollment skipped. Run 'tpm-luks-init' after first boot."
     fi
   fi
   copy_config || warn "Config copy failed. Clone the repo manually after boot."

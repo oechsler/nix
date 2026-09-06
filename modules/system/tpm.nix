@@ -4,7 +4,7 @@
 # for all LUKS partitions. Active when the host has LUKS devices and
 # features.encryption.unlockMethod = "tpm2".
 #
-# Usage: sudo tpm-luks-init
+# Usage: tpm-luks-init (elevates via sudo when needed)
 # PCR policy: 0+7 (firmware + Secure Boot state).
 
 {
@@ -25,7 +25,6 @@ let
       uutils-coreutils-noprefix
       gnugrep
       sbctl
-      sudo
     ];
     text = ''
       if [[ $EUID -ne 0 ]]; then

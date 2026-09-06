@@ -1,7 +1,7 @@
 # Secure Boot with lanzaboote
 #
 # Setup (run after first boot):
-#   sudo secure-boot-init
+#   secure-boot-init (elevates via sudo when needed)
 {
   config,
   lib,
@@ -19,7 +19,6 @@ let
       pkgs.sbctl
       pkgs.systemd
       pkgs.uutils-coreutils-noprefix
-      pkgs.sudo
     ];
     text = ''
       if [[ $EUID -ne 0 ]]; then
@@ -61,7 +60,7 @@ let
         warn "     and set: features.secureBoot.enable = true;"
         warn "  2. Re-run the installer to apply the change:"
         warn "     sudo $REPO_DIR/install.sh"
-        warn "  3. Then run this script again: sudo secure-boot-init"
+        warn "  3. Then run this script again: secure-boot-init"
         echo ""
         exit 1
       fi
@@ -207,7 +206,7 @@ let
           echo -e "      Secure Boot Mode: ''${BOLD}Standard''${RESET}  ''${DIM}(or keep Custom)''${RESET}"
           echo -e "      ''${DIM}→ Secure Boot state will show: On''${RESET}"
           echo ""
-          echo -e "    Then run: ''${BOLD}sudo secure-boot-init''${RESET}  ''${DIM}(to verify all files are signed)''${RESET}"
+          echo -e "    Then run: ''${BOLD}secure-boot-init''${RESET}  ''${DIM}(to verify all files are signed)''${RESET}"
           reboot_to_uefi
         elif [[ "$setup_mode" != "yes" ]]; then
           step 3 3 "Enrolling keys into firmware..."
@@ -219,7 +218,7 @@ let
           echo -e "      1. Disable Secure Boot"
           echo -e "      2. Enable ''${BOLD}Setup Mode''${RESET}  ''${DIM}(or 'Reset to Setup Mode' — clears existing keys)''${RESET}"
           echo -e "      3. Save and reboot into NixOS"
-          echo -e "      4. Run: ''${BOLD}sudo secure-boot-init''${RESET}"
+          echo -e "      4. Run: ''${BOLD}secure-boot-init''${RESET}"
           echo ""
           reboot_to_uefi
           error "Enroll aborted — UEFI not in Setup Mode."
@@ -235,7 +234,7 @@ let
           echo -e "      1. Enable ''${BOLD}Secure Boot''${RESET}"
           echo -e "      2. Save and reboot into NixOS"
           echo ""
-          echo -e "    Then run: ''${BOLD}sudo secure-boot-init''${RESET}  ''${DIM}(to verify all files are signed)''${RESET}"
+          echo -e "    Then run: ''${BOLD}secure-boot-init''${RESET}  ''${DIM}(to verify all files are signed)''${RESET}"
           reboot_to_uefi
         fi
       else
@@ -254,7 +253,7 @@ let
           echo -e "      2. Save and reboot into NixOS"
         fi
         echo ""
-        echo -e "    Then run: ''${BOLD}sudo secure-boot-init''${RESET}  ''${DIM}(to verify all files are signed)''${RESET}"
+           echo -e "    Then run: ''${BOLD}secure-boot-init''${RESET}  ''${DIM}(to verify all files are signed)''${RESET}"
         reboot_to_uefi
       fi
       echo ""
