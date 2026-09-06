@@ -13,7 +13,9 @@ in
 
     ollama = {
       enable = (lib.mkEnableOption "Ollama local model server") // {
-        default = false;
+        # Ollama is the convenient backend when the parent feature is enabled;
+        # hosts that only need llama.cpp can disable it explicitly.
+        default = true;
       };
 
       server = lib.mkEnableOption "Ollama API access from other hosts";
@@ -56,7 +58,7 @@ in
       server = lib.mkEnableOption "llama.cpp API access from other hosts";
 
       port = lib.mkOption {
-        type = lib.types.port;
+        type = lib.types.ints.between 1 65535;
         default = 8080;
         description = "TCP port for the llama.cpp OpenAI-compatible API.";
       };
@@ -83,7 +85,7 @@ in
       models = lib.mkOption {
         type = lib.types.attrsOf modelSpec.llamaType;
         default = { };
-        description = "Hash-pinned GGUF models indexed by OpenCode model ID.";
+        description = "Hash-pinned GGUF models indexed by an OpenCode model ID containing only letters, numbers, '.', '_', ':' and '-'.";
       };
     };
   };

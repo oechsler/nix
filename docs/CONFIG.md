@@ -528,18 +528,16 @@ features = {
 
 ### LLM
 
-The LLM feature provides local model backends. It is disabled by default. The
-parent option and the backend options are independent, so a host can use Ollama,
-llama.cpp, or both:
+The LLM feature provides local model backends. It is disabled by default. When
+enabled, Ollama starts by default as the convenient backend. The backend options
+remain independent, so a host can use Ollama, llama.cpp, or both:
 
 ```nix
 features.llm.enable = true;
 ```
 
-In the current module, `features.llm.enable` enables the feature namespace but
-does not start a backend by itself. The usual local setup is Ollama, enabled
-explicitly as shown below. This keeps backend choice clear for hosts that need
-the more directly configurable llama.cpp backend instead.
+The usual local setup needs only the parent switch. Disable Ollama explicitly
+when the host should use only the more directly configurable llama.cpp backend.
 
 | Backend   | Recommended when                                                       |
 | --------- | ---------------------------------------------------------------------- |
@@ -553,12 +551,12 @@ usually unnecessary on a small or unified-memory system.
 #### Ollama
 
 Ollama is the convenient default backend for local models. It uses model tags,
-provides sensible runtime defaults, and needs little configuration. Enable it
-explicitly together with the parent feature:
+provides sensible runtime defaults, and needs little configuration. Enable the
+parent feature and declare the models you want installed:
 
 | Option                            | Default | Purpose                                   |
 | --------------------------------- | ------- | ----------------------------------------- |
-| `features.llm.ollama.enable`      | `false` | Start the local Ollama server.            |
+| `features.llm.ollama.enable`      | `true`  | Start the local Ollama server.            |
 | `features.llm.ollama.server`      | `false` | Allow connections from other machines.    |
 | `features.llm.ollama.context`     | `32768` | Default context size for model processes. |
 | `features.llm.ollama.unloadAfter` | `"5m"`  | Unload inactive models after this time.   |
@@ -567,10 +565,7 @@ explicitly together with the parent feature:
 ```nix
 features.llm = {
   enable = true;
-  ollama = {
-    enable = true;
-    models."example-model:latest".name = "Example Model";
-  };
+  ollama.models."example-model:latest".name = "Example Model";
 };
 ```
 

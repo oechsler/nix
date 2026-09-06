@@ -37,6 +37,7 @@ let
           echo "llama.cpp model hash mismatch for ${modelId}: expected $expected, got $actual" >&2
           exit 1
         fi
+        ${pkgs.coreutils}/bin/rm -f ${linkPath}.new
         ln -s ${modelPath} ${linkPath}.new
         ${pkgs.coreutils}/bin/mv -Tf ${linkPath}.new ${linkPath}
       ''
@@ -59,6 +60,12 @@ in
       {
         assertion = cfg.models != { };
         message = "features.llm.llamaCpp.models must contain at least one hash-pinned model.";
+      }
+      {
+        assertion = lib.all (modelId: builtins.match "[A-Za-z0-9][A-Za-z0-9._:-]*" modelId != null) (
+          builtins.attrNames cfg.models
+        );
+        message = "features.llm.llamaCpp.models keys must start with a letter or number and contain only letters, numbers, '.', '_', ':' or '-'.";
       }
     ];
 
