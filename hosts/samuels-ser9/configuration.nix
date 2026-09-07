@@ -63,15 +63,20 @@
       llamaCpp = {
         enable = true;
         server = true;
-        models."qwen3.8-27b" = {
-          name = "Qwen 3.8 27B";
+        batchSize = 512;
+        microBatchSize = 128;
+        cacheTypeK = "q8_0";
+        cacheTypeV = "q8_0";
+        models."ornith-1.5-35b-a3b" = {
+          name = "Ornith 1.5 35B-A3B";
           toolCall = true;
           reasoning = true;
           temperature = true;
+          context = 131072;
           source = {
-            repo = "unsloth/Qwen3.8-27B-GGUF";
-            file = "Qwen3.8-27B-UD-Q4_K_M.gguf";
-            sha256 = "322e194ff79741c7baa497c240f677f54b201b0efab44ca8e50f122b39123482";
+            repo = "ornith-ai/Ornith-1.5-35B-A3B-GGUF";
+            file = "Ornith-1.5-35B-Q4_K_M.gguf";
+            sha256 = "42739874cc2ccfdb8523b23fbe52e29b2a7555c8176737ca9ca0b5d59859d41f";
           };
         };
       };

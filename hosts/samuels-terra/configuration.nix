@@ -148,18 +148,18 @@
     # --- Development ---
     dev = {
       opencode = {
-        defaultModel = "llama-cpp-remote/qwen3.8-27b";
+        defaultModel = "llama-cpp-remote/ornith-1.5-35b-a3b";
         provider."llama-cpp-remote" = {
           name = "llama.cpp (Remote)";
           npm = "@ai-sdk/openai-compatible";
           baseURL = "http://172.22.0.118:8080/v1";
           models = {
-            "qwen3.8-27b" = {
-              name = "Qwen 3.8 27B";
+            "ornith-1.5-35b-a3b" = {
+              name = "Ornith 1.5 35B-A3B";
               toolCall = true;
               reasoning = true;
               temperature = true;
-              context = 65536;
+              context = 131072;
               output = 16384;
             };
           };
