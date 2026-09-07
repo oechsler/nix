@@ -26,7 +26,7 @@ jobs:
               flake = builtins.getFlake (toString ./.);
               packages = flake.inputs.catppuccin.packages.x86_64-linux;
               sources = flake.inputs.catppuccin.packages.x86_64-linux.sources;
-            in (builtins.attrValues sources) ++ [ packages.bottom ]
+            in (builtins.attrValues sources) ++ [ packages.palette packages.firefox packages.bottom ]
           '
 
       - name: Run linters
@@ -65,7 +65,7 @@ jobs:
               flake = builtins.getFlake (toString ./.);
               packages = flake.inputs.catppuccin.packages.x86_64-linux;
               sources = flake.inputs.catppuccin.packages.x86_64-linux.sources;
-            in (builtins.attrValues sources) ++ [ packages.bottom ]
+            in (builtins.attrValues sources) ++ [ packages.palette packages.firefox packages.bottom ]
           '
 
       - name: Evaluate all host configurations
