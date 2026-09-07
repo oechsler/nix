@@ -69,8 +69,9 @@
         gpuLayers = "auto";
         # Leave room for the desktop and graphics runtime on the unified-memory APU.
         fitTarget = 2048;
-        batchSize = 512;
-        microBatchSize = 128;
+        batchSize = 2048;
+        microBatchSize = 512;
+        flashAttention = "on";
         # A quantized KV cache keeps the large model context affordable while
         # retaining the full configured context window.
         cacheTypeK = "q4_0";
