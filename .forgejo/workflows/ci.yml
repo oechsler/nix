@@ -24,8 +24,9 @@ jobs:
           nix build --no-link --impure --print-build-logs --expr '
             let
               flake = builtins.getFlake (toString ./.);
+              packages = flake.inputs.catppuccin.packages.x86_64-linux;
               sources = flake.inputs.catppuccin.packages.x86_64-linux.sources;
-            in builtins.attrValues sources
+            in (builtins.attrValues sources) ++ [ packages.bottom ]
           '
 
       - name: Run linters
@@ -62,8 +63,9 @@ jobs:
           nix build --no-link --impure --print-build-logs --expr '
             let
               flake = builtins.getFlake (toString ./.);
+              packages = flake.inputs.catppuccin.packages.x86_64-linux;
               sources = flake.inputs.catppuccin.packages.x86_64-linux.sources;
-            in builtins.attrValues sources
+            in (builtins.attrValues sources) ++ [ packages.bottom ]
           '
 
       - name: Evaluate all host configurations
