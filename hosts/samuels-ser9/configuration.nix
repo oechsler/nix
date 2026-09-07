@@ -63,11 +63,11 @@
       llamaCpp = {
         enable = true;
         server = true;
-        # ROCm exposes the Ryzen AI Max+ 395 directly; let llama.cpp fit the
-        # offloaded layers to the memory it can safely use at startup.
-        backend = "rocm";
+        # Vulkan is currently more reliable than HIP/ROCm on the SER9's
+        # gfx1151 iGPU; let llama.cpp fit offloaded layers at startup.
+        backend = "vulkan";
         gpuLayers = "auto";
-        # Leave room for the desktop and ROCm runtime on the unified-memory APU.
+        # Leave room for the desktop and graphics runtime on the unified-memory APU.
         fitTarget = 2048;
         batchSize = 512;
         microBatchSize = 128;
