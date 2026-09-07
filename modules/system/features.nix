@@ -8,7 +8,6 @@
     ./features/desktop.nix
     ./features/development.nix
     ./features/hardware.nix
-    ./features/llm.nix
     ./features/operations.nix
     ./features/security.nix
     ./features/validation.nix

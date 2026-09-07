@@ -528,115 +528,68 @@ features = {
 
 ### LLM
 
-The LLM feature provides local model backends. It is disabled by default. When
-enabled, Ollama starts by default as the convenient backend. The backend options
-remain independent, so a host can use Ollama, llama.cpp, or both:
+The LLM feature is disabled by default. Ollama is enabled by default when the
+feature is turned on. Use llama.cpp instead when you want to manage the model
+files and inference settings yourself:
 
 ```nix
 features.llm.enable = true;
 ```
 
-The usual local setup needs only the parent switch. Disable Ollama explicitly
-when the host should use only the more directly configurable llama.cpp backend.
+| Backend   | Recommended when                                             |
+| --------- | ------------------------------------------------------------ |
+| Ollama    | You want the simplest local model setup.                     |
+| llama.cpp | You want to choose and pin the exact GGUF file.              |
+| Both      | You intentionally need both backends and have enough memory. |
 
-| Backend   | Recommended when                                                       |
-| --------- | ---------------------------------------------------------------------- |
-| Ollama    | You want the normal, convenient local model setup                      |
-| llama.cpp | You want direct control over GGUF files and inference settings         |
-| Both      | You intentionally need comparison, migration, or different model needs |
-
-Both backends can use the same GPU and system memory. Running both is therefore
-usually unnecessary on a small or unified-memory system.
+Both backends use the same GPU and system memory. Running both is usually not
+useful on a small or unified-memory system.
 
 #### Ollama
 
-Ollama is the convenient default backend for local models. It uses model tags,
-provides sensible runtime defaults, and needs little configuration. Enable the
-parent feature and declare the models you want installed:
+Ollama downloads model tags into its local model store and keeps the declared
+models synchronized. Search available tags at
+[ollama.com/search](https://ollama.com/search).
 
-| Option                            | Default | Purpose                                   |
-| --------------------------------- | ------- | ----------------------------------------- |
-| `features.llm.ollama.enable`      | `true`  | Start the local Ollama server.            |
-| `features.llm.ollama.server`      | `false` | Allow connections from other machines.    |
-| `features.llm.ollama.context`     | `32768` | Default context size for model processes. |
-| `features.llm.ollama.unloadAfter` | `"5m"`  | Unload inactive models after this time.   |
-| `features.llm.ollama.models`      | `{}`    | Models to keep installed.                 |
+| Option                            | Default | Description                             |
+| --------------------------------- | ------- | --------------------------------------- |
+| `features.llm.ollama.enable`      | `true`  | Start Ollama.                           |
+| `features.llm.ollama.server`      | `false` | Allow access from other machines.       |
+| `features.llm.ollama.context`     | `32768` | Default conversation context in tokens. |
+| `features.llm.ollama.unloadAfter` | `"5m"`  | Unload inactive models after this time. |
+| `features.llm.ollama.models`      | `{}`    | Model tags to keep installed.           |
 
 ```nix
 features.llm = {
   enable = true;
-  ollama.models."example-model:latest".name = "Example Model";
+  ollama = {
+    context = 32768;
+    unloadAfter = "5m";
+    models."example-model:latest".name = "Example Model";
+  };
 };
 ```
 
-The model key is the exact Ollama tag to install. Search available tags at
-[ollama.com/search](https://ollama.com/search).
-
-`context` is the conversation window in tokens. Larger values use more memory
-as the conversation grows. `32768` is a balanced default for chat and coding.
-OpenCode advertises a default output limit of `16384` tokens for this local
-backend.
-
-`unloadAfter` controls how long an inactive model stays loaded. Use values such
-as `"1h"` or `"-1"` when a dedicated server should keep a model warm.
-
 Set `server = true` only when another machine needs access. Ollama then listens
-on port `11434`. The endpoint has no authentication, so use it only on a trusted
-network or behind an authenticated HTTPS gateway.
+on port `11434` without authentication. Use a trusted network or an authenticated
+HTTPS gateway.
 
 #### llama.cpp
 
-llama.cpp is an optional lower-level backend. Choose it when the exact GGUF
-file, quantization, model revision, memory use, or inference settings need to
-be controlled explicitly. Models are fetched and verified by Nix, then exposed
-through an immutable router preset. Unlike Ollama, llama.cpp does not maintain
-a mutable model store or download models when the service starts.
+llama.cpp downloads no models at runtime. The selected GGUF is fetched and
+verified by Nix, so changing the source creates a new system configuration.
+Find GGUF files through [Hugging Face model search](https://huggingface.co/models)
+and pin the repository, file, revision, and SHA256 in `source`.
 
-Suitable models can be found with the
-[Hugging Face model search](https://huggingface.co/models). It covers GGUF,
-llama.cpp, and many other model formats and applications. Copy the filename
-from the selected repository and pin its revision and SHA256 in `source`.
-
-| Option                                              | Default                              | Purpose                                                           |
-| --------------------------------------------------- | ------------------------------------ | ----------------------------------------------------------------- |
-| `features.llm.llamaCpp.enable`                      | `false`                              | Start the local llama.cpp backend.                                |
-| `features.llm.llamaCpp.backend`                     | `"vulkan"` on AMD, otherwise `"cpu"` | Select the CPU, Vulkan, or ROCm nixpkgs build.                    |
-| `features.llm.llamaCpp.package`                     | backend-derived                      | Advanced package override; normally leave this unset.             |
-| `features.llm.llamaCpp.server`                      | `false`                              | Allow connections from other machines.                            |
-| `features.llm.llamaCpp.port`                        | `8080`                               | Local API port.                                                   |
-| `features.llm.llamaCpp.context`                     | `32768`                              | Default prompt context in tokens; a model value overrides it.     |
-| `features.llm.llamaCpp.output`                      | `16384`                              | Output limit exposed to OpenCode.                                 |
-| `features.llm.llamaCpp.parallel`                    | `1`                                  | Concurrent server slots; higher values use more memory.           |
-| `features.llm.llamaCpp.batchSize`                   | `2048`                               | Logical prompt-processing batch size.                             |
-| `features.llm.llamaCpp.microBatchSize`              | `512`                                | Physical prompt-processing batch size.                            |
-| `features.llm.llamaCpp.threads`                     | `null`                               | Generation threads; `null` uses llama.cpp's automatic default.    |
-| `features.llm.llamaCpp.threadsBatch`                | `null`                               | Prompt-processing threads; `null` follows the generation setting. |
-| `features.llm.llamaCpp.flashAttention`              | `"auto"`                             | Flash Attention mode: `"auto"`, `"on"`, or `"off"`.               |
-| `features.llm.llamaCpp.gpuLayers`                   | `"auto"`                             | Layers to offload: a non-negative count, `"auto"`, or `"all"`.    |
-| `features.llm.llamaCpp.device`                      | `null`                               | Optional runtime device name for accelerated backends.            |
-| `features.llm.llamaCpp.cacheTypeK`                  | `"f16"`                              | KV-cache data type for K.                                         |
-| `features.llm.llamaCpp.cacheTypeV`                  | `"f16"`                              | KV-cache data type for V.                                         |
-| `features.llm.llamaCpp.modelsMax`                   | `1`                                  | Maximum model instances loaded by the router.                     |
-| `features.llm.llamaCpp.modelsAutoload`              | `true`                               | Load a declared model automatically when requested.               |
-| `features.llm.llamaCpp.jinja`                       | `true`                               | Enable model Jinja chat templates.                                |
-| `features.llm.llamaCpp.models`                      | `{}`                                 | GGUF models declared by OpenCode ID and fixed-output source.      |
-| `features.llm.llamaCpp.models.<id>.name`            | required                             | Display name shared with OpenCode.                                |
-| `features.llm.llamaCpp.models.<id>.toolCall`        | `null`                               | Whether the model supports native tool calls.                     |
-| `features.llm.llamaCpp.models.<id>.reasoning`       | `null`                               | Whether the model emits reasoning content.                        |
-| `features.llm.llamaCpp.models.<id>.temperature`     | `null`                               | Whether the model supports temperature control.                   |
-| `features.llm.llamaCpp.models.<id>.context`         | `null`                               | Per-model context override in tokens.                             |
-| `features.llm.llamaCpp.models.<id>.input`           | `null`                               | Optional maximum input size exposed to OpenCode.                  |
-| `features.llm.llamaCpp.models.<id>.output`          | `null`                               | Optional maximum output size exposed to OpenCode.                 |
-| `features.llm.llamaCpp.models.<id>.source.repo`     | required                             | Hugging Face repository containing the GGUF.                      |
-| `features.llm.llamaCpp.models.<id>.source.file`     | required                             | GGUF filename in that repository.                                 |
-| `features.llm.llamaCpp.models.<id>.source.revision` | `"main"`                             | Hugging Face branch, tag, or commit.                              |
-| `features.llm.llamaCpp.models.<id>.source.sha256`   | required                             | Expected hexadecimal SHA256 of the artifact.                      |
-
-When llama.cpp is enabled, declare at least one model. The `source` contains
-the exact GGUF repository, filename, revision, and SHA256. Shared model fields
-are `name`, `toolCall`, `reasoning`, `temperature`, `context`, `input`, and
-`output`; `context` is also used as that model's runtime context when set. The
-source fields are `repo`, `file`, `revision`, and `sha256`.
+| Option                          | Default                              | Description                             |
+| ------------------------------- | ------------------------------------ | --------------------------------------- |
+| `features.llm.llamaCpp.enable`  | `false`                              | Start llama.cpp.                        |
+| `features.llm.llamaCpp.backend` | `"vulkan"` on AMD, otherwise `"cpu"` | Select the compute backend.             |
+| `features.llm.llamaCpp.server`  | `false`                              | Allow access from other machines.       |
+| `features.llm.llamaCpp.port`    | `8080`                               | API port.                               |
+| `features.llm.llamaCpp.context` | `32768`                              | Default conversation context in tokens. |
+| `features.llm.llamaCpp.output`  | `16384`                              | Maximum response length in tokens.      |
+| `features.llm.llamaCpp.models`  | `{}`                                 | GGUF models to include in the system.   |
 
 The following example uses a pinned GGUF model:
 
@@ -665,13 +618,9 @@ features.llm = {
 };
 ```
 
-The default llama.cpp port is `8080`; `server = true` makes it reachable from
-other hosts without authentication. Use that only on a trusted network or
-behind an authenticated HTTPS gateway. The selected backend package and every
-declared GGUF are realized as part of the NixOS system closure. Changing a
-model source changes the closure and a rollback restores the previous model
-reference; no runtime pull step is required. GGUF files do not need an
-Impermanence entry because they live in the Nix store.
+The model's `context` can override the global default. The selected package and
+GGUF files live in the Nix store, so they do not need an Impermanence entry. Set
+`server = true` only on a trusted network because the API has no authentication.
 
 For a host that intentionally uses both backends, enable both child options:
 
@@ -763,33 +712,19 @@ default model is `openai/gpt-5.6-luna`.
 | `features.dev.opencode.mcp`          | `{}`                  | MCP servers for OpenCode.           |
 | `features.dev.opencode.settings`     | `{}`                  | Additional OpenCode settings.       |
 
-Each enabled local backend contributes a separate OpenCode provider. The model
-registry remains in `features.llm`, so a model is configured once and selected
-in OpenCode with `provider/model`:
-
-| Backend   | OpenCode model example        |
-| --------- | ----------------------------- |
-| Ollama    | `ollama/example-model:latest` |
-| llama.cpp | `llama-cpp/example-model`     |
-
-The provider identifies the backend and the model identifies the model declared
-under that backend. If both backends are enabled, both provider prefixes are
-available. Set `features.dev.opencode.defaultModel` to choose the initial model.
-
-For example:
+Each enabled local backend contributes a provider. Select a model with
+`provider/model`:
 
 ```nix
 features.dev.opencode.defaultModel = "ollama/example-model:latest";
 ```
 
-The shared model metadata `name`, `toolCall`, `reasoning`, `temperature`,
-`context`, `input`, and `output` describes capabilities and limits exposed to
-OpenCode. Backend-specific model configuration remains with the backend: Ollama
-uses tags, while llama.cpp uses its explicit GGUF `source`.
+Local model IDs are `ollama/<tag>` and `llama-cpp/<id>`. The shared fields
+`name`, `toolCall`, `reasoning`, `temperature`, `context`, `input`, and `output`
+describe the model's name, capabilities, and limits.
 
-To add another Ollama server, configure an OpenCode provider named
-`ollama-remote`. It is shown as `Ollama (Remote)` and always needs its own
-endpoint and model list:
+Remote providers are configured separately. They need their own endpoint, model
+list, and credentials, and do not add models to local backends:
 
 ```nix
 features.dev.opencode.provider."ollama-remote" = {
@@ -797,72 +732,25 @@ features.dev.opencode.provider."ollama-remote" = {
   npm = "@ai-sdk/openai-compatible";
   baseURL = "https://ollama.example.com/v1";
   apiKeySecret = "opencode/provider/ollama-remote/api-key";
-  models = {
-    "remote-chat-coding-model" = {
-      name = "Remote Chat and Coding Model";
-      toolCall = true;
-      reasoning = true;
-      temperature = true;
-      context = 131072;
-      output = 16384;
-    };
-  };
-};
-```
-
-For a custom model, set both `context` and `output` in the model definition.
-They control the conversation window and maximum response length. An optional
-`input` limit can be added for providers that distinguish it from the context
-window. The built-in local backends use `32768` context tokens and `16384`
-output tokens by default; custom remote providers should set both values.
-
-Local and remote providers can be enabled at the same time. Choose models with
-the provider prefix for the endpoint where inference should run:
-
-| Endpoint         | OpenCode provider example            |
-| ---------------- | ------------------------------------ |
-| Local Ollama     | `ollama/example-model:latest`        |
-| Local llama.cpp  | `llama-cpp/example-model`            |
-| Remote Ollama    | `ollama-remote/example-model:latest` |
-| Remote llama.cpp | `llama-cpp-remote/example-model`     |
-
-The local llama.cpp provider is generated automatically when
-`features.llm.llamaCpp.enable = true`. A remote llama.cpp endpoint is configured
-as a separate OpenCode provider, just like a remote Ollama endpoint:
-
-```nix
-features.dev.opencode.provider."llama-cpp-remote" = {
-  name = "llama.cpp (Remote)";
-  npm = "@ai-sdk/openai-compatible";
-  baseURL = "http://llama-host.example:8080/v1";
   models."example-model" = {
-    name = "Example Coding Model";
-    toolCall = true;
-    reasoning = true;
-    temperature = true;
+    name = "Example Model";
     context = 32768;
     output = 16384;
   };
 };
 ```
 
-On the host running llama.cpp, set `features.llm.llamaCpp.server = true` to
-listen beyond localhost. This opens port `8080` without authentication; use it
-only on a trusted network or through an authenticated HTTPS gateway.
+Set `context` and `output` when the remote endpoint has limits. Use
+`apiKeySecret` for credentials.
 
-For a trusted remote configuration, use the actual token instead of
-`apiKeySecret`:
+Local and remote providers can be used together. Local providers are generated
+when their backends are enabled. A remote llama.cpp provider uses the same
+format; enable `features.llm.llamaCpp.server` on its host to expose port `8080`.
+Both APIs have no authentication, so use a trusted network or an authenticated
+HTTPS gateway.
 
-```nix
-features.dev.opencode.provider."ollama-remote".apiKey = "ollama-api-token";
-```
-
-Ollama manages a mutable model store through its runtime loader. llama.cpp uses
-immutable Nix-owned GGUF artifacts and a generated router preset. The OpenCode
-providers only expose the configured models and endpoints. Remote providers are
-configured separately and do not add models to the local backend registries.
-
-The following optional flags describe what a model supports:
+The capability fields work for local and remote providers. Backend-specific
+source fields remain with their backend.
 
 | Field         | Meaning                                 |
 | ------------- | --------------------------------------- |
@@ -874,62 +762,11 @@ The following optional flags describe what a model supports:
 | `input`       | Optional maximum input size in tokens.  |
 | `output`      | Maximum generated output in tokens.     |
 
-The same capability fields work for both local backends and custom OpenAI-
-compatible providers. Backend source fields remain backend-specific.
-Unset fields are omitted from the generated OpenCode configuration.
-The built-in OpenAI and OpenCode Go providers remain available when adding a
-custom provider. Disable one explicitly with `enable = false` if it should not
-appear in OpenCode.
+Custom providers use the same capability fields. The built-in OpenAI and
+OpenCode Go providers remain available; configured providers are enabled by
+default. Credentials should use SOPS with `apiKeySecret`.
 
-For current model comparisons, see [Artificial Analysis](https://artificialanalysis.ai/)
-and the [Arena agent leaderboard](https://arena.ai/leaderboard/agent).
-
-Other OpenAI-compatible services use the same provider format:
-
-```nix
-features.dev.opencode.provider.local = {
-  name = "Local Gateway";
-  npm = "@ai-sdk/openai-compatible";
-  baseURL = "http://127.0.0.1:4000/v1";
-  models."remote-coding-model" = {
-    name = "Remote Coding Model";
-    toolCall = true;
-    reasoning = true;
-    temperature = true;
-    context = 262144;
-    output = 16384;
-  };
-};
-```
-
-Providers are enabled by default when configured. Credentials should use SOPS
-with `apiKeySecret`; inline `apiKey` values are intended only for trusted hosts.
-MCP servers are disabled by default and can use a URL, token, or OAuth.
-
-For example, a host can add a provider and an MCP:
-
-```nix
-features.dev.opencode = {
-  provider = {
-    "company-ai" = {
-      name = "Company AI";
-      npm = "@ai-sdk/openai-compatible";
-      baseURL = "https://ai.example/v1";
-      apiKeySecret = "opencode/provider/company-ai/api-key";
-      models."coding-large".name = "Coding Large";
-    };
-  };
-  mcp.homeassistant = {
-    enable = true;
-    url = "https://ha.example/api/mcp";
-    tokenSecret = "opencode/mcp/homeassistant/token";
-  };
-};
-```
-
-Use `settings.small_model` to choose a separate small model. LSP servers and
-formatters have sensible defaults and can be overridden under `lsp` and
-`formatter` when needed.
+MCP servers are configured separately under `features.dev.opencode.mcp`.
 
 ### Operations
 

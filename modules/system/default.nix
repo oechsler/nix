@@ -23,14 +23,13 @@
     ./home-manager.nix
     ./impermanence.nix
     ./input.nix
-    ./llama-cpp.nix
+    ./llm.nix
     ./ldap.nix
     ./locale.nix
     ./networking/base.nix
     ./networking/tailscale.nix
     ./networking/wifi.nix
     ./nix.nix
-    ./ollama.nix
     ./packages.nix
     ./power.nix
     ./secure-boot.nix
