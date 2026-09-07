@@ -63,10 +63,18 @@
       llamaCpp = {
         enable = true;
         server = true;
+        # ROCm exposes the Ryzen AI Max+ 395 directly; let llama.cpp fit the
+        # offloaded layers to the memory it can safely use at startup.
+        backend = "rocm";
+        gpuLayers = "auto";
+        # Leave room for the desktop and ROCm runtime on the unified-memory APU.
+        fitTarget = 2048;
         batchSize = 512;
         microBatchSize = 128;
-        cacheTypeK = "q8_0";
-        cacheTypeV = "q8_0";
+        # A quantized KV cache keeps the large model context affordable while
+        # retaining the full configured context window.
+        cacheTypeK = "q4_0";
+        cacheTypeV = "q4_0";
         models."ornith-1.5-35b-a3b" = {
           name = "Ornith 1.5 35B-A3B";
           toolCall = true;

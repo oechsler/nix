@@ -40,6 +40,7 @@ let
           "cache-type-v = ${cfg.cacheTypeV}"
           "n-gpu-layers = ${toString (if cfg.backend == "cpu" then "auto" else cfg.gpuLayers)}"
         ]
+        ++ lib.optional (cfg.fitTarget != null) "fit-target = ${toString cfg.fitTarget}"
         ++ lib.optional (cfg.threads != null) "threads = ${toString cfg.threads}"
         ++ lib.optional (cfg.threadsBatch != null) "threads-batch = ${toString cfg.threadsBatch}"
         ++ lib.optional (cfg.device != null && cfg.backend != "cpu") "device = ${cfg.device}";
@@ -163,6 +164,12 @@ in
       );
       default = "auto";
       description = "Maximum model layers to offload, as a non-negative layer count, auto, or all.";
+    };
+
+    fitTarget = lib.mkOption {
+      type = lib.types.nullOr lib.types.ints.positive;
+      default = null;
+      description = "Memory margin in MiB reserved on each device while llama.cpp automatically fits GPU layers; null uses llama.cpp's default.";
     };
 
     device = lib.mkOption {

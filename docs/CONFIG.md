@@ -581,15 +581,18 @@ verified by Nix, so changing the source creates a new system configuration.
 Find GGUF files through [Hugging Face model search](https://huggingface.co/models)
 and pin the repository, file, revision, and SHA256 in `source`.
 
-| Option                          | Default                              | Description                             |
-| ------------------------------- | ------------------------------------ | --------------------------------------- |
-| `features.llm.llamaCpp.enable`  | `false`                              | Start llama.cpp.                        |
-| `features.llm.llamaCpp.backend` | `"vulkan"` on AMD, otherwise `"cpu"` | Select the compute backend.             |
-| `features.llm.llamaCpp.server`  | `false`                              | Allow access from other machines.       |
-| `features.llm.llamaCpp.port`    | `8080`                               | API port.                               |
-| `features.llm.llamaCpp.context` | `32768`                              | Default conversation context in tokens. |
-| `features.llm.llamaCpp.output`  | `16384`                              | Maximum response length in tokens.      |
-| `features.llm.llamaCpp.models`  | `{}`                                 | GGUF models to include in the system.   |
+| Option                               | Default                              | Description                                                                 |
+| ------------------------------------ | ------------------------------------ | --------------------------------------------------------------------------- |
+| `features.llm.llamaCpp.enable`       | `false`                              | Start llama.cpp.                                                            |
+| `features.llm.llamaCpp.backend`      | `"vulkan"` on AMD, otherwise `"cpu"` | Select the compute backend.                                                 |
+| `features.llm.llamaCpp.server`       | `false`                              | Allow access from other machines.                                           |
+| `features.llm.llamaCpp.port`         | `8080`                               | API port.                                                                   |
+| `features.llm.llamaCpp.context`      | `32768`                              | Default conversation context in tokens.                                     |
+| `features.llm.llamaCpp.output`       | `16384`                              | Maximum response length in tokens.                                          |
+| `features.llm.llamaCpp.gpuLayers`    | `"auto"`                             | Automatically fit model layers to accelerator memory, or set a layer count. |
+| `features.llm.llamaCpp.fitTarget`    | `null`                               | Memory margin in MiB reserved per accelerator while fitting layers.         |
+| `features.llm.llamaCpp.cacheTypeK/V` | `"f16"`                              | Data types used by the K/V cache, which trade context memory for quality.   |
+| `features.llm.llamaCpp.models`       | `{}`                                 | GGUF models to include in the system.                                       |
 
 The following example uses a pinned GGUF model:
 
@@ -618,7 +621,10 @@ features.llm = {
 };
 ```
 
-The model's `context` can override the global default. The selected package and
+The model's `context` can override the global default. With `gpuLayers = "auto"`,
+llama.cpp fits the offloaded layers during startup; `fitTarget` reserves memory
+for the desktop and driver. K/V cache types such as `q4_0` substantially reduce
+memory use for long contexts at a small quality cost. The selected package and
 GGUF files live in the Nix store, so they do not need an Impermanence entry. Set
 `server = true` only on a trusted network because the API has no authentication.
 
