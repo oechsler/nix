@@ -19,6 +19,15 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
+      - name: Prepare evaluation inputs
+        run: |
+          nix build --no-link --impure --print-build-logs --expr '
+            let
+              flake = builtins.getFlake (toString ./.);
+              packages = flake.inputs.catppuccin.packages.x86_64-linux;
+            in [ packages.palette packages.firefox ]
+          '
+
       - name: Run linters
         run: |
           nix build --print-build-logs \
@@ -47,6 +56,15 @@ jobs:
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Prepare evaluation inputs
+        run: |
+          nix build --no-link --impure --print-build-logs --expr '
+            let
+              flake = builtins.getFlake (toString ./.);
+              packages = flake.inputs.catppuccin.packages.x86_64-linux;
+            in [ packages.palette packages.firefox ]
+          '
 
       - name: Evaluate all host configurations
         run: |
