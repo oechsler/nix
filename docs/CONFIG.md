@@ -766,7 +766,16 @@ Custom providers use the same capability fields. The built-in OpenAI and
 OpenCode Go providers remain available; configured providers are enabled by
 default. Credentials should use SOPS with `apiKeySecret`.
 
-MCP servers are configured separately under `features.dev.opencode.mcp`.
+MCP servers are configured separately under `features.dev.opencode.mcp`. Remote
+servers can use a SOPS-managed token:
+
+```nix
+features.dev.opencode.mcp.example-server = {
+  enable = true;
+  url = "https://mcp.example.com/api";
+  tokenSecret = "opencode/mcp/example-server/token";
+};
+```
 
 ### Operations
 
