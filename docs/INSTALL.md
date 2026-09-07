@@ -249,7 +249,6 @@ Feature-dependent state:
 - `/var/lib/flatpak` (Flatpak)
 - `/var/lib/iwd` (WiFi)
 - `/var/lib/ollama` (Ollama models and server state, when enabled)
-- `/var/lib/llama.cpp` (llama.cpp model state, when enabled)
 - `/var/lib/pam-lldap` (LDAP authentication)
 - `/var/lib/sbctl` (Secure Boot)
 - `/var/lib/tailscale` (Tailscale)

@@ -32,7 +32,7 @@
 # - Flatpak apps
 # - SSH host keys
 # - SOPS secrets
-# - Ollama or llama.cpp models and server state
+# - Ollama models and server state
 # - Prepared wallpapers and their blur cache
 # - Tailscale identity
 # - System state (nixos generations, etc.)
@@ -114,9 +114,6 @@ in
       ]
       ++ lib.optionals (config.features.llm.enable && config.features.llm.ollama.enable) [
         "/var/lib/ollama" # Ollama models and server state
-      ]
-      ++ lib.optionals (config.features.llm.enable && config.features.llm.llamaCpp.enable) [
-        "/var/lib/llama.cpp" # llama.cpp model index and server state
       ]
       ++ lib.optionals config.features.auth.ldap.enable [
         "/var/lib/pam-lldap" # Cached LDAP password verifier

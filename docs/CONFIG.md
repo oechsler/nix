@@ -588,25 +588,55 @@ network or behind an authenticated HTTPS gateway.
 
 llama.cpp is an optional lower-level backend. Choose it when the exact GGUF
 file, quantization, model revision, memory use, or inference settings need to
-be controlled explicitly. Its models are configured with a repository, file,
-revision, and SHA256 instead of an Ollama tag.
+be controlled explicitly. Models are fetched and verified by Nix, then exposed
+through an immutable router preset. Unlike Ollama, llama.cpp does not maintain
+a mutable model store or download models when the service starts.
 
 Suitable models can be found with the
 [Hugging Face model search](https://huggingface.co/models). It covers GGUF,
 llama.cpp, and many other model formats and applications. Copy the filename
 from the selected repository and pin its revision and SHA256 in `source`.
 
-| Option                          | Default | Purpose                                 |
-| ------------------------------- | ------- | --------------------------------------- |
-| `features.llm.llamaCpp.enable`  | `false` | Start the local llama.cpp backend.      |
-| `features.llm.llamaCpp.server`  | `false` | Allow connections from other machines.  |
-| `features.llm.llamaCpp.port`    | `8080`  | Local API port.                         |
-| `features.llm.llamaCpp.context` | `32768` | Context size in tokens.                 |
-| `features.llm.llamaCpp.output`  | `16384` | Output limit exposed to OpenCode.       |
-| `features.llm.llamaCpp.models`  | `{}`    | Explicit GGUF models to make available. |
+| Option                                              | Default                              | Purpose                                                           |
+| --------------------------------------------------- | ------------------------------------ | ----------------------------------------------------------------- |
+| `features.llm.llamaCpp.enable`                      | `false`                              | Start the local llama.cpp backend.                                |
+| `features.llm.llamaCpp.backend`                     | `"vulkan"` on AMD, otherwise `"cpu"` | Select the CPU, Vulkan, or ROCm nixpkgs build.                    |
+| `features.llm.llamaCpp.package`                     | backend-derived                      | Advanced package override; normally leave this unset.             |
+| `features.llm.llamaCpp.server`                      | `false`                              | Allow connections from other machines.                            |
+| `features.llm.llamaCpp.port`                        | `8080`                               | Local API port.                                                   |
+| `features.llm.llamaCpp.context`                     | `32768`                              | Default prompt context in tokens; a model value overrides it.     |
+| `features.llm.llamaCpp.output`                      | `16384`                              | Output limit exposed to OpenCode.                                 |
+| `features.llm.llamaCpp.parallel`                    | `1`                                  | Concurrent server slots; higher values use more memory.           |
+| `features.llm.llamaCpp.batchSize`                   | `2048`                               | Logical prompt-processing batch size.                             |
+| `features.llm.llamaCpp.microBatchSize`              | `512`                                | Physical prompt-processing batch size.                            |
+| `features.llm.llamaCpp.threads`                     | `null`                               | Generation threads; `null` uses llama.cpp's automatic default.    |
+| `features.llm.llamaCpp.threadsBatch`                | `null`                               | Prompt-processing threads; `null` follows the generation setting. |
+| `features.llm.llamaCpp.flashAttention`              | `"auto"`                             | Flash Attention mode: `"auto"`, `"on"`, or `"off"`.               |
+| `features.llm.llamaCpp.gpuLayers`                   | `"auto"`                             | Layers to offload: a non-negative count, `"auto"`, or `"all"`.    |
+| `features.llm.llamaCpp.device`                      | `null`                               | Optional runtime device name for accelerated backends.            |
+| `features.llm.llamaCpp.cacheTypeK`                  | `"f16"`                              | KV-cache data type for K.                                         |
+| `features.llm.llamaCpp.cacheTypeV`                  | `"f16"`                              | KV-cache data type for V.                                         |
+| `features.llm.llamaCpp.modelsMax`                   | `1`                                  | Maximum model instances loaded by the router.                     |
+| `features.llm.llamaCpp.modelsAutoload`              | `true`                               | Load a declared model automatically when requested.               |
+| `features.llm.llamaCpp.jinja`                       | `true`                               | Enable model Jinja chat templates.                                |
+| `features.llm.llamaCpp.models`                      | `{}`                                 | GGUF models declared by OpenCode ID and fixed-output source.      |
+| `features.llm.llamaCpp.models.<id>.name`            | required                             | Display name shared with OpenCode.                                |
+| `features.llm.llamaCpp.models.<id>.toolCall`        | `null`                               | Whether the model supports native tool calls.                     |
+| `features.llm.llamaCpp.models.<id>.reasoning`       | `null`                               | Whether the model emits reasoning content.                        |
+| `features.llm.llamaCpp.models.<id>.temperature`     | `null`                               | Whether the model supports temperature control.                   |
+| `features.llm.llamaCpp.models.<id>.context`         | `null`                               | Per-model context override in tokens.                             |
+| `features.llm.llamaCpp.models.<id>.input`           | `null`                               | Optional maximum input size exposed to OpenCode.                  |
+| `features.llm.llamaCpp.models.<id>.output`          | `null`                               | Optional maximum output size exposed to OpenCode.                 |
+| `features.llm.llamaCpp.models.<id>.source.repo`     | required                             | Hugging Face repository containing the GGUF.                      |
+| `features.llm.llamaCpp.models.<id>.source.file`     | required                             | GGUF filename in that repository.                                 |
+| `features.llm.llamaCpp.models.<id>.source.revision` | `"main"`                             | Hugging Face branch, tag, or commit.                              |
+| `features.llm.llamaCpp.models.<id>.source.sha256`   | required                             | Expected hexadecimal SHA256 of the artifact.                      |
 
 When llama.cpp is enabled, declare at least one model. The `source` contains
-the exact GGUF repository, filename, revision, and SHA256.
+the exact GGUF repository, filename, revision, and SHA256. Shared model fields
+are `name`, `toolCall`, `reasoning`, `temperature`, `context`, `input`, and
+`output`; `context` is also used as that model's runtime context when set. The
+source fields are `repo`, `file`, `revision`, and `sha256`.
 
 The following example uses a pinned GGUF model:
 
@@ -617,6 +647,8 @@ features.llm = {
   llamaCpp = {
     enable = true;
     context = 32768;
+    backend = "vulkan";
+    flashAttention = "auto";
     models."example-model" = {
       name = "Example Coding Model";
       toolCall = true;
@@ -635,10 +667,11 @@ features.llm = {
 
 The default llama.cpp port is `8080`; `server = true` makes it reachable from
 other hosts without authentication. Use that only on a trusted network or
-behind an authenticated HTTPS gateway. The model source is fetched and
-hash-checked declaratively. With Impermanence enabled, the llama.cpp model
-state is kept under `/var/lib/llama.cpp`; see [INSTALL.md](INSTALL.md#impermanence)
-for the general persistence rules.
+behind an authenticated HTTPS gateway. The selected backend package and every
+declared GGUF are realized as part of the NixOS system closure. Changing a
+model source changes the closure and a rollback restores the previous model
+reference; no runtime pull step is required. GGUF files do not need an
+Impermanence entry because they live in the Nix store.
 
 For a host that intentionally uses both backends, enable both child options:
 
@@ -824,9 +857,10 @@ For a trusted remote configuration, use the actual token instead of
 features.dev.opencode.provider."ollama-remote".apiKey = "ollama-api-token";
 ```
 
-Local backends manage their own model stores; the OpenCode provider only exposes
-the configured models and endpoint. Remote providers are configured separately
-and do not add models to the local backend registries.
+Ollama manages a mutable model store through its runtime loader. llama.cpp uses
+immutable Nix-owned GGUF artifacts and a generated router preset. The OpenCode
+providers only expose the configured models and endpoints. Remote providers are
+configured separately and do not add models to the local backend registries.
 
 The following optional flags describe what a model supports:
 

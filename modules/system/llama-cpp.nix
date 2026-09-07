@@ -1,4 +1,4 @@
-# Declarative llama.cpp Vulkan server and hash-pinned GGUF model index.
+# Declarative llama.cpp server with Nix-owned, hash-pinned GGUF artifacts.
 
 {
   config,
@@ -11,8 +11,6 @@ let
   cfg = config.features.llm.llamaCpp;
   enabled = config.features.llm.enable && cfg.enable;
   inherit (cfg) package;
-  llamaServer = "${package}/bin/llama-server";
-  modelDir = "/var/lib/llama.cpp/models";
   modelFiles = lib.mapAttrs (
     modelId: model:
     pkgs.fetchurl {
@@ -21,38 +19,51 @@ let
       sha256 = model.source.sha256;
     }
   ) cfg.models;
-  declaredIds = lib.escapeShellArgs (builtins.attrNames cfg.models);
-  syncModels = lib.concatStringsSep "\n" (
-    lib.mapAttrsToList (
-      modelId: model:
-      let
-        expected = model.source.sha256;
-        modelPath = lib.escapeShellArg modelFiles.${modelId};
-        linkPath = lib.escapeShellArg "${modelDir}/${modelId}.gguf";
-      in
-      ''
-        expected="${expected}"
-        actual="$(${pkgs.coreutils}/bin/sha256sum ${modelPath} | ${pkgs.coreutils}/bin/cut -d ' ' -f1)"
-        if [ "$actual" != "$expected" ]; then
-          echo "llama.cpp model hash mismatch for ${modelId}: expected $expected, got $actual" >&2
-          exit 1
-        fi
-        ${pkgs.coreutils}/bin/rm -f ${linkPath}.new
-        ln -s ${modelPath} ${linkPath}.new
-        ${pkgs.coreutils}/bin/mv -Tf ${linkPath}.new ${linkPath}
-      ''
-    ) cfg.models
+  modelPreset = pkgs.writeText "llama-cpp-models.ini" (
+    let
+      modelSection =
+        modelId:
+        let
+          model = cfg.models.${modelId};
+        in
+        [
+          ""
+          "[${modelId}]"
+          "model = ${modelFiles.${modelId}}"
+          "ctx-size = ${toString (if model.context == null then cfg.context else model.context)}"
+          "parallel = ${toString cfg.parallel}"
+          "batch-size = ${toString cfg.batchSize}"
+          "ubatch-size = ${toString cfg.microBatchSize}"
+          "flash-attn = ${cfg.flashAttention}"
+          "cache-type-k = ${cfg.cacheTypeK}"
+          "cache-type-v = ${cfg.cacheTypeV}"
+          "n-gpu-layers = ${toString (if cfg.backend == "cpu" then "auto" else cfg.gpuLayers)}"
+        ]
+        ++ lib.optional (cfg.threads != null) "threads = ${toString cfg.threads}"
+        ++ lib.optional (cfg.threadsBatch != null) "threads-batch = ${toString cfg.threadsBatch}"
+        ++ lib.optional (cfg.device != null && cfg.backend != "cpu") "device = ${cfg.device}";
+    in
+    lib.concatStringsSep "\n" (
+      [
+        "version = 1"
+        ""
+        "[*]"
+        "load-on-startup = ${if cfg.modelsAutoload then "true" else "false"}"
+        "jinja = ${if cfg.jinja then "true" else "false"}"
+      ]
+      ++ lib.concatMap modelSection (builtins.attrNames cfg.models)
+      ++ [ "" ]
+    )
   );
-  removeUndeclared = ''
-    shopt -s nullglob
-    for path in ${modelDir}/*.gguf; do
-      name="''${path##*/}"
-      case " ${declaredIds} " in
-        *" ''${name%.gguf} "*) ;;
-        *) echo "removing undeclared llama.cpp model: $name"; ${pkgs.coreutils}/bin/rm -f -- "$path" ;;
-      esac
-    done
-  '';
+  backendPath = {
+    vulkan = "${package}/bin/libggml-vulkan.so";
+    rocm = "${package}/bin/libggml-hip.so";
+  };
+  presetOptions = [
+    "--models-preset ${modelPreset}"
+    "--models-max ${toString cfg.modelsMax}"
+    (if cfg.modelsAutoload then "--models-autoload" else "--no-models-autoload")
+  ];
 in
 {
   config = lib.mkIf enabled {
@@ -66,6 +77,10 @@ in
           builtins.attrNames cfg.models
         );
         message = "features.llm.llamaCpp.models keys must start with a letter or number and contain only letters, numbers, '.', '_', ':' or '-'.";
+      }
+      {
+        assertion = cfg.backend != "rocm" || config.features.hardware.gpu == "amd";
+        message = "features.llm.llamaCpp.backend = \"rocm\" requires features.hardware.gpu = \"amd\".";
       }
     ];
 
@@ -84,49 +99,18 @@ in
 
     networking.firewall.allowedTCPPorts = lib.mkIf cfg.server [ cfg.port ];
 
-    systemd.services.llama-cpp-model-loader = {
-      description = "Synchronize declarative llama.cpp models";
-      before = [ "llama-cpp.service" ];
-      wantedBy = [ "llama-cpp.service" ];
-      serviceConfig = {
-        Type = "oneshot";
-        User = "llama-cpp";
-        Group = "llama-cpp";
-        StateDirectory = "llama.cpp";
-      };
-      script = ''
-        set -euo pipefail
-        ${pkgs.coreutils}/bin/mkdir -p ${modelDir}
-        ${removeUndeclared}
-        ${syncModels}
-        echo "llama.cpp model index synchronized"
-      '';
-    };
-
     systemd.services.llama-cpp = {
-      description = "llama.cpp OpenAI-compatible Vulkan server";
+      description = "llama.cpp OpenAI-compatible server";
       wantedBy = [ "multi-user.target" ];
-      requires = [ "llama-cpp-model-loader.service" ];
-      after = [
-        "network-online.target"
-        "llama-cpp-model-loader.service"
-      ];
-      wants = [ "network-online.target" ];
       serviceConfig = {
-        ExecStart = lib.concatStringsSep " " [
-          llamaServer
-          "--models-dir ${modelDir}"
-          "--models-max 1"
-          "--models-autoload"
-          "--host ${if cfg.server then "0.0.0.0" else "127.0.0.1"}"
-          "--port ${toString cfg.port}"
-          "--ctx-size ${toString cfg.context}"
-          "--parallel 1"
-          "--jinja"
-          "--flash-attn on"
-          "--device Vulkan0"
-          "-ngl 999"
-        ];
+        ExecStart = lib.concatStringsSep " " (
+          [
+            "${package}/bin/llama-server"
+            "--host ${if cfg.server then "0.0.0.0" else "127.0.0.1"}"
+            "--port ${toString cfg.port}"
+          ]
+          ++ presetOptions
+        );
         User = "llama-cpp";
         Group = "llama-cpp";
         SupplementaryGroups = [
@@ -135,12 +119,12 @@ in
         ];
         Restart = "on-failure";
         RestartSec = 5;
-        StateDirectory = "llama.cpp";
         LimitNOFILE = 65536;
       };
-      environment = {
-        GGML_BACKEND_PATH = "${package}/bin/libggml-vulkan.so";
-        HOME = "/var/lib/llama.cpp";
+      # Split nixpkgs builds load accelerator backends dynamically. Point at the
+      # selected backend library itself, not its containing directory.
+      environment = lib.optionalAttrs (cfg.backend != "cpu") {
+        GGML_BACKEND_PATH = backendPath.${cfg.backend};
       };
     };
   };
