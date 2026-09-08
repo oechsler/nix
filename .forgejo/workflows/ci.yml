@@ -19,19 +19,6 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Prepare evaluation inputs
-        run: |
-          nix build --no-link --impure --print-build-logs --expr '
-            let
-              flake = builtins.getFlake (toString ./.);
-              packages = flake.inputs.catppuccin.packages.x86_64-linux;
-              sources = flake.inputs.catppuccin.packages.x86_64-linux.sources;
-            in (builtins.attrValues sources)
-              ++ builtins.filter
-                (package: builtins.isAttrs package && package ? type && package.type == "derivation")
-                (builtins.attrValues packages)
-          '
-
       - name: Run linters
         run: |
           nix build --print-build-logs \
@@ -44,9 +31,6 @@ jobs:
             .#checks.x86_64-linux.markdownlint \
             .#checks.x86_64-linux.markdown-format \
             .#checks.x86_64-linux.rust
-
-      - name: Check flake outputs
-        run: nix flake check --no-build
 
   evaluate:
     name: Evaluate configurations
@@ -61,25 +45,13 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Prepare evaluation inputs
-        run: |
-          nix build --no-link --impure --print-build-logs --expr '
-            let
-              flake = builtins.getFlake (toString ./.);
-              packages = flake.inputs.catppuccin.packages.x86_64-linux;
-              sources = flake.inputs.catppuccin.packages.x86_64-linux.sources;
-            in (builtins.attrValues sources)
-              ++ builtins.filter
-                (package: builtins.isAttrs package && package ? type && package.type == "derivation")
-                (builtins.attrValues packages)
-          '
-
       - name: Evaluate all host configurations
         run: |
           set -euo pipefail
           for host_dir in hosts/*; do
             [[ -f "$host_dir/configuration.nix" ]] || continue
             host=${host_dir##*/}
-            echo "Evaluating $host..."
-            nix eval ".#nixosConfigurations.$host.config.system.build.toplevel.drvPath" --show-trace
+            echo "Building and evaluating $host..."
+            nix build --no-link --print-build-logs \
+              ".#nixosConfigurations.$host.config.system.build.toplevel"
           done

@@ -39,14 +39,15 @@ let
   wallpaperSource = toString config.theme.backgrounds.path;
   wallpaperIsUrl =
     lib.hasPrefix "http://" wallpaperSource || lib.hasPrefix "https://" wallpaperSource;
+  desktopEnabled = config.features.desktop.enable;
 in
 {
   # Ensure secrets and wallpaper are ready before home-manager activation
   systemd.services."home-manager-${config.user.name}".after = [
     "sops-install-secrets.service"
   ]
-  ++ lib.optional wallpaperIsUrl "download-wallpaper.service"
-  ++ lib.optional (!wallpaperIsUrl) "prepare-wallpaper.service";
+  ++ lib.optional (desktopEnabled && wallpaperIsUrl) "download-wallpaper.service"
+  ++ lib.optional (desktopEnabled && !wallpaperIsUrl) "prepare-wallpaper.service";
 
   home-manager = {
     useGlobalPkgs = true;

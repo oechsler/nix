@@ -57,6 +57,7 @@ let
   wallpaperPath = config.theme.backgrounds.path;
   wallpaperSource = toString wallpaperPath;
   isUrl = lib.hasPrefix "http://" wallpaperSource || lib.hasPrefix "https://" wallpaperSource;
+  desktopEnabled = config.features.desktop.enable;
 
   # ============================================================================
   # WALLPAPER ARCHIVE
@@ -388,7 +389,7 @@ in
     #---------------------------
     # 2. URL Download Mode
     #---------------------------
-    (lib.mkIf isUrl {
+    (lib.mkIf (desktopEnabled && isUrl) {
       systemd.services.download-wallpaper = {
         description = "Download wallpaper from URL";
         wantedBy = [ "multi-user.target" ];
@@ -435,7 +436,7 @@ in
     # 3. Archive + Direct Mode (Non-URL)
     #---------------------------
     # Tries archive extraction first; falls back to direct Nix store path
-    (lib.mkIf (!isUrl) {
+    (lib.mkIf (desktopEnabled && !isUrl) {
       systemd.services.prepare-wallpaper = {
         description = "Prepare wallpaper (archive or direct)";
         wantedBy = [ "multi-user.target" ];
