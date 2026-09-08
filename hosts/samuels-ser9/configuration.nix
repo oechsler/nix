@@ -76,16 +76,17 @@
         # retaining the full configured context window.
         cacheTypeK = "q4_0";
         cacheTypeV = "q4_0";
-        models."ornith-1.5-35b-a3b" = {
-          name = "Ornith 1.5 35B-A3B";
+        models."tiel-coder-35b-a3b" = {
+          name = "Tiel Coder 35B-A3B";
           toolCall = true;
           reasoning = true;
           temperature = true;
           context = 131072;
           source = {
-            repo = "ornith-ai/Ornith-1.5-35B-A3B-GGUF";
-            file = "Ornith-1.5-35B-Q4_K_M.gguf";
-            sha256 = "42739874cc2ccfdb8523b23fbe52e29b2a7555c8176737ca9ca0b5d59859d41f";
+            repo = "peculiar-ragdoll/Tiel-Coder-35B-A3B-GGUF";
+            file = "Tiel-Coder-35B-A3B-UD-Q4_K_XL.gguf";
+            revision = "0b5b446a04ef6c89efc10408105b1b78d227f0a3";
+            sha256 = "9286a94c453c6a40ad51982c3dc88df4bba32fee9efad06e4588c83c059cf17c";
           };
         };
       };
