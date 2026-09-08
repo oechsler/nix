@@ -67,8 +67,8 @@
         # gfx1151 iGPU; let llama.cpp fit offloaded layers at startup.
         backend = "vulkan";
         gpuLayers = "auto";
-        # Leave room for the desktop and graphics runtime on the unified-memory APU.
-        fitTarget = 2048;
+        # This host is headless; reserve only a small margin for the graphics runtime.
+        fitTarget = 512;
         batchSize = 2048;
         microBatchSize = 512;
         flashAttention = "on";
