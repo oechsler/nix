@@ -225,7 +225,7 @@ in
       };
       services = {
         NetworkManager-wait-online.enable = false;
-        resolved.serviceConfig.Environment = [ "SYSTEMD_RESOLVED_FALLBACK_DNS=" ];
+        systemd-resolved.serviceConfig.Environment = [ "SYSTEMD_RESOLVED_FALLBACK_DNS=" ];
       };
     };
 
