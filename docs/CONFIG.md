@@ -581,21 +581,21 @@ verified by Nix, so changing the source creates a new system configuration.
 Find GGUF files through [Hugging Face model search](https://huggingface.co/models)
 and pin the repository, file, revision, and SHA256 in `source`.
 
-| Option                               | Default                              | Description                                                                 |
-| ------------------------------------ | ------------------------------------ | --------------------------------------------------------------------------- |
-| `features.llm.llamaCpp.enable`       | `false`                              | Start llama.cpp.                                                            |
-| `features.llm.llamaCpp.backend`      | `"vulkan"` on AMD, otherwise `"cpu"` | Select the compute backend.                                                 |
-| `features.llm.llamaCpp.server`       | `false`                              | Allow access from other machines.                                           |
-| `features.llm.llamaCpp.port`         | `8080`                               | API port.                                                                   |
-| `features.llm.llamaCpp.context`      | `32768`                              | Default conversation context in tokens.                                     |
-| `features.llm.llamaCpp.output`       | `16384`                              | Maximum response length in tokens.                                          |
-| `features.llm.llamaCpp.gpuLayers`    | `"auto"`                             | Automatically fit model layers to accelerator memory, or set a layer count. |
-| `features.llm.llamaCpp.fitTarget`    | `null`                               | Memory margin in MiB reserved per accelerator while fitting layers.         |
-| `features.llm.llamaCpp.cacheTypeK/V` | `"f16"`                              | Data types used by the K/V cache, which trade context memory for quality.   |
-| `features.llm.llamaCpp.specType`     | `"none"`                             | Speculative decoding mode; `"draft-mtp"` requires a GGUF with an MTP head. |
-| `features.llm.llamaCpp.specDraftMax` | `3`                                   | Maximum number of tokens proposed per speculative decoding step.            |
-| `features.llm.llamaCpp.specDraftMinP`| `0.0`                                | Minimum draft-token probability from `0.0` to `1.0`.                         |
-| `features.llm.llamaCpp.models`       | `{}`                                 | GGUF models to include in the system.                                       |
+| Option                                | Default                              | Description                                                                 |
+| ------------------------------------- | ------------------------------------ | --------------------------------------------------------------------------- |
+| `features.llm.llamaCpp.enable`        | `false`                              | Start llama.cpp.                                                            |
+| `features.llm.llamaCpp.backend`       | `"vulkan"` on AMD, otherwise `"cpu"` | Select the compute backend.                                                 |
+| `features.llm.llamaCpp.server`        | `false`                              | Allow access from other machines.                                           |
+| `features.llm.llamaCpp.port`          | `8080`                               | API port.                                                                   |
+| `features.llm.llamaCpp.context`       | `32768`                              | Default conversation context in tokens.                                     |
+| `features.llm.llamaCpp.output`        | `16384`                              | Maximum response length in tokens.                                          |
+| `features.llm.llamaCpp.gpuLayers`     | `"auto"`                             | Automatically fit model layers to accelerator memory, or set a layer count. |
+| `features.llm.llamaCpp.fitTarget`     | `null`                               | Memory margin in MiB reserved per accelerator while fitting layers.         |
+| `features.llm.llamaCpp.cacheTypeK/V`  | `"f16"`                              | Data types used by the K/V cache, which trade context memory for quality.   |
+| `features.llm.llamaCpp.specType`      | `"none"`                             | Speculative decoding mode; `"draft-mtp"` requires a GGUF with an MTP head.  |
+| `features.llm.llamaCpp.specDraftMax`  | `3`                                  | Maximum number of tokens proposed per speculative decoding step.            |
+| `features.llm.llamaCpp.specDraftMinP` | `0.0`                                | Minimum draft-token probability from `0.0` to `1.0`.                        |
+| `features.llm.llamaCpp.models`        | `{}`                                 | GGUF models to include in the system.                                       |
 
 The following example uses a pinned GGUF model:
 

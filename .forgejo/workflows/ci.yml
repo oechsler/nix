@@ -51,7 +51,7 @@ jobs:
           for host_dir in hosts/*; do
             [[ -f "$host_dir/configuration.nix" ]] || continue
             host=${host_dir##*/}
-            echo "Building and evaluating $host..."
-            nix build --no-link --print-build-logs \
-              ".#nixosConfigurations.$host.config.system.build.toplevel"
+            echo "Evaluating $host..."
+            nix eval --raw \
+              ".#nixosConfigurations.$host.config.system.build.toplevel.drvPath"
           done
