@@ -65,7 +65,10 @@ let
     "--models-preset ${modelPreset}"
     "--models-max ${toString cfg.modelsMax}"
     (if cfg.modelsAutoload then "--models-autoload" else "--no-models-autoload")
-  ];
+  ]
+  ++ lib.optional (cfg.specType != "none") "--spec-type ${cfg.specType}"
+  ++ lib.optional (cfg.specType != "none") "--spec-draft-n-max ${toString cfg.specDraftMax}"
+  ++ lib.optional (cfg.specType != "none") "--spec-draft-p-min ${toString cfg.specDraftMinP}";
 in
 {
   options.features.llm.llamaCpp = {
@@ -227,6 +230,27 @@ in
       type = lib.types.bool;
       default = true;
       description = "Enable the model's Jinja chat template when supported.";
+    };
+
+    specType = lib.mkOption {
+      type = lib.types.enum [
+        "none"
+        "draft-mtp"
+      ];
+      default = "none";
+      description = "Speculative decoding implementation; draft-mtp requires a GGUF with a trained multi-token prediction head.";
+    };
+
+    specDraftMax = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 3;
+      description = "Maximum number of tokens proposed by the speculative decoding draft model.";
+    };
+
+    specDraftMinP = lib.mkOption {
+      type = lib.types.addCheck lib.types.float (value: value >= 0.0 && value <= 1.0);
+      default = 0.0;
+      description = "Minimum draft-token probability for speculative decoding, from 0.0 to 1.0.";
     };
 
     models = lib.mkOption {

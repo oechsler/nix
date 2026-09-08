@@ -592,6 +592,9 @@ and pin the repository, file, revision, and SHA256 in `source`.
 | `features.llm.llamaCpp.gpuLayers`    | `"auto"`                             | Automatically fit model layers to accelerator memory, or set a layer count. |
 | `features.llm.llamaCpp.fitTarget`    | `null`                               | Memory margin in MiB reserved per accelerator while fitting layers.         |
 | `features.llm.llamaCpp.cacheTypeK/V` | `"f16"`                              | Data types used by the K/V cache, which trade context memory for quality.   |
+| `features.llm.llamaCpp.specType`     | `"none"`                             | Speculative decoding mode; `"draft-mtp"` requires a GGUF with an MTP head. |
+| `features.llm.llamaCpp.specDraftMax` | `3`                                   | Maximum number of tokens proposed per speculative decoding step.            |
+| `features.llm.llamaCpp.specDraftMinP`| `0.0`                                | Minimum draft-token probability from `0.0` to `1.0`.                         |
 | `features.llm.llamaCpp.models`       | `{}`                                 | GGUF models to include in the system.                                       |
 
 The following example uses a pinned GGUF model:
@@ -627,6 +630,12 @@ for the desktop and driver. K/V cache types such as `q4_0` substantially reduce
 memory use for long contexts at a small quality cost. The selected package and
 GGUF files live in the Nix store, so they do not need an Impermanence entry. Set
 `server = true` only on a trusted network because the API has no authentication.
+
+Models with a trained multi-token prediction head can enable speculative decoding
+with `specType = "draft-mtp"`. The default draft settings are a conservative
+starting point; benchmark them against `specType = "none"` on representative
+prompts because accepted-token rates and throughput depend on the GPU, context,
+and quantization. A model without an MTP head must keep `specType = "none"`.
 
 For a host that intentionally uses both backends, enable both child options:
 
