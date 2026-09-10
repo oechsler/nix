@@ -69,8 +69,10 @@
         gpuLayers = "auto";
         # This host is headless; reserve only a small margin for the graphics runtime.
         fitTarget = 512;
-        batchSize = 2048;
-        microBatchSize = 512;
+        # 35B Q4 model + large KV cache on 32GB shared RAM: these caps bound peak
+        # memory so the service is not OOM-killed and restarted by systemd.
+        batchSize = 1024;
+        microBatchSize = 256;
         flashAttention = "on";
         # A quantized KV cache keeps the large model context affordable while
         # retaining the full configured context window.
@@ -82,7 +84,9 @@
           toolCall = true;
           reasoning = true;
           temperature = true;
-          context = 131072;
+          # 100k as KiB-aligned context (not a strict power of 2) to fit the
+          # KV cache in 32GB shared RAM without OOM restarts.
+          context = 102400;
           source = {
             repo = "peculiar-ragdoll/Tiel-Coder-35B-A3B-GGUF";
             file = "Tiel-Coder-35B-A3B-UD-Q4_K_XL.gguf";
