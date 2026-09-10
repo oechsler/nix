@@ -76,11 +76,7 @@
         # retaining the full configured context window.
         cacheTypeK = "q4_0";
         cacheTypeV = "q4_0";
-        # The MTP head improves decode throughput on this host; the draft
-        # settings should be benchmarked against the no-speculation baseline.
-        specType = "draft-mtp";
-        specDraftMax = 3;
-        specDraftMinP = 0.0;
+        specType = "none";
         models."tiel-coder-35b-a3b" = {
           name = "Tiel Coder 35B-A3B";
           toolCall = true;
@@ -88,10 +84,10 @@
           temperature = true;
           context = 131072;
           source = {
-            repo = "peculiar-ragdoll/Tiel-Coder-35B-A3B-GGUF-MTP";
-            file = "Tiel-Coder-35B-A3B-MTP-UD-Q4_K_XL.gguf";
-            revision = "182ae2b61f15ca133f160c6e11badc2791b052fd";
-            sha256 = "10960d1d6477b08ed36a0e542e571b473022023c25b8315b0cf8c33c57e98ccd";
+            repo = "peculiar-ragdoll/Tiel-Coder-35B-A3B-GGUF";
+            file = "Tiel-Coder-35B-A3B-UD-Q4_K_XL.gguf";
+            revision = "0b5b446a04ef6c89efc10408105b1b78d227f0a3";
+            sha256 = "9286a94c453c6a40ad51982c3dc88df4bba32fee9efad06e4588c83c059cf17c";
           };
         };
       };

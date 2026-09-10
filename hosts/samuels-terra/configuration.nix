@@ -152,7 +152,7 @@
         provider."llama-cpp-remote" = {
           name = "llama.cpp (Remote)";
           npm = "@ai-sdk/openai-compatible";
-          baseURL = "http://172.22.0.118:8080/v1";
+          baseURL = "http://samuels-ser9.sole-hops.ts.net:8080/v1";
           models = {
             "tiel-coder-35b-a3b" = {
               name = "Tiel Coder 35B-A3B";

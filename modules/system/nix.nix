@@ -35,10 +35,26 @@
 let
   isGerman = lib.hasPrefix "de" config.locale.language;
   translate = english: german: if isGerman then german else english;
+  isHeadless = config.features.hardware.formFactor == "headless";
   updateIcon = "${config.theme.icons.package}/share/icons/Papirus/32x32/apps/system-software-update.svg";
   currentIcon = "${config.theme.icons.package}/share/icons/Papirus/32x32/status/dialog-information.svg";
   errorIcon = "${config.theme.icons.package}/share/icons/Papirus/32x32/status/dialog-error.svg";
   updateTitle = translate "System update" "Systemaktualisierung";
+
+  # Emit an upgrade notification from a system service.
+  # Why: system services have no D-Bus session; on desktop hosts we run
+  # notify-send in the user session via systemd-run, on headless hosts there
+  # is no session or notification daemon so we log to the journal instead,
+  # which also never fails the unit. Signature: notify <urgency> <icon> <title> <body>
+  notify = pkgs.writeShellScript "nixos-upgrade-notify" ''
+    if [ "${toString isHeadless}" = "1" ]; then
+      ${pkgs.coreutils}/bin/logger -t nixos-upgrade "$3: $4"
+    else
+      ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
+        --user --pipe --quiet --collect \
+        ${pkgs.libnotify}/bin/notify-send -u "$1" -i "$2" "$3" "$4"
+    fi
+  '';
 in
 {
   #===========================
@@ -151,22 +167,9 @@ in
           flakeDir = "${config.users.users.${config.user.name}.home}/repos/nix";
           user = config.user.name;
 
-          # Helper script to send desktop notifications from system service
-          # Why: System services don't have access to user D-Bus session
-          # Solution: Use systemd-run --machine=<user>@ to run notify-send in user session
-          notify = pkgs.writeShellScript "nixos-upgrade-notify" ''
-            ${pkgs.systemd}/bin/systemd-run --machine=${user}@ \
-               --user --pipe --quiet --collect \
-               ${pkgs.libnotify}/bin/notify-send \
-                 --hint=string:x-canonical-private-synchronous:nixos-upgrade \
-                 --hint=string:x-dunst-stack-tag:nixos-upgrade \
-                 "$@"
-          '';
-
           startingNotification = pkgs.writeShellScript "nixos-upgrade-starting" ''
-            ${notify} -u low -t 5000 -i "${updateIcon}" \
-             "${updateTitle}" \
-             "${translate "Automatic system update started." "Automatische Systemaktualisierung gestartet."}"
+            ${notify} low "${updateIcon}" "${updateTitle}" \
+              "${translate "Automatic system update started." "Automatische Systemaktualisierung gestartet."}"
           '';
 
           # nixos-rebuild uses a fixed transient systemd unit name. Wait for
@@ -233,17 +236,15 @@ in
           successScript = pkgs.writeShellScript "nixos-upgrade-success" ''
             current=$(${pkgs.coreutils}/bin/readlink /nix/var/nix/profiles/system)
             booted=$(${pkgs.coreutils}/bin/readlink /run/booted-system)
-            if [ "$current" != "$booted" ]; then
-              # New system generation built, reboot needed to activate
-               ${notify} -u normal -t 7000 -i "${updateIcon}" \
-                 "${updateTitle}" \
-                 "${translate "Update completed. A reboot is recommended." "Aktualisierung abgeschlossen. Ein Neustart wird empfohlen."}"
-            else
-              # No changes, system already up-to-date
-               ${notify} -u low -t 5000 -i "${currentIcon}" \
-                 "${updateTitle}" \
-                 "${translate "The system is already up to date." "Das System ist bereits auf dem neuesten Stand."}"
-            fi
+             if [ "$current" != "$booted" ]; then
+               # New system generation built, reboot needed to activate
+                ${notify} normal "${updateIcon}" "${updateTitle}" \
+                  "${translate "Update completed. A reboot is recommended." "Aktualisierung abgeschlossen. Ein Neustart wird empfohlen."}"
+             else
+               # No changes, system already up-to-date
+                ${notify} low "${currentIcon}" "${updateTitle}" \
+                  "${translate "The system is already up to date." "Das System ist bereits auf dem neuesten Stand."}"
+             fi
           '';
         in
         {
@@ -269,32 +270,22 @@ in
       #---------------------------
       # 7. Upgrade Failure Notification
       #---------------------------
-      # Triggered when nixos-upgrade service fails
-      # Shows last 5 error lines from journal in critical notification
-      nixos-upgrade-notify-failure =
-        let
-          notify = pkgs.writeShellScript "nixos-upgrade-notify-failure" ''
+      # Triggered when nixos-upgrade service fails.
+      # Reads the last error lines from the journal and emits a critical
+      # notification through the shared headless-aware notify helper.
+      nixos-upgrade-notify-failure = {
+        description = "Notify on NixOS upgrade failure";
+        serviceConfig = {
+          Type = "oneshot";
+          ExecStart = pkgs.writeShellScript "nixos-upgrade-notify-failure" ''
             # Extract last 5 error lines from nixos-upgrade journal
-             error=$(${pkgs.systemd}/bin/journalctl -u nixos-upgrade.service -b --no-pager -p err -o cat | ${pkgs.coreutils}/bin/tail -5)
+            error=$(${pkgs.systemd}/bin/journalctl -u nixos-upgrade.service -b --no-pager -p err -o cat | ${pkgs.coreutils}/bin/tail -5)
 
-            # Send critical notification to user session
-            ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
-              --user --pipe --quiet --collect \
-               ${pkgs.libnotify}/bin/notify-send \
-                 --hint=string:x-canonical-private-synchronous:nixos-upgrade \
-                 --hint=string:x-dunst-stack-tag:nixos-upgrade \
-                 -u critical -i "${errorIcon}" \
-                "${updateTitle}" \
-                "${translate "The automatic update could not be completed." "Die automatische Aktualisierung konnte nicht durchgeführt werden."}\n\n$error"
+            ${notify} critical "${errorIcon}" "${updateTitle}" \
+              "${translate "The automatic update could not be completed." "Die automatische Aktualisierung konnte nicht durchgeführt werden."}\n\n$error"
           '';
-        in
-        {
-          description = "Notify on NixOS upgrade failure";
-          serviceConfig = {
-            Type = "oneshot";
-            ExecStart = "${notify}";
-          };
         };
+      };
     };
   };
 }
