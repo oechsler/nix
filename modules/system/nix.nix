@@ -44,15 +44,19 @@ let
   # Emit an upgrade notification from a system service.
   # Why: system services have no D-Bus session; on desktop hosts we run
   # notify-send in the user session via systemd-run, on headless hosts there
-  # is no session or notification daemon so we log to the journal instead,
-  # which also never fails the unit. Signature: notify <urgency> <icon> <title> <body>
+  # is no session or notification daemon so we log to the journal instead.
+  # Notifications are best-effort: every branch exits 0, because a missing
+  # user session, notification daemon, or a store path that no longer executes
+  # must never fail the upgrade unit. A failing ExecStartPre would otherwise
+  # abort nixos-rebuild boot, so the upgrade could never rebuild itself.
+  # Signature: notify <urgency> <icon> <title> <body>
   notify = pkgs.writeShellScript "nixos-upgrade-notify" ''
     if [ "${toString isHeadless}" = "1" ]; then
-      ${pkgs.coreutils}/bin/logger -t nixos-upgrade "$3: $4"
+      ${pkgs.systemd}/bin/journalctl --message="nixos-upgrade: $3: $4" >/dev/null 2>&1 || true
     else
       ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
         --user --pipe --quiet --collect \
-        ${pkgs.libnotify}/bin/notify-send -u "$1" -i "$2" "$3" "$4"
+        ${pkgs.libnotify}/bin/notify-send -u "$1" -i "$2" "$3" "$4" >/dev/null 2>&1 || true
     fi
   '';
 in
