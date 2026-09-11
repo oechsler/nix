@@ -8,11 +8,13 @@
 # 5. Automatic system upgrades with notifications
 #
 # Automatic upgrades:
-# - Runs daily (24h after last upgrade, or 30min after boot)
+# - Runs periodically (30min after boot, then every 8h while powered on)
 # - Updates flake.lock before upgrading
-# - Rebuilds system but doesn't activate (requires reboot)
-# - Shows desktop notifications on success/failure
-# - Recommends reboot when system changed
+# - Headless hosts activate immediately (operation=switch); desktop/laptop
+#   hosts build for the next boot (operation=boot, requires reboot)
+# - Shows notifications on success/failure
+# - Recommends a reboot: after a boot-mode upgrade, or when a kernel update
+#   changed the running kernel on an already-active headless host
 #
 # How it works:
 # 1. Pull latest changes from git (repos/nix)
@@ -103,7 +105,7 @@ in
   system.autoUpgrade = {
     enable = true;
     flake = "${config.users.users.${config.user.name}.home}/repos/nix#${config.networking.hostName}";
-    operation = "boot"; # Build but don't activate (requires reboot)
+    operation = if isHeadless then "switch" else "boot"; # Headless activates immediately, desktop/laptop builds for next boot
     allowReboot = false; # Never reboot automatically
     flags = [ "--refresh" ]; # Refresh cached evaluations
   };
@@ -233,23 +235,41 @@ in
             fi
           '';
 
-          # Post-upgrade success script
-          # Compare /nix/var/nix/profiles/system vs /run/booted-system
-          # If different: Reboot recommended
-          # If same: System already up-to-date
-          successScript = pkgs.writeShellScript "nixos-upgrade-success" ''
-            current=$(${pkgs.coreutils}/bin/readlink /nix/var/nix/profiles/system)
-            booted=$(${pkgs.coreutils}/bin/readlink /run/booted-system)
-             if [ "$current" != "$booted" ]; then
-               # New system generation built, reboot needed to activate
-                ${notify} normal "${updateIcon}" "${updateTitle}" \
-                  "${translate "Update completed. A reboot is recommended." "Aktualisierung abgeschlossen. Ein Neustart wird empfohlen."}"
+           # Post-upgrade success script.
+           # Detection depends on the upgrade operation:
+           # - Headless use operation=switch: the new generation is already
+           #   active, so a reboot is only needed when the kernel changed
+           #   (compare the booted kernel with the current generation's kernel).
+           # - Desktop/laptop use operation=boot: the new generation is only
+           #   active after a reboot, so any newer generation requires one
+           #   (compare the switched profile with the booted system).
+           successScript = pkgs.writeShellScript "nixos-upgrade-success" ''
+             if [ "${toString isHeadless}" = "1" ]; then
+               bootedKernel=$(${pkgs.coreutils}/bin/readlink /run/booted-system/kernel)
+               currentKernel=$(${pkgs.coreutils}/bin/readlink /nix/var/nix/profiles/system/kernel)
+               if [ -n "$bootedKernel" ] && [ "$bootedKernel" != "$currentKernel" ]; then
+                 # Kernel changed, reboot needed to run the new kernel
+                 ${notify} normal "${updateIcon}" "${updateTitle}" \
+                   "${translate "Update completed. A kernel update requires a reboot." "Aktualisierung abgeschlossen. Ein Kernel-Update erfordert einen Neustart."}"
+               else
+                 # Only userspace changed, already active
+                 ${notify} low "${currentIcon}" "${updateTitle}" \
+                   "${translate "The system is already up to date." "Das System ist bereits auf dem neuesten Stand."}"
+               fi
              else
-               # No changes, system already up-to-date
-                ${notify} low "${currentIcon}" "${updateTitle}" \
-                  "${translate "The system is already up to date." "Das System ist bereits auf dem neuesten Stand."}"
+               current=$(${pkgs.coreutils}/bin/readlink /nix/var/nix/profiles/system)
+               booted=$(${pkgs.coreutils}/bin/readlink /run/booted-system)
+               if [ "$current" != "$booted" ]; then
+                 # New system generation built, reboot needed to activate
+                 ${notify} normal "${updateIcon}" "${updateTitle}" \
+                   "${translate "Update completed. A reboot is recommended." "Aktualisierung abgeschlossen. Ein Neustart wird empfohlen."}"
+               else
+                 # No changes, system already up-to-date
+                 ${notify} low "${currentIcon}" "${updateTitle}" \
+                   "${translate "The system is already up to date." "Das System ist bereits auf dem neuesten Stand."}"
+               fi
              fi
-          '';
+           '';
         in
         {
           path = [
