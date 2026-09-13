@@ -18,7 +18,7 @@ let
           options = lib.mapAttrs (
             _profile: budget:
             lib.mkOption {
-              type = lib.types.ints.positive;
+              type = lib.types.ints.unsigned;
               default = budget;
               description = "Maximum reasoning tokens for this canonical profile; this is a ceiling, not a target.";
             }
@@ -45,6 +45,11 @@ let
         type = lib.types.attrs;
         default = { };
         description = "Additional chat_template_kwargs sent with every reasoning profile request.";
+      };
+      chatTemplateKwargsByProfile = lib.mkOption {
+        type = lib.types.attrsOf lib.types.attrs;
+        default = { };
+        description = "Additional chat_template_kwargs merged for individual canonical reasoning profiles.";
       };
     };
   };
@@ -140,6 +145,7 @@ in
       budgets = reasoningDefaults // (profile.budgets or { });
       effortTransport = profile.effortTransport or "none";
       chatTemplateKwargs = profile.chatTemplateKwargs or { };
+      chatTemplateKwargsByProfile = profile.chatTemplateKwargsByProfile or { };
       profiles = [
         "low"
         "medium"
@@ -161,11 +167,18 @@ in
               }
             else
               { reasoning_effort = nativeEffort; };
+          templateOptions =
+            lib.optionalAttrs
+              (chatTemplateKwargs != { } || builtins.hasAttr profileName chatTemplateKwargsByProfile)
+              {
+                chat_template_kwargs = chatTemplateKwargs // (chatTemplateKwargsByProfile.${profileName} or { });
+              };
         in
         {
           thinking_budget_tokens = budgets.${profileName};
         }
         // effortOptions
+        // templateOptions
       );
     in
     {

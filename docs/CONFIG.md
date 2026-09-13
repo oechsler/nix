@@ -1,9 +1,8 @@
 # Configuration Guide
 
-This is the user guide for configuring the NixOS setup. It describes the public
-options, their defaults, and the usual patterns for adapting a host. Host-
-specific values belong in host modules; implementation details that are not
-options are intentionally omitted.
+This is the user guide for configuring the NixOS setup. It explains the options
+you normally change, their defaults, and common patterns for adapting a host.
+Host-specific values belong in host modules.
 
 ## How to Use This Guide
 
@@ -63,7 +62,6 @@ the remaining options control boot-time storage and persistence.
 | `features.kernel`                        | `"cachyos"` | Kernel variant, such as `"cachyos-v3"`, `"cachyos-v4"`, `"cachyos-lts"`, `"default"`, or `"default-lts"`. |
 | `features.secureBoot.enable`             | `false`     | UEFI Secure Boot via lanzaboote.                                                                          |
 | `features.impermanence.enable`           | `true`      | Impermanent root with btrfs rollback on boot.                                                             |
-| `features.impermanence.persistPrefix`    | read-only   | Resolved persistence prefix (`/persist` when enabled).                                                    |
 | `features.impermanence.extraPaths`       | `[]`        | Additional paths to persist.                                                                              |
 | `features.snapshots.enable`              | `true`      | Automatic btrfs snapshots.                                                                                |
 
@@ -90,13 +88,9 @@ features = {
 };
 ```
 
-For AMD APUs, `unifiedMemory.enable` adds the kernel parameter
-`amdgpu.gttsize=<size>`. This does not reserve that amount of RAM or turn it
-into dedicated VRAM; it allows `amdgpu` to map up to that amount of shared
-system memory for GPU workloads. The option requires both
-`features.hardware.cpu = "amd"` and `features.hardware.gpu = "amd"`, plus an
-explicit size. It should only be enabled when the hardware and workload benefit
-from it.
+For an AMD APU that needs more memory available to graphics workloads, enable
+`unifiedMemory` and choose a size that fits the machine's RAM. This is an
+optional hardware setting and is normally only needed for a specific workload.
 
 The size must be selected explicitly for the host:
 
@@ -118,8 +112,8 @@ This disables the desktop session, display manager, Plymouth, and GUI
 applications by default. Console tools, services, networking, storage,
 development tools, and server backends remain available. GUI frontends such as
 virt-manager are omitted, while server features such as libvirt and Podman can
-still be enabled. Headless hosts keep normal GPU runtime power management so
-supported hardware can enter low-power idle states.
+still be enabled. Headless hosts can still use services and hardware
+acceleration when enabled.
 
 Impermanence recreates the root filesystem on every boot. Persistent state is
 kept under `/persist` and is declared by feature modules or
@@ -259,15 +253,9 @@ features = {
 };
 ```
 
-The following implementation choices apply to the managed networking stack and
-normally do not need per-host overrides:
-
-- NetworkManager owns connection profiles, IP configuration, and routing.
-- `iwd` is used as NetworkManager's WiFi backend.
-- Docker/Tailscale interfaces are unmanaged in NetworkManager: `docker0`, `br-*`, `veth*`, `tailscale0`.
-- Desktop hosts disable IPv6 only on Docker bridge/veth interfaces to reduce local development link churn.
-- LLMNR is disabled in `systemd-resolved` to avoid resolver scopes on Docker/veth links.
-- Desktop Ethernet disables WiFi autoconnect while active.
+The defaults are suitable for most hosts. Usually only the WiFi networks and
+shares need to be added here; credentials stay in SOPS rather than in the host
+configuration.
 
 ### Desktop
 
@@ -528,28 +516,26 @@ features = {
 
 ### LLM
 
-The LLM feature is disabled by default. Ollama is enabled by default when the
-feature is turned on. Use llama.cpp instead when you want to manage the model
-files and inference settings yourself:
+The LLM feature is disabled by default. Enable it when the host should provide a
+local AI service:
 
 ```nix
 features.llm.enable = true;
 ```
 
-| Backend   | Recommended when                                             |
-| --------- | ------------------------------------------------------------ |
-| Ollama    | You want the simplest local model setup.                     |
-| llama.cpp | You want to choose and pin the exact GGUF file.              |
-| Both      | You intentionally need both backends and have enough memory. |
+| Backend   | Choose it when                        |
+| --------- | ------------------------------------- |
+| Ollama    | You want the simplest local setup.    |
+| llama.cpp | You need explicit local file control. |
+| Both      | You intentionally need both services. |
 
 Both backends use the same GPU and system memory. Running both is usually not
 useful on a small or unified-memory system.
 
 #### Ollama
 
-Ollama downloads model tags into its local model store and keeps the declared
-models synchronized. Search available tags at
-[ollama.com/search](https://ollama.com/search).
+Ollama manages its local service data for you. Use the options below when you
+need to change its availability, network access, or conversation length.
 
 | Option                            | Default | Description                             |
 | --------------------------------- | ------- | --------------------------------------- |
@@ -557,7 +543,6 @@ models synchronized. Search available tags at
 | `features.llm.ollama.server`      | `false` | Allow access from other machines.       |
 | `features.llm.ollama.context`     | `32768` | Default conversation context in tokens. |
 | `features.llm.ollama.unloadAfter` | `"5m"`  | Unload inactive models after this time. |
-| `features.llm.ollama.models`      | `{}`    | Model tags to keep installed.           |
 
 ```nix
 features.llm = {
@@ -565,7 +550,6 @@ features.llm = {
   ollama = {
     context = 32768;
     unloadAfter = "5m";
-    models."example-model:latest".name = "Example Model";
   };
 };
 ```
@@ -576,73 +560,22 @@ HTTPS gateway.
 
 #### llama.cpp
 
-llama.cpp downloads no models at runtime. The selected GGUF is fetched and
-verified by Nix, so changing the source creates a new system configuration.
-Find GGUF files through [Hugging Face model search](https://huggingface.co/models)
-and pin the repository, file, revision, and SHA256 in `source`.
+Use llama.cpp when the host should manage its local inference files
+declaratively. Files are fetched during the system build instead of being
+downloaded by the running service.
 
-| Option                                | Default                              | Description                                                                 |
-| ------------------------------------- | ------------------------------------ | --------------------------------------------------------------------------- |
-| `features.llm.llamaCpp.enable`        | `false`                              | Start llama.cpp.                                                            |
-| `features.llm.llamaCpp.backend`       | `"vulkan"` on AMD, otherwise `"cpu"` | Select the compute backend.                                                 |
-| `features.llm.llamaCpp.server`        | `false`                              | Allow access from other machines.                                           |
-| `features.llm.llamaCpp.port`          | `8080`                               | API port.                                                                   |
-| `features.llm.llamaCpp.context`       | `32768`                              | Default conversation context in tokens.                                     |
-| `features.llm.llamaCpp.output`        | `16384`                              | Maximum response length in tokens.                                          |
-| `features.llm.llamaCpp.gpuLayers`     | `"auto"`                             | Automatically fit model layers to accelerator memory, or set a layer count. |
-| `features.llm.llamaCpp.fitTarget`     | `null`                               | Memory margin in MiB reserved per accelerator while fitting layers.         |
-| `features.llm.llamaCpp.cacheTypeK/V`  | `"f16"`                              | Data types used by the K/V cache, which trade context memory for quality.   |
-| `features.llm.llamaCpp.specType`      | `"none"`                             | Speculative decoding mode; `"draft-mtp"` requires a GGUF with an MTP head.  |
-| `features.llm.llamaCpp.specDraftMax`  | `3`                                  | Maximum number of tokens proposed per speculative decoding step.            |
-| `features.llm.llamaCpp.specDraftMinP` | `0.0`                                | Minimum draft-token probability from `0.0` to `1.0`.                        |
-| `features.llm.llamaCpp.models`        | `{}`                                 | GGUF models to include in the system.                                       |
+| Option                          | Default                              | Description                             |
+| ------------------------------- | ------------------------------------ | --------------------------------------- |
+| `features.llm.llamaCpp.enable`  | `false`                              | Start llama.cpp.                        |
+| `features.llm.llamaCpp.backend` | `"vulkan"` on AMD, otherwise `"cpu"` | Select the compute backend.             |
+| `features.llm.llamaCpp.server`  | `false`                              | Allow access from other machines.       |
+| `features.llm.llamaCpp.port`    | `8080`                               | API port.                               |
+| `features.llm.llamaCpp.context` | `32768`                              | Default conversation context in tokens. |
+| `features.llm.llamaCpp.output`  | `16384`                              | Maximum response length in tokens.      |
 
-The following example uses a pinned GGUF model:
-
-```nix
-features.llm = {
-  enable = true;
-  ollama.enable = false;
-  llamaCpp = {
-    enable = true;
-    context = 32768;
-    backend = "vulkan";
-    flashAttention = "auto";
-    models."example-model" = {
-      name = "Example Coding Model";
-      toolCall = true;
-      reasoning = true;
-      # Optional: override the reasoning ceilings for this model.
-      reasoningProfile.budgets = {
-        low = 512;
-        medium = 1024;
-        high = 2048;
-        xhigh = 4096;
-      };
-      temperature = true;
-      source = {
-        repo = "example-org/example-model-GGUF";
-        file = "example-model-Q4_K_M.gguf";
-        revision = "main";
-        sha256 = "0000000000000000000000000000000000000000000000000000000000000000";
-      };
-    };
-  };
-};
-```
-
-The model's `context` can override the global default. With `gpuLayers = "auto"`,
-llama.cpp fits the offloaded layers during startup; `fitTarget` reserves memory
-for the desktop and driver. K/V cache types such as `q4_0` substantially reduce
-memory use for long contexts at a small quality cost. The selected package and
-GGUF files live in the Nix store, so they do not need an Impermanence entry. Set
-`server = true` only on a trusted network because the API has no authentication.
-
-Models with a trained multi-token prediction head can enable speculative decoding
-with `specType = "draft-mtp"`. The default draft settings are a conservative
-starting point; benchmark them against `specType = "none"` on representative
-prompts because accepted-token rates and throughput depend on the GPU, context,
-and quantization. A model without an MTP head must keep `specType = "none"`.
+Keep `server = false` unless another machine needs access. When remote access is
+enabled, the service has no built-in authentication and should only be exposed
+to a trusted network.
 
 For a host that intentionally uses both backends, enable both child options:
 
@@ -734,18 +667,14 @@ default model is `openai/gpt-5.6-luna`.
 | `features.dev.opencode.mcp`          | `{}`                  | MCP servers for OpenCode.           |
 | `features.dev.opencode.settings`     | `{}`                  | Additional OpenCode settings.       |
 
-Each enabled local backend contributes a provider. Select a model with
-`provider/model`:
+Each enabled local backend contributes a provider. Select an entry with
+`provider/name`:
 
 ```nix
 features.dev.opencode.defaultModel = "ollama/example-model:latest";
 ```
 
-Local model IDs are `ollama/<tag>` and `llama-cpp/<id>`. The shared fields
-`name`, `toolCall`, `reasoning`, `temperature`, `context`, `input`, and `output`
-describe the model's name, capabilities, and limits.
-
-Reasoning-capable models additionally expose the same four OpenCode variants:
+Entries that support reasoning additionally expose these four variants:
 
 | Variant  | Meaning                                     |
 | -------- | ------------------------------------------- |
@@ -766,9 +695,9 @@ runtime, and reasoning may finish before any limit is reached. Use `low` for
 quick, obvious work, `medium` for routine coding, `high` for serious coding,
 and `xhigh` only when additional latency is worthwhile.
 
-Choose a profile from OpenCode's normal variant selector after selecting a
-reasoning-capable model. The selected profile stays attached to that model for
-the session; changing it does not require changing the provider or server.
+Choose a profile from OpenCode's normal variant selector after selecting an
+entry that supports reasoning. The selected profile stays active for the
+session.
 
 Remote providers are configured separately. They need their own endpoint, model
 list, and credentials, and do not add models to local backends:
@@ -790,29 +719,14 @@ features.dev.opencode.provider."ollama-remote" = {
 Set `context` and `output` when the remote endpoint has limits. Use
 `apiKeySecret` for credentials.
 
-Local and remote providers can be used together. Local providers are generated
-when their backends are enabled. A remote llama.cpp provider uses the same
-format; enable `features.llm.llamaCpp.server` on its host to expose port `8080`.
+Local and remote providers can be used together. Enable the relevant backend on
+the host that provides it.
 Both APIs have no authentication, so use a trusted network or an authenticated
 HTTPS gateway.
 
-The capability fields work for local and remote providers. Backend-specific
-source fields remain with their backend.
-
-| Field              | Meaning                                      |
-| ------------------ | -------------------------------------------- |
-| `name`             | Name shown in OpenCode.                      |
-| `toolCall`         | Native tool calls are supported.             |
-| `reasoning`        | Reasoning output is supported.               |
-| `reasoningProfile` | Optional per-model reasoning profile limits. |
-| `temperature`      | Temperature control is supported.            |
-| `context`          | Maximum conversation context in tokens.      |
-| `input`            | Optional maximum input size in tokens.       |
-| `output`           | Maximum generated output in tokens.          |
-
-Custom providers use the same capability fields. The built-in OpenAI and
-OpenCode Go providers remain available; configured providers are enabled by
-default. Credentials should use SOPS with `apiKeySecret`.
+The built-in providers remain available. Add a custom provider when you need a
+different endpoint or credentials. Keep credentials in SOPS with
+`apiKeySecret`.
 
 MCP servers are configured separately under `features.dev.opencode.mcp`. Remote
 servers can use a SOPS-managed token:
@@ -938,10 +852,8 @@ Set `features.apps.mumble.disablePublicServerList = false` to show the public se
 
 ### Flatpak
 
-Flatpak is an escape hatch for applications that are unavailable or impractical
-as Nix packages. Prefer a native Nix package when one provides the required
-application and integration. Flatpak adds a separate runtime, sandbox policy,
-and an additional update mechanism.
+Use Flatpak for applications that are unavailable or impractical as Nix
+packages. Prefer a native Nix package when one provides what you need.
 
 | Option                    | Default | Description                 |
 | ------------------------- | ------- | --------------------------- |
@@ -958,18 +870,8 @@ services.flatpak.packages = [
 ];
 ```
 
-Flatpak applications receive the configured GTK theme integration and
-runtime-specific Qt integration where their runtime supports it. KDE-runtime
-applications get the KDE Qt Quick Controls style and the generated complete
-Catppuccin palette; this is applied only to KDE runtimes and does not turn
-GNOME or Freedesktop applications into KDE applications. Theme support remains
-runtime- and application-dependent, so applications that bundle their own
-toolkit or style can still ignore the host theme.
-
-Sandbox permissions remain application-specific; inspect or adjust them with
-Flatseal when needed. After changing `theme.catppuccin.flavor` or
-`theme.catppuccin.accent`, rebuild the system and restart running Flatpaks so
-they receive the regenerated palette.
+Flatpak applications are sandboxed. Adjust permissions with Flatseal when an
+application needs access beyond its defaults.
 
 Disable Flatpak when the host should only use declarative Nix packages:
 
@@ -980,21 +882,14 @@ features.flatpak.enable = false;
 ### AppImage
 
 AppImage is a fallback for vendor binaries that are not packaged in Nixpkgs.
-It is less reproducible than a Nix package and does not provide the same
-dependency, update, or sandbox guarantees as Flatpak, so it should normally be
-the last resort. AppImages bundle their own libraries and may bundle GTK,
-Qt, or a custom UI toolkit as well. The host theme is therefore not
-guaranteed to apply; particularly for bundled Qt or custom-styled interfaces,
-matching the host theme may not be possible without application-specific
-options.
+Prefer a Nix package or Flatpak when possible because AppImages have fewer
+integration and update guarantees.
 
 | Option                     | Default | Description                                |
 | -------------------------- | ------- | ------------------------------------------ |
 | `features.appimage.enable` | `true`  | Enable AppImage execution and integration. |
 
-When enabled, put `.AppImage` files in `~/Applications`. The watcher makes them
-executable, extracts their desktop metadata and icons without running them, and
-creates launcher entries in `~/.local/share/applications`:
+When enabled, put `.AppImage` files in `~/Applications`:
 
 ```nix
 features.appimage.enable = true;
@@ -1029,18 +924,14 @@ features.compat.enable = false;
 
 ## Shared Options
 
-The options in this section configure shared system and userspace behavior after
-the feature toggles have selected the system capabilities. They are ordered from
-system-wide settings toward session and application integration. Feature
-defaults remain under `features`; these options provide the lower-level values
-consumed by those features.
+The options in this section adjust behavior shared by the enabled features. They
+cover power, secrets, identity, appearance, locale, displays, input, and
+applications.
 
 ### Idle / Power Management
 
-Idle handling is session-facing, but closely tied to display power and suspend
-behavior. Hyprland uses `hypridle`; KDE translates the same timeouts to
-PowerDevil. The session-specific implementation keeps locking, display dimming,
-and suspend behavior aligned.
+Idle handling controls locking, display dimming, and suspend behavior for the
+active desktop session.
 
 | Option                         | Default | Description                                       |
 | ------------------------------ | ------- | ------------------------------------------------- |
@@ -1062,11 +953,9 @@ idle = {
 
 ### Hyprland Dim Settings
 
-Hyprland uses a custom gradual dimming sequence: the configured idle timeout
-starts the sequence, `stepPercent` controls each brightness step, and
-`stepDelay` controls the transition speed. KDE does not use these options;
-PowerDevil provides its own built-in display dimming and uses the shared idle
-timeouts above.
+Hyprland can dim the display gradually. `stepPercent` controls each brightness
+step and `stepDelay` controls the transition speed. These options apply to
+Hyprland; KDE uses the shared idle timeouts above.
 
 | Option                          | Default  | Description                                 |
 | ------------------------------- | -------- | ------------------------------------------- |
@@ -1220,9 +1109,7 @@ Font options are set in `configuration.nix` and shared with Home Manager.
 | `fonts.sansSerif`     | `"Noto Sans"`               | Sans-serif font (UI when `ui.style = "sans-serif"`)                       |
 | `fonts.serif`         | `"Noto Serif"`              | Serif font (fontconfig default)                                           |
 | `fonts.ui.style`      | `"monospace"`               | Font style for UI elements: `"monospace"` or `"sans-serif"`               |
-| `fonts.ui.font`       | _(read-only)_               | Resolved UI font name                                                     |
 | `fonts.ui.size`       | `11`                        | Default font size for UI elements                                         |
-| `fonts.ui.pixelSize`  | `floor(size * 4 / 3)`       | Resolved pixel size used by UI components (read-only)                     |
 | `fonts.terminal.size` | `fonts.ui.size`             | Terminal (Kitty) size and closest packaged Linux-VT font size             |
 
 ```nix
@@ -1260,8 +1147,7 @@ locale = {
 
 ### Display and Monitor Options
 
-`displays` is the shared display abstraction for Hyprland, KDE, and SDDM. It
-describes known outputs and their layout independently of the selected desktop.
+`displays` describes known outputs and their layout.
 When `displays.monitors` is empty, desktop sessions use automatic layout
 detection and `theme.scale`.
 
@@ -1325,16 +1211,8 @@ displays = {
 assignment. `defaultWorkspaceCount` supplies the default workspace group size
 for monitors without an explicit list.
 
-KDE and SDDM apply the shared layout through KScreen. On Hyprland, the same
-declaration is used for the Nix-managed `default` profile. Its monitor order is
-preserved, so the default four-workspaces-per-monitor setup assigns 1-4 to the
-first monitor, 5-8 to the second, and so on.
-
-On Hyprland, additional hyprmoncfg profiles can be created and changed at
-runtime. The `default` profile is managed by Nix and should not be edited
-manually. When automatic matching is used, profiles for the same set of
-connected monitors cannot be distinguished by layout alone; use a different
-hardware setup or apply a profile explicitly for such tests.
+The same layout is used by the supported desktop sessions. Leave `monitors`
+empty to let the desktop detect connected displays automatically.
 
 ### Input Options
 
@@ -1363,9 +1241,8 @@ startup.
 
 ### Autostart Apps
 
-Autostart entries are managed by Home Manager and translated to the selected
-desktop's session mechanism. Feature modules add their own entries when enabled;
-custom entries can be added to the same list.
+Feature modules add their own entries when enabled; custom entries can be added
+to the same list.
 
 | Option           | Default           | Description                                             |
 | ---------------- | ----------------- | ------------------------------------------------------- |
@@ -1389,8 +1266,7 @@ The default list is extended by feature toggles:
 - `features.gaming.enable` adds Steam
 - `features.tailscale.enable` adds Trayscale
 
-Each entry contains a display `name` and an `exec` command. KDE writes XDG
-autostart entries; Hyprland starts the commands with `exec-once`.
+Each entry contains a display `name` and an `exec` command.
 
 ## System Requirements
 

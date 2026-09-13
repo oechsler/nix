@@ -187,6 +187,28 @@
               context = 102400;
               output = 16384;
             };
+            "gemma-4-26b-a4b-it" = {
+              name = "Gemma 4 26B A4B";
+              toolCall = true;
+              reasoning = true;
+              reasoningProfile = {
+                budgets = {
+                  low = 0;
+                  medium = 512;
+                  high = 1024;
+                  xhigh = 2048;
+                };
+                chatTemplateKwargsByProfile = {
+                  low.enable_thinking = false;
+                  medium.enable_thinking = true;
+                  high.enable_thinking = true;
+                  xhigh.enable_thinking = true;
+                };
+              };
+              temperature = true;
+              context = 32768;
+              output = 16384;
+            };
           };
         };
         mcp.homeassistant = {

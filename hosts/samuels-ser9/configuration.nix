@@ -79,49 +79,79 @@
         cacheTypeK = "q4_0";
         cacheTypeV = "q4_0";
         specType = "none";
-        models."tiel-coder-35b-a3b" = {
-          name = "Tiel Coder 35B-A3B";
-          toolCall = true;
-          reasoning = true;
-          # TielCoder's pinned Sharp template has no documented native effort
-          # hierarchy, so profiles differ by deterministic budget ceilings.
-          temperature = true;
-          # 100k as KiB-aligned context (not a strict power of 2) to fit the
-          # KV cache in 32GB shared RAM without OOM restarts.
-          context = 102400;
-          source = {
-            repo = "peculiar-ragdoll/Tiel-Coder-35B-A3B-GGUF";
-            file = "Tiel-Coder-35B-A3B-UD-Q4_K_XL.gguf";
-            revision = "0b5b446a04ef6c89efc10408105b1b78d227f0a3";
-            sha256 = "9286a94c453c6a40ad51982c3dc88df4bba32fee9efad06e4588c83c059cf17c";
-          };
-        };
-        models."dirk-qwen3.8-27b" = {
-          name = "Dirk 27B";
-          toolCall = true;
-          reasoning = true;
-          reasoningProfile = {
-            budgets = {
-              low = 256;
-              medium = 512;
-              high = 1024;
-              xhigh = 2048;
+        models = {
+          "tiel-coder-35b-a3b" = {
+            name = "Tiel Coder 35B-A3B";
+            toolCall = true;
+            reasoning = true;
+            # TielCoder's pinned Sharp template has no documented native effort
+            # hierarchy, so profiles differ by deterministic budget ceilings.
+            temperature = true;
+            # 100k as KiB-aligned context (not a strict power of 2) to fit the
+            # KV cache in 32GB shared RAM without OOM restarts.
+            context = 102400;
+            source = {
+              repo = "peculiar-ragdoll/Tiel-Coder-35B-A3B-GGUF";
+              file = "Tiel-Coder-35B-A3B-UD-Q4_K_XL.gguf";
+              revision = "0b5b446a04ef6c89efc10408105b1b78d227f0a3";
+              sha256 = "9286a94c453c6a40ad51982c3dc88df4bba32fee9efad06e4588c83c059cf17c";
             };
-            nativeEffort = {
-              low = "low";
-              medium = "medium";
-              high = "medium";
-              xhigh = "xhigh";
-            };
-            effortTransport = "chat_template_kwargs";
           };
-          temperature = true;
-          context = 102400;
-          source = {
-            repo = "peculiar-ragdoll/Dirk-Qwen3.8-27B-GGUF";
-            file = "Dirk-Qwen3.8-27B-UD-Q4_K_XL.gguf";
-            revision = "52cb3e759635ab4605e08790b6c47df8adcf0744";
-            sha256 = "d1ad2472a147caa1111bae5ec710331dc50692d62ebbdb3fbc54d421c4e209bc";
+          "dirk-qwen3.8-27b" = {
+            name = "Dirk 27B";
+            toolCall = true;
+            reasoning = true;
+            reasoningProfile = {
+              budgets = {
+                low = 256;
+                medium = 512;
+                high = 1024;
+                xhigh = 2048;
+              };
+              nativeEffort = {
+                low = "low";
+                medium = "medium";
+                high = "medium";
+                xhigh = "xhigh";
+              };
+              effortTransport = "chat_template_kwargs";
+            };
+            temperature = true;
+            context = 102400;
+            source = {
+              repo = "peculiar-ragdoll/Dirk-Qwen3.8-27B-GGUF";
+              file = "Dirk-Qwen3.8-27B-UD-Q4_K_XL.gguf";
+              revision = "52cb3e759635ab4605e08790b6c47df8adcf0744";
+              sha256 = "d1ad2472a147caa1111bae5ec710331dc50692d62ebbdb3fbc54d421c4e209bc";
+            };
+          };
+          "gemma-4-26b-a4b-it" = {
+            name = "Gemma 4 26B A4B";
+            toolCall = true;
+            reasoning = true;
+            # Gemma exposes a thinking toggle rather than a native effort ladder.
+            reasoningProfile = {
+              budgets = {
+                low = 0;
+                medium = 512;
+                high = 1024;
+                xhigh = 2048;
+              };
+              chatTemplateKwargsByProfile = {
+                low.enable_thinking = false;
+                medium.enable_thinking = true;
+                high.enable_thinking = true;
+                xhigh.enable_thinking = true;
+              };
+            };
+            temperature = true;
+            context = 32768;
+            source = {
+              repo = "ggml-org/gemma-4-26B-A4B-it-GGUF";
+              file = "gemma-4-26B-A4B-it-Q4_0.gguf";
+              revision = "bb4531cda34d1ea09d9814959ed4d5833cf2a4c8";
+              sha256 = "d208665ab1cd3a69f7a9a4bc59430e8448c8093d9b06334f566ac59d6d504a03";
+            };
           };
         };
       };
