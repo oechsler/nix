@@ -147,6 +147,12 @@
 
     # --- Development ---
     dev = {
+      android.enable = true;
+      jetbrains.entries = [
+        "android-studio"
+        "goland"
+        "rustrover"
+      ];
       opencode = {
         defaultModel = "llama-cpp-remote/tiel-coder-35b-a3b";
         provider."llama-cpp-remote" = {

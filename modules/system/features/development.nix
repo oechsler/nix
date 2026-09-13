@@ -278,6 +278,12 @@ in
     };
   };
 
+  # Android tooling cannot be built without accepting the Google Android SDK
+  # license, so accept it whenever android development is enabled.
+  config.nixpkgs.config = lib.mkIf config.features.dev.android.enable {
+    android_sdk.accept_license = true;
+  };
+
   config.assertions = lib.optional (config.features.dev.opencode.provider ? "ollama-remote") {
     assertion =
       !config.features.dev.opencode.provider."ollama-remote".enable
