@@ -50,7 +50,6 @@ let
         "version = 1"
         ""
         "[*]"
-        "load-on-startup = ${if cfg.modelsAutoload then "true" else "false"}"
         "jinja = ${if cfg.jinja then "true" else "false"}"
       ]
       ++ lib.concatMap modelSection (builtins.attrNames cfg.models)
