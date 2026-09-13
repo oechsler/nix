@@ -5,6 +5,49 @@
 { lib }:
 
 let
+  reasoningDefaults = {
+    low = 1024;
+    medium = 2048;
+    high = 4096;
+    xhigh = 8192;
+  };
+  reasoningProfiles = lib.types.submodule {
+    options = {
+      budgets = lib.mkOption {
+        type = lib.types.submodule {
+          options = lib.mapAttrs (
+            _profile: budget:
+            lib.mkOption {
+              type = lib.types.ints.positive;
+              default = budget;
+              description = "Maximum reasoning tokens for this canonical profile; this is a ceiling, not a target.";
+            }
+          ) reasoningDefaults;
+        };
+        default = { };
+        description = "Model-specific reasoning token ceilings, overriding the generic profile defaults.";
+      };
+      nativeEffort = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = { };
+        description = "Optional model-native reasoning effort by canonical profile; omitted means native default behavior.";
+      };
+      effortTransport = lib.mkOption {
+        type = lib.types.enum [
+          "none"
+          "chat_template_kwargs"
+          "top_level"
+        ];
+        default = "none";
+        description = "Request transport for native effort, when the model has a verified effort selector.";
+      };
+      chatTemplateKwargs = lib.mkOption {
+        type = lib.types.attrs;
+        default = { };
+        description = "Additional chat_template_kwargs sent with every reasoning profile request.";
+      };
+    };
+  };
   modelOptions = {
     name = lib.mkOption {
       type = lib.types.str;
@@ -19,6 +62,11 @@ let
       type = lib.types.nullOr lib.types.bool;
       default = null;
       description = "Whether the model emits reasoning content.";
+    };
+    reasoningProfile = lib.mkOption {
+      type = lib.types.nullOr reasoningProfiles;
+      default = null;
+      description = "Optional model-specific mapping of canonical reasoning profiles to budgets and native effort.";
     };
     temperature = lib.mkOption {
       type = lib.types.nullOr lib.types.bool;
@@ -44,6 +92,7 @@ let
 in
 {
   inherit modelOptions;
+  inherit reasoningDefaults reasoningProfiles;
 
   type = lib.types.submodule {
     options = modelOptions;
@@ -87,12 +136,44 @@ in
       context = model.context or null;
       output = model.output or null;
       input = model.input or null;
+      profile = model.reasoningProfile or { };
+      budgets = reasoningDefaults // (profile.budgets or { });
+      effortTransport = profile.effortTransport or "none";
+      chatTemplateKwargs = profile.chatTemplateKwargs or { };
+      profiles = [
+        "low"
+        "medium"
+        "high"
+        "xhigh"
+      ];
+      reasoningVariants = lib.genAttrs profiles (
+        profileName:
+        let
+          nativeEffort = profile.nativeEffort.${profileName} or null;
+          effortOptions =
+            if nativeEffort == null || effortTransport == "none" then
+              { }
+            else if effortTransport == "chat_template_kwargs" then
+              {
+                chat_template_kwargs = chatTemplateKwargs // {
+                  reasoning_effort = nativeEffort;
+                };
+              }
+            else
+              { reasoning_effort = nativeEffort; };
+        in
+        {
+          thinking_budget_tokens = budgets.${profileName};
+        }
+        // effortOptions
+      );
     in
     {
       inherit (model) name;
     }
     // lib.optionalAttrs (toolCall != null) { tool_call = toolCall; }
     // lib.optionalAttrs (reasoning != null) { inherit reasoning; }
+    // lib.optionalAttrs (reasoning == true) { variants = reasoningVariants; }
     // lib.optionalAttrs (temperature != null) { inherit temperature; }
     // lib.optionalAttrs (context != null && output != null) {
       limit = {

@@ -551,6 +551,17 @@ in
         theme = cfg.settings.theme or opencodeTheme;
         model = cfg.defaultModel;
         small_model = cfg.settings.small_model or cfg.defaultModel;
+        agent =
+          let
+            configuredAgents = cfg.settings.agent or { };
+          in
+          configuredAgents
+          // {
+            build = (configuredAgents.build or { }) // {
+              # Keep serious coding deterministic; xhigh remains explicit.
+              variant = "high";
+            };
+          };
 
         mcp = mcpSettings;
 

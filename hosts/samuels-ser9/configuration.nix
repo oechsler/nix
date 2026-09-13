@@ -83,6 +83,8 @@
           name = "Tiel Coder 35B-A3B";
           toolCall = true;
           reasoning = true;
+          # TielCoder's pinned Sharp template has no documented native effort
+          # hierarchy, so profiles differ by deterministic budget ceilings.
           temperature = true;
           # 100k as KiB-aligned context (not a strict power of 2) to fit the
           # KV cache in 32GB shared RAM without OOM restarts.
@@ -98,6 +100,21 @@
           name = "Dirk 27B";
           toolCall = true;
           reasoning = true;
+          reasoningProfile = {
+            budgets = {
+              low = 256;
+              medium = 512;
+              high = 1024;
+              xhigh = 2048;
+            };
+            nativeEffort = {
+              low = "low";
+              medium = "medium";
+              high = "medium";
+              xhigh = "xhigh";
+            };
+            effortTransport = "chat_template_kwargs";
+          };
           temperature = true;
           context = 102400;
           source = {

@@ -158,6 +158,8 @@
               name = "Tiel Coder 35B-A3B";
               toolCall = true;
               reasoning = true;
+              # TielCoder's pinned Sharp template has no documented native
+              # effort hierarchy, so profiles use budget ceilings only.
               temperature = true;
               context = 102400;
               output = 16384;
@@ -166,6 +168,21 @@
               name = "Dirk 27B";
               toolCall = true;
               reasoning = true;
+              reasoningProfile = {
+                budgets = {
+                  low = 256;
+                  medium = 512;
+                  high = 1024;
+                  xhigh = 2048;
+                };
+                nativeEffort = {
+                  low = "low";
+                  medium = "medium";
+                  high = "medium";
+                  xhigh = "xhigh";
+                };
+                effortTransport = "chat_template_kwargs";
+              };
               temperature = true;
               context = 102400;
               output = 16384;

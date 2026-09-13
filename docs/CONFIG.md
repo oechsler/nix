@@ -612,6 +612,13 @@ features.llm = {
       name = "Example Coding Model";
       toolCall = true;
       reasoning = true;
+      # Optional: override the reasoning ceilings for this model.
+      reasoningProfile.budgets = {
+        low = 512;
+        medium = 1024;
+        high = 2048;
+        xhigh = 4096;
+      };
       temperature = true;
       source = {
         repo = "example-org/example-model-GGUF";
@@ -738,6 +745,31 @@ Local model IDs are `ollama/<tag>` and `llama-cpp/<id>`. The shared fields
 `name`, `toolCall`, `reasoning`, `temperature`, `context`, `input`, and `output`
 describe the model's name, capabilities, and limits.
 
+Reasoning-capable models additionally expose the same four OpenCode variants:
+
+| Variant  | Meaning                                     |
+| -------- | ------------------------------------------- |
+| `low`    | Fast/simple reasoning.                      |
+| `medium` | Normal coding with balanced latency.        |
+| `high`   | Default serious coding profile.             |
+| `xhigh`  | Explicit deep reasoning for difficult work. |
+
+The default coding variant is `high`. Use `xhigh` explicitly when its extra
+latency is justified. Variants are settings on the same model, not separate
+models or server instances; selecting one does not reload llama.cpp or change
+the provider. OpenCode's built-in `variant_cycle` keybind cycles through the
+available variants.
+
+The profiles are intentionally semantic rather than tied to one universal
+amount of reasoning. The backend applies practical limits for its configured
+runtime, and reasoning may finish before any limit is reached. Use `low` for
+quick, obvious work, `medium` for routine coding, `high` for serious coding,
+and `xhigh` only when additional latency is worthwhile.
+
+Choose a profile from OpenCode's normal variant selector after selecting a
+reasoning-capable model. The selected profile stays attached to that model for
+the session; changing it does not require changing the provider or server.
+
 Remote providers are configured separately. They need their own endpoint, model
 list, and credentials, and do not add models to local backends:
 
@@ -767,15 +799,16 @@ HTTPS gateway.
 The capability fields work for local and remote providers. Backend-specific
 source fields remain with their backend.
 
-| Field         | Meaning                                 |
-| ------------- | --------------------------------------- |
-| `name`        | Name shown in OpenCode.                 |
-| `toolCall`    | Native tool calls are supported.        |
-| `reasoning`   | Reasoning output is supported.          |
-| `temperature` | Temperature control is supported.       |
-| `context`     | Maximum conversation context in tokens. |
-| `input`       | Optional maximum input size in tokens.  |
-| `output`      | Maximum generated output in tokens.     |
+| Field              | Meaning                                      |
+| ------------------ | -------------------------------------------- |
+| `name`             | Name shown in OpenCode.                      |
+| `toolCall`         | Native tool calls are supported.             |
+| `reasoning`        | Reasoning output is supported.               |
+| `reasoningProfile` | Optional per-model reasoning profile limits. |
+| `temperature`      | Temperature control is supported.            |
+| `context`          | Maximum conversation context in tokens.      |
+| `input`            | Optional maximum input size in tokens.       |
+| `output`           | Maximum generated output in tokens.          |
 
 Custom providers use the same capability fields. The built-in OpenAI and
 OpenCode Go providers remain available; configured providers are enabled by

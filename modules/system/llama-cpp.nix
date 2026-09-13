@@ -65,6 +65,8 @@ let
     "--models-max ${toString cfg.modelsMax}"
     (if cfg.modelsAutoload then "--models-autoload" else "--no-models-autoload")
   ]
+  # Do not add a positive --reasoning-budget here: OpenCode supplies the
+  # per-request thinking_budget_tokens ceiling for each selected variant.
   ++ lib.optional (cfg.specType != "none") "--spec-type ${cfg.specType}"
   ++ lib.optional (cfg.specType != "none") "--spec-draft-n-max ${toString cfg.specDraftMax}"
   ++ lib.optional (cfg.specType != "none") "--spec-draft-p-min ${toString cfg.specDraftMinP}";
