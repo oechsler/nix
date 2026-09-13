@@ -162,6 +162,14 @@
               context = 102400;
               output = 16384;
             };
+            "dirk-qwen3.8-27b" = {
+              name = "Dirk 27B";
+              toolCall = true;
+              reasoning = true;
+              temperature = true;
+              context = 102400;
+              output = 16384;
+            };
           };
         };
         mcp.homeassistant = {

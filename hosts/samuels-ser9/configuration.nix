@@ -94,6 +94,19 @@
             sha256 = "9286a94c453c6a40ad51982c3dc88df4bba32fee9efad06e4588c83c059cf17c";
           };
         };
+        models."dirk-qwen3.8-27b" = {
+          name = "Dirk 27B";
+          toolCall = true;
+          reasoning = true;
+          temperature = true;
+          context = 102400;
+          source = {
+            repo = "peculiar-ragdoll/Dirk-Qwen3.8-27B-GGUF";
+            file = "Dirk-Qwen3.8-27B-UD-Q4_K_XL.gguf";
+            revision = "52cb3e759635ab4605e08790b6c47df8adcf0744";
+            sha256 = "d1ad2472a147caa1111bae5ec710331dc50692d62ebbdb3fbc54d421c4e209bc";
+          };
+        };
       };
     };
 
