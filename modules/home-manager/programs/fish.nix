@@ -25,6 +25,7 @@
 # Tmux behavior:
 # - SSH: Auto-attach to "ssh" session
 # - Kitty desktop sessions: Auto-attach to first non-SSH session or create new
+# - When NO_TMUX is set: skip the attach and run a plain shell instead
 
 {
   features,
@@ -61,7 +62,9 @@
     interactiveShellInit = ''
       set fish_greeting
       fzf_configure_bindings --directory=\co --history=\cr --processes= --variables= --git_status= --git_log=
-      if not set -q TMUX; and begin; set -q KITTY_WINDOW_ID; or set -q SSH_CONNECTION; end
+      # NO_TMUX (set by the Kitty "no tmux" keybinding or anywhere else) skips the
+      # tmux auto-attach so the user gets a plain shell instead.
+      if not set -q TMUX; and not set -q NO_TMUX; and begin; set -q KITTY_WINDOW_ID; or set -q SSH_CONNECTION; end
         if set -q SSH_CONNECTION
           exec ${pkgs.tmux}/bin/tmux new-session -A -s ssh
         else
