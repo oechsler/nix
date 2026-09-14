@@ -49,6 +49,11 @@ in
 {
   config = lib.mkIf cfg.enable (
     lib.mkMerge [
+      # The Android Emulator uses KVM directly and needs access to /dev/kvm.
+      (lib.mkIf config.features.dev.android.enable {
+        users.users.${config.user.name}.extraGroups = [ "kvm" ];
+      })
+
       # Podman with Docker-compatible CLI
       (lib.mkIf cfg.container.enable {
         virtualisation.podman = {

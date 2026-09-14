@@ -644,10 +644,6 @@ platform tools, build tools, NDK, emulator, and a Google APIs system image:
 features.dev.android.enable = true;
 ```
 
-After enabling Android tooling, the SDK is automatically available at the path
-expected by Android Studio. You do not need to configure the SDK path manually
-in Android Studio.
-
 Add `android-studio` to `features.dev.jetbrains.entries` when the IDE is also
 needed.
 
