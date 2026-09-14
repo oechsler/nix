@@ -158,9 +158,12 @@ in
     (lib.mkIf (features.dev.enable && features.dev.android.enable) {
       home = {
         packages = [ androidComposition.androidsdk ];
+        # Android Studio's default Linux SDK path is kept as a symlink to the
+        # immutable SDK derivation so the IDE and command-line tools agree.
+        file."Android/Sdk".source = "${androidComposition.androidsdk}/libexec/android-sdk";
         sessionVariables = {
-          ANDROID_HOME = "${androidComposition.androidsdk}/libexec/android-sdk";
-          ANDROID_SDK_ROOT = "${androidComposition.androidsdk}/libexec/android-sdk";
+          ANDROID_HOME = "${config.home.homeDirectory}/Android/Sdk";
+          ANDROID_SDK_ROOT = "${config.home.homeDirectory}/Android/Sdk";
         };
       };
     })
