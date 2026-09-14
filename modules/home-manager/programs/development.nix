@@ -37,12 +37,15 @@ let
     rustrover = pkgs.jetbrains.rust-rover;
   };
   androidComposition = pkgs.androidenv.composeAndroidPackages {
-    platformVersions = [ "35" ];
+    platformVersions = [
+      "35"
+      "37.1"
+    ];
     buildToolsVersions = [ "35.0.0" ];
     includeNDK = true;
     includeEmulator = true;
     includeSystemImages = true;
-    systemImageTypes = [ "google_apis" ];
+    systemImageTypes = [ "google_apis_playstore" ];
     abiVersions = [ "x86_64" ];
   };
 in
