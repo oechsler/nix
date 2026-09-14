@@ -36,18 +36,6 @@ let
     rubymine = pkgs.jetbrains.ruby-mine;
     rustrover = pkgs.jetbrains.rust-rover;
   };
-  androidComposition = pkgs.androidenv.composeAndroidPackages {
-    platformVersions = [
-      "35"
-      "37.1"
-    ];
-    buildToolsVersions = [ "35.0.0" ];
-    includeNDK = true;
-    includeEmulator = true;
-    includeSystemImages = true;
-    systemImageTypes = [ "google_apis_playstore" ];
-    abiVersions = [ "x86_64" ];
-  };
 in
 {
   #===========================
@@ -159,15 +147,12 @@ in
       }
     )
     (lib.mkIf (features.dev.enable && features.dev.android.enable) {
-      home = {
-        packages = [ androidComposition.androidsdk ];
-        # Android Studio's default Linux SDK path is kept as a symlink to the
-        # immutable SDK derivation so the IDE and command-line tools agree.
-        file."Android/Sdk".source = "${androidComposition.androidsdk}/libexec/android-sdk";
-        sessionVariables = {
-          ANDROID_HOME = "${config.home.homeDirectory}/Android/Sdk";
-          ANDROID_SDK_ROOT = "${config.home.homeDirectory}/Android/Sdk";
-        };
+      home.activation.androidSdkDirectory = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+        mkdir -p "$HOME/Android/Sdk"
+      '';
+      home.sessionVariables = {
+        ANDROID_HOME = "${config.home.homeDirectory}/Android/Sdk";
+        ANDROID_SDK_ROOT = "${config.home.homeDirectory}/Android/Sdk";
       };
     })
   ];

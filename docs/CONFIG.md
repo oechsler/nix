@@ -637,9 +637,8 @@ Available JetBrains values include `clion`, `datagrip`, `goland`, `idea-oss`,
 
 #### Android Development
 
-Android tooling is disabled by default. Enable it to install the Android SDK,
-platform tools, build tools, NDK, emulator, and a Google APIs Play Store system
-image:
+Android tooling is disabled by default. Enable it to configure Android Studio
+and its emulator environment:
 
 ```nix
 features.dev.android.enable = true;
