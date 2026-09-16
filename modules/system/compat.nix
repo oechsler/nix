@@ -43,7 +43,18 @@
         libpulseaudio
         libpng
         libGL
+        libdrm
         libx11
+        libxcb
+        libXi
+        libXext
+        libXfixes
+        libxkbcommon
+        libxkbfile
+        nss
+        nspr
+        dbus
+        expat
         fontconfig
         freetype
       ];
