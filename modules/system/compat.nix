@@ -54,6 +54,7 @@
           libpng
           libdrm
           libxcb
+          xcbutilcursor
           libXi
           libXext
           libXfixes
