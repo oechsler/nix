@@ -34,30 +34,36 @@
   config = lib.mkIf config.features.compat.enable {
     programs.nix-ld = {
       enable = true;
-      libraries = with pkgs; [
-        stdenv.cc.cc.lib
-        glibc
-        zlib
-        openssl
-        curl
-        libpulseaudio
-        libpng
-        libGL
-        libdrm
-        libx11
-        libxcb
-        libXi
-        libXext
-        libXfixes
-        libxkbcommon
-        libxkbfile
-        nss
-        nspr
-        dbus
-        expat
-        fontconfig
-        freetype
-      ];
+      libraries =
+        with pkgs;
+        [
+          stdenv.cc.cc.lib
+          glibc
+          zlib
+          openssl
+          curl
+          libGL
+          libx11
+          fontconfig
+          freetype
+        ]
+        ++ lib.optionals config.features.dev.android.enable [
+          # The Android SDK emulator is a foreign binary and needs these host
+          # libraries in addition to the generic compatibility set.
+          libpulseaudio
+          libpng
+          libdrm
+          libxcb
+          libXi
+          libXext
+          libXfixes
+          libxkbcommon
+          libxkbfile
+          nss
+          nspr
+          dbus
+          expat
+        ];
     };
   };
 }
