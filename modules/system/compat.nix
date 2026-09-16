@@ -55,11 +55,16 @@
           libdrm
           libxcb
           xcbutilcursor
+          xcbutilimage
+          xcbutilkeysyms
+          xcbutilrenderutil
           libXi
           libXext
           libXfixes
           libxkbcommon
           libxkbfile
+          libSM
+          libICE
           nss
           nspr
           libbsd
