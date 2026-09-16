@@ -61,6 +61,7 @@
           libxkbfile
           nss
           nspr
+          libbsd
           dbus
           expat
         ];
