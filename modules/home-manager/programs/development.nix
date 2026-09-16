@@ -154,6 +154,19 @@ in
         ANDROID_HOME = "${config.home.homeDirectory}/Android/Sdk";
         ANDROID_SDK_ROOT = "${config.home.homeDirectory}/Android/Sdk";
       };
+
+      # The SDK emulator ships an XCB Qt plugin but no Wayland plugin. Keep
+      # the workaround scoped to Android Studio and its child processes.
+      xdg.desktopEntries.android-studio = {
+        name = "Android Studio";
+        exec = "env QT_QPA_PLATFORM=xcb android-studio %U";
+        icon = "android-studio";
+        terminal = false;
+        categories = [
+          "Development"
+          "IDE"
+        ];
+      };
     })
   ];
 }
