@@ -40,6 +40,7 @@
         zlib
         openssl
         curl
+        libpulseaudio
         libGL
         libx11
         fontconfig
