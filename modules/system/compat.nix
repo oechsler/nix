@@ -41,6 +41,7 @@
         openssl
         curl
         libpulseaudio
+        libpng
         libGL
         libx11
         fontconfig
