@@ -13,6 +13,12 @@
 let
   modelSpec = import ../../lib/opencode.nix { inherit lib; };
   cfg = features.dev.opencode;
+  selectedLanguages =
+    if features.dev.languages == [ ] then
+      (import ../../lib/development.nix).languageNames
+    else
+      features.dev.languages;
+  languageEnabled = name: builtins.elem name selectedLanguages;
   localOllamaCfg = features.llm.ollama;
   localOllamaEnabled = features.llm.enable && localOllamaCfg.enable;
   localLlamaCppCfg = features.llm.llamaCpp;
@@ -204,6 +210,10 @@ let
         ".tsx"
       ];
     };
+    lua-language-server = {
+      command = [ "${pkgs.lua-language-server}/bin/lua-language-server" ];
+      extensions = [ ".lua" ];
+    };
     jdtls = {
       command = [ "${pkgs.jdt-language-server}/bin/jdtls" ];
       extensions = [ ".java" ];
@@ -252,6 +262,26 @@ let
       extensions = [ ".toml" ];
     };
   };
+  lspLanguages = {
+    nixd = "nix";
+    bash-language-server = "shell";
+    fish-lsp = "shell";
+    yaml-language-server = "yaml";
+    pyright = "python";
+    gopls = "go";
+    rust-analyzer = "rust";
+    typescript-language-server = "typescript";
+    jdtls = "java";
+    kotlin-language-server = "kotlin";
+    lua-language-server = "lua";
+    clangd = "c";
+    marksman = "markdown";
+    vscode-json-language-server = "json";
+    taplo = "toml";
+  };
+  enabledDefaultLsp = lib.filterAttrs (
+    name: _server: languageEnabled lspLanguages.${name}
+  ) defaultLsp;
   providerSecretChecks = lib.concatStringsSep "\n" (
     lib.mapAttrsToList (name: provider: ''
       if ! test -r ${providerSecretPath provider}; then
@@ -315,6 +345,13 @@ let
         ".yml"
         ".md"
       ];
+    };
+    stylua = {
+      command = [
+        "${pkgs.stylua}/bin/stylua"
+        "$FILE"
+      ];
+      extensions = [ ".lua" ];
     };
     shfmt = {
       command = [
@@ -397,6 +434,28 @@ let
       ];
     };
   };
+  formatterLanguages = {
+    nixfmt = [ "nix" ];
+    prettier = [
+      "javascript"
+      "typescript"
+      "json"
+      "markdown"
+      "yaml"
+    ];
+    shfmt = [ "shell" ];
+    fish_indent = [ "shell" ];
+    ruff = [ "python" ];
+    gofumpt = [ "go" ];
+    rustfmt = [ "rust" ];
+    google-java-format = [ "java" ];
+    ktlint = [ "kotlin" ];
+    clang-format = [ "c" ];
+    stylua = [ "lua" ];
+  };
+  enabledDefaultFormatters = lib.filterAttrs (
+    name: _formatter: builtins.any languageEnabled formatterLanguages.${name}
+  ) defaultFormatters;
   formatterSettings = lib.mapAttrs (
     _name: formatter:
     {
@@ -407,7 +466,7 @@ let
     // lib.optionalAttrs ((formatter.environment or { }) != { }) {
       inherit (formatter) environment;
     }
-  ) (defaultFormatters // cfg.formatter);
+  ) (enabledDefaultFormatters // cfg.formatter);
   providerSettings = lib.mapAttrs (
     name: provider:
     {
@@ -441,7 +500,7 @@ let
     // lib.optionalAttrs ((server.initialization or { }) != { }) {
       inherit (server) initialization;
     }
-  ) (defaultLsp // cfg.lsp);
+  ) (enabledDefaultLsp // cfg.lsp);
   mcpSettings = lib.mapAttrs (
     name: server:
     {

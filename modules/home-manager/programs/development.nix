@@ -55,33 +55,6 @@ in
       };
 
       home = {
-        packages = with pkgs; [
-          # General development utilities
-          cloc # Count lines of code
-
-          # C/C++ toolchain
-          clang # C compiler for native dependencies
-          lld # LLVM linker for native dependencies
-
-          # JVM toolchain
-          gradle
-          jdk
-          kotlin
-
-          # JavaScript/TypeScript toolchain
-          bun # Runtime, package manager, and bunx (npx replacement)
-
-          # Go toolchain
-          go
-
-          # Rust toolchain
-          rustc
-          cargo
-          clippy
-          rustfmt
-          rustPlatform.rustcSrc # Rust standard library sources
-        ];
-
         # Keep user-installed Bun CLIs and caches in the home directory.
         sessionPath = [
           "${config.home.homeDirectory}/.bun/bin"
@@ -99,19 +72,6 @@ in
           LDFLAGS = "-fuse-ld=lld";
         };
       };
-    })
-
-    # Distrobox requires a container runtime and follows its feature toggle.
-    (lib.mkIf (features.dev.enable && features.virtualisation.container.enable) {
-      home.packages = [ pkgs.distrobox ];
-    })
-
-    # Infrastructure tools
-    (lib.mkIf features.dev.enable {
-      home.packages = with pkgs; [
-        ansible # Infrastructure automation
-        opentofu # Terraform alternative (open-source)
-      ];
     })
 
     # GUI development tools (only for desktop)

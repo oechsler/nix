@@ -66,6 +66,32 @@
   ...
 }:
 
+let
+  selectedLanguages =
+    if features.dev.languages == [ ] then
+      (import ../../lib/development.nix).languageNames
+    else
+      features.dev.languages;
+  languageEnabled = name: builtins.elem name selectedLanguages;
+  enabledLsp = lib.concatStringsSep ", " (
+    lib.flatten [
+      (lib.optional (languageEnabled "nix") "\"nil_ls\"")
+      (lib.optional (languageEnabled "go") "\"gopls\"")
+      (lib.optional (languageEnabled "rust") "\"rust_analyzer\"")
+      (lib.optional (languageEnabled "typescript") "\"ts_ls\"")
+      (lib.optional (languageEnabled "java") "\"jdtls\"")
+      (lib.optional (languageEnabled "kotlin") "\"kotlin_language_server\"")
+      (lib.optional (languageEnabled "lua") "\"lua_ls\"")
+      (lib.optional (languageEnabled "shell") ''"bashls", "fish_lsp"'')
+      (lib.optional (languageEnabled "python") "\"pyright\"")
+      (lib.optional (languageEnabled "markdown") "\"marksman\"")
+      (lib.optional (languageEnabled "json") "\"jsonls\"")
+      (lib.optional (languageEnabled "toml") "\"taplo\"")
+      (lib.optional (languageEnabled "c") "\"clangd\"")
+      (lib.optional (languageEnabled "yaml") "\"yamlls\"")
+    ]
+  );
+in
 {
   #===========================
   # Configuration
@@ -149,11 +175,6 @@
       markdown-preview-nvim
       opencode-nvim
     ];
-
-    #---------------------------
-    # Extra Packages
-    #---------------------------
-    # Shared language servers and formatters are managed centrally in lsp.nix.
 
     #---------------------------
     # Lua Configuration
@@ -444,6 +465,11 @@
          filetypes = { "kotlin" },
          root_markers = { "settings.gradle", "settings.gradle.kts", "build.gradle", "build.gradle.kts", ".git" },
        })
+       vim.lsp.config("lua_ls", {
+         cmd = { "lua-language-server" },
+         filetypes = { "lua" },
+         root_markers = { ".luarc.json", ".luacheckrc", ".git" },
+       })
        vim.lsp.config("bashls", {
          cmd = { "bash-language-server", "start" },
          filetypes = { "sh", "bash", "zsh" },
@@ -484,33 +510,24 @@
          filetypes = { "c", "cpp", "objc", "objcpp" },
          root_markers = { "compile_commands.json", "compile_flags.txt", "CMakeLists.txt", ".git" },
        })
-       vim.lsp.enable({
-         "nil_ls", "gopls", "rust_analyzer", "ts_ls", "jdtls", "kotlin_language_server", "bashls", "yamlls", "pyright",
-         "fish_lsp", "marksman", "jsonls", "taplo", "clangd",
-       })
+       vim.lsp.enable({ ${enabledLsp} })
 
        require("conform").setup({
          formatters_by_ft = {
-           bash = { "shfmt" },
-           c = { "clang_format" },
-           cpp = { "clang_format" },
-           fish = { "fish_indent" },
-           go = { "gofumpt" },
-           java = { "google-java-format" },
-           javascript = { "prettierd" },
-           javascriptreact = { "prettierd" },
-           json = { "prettierd" },
-           kotlin = { "ktlint" },
-           kotlin_script = { "ktlint" },
-           markdown = { "prettierd" },
-           nix = { "nixfmt" },
-           python = { "ruff" },
-           rust = { "rustfmt" },
-           sh = { "shfmt" },
-           typescript = { "prettierd" },
-           typescriptreact = { "prettierd" },
-           yaml = { "prettierd" },
-           zsh = { "shfmt" },
+            ${lib.optionalString (languageEnabled "shell") ''bash = { "shfmt" }, fish = { "fish_indent" }, sh = { "shfmt" }, zsh = { "shfmt" },''}
+            ${lib.optionalString (languageEnabled "c") ''c = { "clang_format" }, cpp = { "clang_format" },''}
+            ${lib.optionalString (languageEnabled "go") ''go = { "gofumpt" },''}
+            ${lib.optionalString (languageEnabled "java") ''java = { "google-java-format" },''}
+            ${lib.optionalString (languageEnabled "javascript") ''javascript = { "prettierd" }, javascriptreact = { "prettierd" },''}
+            ${lib.optionalString (languageEnabled "json") ''json = { "prettierd" },''}
+            ${lib.optionalString (languageEnabled "kotlin") ''kotlin = { "ktlint" }, kotlin_script = { "ktlint" },''}
+            ${lib.optionalString (languageEnabled "lua") ''lua = { "stylua" },''}
+            ${lib.optionalString (languageEnabled "markdown") ''markdown = { "prettierd" },''}
+            ${lib.optionalString (languageEnabled "nix") ''nix = { "nixfmt" },''}
+            ${lib.optionalString (languageEnabled "python") ''python = { "ruff" },''}
+            ${lib.optionalString (languageEnabled "rust") ''rust = { "rustfmt" },''}
+            ${lib.optionalString (languageEnabled "typescript") ''typescript = { "prettierd" }, typescriptreact = { "prettierd" },''}
+            ${lib.optionalString (languageEnabled "yaml") ''yaml = { "prettierd" },''}
          },
         format_on_save = { timeout_ms = 500, lsp_format = "fallback" },
       })

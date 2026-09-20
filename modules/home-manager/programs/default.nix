@@ -25,7 +25,6 @@
     ./fish.nix
     ./git.nix
     ./kubernetes.nix
-    ./lsp.nix
     ./mangohud.nix
     ./mumble.nix
     ./neovim.nix

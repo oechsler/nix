@@ -4,11 +4,17 @@
 
 let
   modelSpec = import ../../lib/opencode.nix { inherit lib; };
+  development = import ../../lib/development.nix;
 in
 {
   options.features.dev = {
     enable = (lib.mkEnableOption "development tools") // {
       default = true;
+    };
+    languages = lib.mkOption {
+      type = lib.types.listOf (lib.types.enum development.languageNames);
+      default = [ ];
+      description = "Development languages to enable; an empty list enables all languages.";
     };
     opencode = {
       enable = (lib.mkEnableOption "OpenCode AI coding agent") // {

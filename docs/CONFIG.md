@@ -607,6 +607,7 @@ formatters for:
 - JavaScript/TypeScript: Bun, `typescript-language-server`, `prettierd`
 - JSON: `vscode-json-languageserver`, `prettierd`
 - Kotlin: Kotlin, Gradle, `kotlin-language-server`, `ktlint`, Detekt
+- Lua: `lua-language-server`, `stylua`
 - Markdown: `marksman`, `prettierd`
 - Nix: `nixd`, `nil`, `nixfmt`
 - Python: `pyright`, `ruff`
@@ -621,13 +622,31 @@ Neovim is the default terminal editor with completion, diagnostics, LSP
 navigation, syntax highlighting, and format-on-save. JetBrains IDEs and DBeaver
 are optional GUI tools; GoLand and RustRover are selected by default.
 
-| Option                           | Default                    | Description                             |
-| -------------------------------- | -------------------------- | --------------------------------------- |
-| `features.dev.enable`            | `true`                     | Development languages, tools, and IDEs. |
-| `features.dev.jetbrains.enable`  | `dev.enable`               | JetBrains IDEs as a group.              |
-| `features.dev.jetbrains.entries` | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.              |
-| `features.dev.android.enable`    | `false`                    | Android SDK and Android build tools.    |
-| `features.dev.dbeaver.enable`    | `dev.enable`               | DBeaver database GUI.                   |
+| Option                           | Default                    | Description                                             |
+| -------------------------------- | -------------------------- | ------------------------------------------------------- |
+| `features.dev.enable`            | `true`                     | Development languages, tools, and IDEs.                 |
+| `features.dev.languages`         | `[]`                       | Languages to enable; an empty list means all languages. |
+| `features.dev.jetbrains.enable`  | `dev.enable`               | JetBrains IDEs as a group.                              |
+| `features.dev.jetbrains.entries` | `[ "goland" "rustrover" ]` | JetBrains IDEs to install.                              |
+| `features.dev.android.enable`    | `false`                    | Android SDK and Android build tools.                    |
+| `features.dev.dbeaver.enable`    | `dev.enable`               | DBeaver database GUI.                                   |
+
+All development languages are enabled by default. Disable individual language
+toolchains when a host does not need them; this affects the system packages,
+Neovim, and OpenCode consistently:
+
+```nix
+features.dev.languages = [
+  "nix"
+  "rust"
+  "lua"
+];
+```
+
+Available language names are `c`, `go`, `java`, `javascript`, `json`, `kotlin`,
+`lua`, `markdown`, `nix`, `python`, `rust`, `shell`, `toml`, `typescript`, and
+`yaml`. The list is an allowlist: languages not listed are not installed or
+configured in Neovim and OpenCode.
 
 #### JetBrains IDEs
 
@@ -738,6 +757,58 @@ features.dev.opencode.mcp.example-server = {
   tokenSecret = "opencode/mcp/example-server/token";
 };
 ```
+
+### Git
+
+Git is configured for a CLI-first workflow. No additional Git setup is normally
+needed after applying the system configuration.
+
+#### Defaults
+
+| Behavior              | Default                                       |
+| --------------------- | --------------------------------------------- |
+| Editor                | Neovim                                        |
+| Diff viewer           | Delta with the active Catppuccin theme        |
+| Diff layout           | Side-by-side with navigation and line numbers |
+| Conflict markers      | `zdiff3`                                      |
+| Pull behavior         | Rebase with auto-stash                        |
+| Conflict reuse        | Enabled through `rerere`                      |
+| Remote branch cleanup | Enabled during fetch                          |
+| First push            | Automatically configures the upstream         |
+
+The diff output uses Git's `histogram` algorithm for readable changes. Merge
+conflicts use `zdiff3`, which includes the common base and makes both sides of a
+conflict easier to compare. Previously resolved conflicts can be reused by Git
+through `rerere`.
+
+#### Staging Workflow
+
+Use patch staging when a working tree contains several logical changes:
+
+```bash
+git patch       # select individual hunks
+git staged      # review exactly what will be committed
+git commit
+```
+
+Use `git unstage <file>` to remove one file from the index or
+`git unstage-all` to clear the complete staging area without deleting worktree
+changes.
+
+#### Aliases
+
+| Alias                | Command                        | Purpose                        |
+| -------------------- | ------------------------------ | ------------------------------ |
+| `git st`             | `status --short --branch`      | Compact status                 |
+| `git d`              | `diff`                         | Unstaged changes               |
+| `git staged`         | `diff --cached`                | Staged changes                 |
+| `git patch`          | `add --patch`                  | Selective staging              |
+| `git unstage`        | `restore --staged`             | Unstage selected files         |
+| `git unstage-all`    | `restore --staged :/`          | Clear the complete index       |
+| `git last`           | `log -1 HEAD`                  | Show the last commit           |
+| `git lg`             | `log --graph --decorate --all` | Browse branch history          |
+| `git amend`          | `commit --amend --no-edit`     | Amend without changing message |
+| `git fixup <commit>` | `commit --fixup <commit>`      | Create a rebase fixup commit   |
 
 ### Operations
 

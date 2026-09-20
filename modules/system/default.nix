@@ -12,6 +12,7 @@
     ./bluetooth.nix
     ./boot.nix
     ./compat.nix
+    ./development.nix
     ./mount.nix
     ./desktop
     ./disko-luks.nix
