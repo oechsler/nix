@@ -355,8 +355,8 @@ in
 
     programs.rofi = {
       enable = true;
-      font = "${fonts.ui.font} ${toString fonts.ui.size}";
-      extraConfig = {
+      settings = {
+        font = "${fonts.ui.font} ${toString fonts.ui.size}";
         show-icons = true;
         icon-theme = theme.icons.name;
         drun-match-fields = "name,exec";

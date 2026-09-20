@@ -1,0 +1,62 @@
+name: Update flake inputs
+
+on:
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+jobs:
+  update:
+    name: Update flake and rolling assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.FORGEJO_TOKEN }}
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Update flake and userstyles hash
+        run: |
+          set -euo pipefail
+          nix flake update
+          ./scripts/update-catppuccin-userstyles-hash.sh --update
+
+      - name: Validate update
+        run: nix flake check --no-build
+
+      - name: Push update branch
+        id: push
+        env:
+          BRANCH: automation/flake-update
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "Forgejo Flake Updater"
+          git config user.email "forgejo-flake-updater@localhost"
+          git switch --create "$BRANCH"
+          git add flake.lock modules/home-manager/programs/browsers.nix
+          git commit -m "chore: update flake inputs and userstyles"
+          git push --force origin "$BRANCH"
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Open Forgejo pull request
+        if: steps.push.outputs.changed == 'true'
+        env:
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+          BRANCH: automation/flake-update
+        run: |
+          set -euo pipefail
+          server="${FORGEJO_SERVER_URL:-$GITHUB_SERVER_URL}"
+          repo="${FORGEJO_REPOSITORY:-$GITHUB_REPOSITORY}"
+          curl --fail --request POST "$server/api/v1/repos/$repo/pulls" \
+            --header "Authorization: token $FORGEJO_TOKEN" \
+            --header 'Content-Type: application/json' \
+            --data "{\"head\":\"$BRANCH\",\"base\":\"main\",\"title\":\"chore: update flake inputs and userstyles\",\"body\":\"Automated weekly update of flake inputs and the Catppuccin rolling userstyles hash.\"}"

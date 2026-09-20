@@ -64,7 +64,7 @@ let
   stylusId = firefoxAddons.stylus.addonId;
   catppuccinUserstylesExport = pkgs.fetchurl {
     url = "https://github.com/catppuccin/userstyles/releases/download/all-userstyles-export/import.json";
-    hash = "sha256-uV3vq5NXiJ68oOc7TK8bSsvhYosgKZizNJjUNVMnS7k=";
+    hash = "sha256-JcgPbDd4R/uZIyjUbPuQEqnq5ee7I21GjsI8dzSc0N0=";
   };
   catppuccinUserstylesLibrary = pkgs.fetchurl {
     url = "https://userstyles.catppuccin.com/lib/std/v1.less";
@@ -129,7 +129,6 @@ let
         dbInChromeStorage: true,
         settings: imported[0].settings,
       };
-
       for (const [offset, original] of imported.slice(1).entries()) {
         const id = offset + 1;
         const style = JSON.parse(JSON.stringify(original));

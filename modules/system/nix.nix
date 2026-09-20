@@ -225,7 +225,8 @@ in
           '';
 
           # Post-upgrade cleanup: remove override and restore configuration.nix.
-          # Runs even on upgrade failure so the git tree stays clean.
+          # ExecStopPost below also runs when the rebuild fails, so a temporary
+          # Secure Boot override can never poison the next upgrade.
           cleanupOverride = pkgs.writeShellScript "nixos-upgrade-cleanup-override" ''
             OVERRIDE="${flakeDir}/hosts/${config.networking.hostName}/secure-boot-upgrade-override.nix"
             if [ -f "$OVERRIDE" ]; then
@@ -277,15 +278,18 @@ in
             pkgs.gnused
           ];
 
-          serviceConfig.ExecStartPre = lib.mkBefore [
-            "${waitForManualRebuild}"
-            "${startingNotification}"
-            "${updateFlake}"
-          ];
-          serviceConfig.ExecStartPost = [
-            "${cleanupOverride}"
-            "${successScript}"
-          ];
+          serviceConfig = {
+            ExecStartPre = lib.mkBefore [
+              "${waitForManualRebuild}"
+              "${startingNotification}"
+              "${updateFlake}"
+            ];
+            ExecStartPost = [ "${successScript}" ];
+            # ExecStartPost is skipped when nixos-rebuild fails. Cleanup belongs
+            # in ExecStopPost because systemd runs it for successful and failed
+            # services alike.
+            ExecStopPost = [ "${cleanupOverride}" ];
+          };
 
           # Trigger failure notification service on upgrade failure
           unitConfig.OnFailure = [ "nixos-upgrade-notify-failure.service" ];

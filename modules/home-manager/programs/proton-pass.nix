@@ -134,14 +134,13 @@ in
         Unit = {
           Description = "Proton Pass SSH Agent";
           ConditionPathExists = "%h/.local/share/proton-pass-cli";
-          # Keep this service on default.target: the agent is also used on
-          # servers, and SSH must not silently fall back to a stale key while
-          # waiting for a graphical session. The service retries until the
-          # Proton Pass session created by proton-pass-init is available.
+          # The session directory can survive logout or contain an expired
+          # session, so path existence alone is not sufficient.
         };
 
         Service = {
           Type = "simple";
+          ExecCondition = "${pkgs.proton-pass-cli}/bin/pass-cli info";
           ExecStart = "${pkgs.proton-pass-cli}/bin/pass-cli ssh-agent start";
           Restart = "on-failure";
           RestartSec = "5s";
@@ -153,9 +152,7 @@ in
           ];
         };
 
-        Install = {
-          WantedBy = [ "default.target" ];
-        };
+        Install.WantedBy = [ "default.target" ];
       };
 
       # SSH configuration
