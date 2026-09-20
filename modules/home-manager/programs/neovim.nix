@@ -89,6 +89,12 @@ let
       (lib.optional (languageEnabled "toml") "\"taplo\"")
       (lib.optional (languageEnabled "c") "\"clangd\"")
       (lib.optional (languageEnabled "yaml") "\"yamlls\"")
+      (lib.optional (languageEnabled "cmake") "\"cmake\"")
+      (lib.optional (languageEnabled "css") "\"cssls\"")
+      (lib.optional (languageEnabled "html") "\"html\"")
+      (lib.optional (languageEnabled "docker") "\"dockerls\"")
+      (lib.optional (languageEnabled "sql") "\"sqlls\"")
+      (lib.optional (languageEnabled "terraform") "\"terraformls\"")
     ]
   );
 in
@@ -505,14 +511,49 @@ in
          filetypes = { "toml" },
          root_markers = { "pyproject.toml", "Cargo.toml", ".git" },
        })
-       vim.lsp.config("clangd", {
+        vim.lsp.config("clangd", {
          cmd = { "clangd" },
          filetypes = { "c", "cpp", "objc", "objcpp" },
-         root_markers = { "compile_commands.json", "compile_flags.txt", "CMakeLists.txt", ".git" },
-       })
+          root_markers = { "compile_commands.json", "compile_flags.txt", "CMakeLists.txt", ".git" },
+        })
+        vim.lsp.config("cmake", {
+          cmd = { "cmake-language-server" },
+          filetypes = { "cmake" },
+          root_markers = { "CMakeLists.txt", ".git" },
+        })
+        vim.lsp.config("cssls", {
+          cmd = { "vscode-css-language-server", "--stdio" },
+          filetypes = { "css", "scss", "less" },
+          root_markers = { "package.json", ".git" },
+        })
+        vim.lsp.config("html", {
+          cmd = { "vscode-html-language-server", "--stdio" },
+          filetypes = { "html" },
+          root_markers = { "package.json", ".git" },
+        })
+        vim.lsp.config("dockerls", {
+          cmd = { "docker-langserver", "--stdio" },
+          filetypes = { "dockerfile" },
+          root_markers = { "Dockerfile", ".git" },
+        })
+        vim.lsp.config("sqlls", {
+          cmd = { "sqls" },
+          filetypes = { "sql" },
+          root_markers = { ".git" },
+        })
+        vim.lsp.config("terraformls", {
+          cmd = { "terraform-ls", "serve" },
+          filetypes = { "terraform", "hcl" },
+          root_markers = { ".terraform", "main.tf", ".git" },
+        })
        vim.lsp.enable({ ${enabledLsp} })
 
-       require("conform").setup({
+        require("conform").setup({
+         formatters = {
+           cmake_format = { command = "cmake-format", args = { "-i", "$FILENAME" } },
+           sql_formatter = { command = "sql-formatter", args = { "--fix", "$FILENAME" } },
+           tofu_fmt = { command = "tofu", args = { "fmt", "$FILENAME" } },
+         },
          formatters_by_ft = {
             ${lib.optionalString (languageEnabled "shell") ''bash = { "shfmt" }, fish = { "fish_indent" }, sh = { "shfmt" }, zsh = { "shfmt" },''}
             ${lib.optionalString (languageEnabled "c") ''c = { "clang_format" }, cpp = { "clang_format" },''}
@@ -528,6 +569,12 @@ in
             ${lib.optionalString (languageEnabled "rust") ''rust = { "rustfmt" },''}
             ${lib.optionalString (languageEnabled "typescript") ''typescript = { "prettierd" }, typescriptreact = { "prettierd" },''}
             ${lib.optionalString (languageEnabled "yaml") ''yaml = { "prettierd" },''}
+            ${lib.optionalString (languageEnabled "cmake") ''cmake = { "cmake_format" },''}
+            ${lib.optionalString (
+              languageEnabled "css" || languageEnabled "html" || languageEnabled "scss"
+            ) ''css = { "prettierd" }, html = { "prettierd" }, scss = { "prettierd" },''}
+            ${lib.optionalString (languageEnabled "sql") ''sql = { "sql_formatter" },''}
+            ${lib.optionalString (languageEnabled "terraform") ''terraform = { "tofu_fmt" }, hcl = { "tofu_fmt" },''}
          },
         format_on_save = { timeout_ms = 500, lsp_format = "fallback" },
       })

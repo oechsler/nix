@@ -236,6 +236,53 @@ let
         ".hpp"
       ];
     };
+    cmake-language-server = {
+      command = [ "${pkgs.cmake-language-server}/bin/cmake-language-server" ];
+      extensions = [
+        "CMakeLists.txt"
+        ".cmake"
+      ];
+    };
+    vscode-css-language-server = {
+      command = [
+        "${pkgs.vscode-langservers-extracted}/bin/vscode-css-language-server"
+        "--stdio"
+      ];
+      extensions = [
+        ".css"
+        ".scss"
+        ".less"
+      ];
+    };
+    vscode-html-language-server = {
+      command = [
+        "${pkgs.vscode-langservers-extracted}/bin/vscode-html-language-server"
+        "--stdio"
+      ];
+      extensions = [ ".html" ];
+    };
+    dockerfile-language-server = {
+      command = [
+        "${pkgs.dockerfile-language-server}/bin/docker-langserver"
+        "--stdio"
+      ];
+      extensions = [ "Dockerfile" ];
+    };
+    sqls = {
+      command = [ "${pkgs.sqls}/bin/sqls" ];
+      extensions = [ ".sql" ];
+    };
+    terraform-ls = {
+      command = [
+        "${pkgs.terraform-ls}/bin/terraform-ls"
+        "serve"
+      ];
+      extensions = [
+        ".tf"
+        ".tfvars"
+        ".hcl"
+      ];
+    };
     marksman = {
       command = [
         "${pkgs.marksman}/bin/marksman"
@@ -278,6 +325,12 @@ let
     marksman = "markdown";
     vscode-json-language-server = "json";
     taplo = "toml";
+    cmake-language-server = "cmake";
+    vscode-css-language-server = "css";
+    vscode-html-language-server = "html";
+    dockerfile-language-server = "docker";
+    sqls = "sql";
+    terraform-ls = "terraform";
   };
   enabledDefaultLsp = lib.filterAttrs (
     name: _server: languageEnabled lspLanguages.${name}
@@ -352,6 +405,37 @@ let
         "$FILE"
       ];
       extensions = [ ".lua" ];
+    };
+    cmake-format = {
+      command = [
+        "${pkgs.cmake-format}/bin/cmake-format"
+        "-i"
+        "$FILE"
+      ];
+      extensions = [
+        ".cmake"
+        "CMakeLists.txt"
+      ];
+    };
+    sql-formatter = {
+      command = [
+        "${pkgs.sql-formatter}/bin/sql-formatter"
+        "--fix"
+        "$FILE"
+      ];
+      extensions = [ ".sql" ];
+    };
+    tofu-format = {
+      command = [
+        "${pkgs.opentofu}/bin/tofu"
+        "fmt"
+        "$FILE"
+      ];
+      extensions = [
+        ".tf"
+        ".tfvars"
+        ".hcl"
+      ];
     };
     shfmt = {
       command = [
@@ -452,6 +536,9 @@ let
     ktlint = [ "kotlin" ];
     clang-format = [ "c" ];
     stylua = [ "lua" ];
+    cmake-format = [ "cmake" ];
+    sql-formatter = [ "sql" ];
+    tofu-format = [ "terraform" ];
   };
   enabledDefaultFormatters = lib.filterAttrs (
     name: _formatter: builtins.any languageEnabled formatterLanguages.${name}

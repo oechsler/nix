@@ -601,8 +601,12 @@ The default setup includes toolchains, language servers, diagnostics, and
 formatters for:
 
 - C/C++: Clang, LLD, `clangd`, `clang-format`
+- CMake: `cmake-language-server`, `cmake-format`
+- CSS/SCSS: CSS-Language-Server, `prettierd`
+- Docker: Dockerfile-Language-Server, Hadolint
 - Fish: `fish-lsp`, `fish_indent`
-- Go: Go, `gopls`, `gofumpt`
+- Go: Go, `gopls`, `gofumpt`, `golangci-lint`
+- HTML: HTML-Language-Server, `prettierd`
 - Java: JDK, Gradle, `jdt-language-server`, `google-java-format`
 - JavaScript/TypeScript: Bun, `typescript-language-server`, `prettierd`
 - JSON: `vscode-json-languageserver`, `prettierd`
@@ -612,9 +616,11 @@ formatters for:
 - Nix: `nixd`, `nil`, `nixfmt`
 - Python: `pyright`, `ruff`
 - Rust: `rustc`, Cargo, Clippy, `rust-analyzer`, `rustfmt`
-- Shell: `bash-language-server`, `shfmt`
+- Shell: `bash-language-server`, `shfmt`, ShellCheck
+- SQL: `sqls`, `sql-formatter`
+- Terraform/OpenTofu: `terraform-ls`, `tofu fmt`, `tflint`
 - TOML: `taplo`
-- YAML: `yaml-language-server`, `prettierd`
+- YAML: `yaml-language-server`, `prettierd`, `yamllint`
 
 #### Editors and IDEs
 
@@ -643,10 +649,11 @@ features.dev.languages = [
 ];
 ```
 
-Available language names are `c`, `go`, `java`, `javascript`, `json`, `kotlin`,
-`lua`, `markdown`, `nix`, `python`, `rust`, `shell`, `toml`, `typescript`, and
-`yaml`. The list is an allowlist: languages not listed are not installed or
-configured in Neovim and OpenCode.
+Available language names are `c`, `cmake`, `css`, `docker`, `go`, `html`, `java`,
+`javascript`, `json`, `kotlin`, `lua`, `markdown`, `nix`, `python`, `rust`,
+`scss`, `shell`, `sql`, `terraform`, `toml`, `typescript`, and `yaml`. The list
+is an allowlist: languages not listed are not installed or configured in Neovim
+and OpenCode.
 
 #### JetBrains IDEs
 

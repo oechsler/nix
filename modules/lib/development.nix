@@ -3,7 +3,11 @@
 {
   languageNames = [
     "c"
+    "cmake"
+    "css"
+    "docker"
     "go"
+    "html"
     "java"
     "javascript"
     "json"
@@ -13,7 +17,10 @@
     "nix"
     "python"
     "rust"
+    "sql"
     "shell"
+    "scss"
+    "terraform"
     "toml"
     "typescript"
     "yaml"
