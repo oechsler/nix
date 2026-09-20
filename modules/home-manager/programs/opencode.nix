@@ -526,7 +526,7 @@ let
         (provider.baseURL != null || provider.apiKeySecret != null || provider.apiKey != null)
         {
           settings =
-            lib.optionalAttrs (provider.baseURL != null) { baseURL = provider.baseURL; }
+            lib.optionalAttrs (provider.baseURL != null) { inherit (provider) baseURL; }
             // lib.optionalAttrs (provider.apiKeySecret != null || provider.apiKey != null) {
               apiKey = if provider.apiKey != null then provider.apiKey else "{env:${providerEnvName name}}";
             };
@@ -561,7 +561,7 @@ let
     {
       inherit (server) type;
       enabled = server.enable;
-      timeout = server.timeout;
+      inherit (server) timeout;
     }
     // lib.optionalAttrs (server.type == "remote") {
       inherit (server) url;
