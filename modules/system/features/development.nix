@@ -28,7 +28,7 @@ in
       settings = lib.mkOption {
         type = lib.types.attrs;
         default = { };
-        description = "Additional OpenCode settings, excluding generated model, provider, MCP, LSP, formatter, and server settings.";
+        description = "Additional OpenCode V2 settings, excluding generated model, providers, MCP servers, agents, LSP servers, and formatters.";
       };
       lsp = lib.mkOption {
         type = lib.types.attrsOf (
@@ -103,10 +103,10 @@ in
                 default = null;
                 description = "Provider display name.";
               };
-              npm = lib.mkOption {
+              package = lib.mkOption {
                 type = lib.types.nullOr lib.types.str;
                 default = null;
-                description = "AI SDK provider package.";
+                description = "OpenCode V2 provider package.";
               };
               baseURL = lib.mkOption {
                 type = lib.types.nullOr lib.types.str;

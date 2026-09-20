@@ -23,63 +23,6 @@ let
   localOllamaEnabled = features.llm.enable && localOllamaCfg.enable;
   localLlamaCppCfg = features.llm.llamaCpp;
   localLlamaCppEnabled = features.llm.enable && localLlamaCppCfg.enable;
-  defaultProviders = {
-    openai = {
-      enable = true;
-      name = null;
-      npm = null;
-      baseURL = null;
-      apiKeySecret = null;
-      apiKey = null;
-      models = {
-        "gpt-5.6-luna".name = "GPT-5.6 Luna";
-        "gpt-5.6-terra".name = "GPT-5.6 Terra";
-        "gpt-5.6-sol".name = "GPT-5.6 Sol";
-      };
-    };
-    "opencode-go" = {
-      enable = true;
-      name = "OpenCode Go";
-      npm = "@ai-sdk/openai-compatible";
-      baseURL = "https://opencode.ai/zen/go/v1";
-      apiKeySecret = "opencode/provider/opencode-go/api-key";
-      apiKey = null;
-      models = {
-        "deepseek-v4-flash".name = "DeepSeek V4 Flash";
-        "deepseek-v4-pro".name = "DeepSeek V4 Pro";
-        "gpt-5.6-luna".name = "GPT-5.6 Luna";
-        "qwen3.8-max".name = "Qwen3.8 Max";
-      };
-    };
-  };
-  configuredProviders = lib.filterAttrs (_: provider: provider.enable) (
-    defaultProviders
-    // lib.optionalAttrs localOllamaEnabled { ollama = localOllamaProvider; }
-    // lib.optionalAttrs localLlamaCppEnabled { "llama-cpp" = localLlamaCppProvider; }
-    // cfg.provider
-  );
-  nativeToolModels = lib.flatten (
-    lib.mapAttrsToList (
-      providerName: provider:
-      lib.mapAttrsToList (
-        modelName: model: lib.optional ((model.toolCall or null) == true) "${providerName}/${modelName}"
-      ) provider.models
-    ) configuredProviders
-  );
-  nativeToolCallPlugin = pkgs.writeText "opencode-native-tool-calls.js" ''
-    const nativeToolModels = new Set(${builtins.toJSON nativeToolModels})
-
-    export const NativeToolCalls = async () => ({
-      "experimental.chat.system.transform": async (input, output) => {
-        const model = `''${input.model.providerID}/''${input.model.modelID}`
-        if (!nativeToolModels.has(model)) return
-
-        output.system.push(
-          "You are operating as an agent with native tools. When a tool is needed, you MUST call the provided tool using the native tool-calling API. Never write a shell command, tool name, JSON arguments, or Markdown code block as a substitute for a tool call."
-        )
-      },
-    })
-  '';
   opencodeTheme =
     {
       latte = "catppuccin";
@@ -88,13 +31,18 @@ let
       mocha = "catppuccin";
     }
     .${theme.catppuccin.flavor};
+  configuredProviders = lib.filterAttrs (_: provider: provider.enable) (
+    lib.optionalAttrs localOllamaEnabled { ollama = localOllamaProvider; }
+    // lib.optionalAttrs localLlamaCppEnabled { "llama-cpp" = localLlamaCppProvider; }
+    // cfg.provider
+  );
   localOllamaProvider = {
     enable = true;
     apiKeySecret = null;
     apiKey = null;
     baseURL = "http://127.0.0.1:11434/v1";
     name = "Ollama";
-    npm = "@ai-sdk/openai-compatible";
+    package = "@opencode/ai/providers/openai-compatible";
     models = lib.mapAttrs (
       _: model:
       model
@@ -112,7 +60,7 @@ let
     apiKey = null;
     baseURL = "http://127.0.0.1:${toString localLlamaCppCfg.port}/v1";
     name = "llama.cpp";
-    npm = "@ai-sdk/openai-compatible";
+    package = "@opencode/ai/providers/openai-compatible";
     models = lib.mapAttrs (
       _: model:
       model
@@ -554,28 +502,6 @@ let
       inherit (formatter) environment;
     }
   ) (enabledDefaultFormatters // cfg.formatter);
-  providerSettings = lib.mapAttrs (
-    name: provider:
-    {
-      models = lib.mapAttrs (_model: model: modelSpec.toOpenCode model) provider.models;
-      whitelist = builtins.attrNames provider.models;
-    }
-    // lib.optionalAttrs (provider.name != null) { inherit (provider) name; }
-    // lib.optionalAttrs (provider.npm != null) { inherit (provider) npm; }
-    //
-      lib.optionalAttrs
-        (provider.baseURL != null || provider.apiKeySecret != null || provider.apiKey != null)
-        {
-          options =
-            lib.optionalAttrs (provider.baseURL != null) { inherit (provider) baseURL; }
-            // lib.optionalAttrs (provider.apiKeySecret != null || provider.apiKey != null) {
-              apiKey = if provider.apiKey != null then provider.apiKey else "{env:${providerEnvName name}}";
-            };
-        }
-  ) configuredProviders;
-  providerSopsSecrets = lib.mapAttrs' (
-    _name: provider: lib.nameValuePair provider.apiKeySecret { }
-  ) providersWithSecrets;
   lspSettings = lib.mapAttrs (
     _name: server:
     {
@@ -588,19 +514,59 @@ let
       inherit (server) initialization;
     }
   ) (enabledDefaultLsp // cfg.lsp);
-  mcpSettings = lib.mapAttrs (
+  providerSettings = lib.mapAttrs (
+    name: provider:
+    {
+      models = lib.mapAttrs (modelName: model: modelSpec.toOpenCode modelName model) provider.models;
+    }
+    // lib.optionalAttrs (provider.name != null) { inherit (provider) name; }
+    // lib.optionalAttrs (provider.package != null) { inherit (provider) package; }
+    //
+      lib.optionalAttrs
+        (provider.baseURL != null || provider.apiKeySecret != null || provider.apiKey != null)
+        {
+          settings =
+            lib.optionalAttrs (provider.baseURL != null) { baseURL = provider.baseURL; }
+            // lib.optionalAttrs (provider.apiKeySecret != null || provider.apiKey != null) {
+              apiKey = if provider.apiKey != null then provider.apiKey else "{env:${providerEnvName name}}";
+            };
+        }
+  ) configuredProviders;
+  providerSopsSecrets = lib.mapAttrs' (
+    _name: provider: lib.nameValuePair provider.apiKeySecret { }
+  ) providersWithSecrets;
+  providerAccessPolicies = [
+    {
+      effect = "deny";
+      action = "provider.use";
+      resource = "*";
+    }
+  ]
+  ++
+    lib.mapAttrsToList
+      (name: _provider: {
+        effect = "allow";
+        action = "provider.use";
+        resource = name;
+      })
+      (
+        configuredProviders
+        // {
+          openai = { };
+          "opencode-go" = { };
+        }
+      );
+  mcpServerSettings =
     name: server:
     {
       inherit (server) type;
       enabled = server.enable;
-      inherit (server) timeout;
+      timeout = server.timeout;
     }
     // lib.optionalAttrs (server.type == "remote") {
       inherit (server) url;
     }
-    // lib.optionalAttrs (server.type == "local") {
-      inherit (server) command;
-    }
+    // lib.optionalAttrs (server.type == "local") { inherit (server) command; }
     // lib.optionalAttrs (server.headers != { } || server.tokenSecret != null || server.token != null) {
       headers =
         server.headers
@@ -633,8 +599,10 @@ let
         // lib.optionalAttrs (server.oauth.redirectUri != null) {
           redirectUri = server.oauth.redirectUri;
         };
-    }
-  ) cfg.mcp;
+    };
+  mcpSettings = {
+    servers = lib.mapAttrs mcpServerSettings cfg.mcp;
+  };
   mcpSopsSecrets = lib.mapAttrs' (
     _name: server: lib.nameValuePair server.tokenSecret { }
   ) mcpWithSecrets;
@@ -657,69 +625,89 @@ in
   config = lib.mkIf (features.dev.enable && features.dev.opencode.enable) {
     sops.secrets = providerSopsSecrets // mcpSopsSecrets // mcpOAuthSopsSecrets;
 
+    xdg.configFile."opencode/tui.json".text = builtins.toJSON {
+      theme = opencodeTheme;
+    };
+
     programs.opencode = {
       enable = true;
       package = opencodeWithSecrets;
 
-      settings = cfg.settings // {
-        plugin = [ nativeToolCallPlugin ] ++ (cfg.settings.plugin or [ ]);
-        lsp = {
-          # Add locally managed servers for formats not covered by the built-ins.
-          markdown = {
-            command = [
-              "${pkgs.marksman}/bin/marksman"
-              "server"
-            ];
-            extensions = [ ".md" ];
-          };
-          json = {
-            command = [
-              "${pkgs.vscode-json-languageserver}/bin/vscode-json-language-server"
-              "--stdio"
-            ];
-            extensions = [
-              ".json"
-              ".jsonc"
-            ];
-          };
-          toml = {
-            command = [
-              "${pkgs.taplo}/bin/taplo"
-              "lsp"
-              "stdio"
-            ];
-            extensions = [ ".toml" ];
-          };
-        }
-        // lspSettings;
-        formatter = formatterSettings;
-        enabled_providers = builtins.attrNames configuredProviders;
-        theme = cfg.settings.theme or opencodeTheme;
-        model = cfg.defaultModel;
-        small_model = cfg.settings.small_model or cfg.defaultModel;
-        agent =
-          let
-            configuredAgents = cfg.settings.agent or { };
-          in
-          configuredAgents
-          // {
-            build = (configuredAgents.build or { }) // {
-              # Keep serious coding deterministic; xhigh remains explicit.
-              variant = "high";
+      settings =
+        lib.removeAttrs cfg.settings [
+          "agent"
+          "compaction"
+          "formatter"
+          "lsp"
+          "mcp"
+          "model"
+          "plugin"
+          "provider"
+          "small_model"
+          "theme"
+        ]
+        // {
+          "$schema" = "https://opencode.ai/config.json";
+          formatter = formatterSettings;
+          lsp = {
+            markdown = {
+              command = [
+                "${pkgs.marksman}/bin/marksman"
+                "server"
+              ];
+              extensions = [ ".md" ];
             };
+            json = {
+              command = [
+                "${pkgs.vscode-json-languageserver}/bin/vscode-json-languageserver"
+                "--stdio"
+              ];
+              extensions = [
+                ".json"
+                ".jsonc"
+              ];
+            };
+            toml = {
+              command = [
+                "${pkgs.taplo}/bin/taplo"
+                "lsp"
+                "stdio"
+              ];
+              extensions = [ ".toml" ];
+            };
+          }
+          // lspSettings;
+          model = cfg.defaultModel;
+          default_agent = "build";
+          agents =
+            let
+              configuredAgents = cfg.settings.agents or { };
+            in
+            configuredAgents
+            // {
+              build = (configuredAgents.build or { }) // {
+                model = "${cfg.defaultModel}#high";
+              };
+              title = (configuredAgents.title or { }) // {
+                model = cfg.defaultModel;
+              };
+            };
+
+          mcp = mcpSettings;
+
+          compaction =
+            cfg.settings.compaction or {
+              auto = true;
+              keep.tokens = 15000;
+              buffer = 20000;
+            };
+
+          experimental = (cfg.settings.experimental or { }) // {
+            policies = providerAccessPolicies;
           };
 
-        mcp = mcpSettings;
-
-        compaction =
-          cfg.settings.compaction or {
-            auto = true;
-            prune = true;
-            reserved = 20000;
-          };
-
-        provider = providerSettings;
-      };
+          providers = providerSettings;
+        };
     };
 
   };

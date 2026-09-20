@@ -682,16 +682,18 @@ features = {
 #### OpenCode
 
 OpenCode is the coding assistant configured by the development feature. It
-includes model providers, MCP integrations, LSP servers, and formatters. Its
+includes model providers, MCP integrations, agents, LSP servers, and formatters. Its
 default model is `openai/gpt-5.6-luna`.
 
-| Option                               | Default               | Purpose                             |
-| ------------------------------------ | --------------------- | ----------------------------------- |
-| `features.dev.opencode.enable`       | `features.dev.enable` | Install and configure OpenCode.     |
-| `features.dev.opencode.defaultModel` | `openai/gpt-5.6-luna` | Model selected by default.          |
-| `features.dev.opencode.provider`     | Built-in providers    | Additional or overridden providers. |
-| `features.dev.opencode.mcp`          | `{}`                  | MCP servers for OpenCode.           |
-| `features.dev.opencode.settings`     | `{}`                  | Additional OpenCode settings.       |
+| Option                               | Default                    | Purpose                             |
+| ------------------------------------ | -------------------------- | ----------------------------------- |
+| `features.dev.opencode.enable`       | `features.dev.enable`      | Install and configure OpenCode.     |
+| `features.dev.opencode.defaultModel` | `openai/gpt-5.6-luna`      | Model selected by default.          |
+| `features.dev.opencode.provider`     | Built-in providers         | Additional or overridden providers. |
+| `features.dev.opencode.mcp`          | `{}`                       | MCP servers for OpenCode.           |
+| `features.dev.opencode.lsp`          | Enabled selected languages | LSP servers and overrides.          |
+| `features.dev.opencode.formatter`    | Enabled selected languages | Formatters and overrides.           |
+| `features.dev.opencode.settings`     | `{}`                       | Additional OpenCode settings.       |
 
 Each enabled local backend contributes a provider. Select an entry with
 `provider/name`:
@@ -731,7 +733,7 @@ list, and credentials, and do not add models to local backends:
 ```nix
 features.dev.opencode.provider."ollama-remote" = {
   name = "Ollama (Remote)";
-  npm = "@ai-sdk/openai-compatible";
+  package = "@opencode/ai/providers/openai-compatible";
   baseURL = "https://ollama.example.com/v1";
   apiKeySecret = "opencode/provider/ollama-remote/api-key";
   models."example-model" = {
@@ -744,6 +746,13 @@ features.dev.opencode.provider."ollama-remote" = {
 
 Set `context` and `output` when the remote endpoint has limits. Use
 `apiKeySecret` for credentials.
+
+LSP servers are generated for the languages selected by
+`features.dev.languages`; custom servers and overrides belong under
+`features.dev.opencode.lsp`. Formatters are configured similarly under
+`features.dev.opencode.formatter`. OpenCode does not have a separate linter
+configuration: use the project’s lint or type-check commands through the
+agent workflow.
 
 Local and remote providers can be used together. Enable the relevant backend on
 the host that provides it.
