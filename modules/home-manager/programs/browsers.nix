@@ -143,7 +143,15 @@ let
           'domain("cinny.in")',
           'domain("cinny.in"), domain("matrix.at.oechsler.it")',
         );
-        style.sections = await compile(source, style.usercssData.preprocessor, vars, id);
+        try {
+          style.sections = await compile(source, style.usercssData.preprocessor, vars, id);
+        } catch (error) {
+          // The rolling export can contain syntax newer than the pinned
+          // Stylus compiler. Keep the compatible styles instead of failing
+          // the complete Home Manager generation.
+          console.error(`Skipping incompatible userstyle: ''${style.name}`, error);
+          continue;
+        }
         if (!style.sections.length) throw new Error(`''${style.name} compiled without sections`);
         style.id = id;
         style._id = uuid(style.usercssData.namespace || style.name);
