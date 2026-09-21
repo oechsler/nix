@@ -137,62 +137,18 @@ in
     let
       toolCall = model.toolCall or null;
       reasoning = model.reasoning or null;
+      temperature = model.temperature or null;
       context = model.context or null;
       output = model.output or null;
       input = model.input or null;
-      profile = model.reasoningProfile or { };
-      budgets = reasoningDefaults // (profile.budgets or { });
-      effortTransport = profile.effortTransport or "none";
-      chatTemplateKwargs = profile.chatTemplateKwargs or { };
-      chatTemplateKwargsByProfile = profile.chatTemplateKwargsByProfile or { };
-      profiles = [
-        "low"
-        "medium"
-        "high"
-        "xhigh"
-      ];
-      reasoningVariants = map (
-        profileName:
-        let
-          nativeEffort = profile.nativeEffort.${profileName} or null;
-          effortOptions =
-            if nativeEffort == null || effortTransport == "none" then
-              { }
-            else if effortTransport == "chat_template_kwargs" then
-              {
-                chat_template_kwargs = chatTemplateKwargs // {
-                  reasoning_effort = nativeEffort;
-                };
-              }
-            else
-              { reasoning_effort = nativeEffort; };
-          templateOptions =
-            lib.optionalAttrs
-              (chatTemplateKwargs != { } || builtins.hasAttr profileName chatTemplateKwargsByProfile)
-              {
-                chat_template_kwargs = chatTemplateKwargs // (chatTemplateKwargsByProfile.${profileName} or { });
-              };
-        in
-        {
-          id = profileName;
-          body = {
-            thinking_budget_tokens = budgets.${profileName};
-          }
-          // effortOptions
-          // templateOptions;
-        }
-      ) profiles;
     in
     {
       inherit (model) name;
-      modelID = modelName;
-      capabilities = {
-        tools = toolCall == true;
-        input = [ "text" ];
-        output = [ "text" ];
-      };
+      id = modelName;
     }
-    // lib.optionalAttrs (reasoning == true) { variants = reasoningVariants; }
+    // lib.optionalAttrs (toolCall != null) { tool_call = toolCall; }
+    // lib.optionalAttrs (reasoning != null) { inherit reasoning; }
+    // lib.optionalAttrs (temperature != null) { inherit temperature; }
     // lib.optionalAttrs (context != null && output != null) {
       limit = {
         inherit context output;

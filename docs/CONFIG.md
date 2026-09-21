@@ -702,30 +702,10 @@ Each enabled local backend contributes a provider. Select an entry with
 features.dev.opencode.defaultModel = "ollama/example-model:latest";
 ```
 
-Entries that support reasoning additionally expose these four variants:
-
-| Variant  | Meaning                                     |
-| -------- | ------------------------------------------- |
-| `low`    | Fast/simple reasoning.                      |
-| `medium` | Normal coding with balanced latency.        |
-| `high`   | Default serious coding profile.             |
-| `xhigh`  | Explicit deep reasoning for difficult work. |
-
-The default coding variant is `high`. Use `xhigh` explicitly when its extra
-latency is justified. Variants are settings on the same model, not separate
-models or server instances; selecting one does not reload llama.cpp or change
-the provider. OpenCode's built-in `variant_cycle` keybind cycles through the
-available variants.
-
-The profiles are intentionally semantic rather than tied to one universal
-amount of reasoning. The backend applies practical limits for its configured
-runtime, and reasoning may finish before any limit is reached. Use `low` for
-quick, obvious work, `medium` for routine coding, `high` for serious coding,
-and `xhigh` only when additional latency is worthwhile.
-
-Choose a profile from OpenCode's normal variant selector after selecting an
-entry that supports reasoning. The selected profile stays active for the
-session.
+Local OpenAI-compatible providers are kept schema-compatible with OpenCode V2
+and only expose the models declared in Nix. Provider-supported variants remain
+settings on the same model, not separate models or server instances; selecting
+one does not reload llama.cpp or change the provider.
 
 Remote providers are configured separately. They need their own endpoint, model
 list, and credentials, and do not add models to local backends:
@@ -733,7 +713,7 @@ list, and credentials, and do not add models to local backends:
 ```nix
 features.dev.opencode.provider."ollama-remote" = {
   name = "Ollama (Remote)";
-  package = "@opencode/ai/providers/openai-compatible";
+  package = "@ai-sdk/openai-compatible";
   baseURL = "https://ollama.example.com/v1";
   apiKeySecret = "opencode/provider/ollama-remote/api-key";
   models."example-model" = {
@@ -759,9 +739,13 @@ the host that provides it.
 Both APIs have no authentication, so use a trusted network or an authenticated
 HTTPS gateway.
 
-The built-in providers remain available. Add a custom provider when you need a
-different endpoint or credentials. Keep credentials in SOPS with
-`apiKeySecret`.
+The standard `openai` and `opencode-go` providers are included with their
+declared model lists. Only these providers and enabled local or custom
+providers are enabled in the generated configuration, so unrelated models from
+the remote registry are not added to the model picker. OpenCode Go uses the
+SOPS secret `opencode/provider/opencode-go/api-key` and keeps OpenCode's
+built-in provider implementation so the required per-session routing header is
+sent to the Go endpoint.
 
 MCP servers are configured separately under `features.dev.opencode.mcp`. Remote
 servers can use a SOPS-managed token:

@@ -157,7 +157,7 @@
         defaultModel = "llama-cpp-remote/tiel-coder-35b-a3b";
         provider."llama-cpp-remote" = {
           name = "llama.cpp (Remote)";
-          package = "@opencode/ai/providers/openai-compatible";
+          package = "@ai-sdk/openai-compatible";
           baseURL = "http://samuels-ser9.sole-hops.ts.net:8080/v1";
           models = {
             "tiel-coder-35b-a3b" = {

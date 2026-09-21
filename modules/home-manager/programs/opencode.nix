@@ -31,8 +31,40 @@ let
       mocha = "catppuccin";
     }
     .${theme.catppuccin.flavor};
+  defaultProviders = {
+    openai = {
+      enable = true;
+      name = null;
+      package = null;
+      baseURL = null;
+      apiKeySecret = null;
+      apiKey = null;
+      models = {
+        "gpt-5.6-luna".name = "GPT-5.6 Luna";
+        "gpt-5.6-terra".name = "GPT-5.6 Terra";
+        "gpt-5.6-sol".name = "GPT-5.6 Sol";
+      };
+    };
+    "opencode-go" = {
+      enable = true;
+      name = "OpenCode Go";
+      # Keep OpenCode's built-in provider implementation so it adds the
+      # per-session header required by the Go service.
+      package = null;
+      baseURL = null;
+      apiKeySecret = "opencode/provider/opencode-go/api-key";
+      apiKey = null;
+      models = {
+        "deepseek-v4-flash".name = "DeepSeek V4 Flash";
+        "deepseek-v4-pro".name = "DeepSeek V4 Pro";
+        "gpt-5.6-luna".name = "GPT-5.6 Luna";
+        "qwen3.8-max".name = "Qwen3.8 Max";
+      };
+    };
+  };
   configuredProviders = lib.filterAttrs (_: provider: provider.enable) (
-    lib.optionalAttrs localOllamaEnabled { ollama = localOllamaProvider; }
+    defaultProviders
+    // lib.optionalAttrs localOllamaEnabled { ollama = localOllamaProvider; }
     // lib.optionalAttrs localLlamaCppEnabled { "llama-cpp" = localLlamaCppProvider; }
     // cfg.provider
   );
@@ -42,7 +74,7 @@ let
     apiKey = null;
     baseURL = "http://127.0.0.1:11434/v1";
     name = "Ollama";
-    package = "@opencode/ai/providers/openai-compatible";
+    package = "@ai-sdk/openai-compatible";
     models = lib.mapAttrs (
       _: model:
       model
@@ -60,7 +92,7 @@ let
     apiKey = null;
     baseURL = "http://127.0.0.1:${toString localLlamaCppCfg.port}/v1";
     name = "llama.cpp";
-    package = "@opencode/ai/providers/openai-compatible";
+    package = "@ai-sdk/openai-compatible";
     models = lib.mapAttrs (
       _: model:
       model
@@ -518,14 +550,15 @@ let
     name: provider:
     {
       models = lib.mapAttrs (modelName: model: modelSpec.toOpenCode modelName model) provider.models;
+      whitelist = builtins.attrNames provider.models;
     }
     // lib.optionalAttrs (provider.name != null) { inherit (provider) name; }
-    // lib.optionalAttrs (provider.package != null) { inherit (provider) package; }
+    // lib.optionalAttrs (provider.package != null) { npm = provider.package; }
     //
       lib.optionalAttrs
         (provider.baseURL != null || provider.apiKeySecret != null || provider.apiKey != null)
         {
-          settings =
+          options =
             lib.optionalAttrs (provider.baseURL != null) { inherit (provider) baseURL; }
             // lib.optionalAttrs (provider.apiKeySecret != null || provider.apiKey != null) {
               apiKey = if provider.apiKey != null then provider.apiKey else "{env:${providerEnvName name}}";
@@ -600,9 +633,7 @@ let
           redirectUri = server.oauth.redirectUri;
         };
     };
-  mcpSettings = {
-    servers = lib.mapAttrs mcpServerSettings cfg.mcp;
-  };
+  mcpSettings = lib.mapAttrs mcpServerSettings cfg.mcp;
   mcpSopsSecrets = lib.mapAttrs' (
     _name: server: lib.nameValuePair server.tokenSecret { }
   ) mcpWithSecrets;
@@ -679,14 +710,14 @@ in
           // lspSettings;
           model = cfg.defaultModel;
           default_agent = "build";
-          agents =
+          agent =
             let
-              configuredAgents = cfg.settings.agents or { };
+              configuredAgents = cfg.settings.agent or { };
             in
             configuredAgents
             // {
               build = (configuredAgents.build or { }) // {
-                model = "${cfg.defaultModel}#high";
+                model = cfg.defaultModel;
               };
               title = (configuredAgents.title or { }) // {
                 model = cfg.defaultModel;
@@ -698,15 +729,15 @@ in
           compaction =
             cfg.settings.compaction or {
               auto = true;
-              keep.tokens = 15000;
-              buffer = 20000;
+              reserved = 20000;
             };
 
           experimental = (cfg.settings.experimental or { }) // {
             policies = providerAccessPolicies;
           };
 
-          providers = providerSettings;
+          enabled_providers = builtins.attrNames configuredProviders;
+          provider = providerSettings;
         };
     };
 
