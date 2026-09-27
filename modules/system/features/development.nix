@@ -22,7 +22,7 @@ in
       };
       defaultModel = lib.mkOption {
         type = lib.types.str;
-        default = "openai/gpt-5.6-luna";
+        default = "openai/gpt-6-luna";
         description = "Default OpenCode model in provider/model format.";
       };
       settings = lib.mkOption {

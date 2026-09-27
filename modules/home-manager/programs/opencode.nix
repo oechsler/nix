@@ -40,9 +40,9 @@ let
       apiKeySecret = null;
       apiKey = null;
       models = {
-        "gpt-5.6-luna".name = "GPT-5.6 Luna";
-        "gpt-5.6-terra".name = "GPT-5.6 Terra";
-        "gpt-5.6-sol".name = "GPT-5.6 Sol";
+        "gpt-6-luna".name = "GPT-6 Luna";
+        "gpt-6-terra".name = "GPT-6 Terra";
+        "gpt-6-sol".name = "GPT-6 Sol";
       };
     };
     "opencode-go" = {
@@ -57,7 +57,6 @@ let
       models = {
         "deepseek-v4-flash".name = "DeepSeek V4 Flash";
         "deepseek-v4-pro".name = "DeepSeek V4 Pro";
-        "gpt-5.6-luna".name = "GPT-5.6 Luna";
         "qwen3.8-max".name = "Qwen3.8 Max";
       };
     };

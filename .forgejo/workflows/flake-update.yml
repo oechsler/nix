@@ -27,7 +27,9 @@ jobs:
           ./scripts/update-catppuccin-userstyles-hash.sh --update
 
       - name: Validate update
-        run: nix flake check --no-build
+        # Do not reuse cached evaluations that can reference derivations from
+        # the pre-update Catppuccin input.
+        run: nix flake check --no-build --option eval-cache false
 
       - name: Push update branch
         id: push
