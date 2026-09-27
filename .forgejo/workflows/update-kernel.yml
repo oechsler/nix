@@ -107,20 +107,11 @@ jobs:
           cache_dir=$(mktemp -d)
           trap 'rm -rf "$cache_dir"' EXIT
           export XDG_CACHE_HOME="$cache_dir"
-          nix eval --impure --json --option eval-cache false --expr '
-            let
-              flake = builtins.getFlake (toString ./.);
-              packages = flake.inputs.catppuccin.packages.x86_64-linux;
-              filterAttrs = flake.inputs.nixpkgs.lib.filterAttrs;
-            in
-            builtins.attrValues (builtins.mapAttrs (_: package: package.drvPath) (
-              filterAttrs (_: package: builtins.isAttrs package && package ? drvPath) packages
-            ))
-          ' >/dev/null
           hosts=(samuels-terra samuels-razer samuels-ser9)
           for host in "${hosts[@]}"; do
             echo "Evaluating $host..."
-            nix eval ".#nixosConfigurations.$host.config.system.build.toplevel.drvPath" --show-trace --option eval-cache false
+            nix eval ".#nixosConfigurations.$host.config.system.build.toplevel.drvPath" \
+              --show-trace --option eval-cache false --option substitute false
           done
 
       - name: Commit and push kernel update
