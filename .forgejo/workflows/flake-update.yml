@@ -23,8 +23,8 @@ jobs:
       - name: Update flake and userstyles hash
         env:
           # GitHub rate-limits anonymous flake-ref resolution aggressively.
-          # Configure GITHUB_TOKEN as a Forgejo repository secret.
-          NIX_CONFIG: "access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}"
+          # Use the repository's GitHub token for flake-ref resolution.
+          NIX_CONFIG: "access-tokens = github.com=${{ secrets.GH_TOKEN }}"
         run: |
           set -euo pipefail
           cache_dir=$(mktemp -d)
