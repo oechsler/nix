@@ -44,7 +44,11 @@ jobs:
         id: latest-kernel
         run: |
           set -euo pipefail
-          LATEST_COMMIT=$(curl -fsSL "https://api.github.com/repos/${{ steps.kernel-repo.outputs.KERNEL_GITHUB_REPO }}/commits/${{ steps.kernel-repo.outputs.KERNEL_BRANCH }}" | jq -er '.sha | select(test("^[a-f0-9]{40}$"))')
+          LATEST_COMMIT=$(git ls-remote --exit-code \
+            "https://github.com/${{ steps.kernel-repo.outputs.KERNEL_GITHUB_REPO }}.git" \
+            "refs/heads/${{ steps.kernel-repo.outputs.KERNEL_BRANCH }}" \
+            | cut -f1)
+          [[ "$LATEST_COMMIT" =~ ^[a-f0-9]{40}$ ]]
           echo "commit=$LATEST_COMMIT" >> "$GITHUB_OUTPUT"
           echo "short_commit=${LATEST_COMMIT:0:8}" >> "$GITHUB_OUTPUT"
           LATEST_NIXPKGS_KERNEL=$(curl -fsSL "${{ steps.kernel-repo.outputs.KERNEL_LOCK_URL }}" | jq -er '.nodes.nixpkgs.locked.rev | select(test("^[a-f0-9]{40}$"))')
@@ -71,6 +75,10 @@ jobs:
 
       - name: Update flake.lock
         if: steps.check-update.outputs.needs_update == 'true'
+        env:
+          # GitHub rate-limits anonymous flake-ref resolution aggressively.
+          # Configure GITHUB_TOKEN as a Forgejo repository secret.
+          NIX_CONFIG: "access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}"
         run: |
           set -euo pipefail
           cache_dir=$(mktemp -d)
