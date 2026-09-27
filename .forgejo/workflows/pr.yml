@@ -1,0 +1,55 @@
+name: Validate pull request
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Validate merge candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout merge candidate
+        uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Validate checks
+        run: |
+          set -euo pipefail
+          cache_dir=$(mktemp -d)
+          trap 'rm -rf "$cache_dir"' EXIT
+          export XDG_CACHE_HOME="$cache_dir"
+          nix eval --json --option eval-cache false '.#checks.x86_64-linux' >/dev/null
+          nix build --no-link --keep-going \
+            .#checks.x86_64-linux.format \
+            .#checks.x86_64-linux.lint \
+            .#checks.x86_64-linux.statix \
+            .#checks.x86_64-linux.shfmt \
+            .#checks.x86_64-linux.deadnix \
+            .#checks.x86_64-linux.shellcheck \
+            .#checks.x86_64-linux.markdownlint \
+            .#checks.x86_64-linux.markdown-format \
+            .#checks.x86_64-linux.rust
+
+      - name: Validate host configurations
+        run: |
+          set -euo pipefail
+          cache_dir=$(mktemp -d)
+          trap 'rm -rf "$cache_dir"' EXIT
+          export XDG_CACHE_HOME="$cache_dir"
+          hosts=(samuels-terra samuels-razer samuels-ser9)
+          for host in "${hosts[@]}"; do
+            echo "Evaluating $host..."
+            nix eval ".#nixosConfigurations.$host.config.system.build.toplevel.drvPath" \
+              --show-trace --option eval-cache false --option substitute false
+          done
