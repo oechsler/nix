@@ -23,13 +23,21 @@ jobs:
       - name: Update flake and userstyles hash
         run: |
           set -euo pipefail
+          cache_dir=$(mktemp -d)
+          trap 'rm -rf "$cache_dir"' EXIT
+          export XDG_CACHE_HOME="$cache_dir"
           nix flake update
           ./scripts/update-catppuccin-userstyles-hash.sh --update
 
       - name: Validate update
-        # Do not reuse cached evaluations that can reference derivations from
-        # the pre-update Catppuccin input.
-        run: nix flake check --no-build --option eval-cache false
+        run: |
+          set -euo pipefail
+          # A fresh cache prevents stale derivation paths from a previous
+          # runner invocation from being reused after the lockfile update.
+          cache_dir=$(mktemp -d)
+          trap 'rm -rf "$cache_dir"' EXIT
+          export XDG_CACHE_HOME="$cache_dir"
+          nix flake check --no-build --option eval-cache false
 
       - name: Push update branch
         id: push
