@@ -33,7 +33,7 @@ jobs:
           nix flake update
           ./scripts/update-catppuccin-userstyles-hash.sh --update
 
-      - name: Validate update
+      - name: Validate checks
         run: |
           set -euo pipefail
           # A fresh cache prevents stale derivation paths from a previous
@@ -63,24 +63,20 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git config user.name "Forgejo Flake Updater"
-          git config user.email "forgejo-flake-updater@localhost"
+          git config user.name "Nix Automation"
+          git config user.email "nix-automation@oechsler.it"
           git switch --create "$BRANCH"
           git add flake.lock modules/home-manager/programs/browsers.nix
           git commit -m "chore: update flake inputs and userstyles"
           git push --force origin "$BRANCH"
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
-      - name: Open Forgejo pull request
+      - name: Open or update pull request
         if: steps.push.outputs.changed == 'true'
         env:
           FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
           BRANCH: automation/flake-update
         run: |
-          set -euo pipefail
-          server="${FORGEJO_SERVER_URL:-$GITHUB_SERVER_URL}"
-          repo="${FORGEJO_REPOSITORY:-$GITHUB_REPOSITORY}"
-          curl --fail --request POST "$server/api/v1/repos/$repo/pulls" \
-            --header "Authorization: token $FORGEJO_TOKEN" \
-            --header 'Content-Type: application/json' \
-            --data "{\"head\":\"$BRANCH\",\"base\":\"main\",\"title\":\"chore: update flake inputs and userstyles\",\"body\":\"Automated weekly update of flake inputs and the Catppuccin rolling userstyles hash.\"}"
+          ./scripts/open-forgejo-pull-request.sh \
+            "chore: update flake inputs and userstyles" \
+            "Automated weekly update of flake inputs and the Catppuccin rolling userstyles hash."

@@ -25,7 +25,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          persist-credentials: true
+          token: ${{ secrets.FORGEJO_TOKEN }}
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
@@ -70,7 +70,7 @@ jobs:
           set -euo pipefail
           sed -i "s|${{ steps.kernel-repo.outputs.KERNEL_REPO }}/[a-f0-9]\{40\}|${{ steps.kernel-repo.outputs.KERNEL_REPO }}/${{ steps.latest-kernel.outputs.commit }}|" flake.nix
           sed -i "s|github:nixos/nixpkgs/[a-f0-9]\{40\}|github:nixos/nixpkgs/${{ steps.latest-kernel.outputs.nixpkgs_kernel_commit }}|" flake.nix
-          LATEST_KERNEL_VERSION=$(curl -fsSL "${{ steps.kernel-repo.outputs.KERNEL_VERSION_JSON_URL }}" | jq -er '.latest.version | select(test("^[0-9]+([.-][0-9A-Za-z]+)+$"))')
+          LATEST_KERNEL_VERSION=$(curl -fsSL "${{ steps.kernel-repo.outputs.KERNEL_VERSION_JSON_URL }}" | jq -er '."linux-cachyos".version | strings | select(test("^[0-9]+([.-][0-9A-Za-z]+)+$"))')
           sed -i "s|Current: rev [a-f0-9]\{8\} ([0-9-]\{10\}), kernel [0-9.]*|Current: rev ${{ steps.latest-kernel.outputs.short_commit }} ($(date +%Y-%m-%d)), kernel $LATEST_KERNEL_VERSION|" flake.nix
 
       - name: Update flake.lock
@@ -86,9 +86,10 @@ jobs:
           export XDG_CACHE_HOME="$cache_dir"
           nix flake update cachyos-kernel nixpkgs-kernel
 
-      - name: Run linters
+      - name: Validate checks
         if: steps.check-update.outputs.needs_update == 'true'
         run: |
+          set -euo pipefail
           nix build --print-build-logs \
             .#checks.x86_64-linux.format \
             .#checks.x86_64-linux.lint \
@@ -100,25 +101,26 @@ jobs:
             .#checks.x86_64-linux.markdown-format \
             .#checks.x86_64-linux.rust
 
-      - name: Evaluate all host configurations
+      - name: Push update branch
+        id: push
         if: steps.check-update.outputs.needs_update == 'true'
+        env:
+          BRANCH: automation/kernel-update
         run: |
           set -euo pipefail
-          cache_dir=$(mktemp -d)
-          trap 'rm -rf "$cache_dir"' EXIT
-          export XDG_CACHE_HOME="$cache_dir"
-          hosts=(samuels-terra samuels-razer samuels-ser9)
-          for host in "${hosts[@]}"; do
-            echo "Evaluating $host..."
-            nix eval ".#nixosConfigurations.$host.config.system.build.toplevel.drvPath" \
-              --show-trace --option eval-cache false --option substitute false
-          done
-
-      - name: Commit and push kernel update
-        if: steps.check-update.outputs.needs_update == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "Nix Automation"
+          git config user.email "nix-automation@oechsler.it"
+          git switch --create "$BRANCH"
           git add flake.nix flake.lock
-          git commit -m "chore: bump cachyos-kernel to ${{ steps.latest-kernel.outputs.short_commit }}"
-          git push
+          git commit -m "chore: bump CachyOS kernel to ${{ steps.latest-kernel.outputs.short_commit }}"
+          git push --force origin "$BRANCH"
+
+      - name: Open or update pull request
+        if: steps.push.outcome == 'success'
+        env:
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+          BRANCH: automation/kernel-update
+        run: |
+          ./scripts/open-forgejo-pull-request.sh \
+            "chore: bump CachyOS kernel" \
+            "Automated CachyOS kernel and kernel nixpkgs update."
