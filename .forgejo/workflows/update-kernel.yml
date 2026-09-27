@@ -112,7 +112,7 @@ jobs:
           git config user.email "nix-automation@oechsler.it"
           git switch --create "$BRANCH"
           git add flake.nix flake.lock
-          git commit -m "chore: bump cachyos-kernel to ${{ steps.latest-kernel.outputs.short_commit }}"
+          git commit -m "chore: bump CachyOS kernel to ${{ steps.latest-kernel.outputs.short_commit }}"
           git push --force origin "$BRANCH"
 
       - name: Open or update pull request
