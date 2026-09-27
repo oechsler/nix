@@ -80,6 +80,16 @@ jobs:
           set -euo pipefail
           server="${FORGEJO_SERVER_URL:-$GITHUB_SERVER_URL}"
           repo="${FORGEJO_REPOSITORY:-$GITHUB_REPOSITORY}"
+          open_pr=$(curl --fail --silent --get "$server/api/v1/repos/$repo/pulls" \
+            --header "Authorization: token $FORGEJO_TOKEN" \
+            --data-urlencode 'state=open' \
+            --data-urlencode 'base=main' \
+            --data-urlencode 'limit=50' \
+            | jq -r --arg branch "$BRANCH" 'map(select(.head.ref == $branch))[0].number // empty')
+          if [[ -n "$open_pr" ]]; then
+            echo "Updated existing Forgejo pull request #$open_pr"
+            exit 0
+          fi
           curl --fail --request POST "$server/api/v1/repos/$repo/pulls" \
             --header "Authorization: token $FORGEJO_TOKEN" \
             --header 'Content-Type: application/json' \

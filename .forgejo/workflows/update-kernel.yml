@@ -114,11 +114,40 @@ jobs:
               --show-trace --option eval-cache false --option substitute false
           done
 
-      - name: Commit and push kernel update
+      - name: Commit and push kernel update branch
+        id: push
         if: steps.check-update.outputs.needs_update == 'true'
+        env:
+          BRANCH: automation/kernel-update
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git switch --create "$BRANCH"
           git add flake.nix flake.lock
           git commit -m "chore: bump cachyos-kernel to ${{ steps.latest-kernel.outputs.short_commit }}"
-          git push
+          git push --force origin "$BRANCH"
+
+      - name: Open or update kernel pull request
+        if: steps.push.outcome == 'success'
+        env:
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+          BRANCH: automation/kernel-update
+        run: |
+          set -euo pipefail
+          server="${FORGEJO_SERVER_URL:-$GITHUB_SERVER_URL}"
+          repo="${FORGEJO_REPOSITORY:-$GITHUB_REPOSITORY}"
+          open_pr=$(curl --fail --silent --get "$server/api/v1/repos/$repo/pulls" \
+            --header "Authorization: token $FORGEJO_TOKEN" \
+            --data-urlencode 'state=open' \
+            --data-urlencode 'base=main' \
+            --data-urlencode 'limit=50' \
+            | jq -r --arg branch "$BRANCH" 'map(select(.head.ref == $branch))[0].number // empty')
+          if [[ -n "$open_pr" ]]; then
+            echo "Updated existing Forgejo pull request #$open_pr"
+            exit 0
+          fi
+          curl --fail --request POST "$server/api/v1/repos/$repo/pulls" \
+            --header "Authorization: token $FORGEJO_TOKEN" \
+            --header 'Content-Type: application/json' \
+            --data "{\"head\":\"$BRANCH\",\"base\":\"main\",\"title\":\"chore: bump CachyOS kernel\",\"body\":\"Automated CachyOS kernel and kernel nixpkgs update.\"}"
