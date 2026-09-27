@@ -70,7 +70,7 @@ jobs:
           set -euo pipefail
           sed -i "s|${{ steps.kernel-repo.outputs.KERNEL_REPO }}/[a-f0-9]\{40\}|${{ steps.kernel-repo.outputs.KERNEL_REPO }}/${{ steps.latest-kernel.outputs.commit }}|" flake.nix
           sed -i "s|github:nixos/nixpkgs/[a-f0-9]\{40\}|github:nixos/nixpkgs/${{ steps.latest-kernel.outputs.nixpkgs_kernel_commit }}|" flake.nix
-          LATEST_KERNEL_VERSION=$(curl -fsSL "${{ steps.kernel-repo.outputs.KERNEL_VERSION_JSON_URL }}" | jq -er '.latest.version | select(test("^[0-9]+([.-][0-9A-Za-z]+)+$"))')
+          LATEST_KERNEL_VERSION=$(curl -fsSL "${{ steps.kernel-repo.outputs.KERNEL_VERSION_JSON_URL }}" | jq -er '."linux-cachyos".version | strings | select(test("^[0-9]+([.-][0-9A-Za-z]+)+$"))')
           sed -i "s|Current: rev [a-f0-9]\{8\} ([0-9-]\{10\}), kernel [0-9.]*|Current: rev ${{ steps.latest-kernel.outputs.short_commit }} ($(date +%Y-%m-%d)), kernel $LATEST_KERNEL_VERSION|" flake.nix
 
       - name: Update flake.lock
