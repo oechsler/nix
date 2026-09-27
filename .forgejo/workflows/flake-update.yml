@@ -63,8 +63,8 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          git config user.name "Forgejo Flake Updater"
-          git config user.email "forgejo-flake-updater@localhost"
+          git config user.name "Nix Automation"
+          git config user.email "nix-automation@oechsler.it"
           git switch --create "$BRANCH"
           git add flake.lock modules/home-manager/programs/browsers.nix
           git commit -m "chore: update flake inputs and userstyles"
