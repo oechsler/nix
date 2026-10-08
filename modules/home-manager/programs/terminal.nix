@@ -109,9 +109,9 @@ in
           window_padding_width = theme.gaps.outer;
           confirm_os_window_close = 0;
           background_opacity = if features.desktop.wm == "kde" then "1.0" else "0.92";
+          remember_window_size = "no";
         }
         // lib.optionalAttrs (features.desktop.wm != "hyprland") {
-          remember_window_size = "no";
           initial_window_width = "96c";
           initial_window_height = "22c";
         };

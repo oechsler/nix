@@ -259,13 +259,21 @@ let
       local monitor = window.monitor or hl.get_active_monitor()
       hl.dispatch(hl.dsp.window.float({ action = "enable" }))
       if monitor then
-        -- Monitor dimensions are physical pixels; window sizes use logical pixels.
-        local scale = monitor.scale or 1
-        hl.dispatch(hl.dsp.window.resize({
-          x = math.floor(monitor.width / scale * 0.6),
-          y = math.floor(monitor.height / scale * 0.6)
-        }))
-        hl.dispatch(hl.dsp.window.center())
+        -- Apply geometry after Hyprland has processed the floating-state change.
+        hl.timer(function()
+          local current = hl.get_active_window()
+          if not current or not current.floating then
+            return
+          end
+
+          -- Monitor dimensions are physical pixels; window sizes use logical pixels.
+          local scale = monitor.scale or 1
+          hl.dispatch(hl.dsp.window.resize({
+            x = math.floor(monitor.width / scale * 0.6),
+            y = math.floor(monitor.height / scale * 0.6)
+          }))
+          hl.dispatch(hl.dsp.window.center())
+        end, { timeout = 50, type = "oneshot" })
       end
     end
   '';
