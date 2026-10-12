@@ -1,9 +1,25 @@
 # System-wide modules, kept in alphabetical order. Feature-specific modules own
 # their options and guard their configuration locally.
 
-{ ... }:
+{ lib, ... }:
 
 {
+  nixpkgs.overlays = [
+    (_final: prev: {
+      python3Packages = prev.python3Packages.overrideScope (
+        _pythonFinal: pythonPrev: {
+          # Temporary workaround: VTK 9.5.2 falls through to an unavailable
+          # external PEGTL despite bundling its compatible copy. Disable
+          # external dependencies so VTK builds that bundled copy instead.
+          # Remove this override once the upstream packaging issue is fixed.
+          vtk = pythonPrev.vtk.overrideAttrs (old: {
+            cmakeFlags = (old.cmakeFlags or [ ]) ++ [ (lib.cmakeBool "VTK_USE_EXTERNAL" false) ];
+          });
+        }
+      );
+    })
+  ];
+
   imports = [
     ../lib/log.nix
     ./audio.nix

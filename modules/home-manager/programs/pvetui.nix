@@ -36,13 +36,6 @@ let
       substituteInPlace internal/ui/components/app.go \
         --replace-fail 'Application:        tview.NewApplication(),' \
         'Application:        tview.NewApplication().EnableMouse(true),'
-
-      # Reuse pvetui's parser for compound Proxmox agent settings such as
-      # "enabled=1,fstrim_cloned_disks=0,type=virtio".
-      substituteInPlace pkg/api/vm.go \
-        --replace-fail \
-          'vm.AgentEnabled = v == "1" || v == StringTrue' \
-          'vm.AgentEnabled = parseQEMUAgentEnabled(v)'
     '';
   });
 
