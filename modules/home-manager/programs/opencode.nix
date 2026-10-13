@@ -45,21 +45,6 @@ let
         "gpt-6-sol".name = "GPT-6 Sol";
       };
     };
-    "opencode-go" = {
-      enable = true;
-      name = "OpenCode Go";
-      # Keep OpenCode's built-in provider implementation so it adds the
-      # per-session header required by the Go service.
-      package = null;
-      baseURL = null;
-      apiKeySecret = "opencode/provider/opencode-go/api-key";
-      apiKey = null;
-      models = {
-        "deepseek-v4-flash".name = "DeepSeek V4 Flash";
-        "deepseek-v4-pro".name = "DeepSeek V4 Pro";
-        "qwen3.8-max".name = "Qwen3.8 Max";
-      };
-    };
   };
   configuredProviders = lib.filterAttrs (_: provider: provider.enable) (
     defaultProviders
@@ -585,7 +570,6 @@ let
         configuredProviders
         // {
           openai = { };
-          "opencode-go" = { };
         }
       );
   mcpServerSettings =

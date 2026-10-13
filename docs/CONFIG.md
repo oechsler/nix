@@ -739,13 +739,10 @@ the host that provides it.
 Both APIs have no authentication, so use a trusted network or an authenticated
 HTTPS gateway.
 
-The standard `openai` and `opencode-go` providers are included with their
-declared model lists. Only these providers and enabled local or custom
-providers are enabled in the generated configuration, so unrelated models from
-the remote registry are not added to the model picker. OpenCode Go uses the
-SOPS secret `opencode/provider/opencode-go/api-key` and keeps OpenCode's
-built-in provider implementation so the required per-session routing header is
-sent to the Go endpoint.
+The standard `openai` provider is included with its declared model list. Only
+this provider and enabled local or custom providers are enabled in the
+generated configuration, so unrelated models from the remote registry are not
+added to the model picker.
 
 MCP servers are configured separately under `features.dev.opencode.mcp`. Remote
 servers can use a SOPS-managed token:
