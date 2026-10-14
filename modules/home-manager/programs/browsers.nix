@@ -13,6 +13,7 @@
 #
 # Extensions:
 # - firefox-color - Catppuccin theme
+# - darkreader - Dark mode fallback for sites without Catppuccin userstyles
 # - ublock-origin - Ad blocker
 # - proton-pass - Password manager
 # - new-tab-override - Custom new tab page
@@ -55,6 +56,7 @@ let
   catppuccinFirefoxThemes = lib.importJSON "${config.catppuccin.sources.firefox}/themes.json";
   catppuccinFirefoxTheme =
     catppuccinFirefoxThemes.${config.catppuccin.flavor}.${config.catppuccin.accent};
+  catppuccinPalette = config.theme.catppuccinPalette;
   defaultCookieAllowlist = [
     "https://oechsler.it"
     "https://*.oechsler.it"
@@ -233,10 +235,35 @@ in
               theme = catppuccinFirefoxTheme;
             };
           };
+          settings."addon@darkreader.org" = {
+            force = true;
+            settings = {
+              enabled = config.catppuccin.flavor != "latte";
+              # Dark Reader otherwise replaces local storage.js settings with
+              # its synchronized settings during startup.
+              syncSettings = false;
+              detectDarkTheme = true;
+              disabledFor = [ "dash.at.oechsler.it" ];
+              theme = {
+                mode = 1;
+                engine = "dynamicTheme";
+                brightness = 100;
+                contrast = 100;
+                # Slightly reduce warm color casts without washing out accents.
+                grayscale = 20;
+                sepia = 0;
+                darkSchemeBackgroundColor = catppuccinPalette.mantle.hex;
+                darkSchemeTextColor = catppuccinPalette.text.hex;
+                selectionColor = catppuccinPalette.surface2.hex;
+                darkColorScheme = "Catppuccin";
+              };
+            };
+          };
           packages =
             with inputs.firefox-addons.packages.${pkgs.stdenv.hostPlatform.system};
             [
               firefox-color # catppuccin.firefox
+              darkreader
               ublock-origin
               proton-pass
               new-tab-override
@@ -301,6 +328,7 @@ in
                 "newtaboverride_agenedia_com-browser-action"
               ];
             };
+            hidden = [ "addon_darkreader_org-browser-action" ];
             seen = [
               "developer-button"
               "profiler-button"

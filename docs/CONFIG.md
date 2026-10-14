@@ -284,7 +284,13 @@ features = {
 The selected browser is configured with a managed profile. The new-tab
 extension opens the configured dashboard URL; this is separate from the
 browser's normal startup behavior. The search engine and cookie allowlist are
-also applied to the selected browser.
+also applied to the selected browser. Stylus applies available Catppuccin
+userstyles. Dark Reader supplies a dark theme where it does not detect an
+existing dark theme; it is disabled entirely when the Catppuccin Latte flavor
+is selected. `dash.at.oechsler.it` is explicitly excluded from Dark Reader.
+Dark Reader uses its Dynamic engine with Catppuccin background, text, and
+selection colors. A small grayscale amount reduces warm color casts while
+retaining most saturation.
 
 | Option                                     | Default                       | Description                                                        |
 | ------------------------------------------ | ----------------------------- | ------------------------------------------------------------------ |
