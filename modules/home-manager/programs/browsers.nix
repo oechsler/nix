@@ -13,7 +13,7 @@
 #
 # Extensions:
 # - firefox-color - Catppuccin theme
-# - darkreader - Dark mode fallback for sites without Catppuccin userstyles
+# - darkreader - Dark mode support
 # - ublock-origin - Ad blocker
 # - proton-pass - Password manager
 # - new-tab-override - Custom new tab page
@@ -224,6 +224,39 @@ in
       #---------------------------
       profiles.default = {
         isDefault = true;
+        containersForce = true;
+        containers = {
+          blue = {
+            name = "Blue";
+            id = 1;
+            color = "blue";
+            icon = "circle";
+          };
+          orange = {
+            name = "Orange";
+            id = 2;
+            color = "orange";
+            icon = "circle";
+          };
+          green = {
+            name = "Green";
+            id = 3;
+            color = "green";
+            icon = "circle";
+          };
+          pink = {
+            name = "Pink";
+            id = 4;
+            color = "pink";
+            icon = "circle";
+          };
+          purple = {
+            name = "Purple";
+            id = 5;
+            color = "purple";
+            icon = "circle";
+          };
+        };
 
         # Extensions
         extensions = {
@@ -304,6 +337,11 @@ in
 
           "browser.toolbars.bookmarks.visibility" = "never";
 
+          "privacy.userContext.enabled" = true;
+          "privacy.userContext.ui.enabled" = true;
+          "privacy.userContext.newTabContainerOnLeftClick.enabled" = false;
+          "browser.link.force_default_user_context_id_for_external_opens" = true;
+
           # Toolbar layout: back forward reload | spacer | urlbar | spacer | downloads proton-pass
           # To customize toolbar: Right-click toolbar → Customize Toolbar
           "browser.uiCustomization.state" = builtins.toJSON {
@@ -345,7 +383,7 @@ in
           };
 
           "layout.css.prefers-color-scheme.content-override" = 0; # 0 = System
-          "ui.systemUsesDarkTheme" = 1; # Force dark theme for UI
+          "ui.systemUsesDarkTheme" = if config.catppuccin.flavor == "latte" then 0 else 1;
 
           # Home Manager installs extensions into the profile. Keep them enabled
           # without a first-run approval prompt. Firefox Color / Catppuccin
@@ -391,9 +429,11 @@ in
           "privacy.trackingprotection.enabled" = true;
           "privacy.trackingprotection.socialtracking.enabled" = true;
           "privacy.annotate_channels.strict_list.enabled" = true;
-          # Allow websites to follow the system dark/light theme.
+          # Keep website color-scheme available; broad FPP still mitigates fingerprinting.
           "privacy.resistFingerprinting" = false;
+          "privacy.resistFingerprinting.letterboxing" = false;
           "privacy.fingerprintingProtection" = true;
+          "privacy.fingerprintingProtection.overrides" = "+AllTargets,-CSSPrefersColorScheme";
           # Allow only LibreWolf's targeted compatibility shims for major site
           # issues; strict tracking protection remains enabled.
           "privacy.antitracking.enableWebcompat" = true;
