@@ -277,19 +277,6 @@ in
               syncSettings = false;
               detectDarkTheme = true;
               disabledFor = [ "dash.at.oechsler.it" ];
-              theme = {
-                mode = 1;
-                engine = "dynamicTheme";
-                brightness = 100;
-                contrast = 100;
-                # Slightly reduce warm color casts without washing out accents.
-                grayscale = 20;
-                sepia = 0;
-                darkSchemeBackgroundColor = catppuccinPalette.mantle.hex;
-                darkSchemeTextColor = catppuccinPalette.text.hex;
-                selectionColor = catppuccinPalette.surface2.hex;
-                darkColorScheme = "Catppuccin";
-              };
             };
           };
           packages =

@@ -286,7 +286,7 @@ search engine, cookie allowlist, Catppuccin theme and website styles, and Dark
 Reader. Five color-coded containers are available: Blue, Orange, Green, Pink,
 and Purple. New tabs open without a container prompt. Fingerprinting protection
 preserves the Catppuccin light/dark preference; Dark Reader handles dark-flavor
-web pages and is disabled for Latte.
+web pages with its own color settings and is disabled for Latte.
 
 | Option                                     | Default                       | Description                                                        |
 | ------------------------------------------ | ----------------------------- | ------------------------------------------------------------------ |
