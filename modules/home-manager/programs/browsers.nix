@@ -277,6 +277,12 @@ in
               syncSettings = false;
               detectDarkTheme = true;
               disabledFor = [ "dash.at.oechsler.it" ];
+              theme = {
+                mode = 1;
+                engine = "dynamicTheme";
+                brightness = 100;
+                contrast = 100;
+              };
             };
           };
           packages =
