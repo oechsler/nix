@@ -45,6 +45,8 @@ in
   config = lib.mkMerge [
     # CLI Development Tools (always useful, even on servers)
     (lib.mkIf features.dev.enable {
+      home.packages = [ pkgs.llvm ];
+
       programs = {
         gh = {
           enable = true;
