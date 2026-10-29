@@ -15,7 +15,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
         with:
-          token: ${{ secrets.FORGEJO_TOKEN }}
+          token: ${{ secrets.RENOVATE_TOKEN }}
 
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
@@ -74,7 +74,7 @@ jobs:
       - name: Open or update pull request
         if: steps.push.outputs.changed == 'true'
         env:
-          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+          FORGEJO_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           BRANCH: automation/flake-update
         run: |
           ./scripts/open-forgejo-pull-request.sh \
