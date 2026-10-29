@@ -49,7 +49,7 @@
 
     # Pinned nixpkgs for the CachyOS kernel — bump together with cachyos-kernel
     # when upgrading the kernel version.
-    nixpkgs-kernel.url = "github:nixos/nixpkgs/3b454549718018467a25fc5d40a910132dc45709";
+    nixpkgs-kernel.url = "github:nixos/nixpkgs/679429ff581232d6927f59c362bd670c40b2fcdb";
 
     home-manager = {
       url = "github:nix-community/home-manager";
@@ -104,7 +104,7 @@
       # See: github.com/xddxdd/nix-cachyos-kernel (version.json tracks kernel versions)
       # Current: rev c69c33c2 (2026-08-20); kernel version tracked by the input
       # MT7927 (WiFi/BT on samuels-terra) requires kernel 7.2+ — bump when available.
-      url = "github:xddxdd/nix-cachyos-kernel/243c9cd644f10b4ebaf89d815bc32ce67d60e5c0";
+      url = "github:xddxdd/nix-cachyos-kernel/2a991e7302d8dcf5a50e8bd4b5cb27f3a6a2dc82";
       inputs.nixpkgs.follows = "nixpkgs-kernel";
     };
 
