@@ -120,7 +120,6 @@ in
   config = lib.mkIf enabled {
     environment.systemPackages = [ yubikey-luks-init ];
     boot.initrd.systemd = {
-      enable = lib.mkDefault true;
       storePaths = [
         pkgs.pcsclite.lib
         pkgs.libfido2

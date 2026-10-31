@@ -69,7 +69,7 @@ let
     set -eu
     # Tailscale may need a few seconds after the graphical session starts.
     ${pkgs.coreutils}/bin/sleep 10
-    exec ${pkgs.trayscale}/bin/trayscale --hide-window
+    exec ${pkgs.trayscale}/bin/trayscale
   '';
   steamStart = pkgs.writeShellScript "steam-start" ''
     set -eu

@@ -623,17 +623,22 @@ let
   mcpOAuthSopsSecrets = lib.mapAttrs' (
     _name: server: lib.nameValuePair server.oauth.clientSecretSecret { }
   ) mcpWithOAuthSecrets;
-  opencodeWithSecrets = pkgs.writeShellScriptBin "opencode" ''
-    ${lib.optionalString mcpWithInsecureTls ''
-      # OpenCode has no per-remote-MCP TLS exception; this affects this process.
-      export NODE_TLS_REJECT_UNAUTHORIZED=0
-    ''}
-    ${providerSecretChecks}
-    ${mcpSecretChecks}
-    ${mcpOAuthSecretChecks}
-    ${providerEnvAssignments}${mcpEnvAssignments}${mcpOAuthEnvAssignments}
-    exec ${pkgs.opencode}/bin/opencode "$@"
-  '';
+  opencodeWithSecrets =
+    (pkgs.writeShellScriptBin "opencode" ''
+      ${lib.optionalString mcpWithInsecureTls ''
+        # OpenCode has no per-remote-MCP TLS exception; this affects this process.
+        export NODE_TLS_REJECT_UNAUTHORIZED=0
+      ''}
+      ${providerSecretChecks}
+      ${mcpSecretChecks}
+      ${mcpOAuthSecretChecks}
+      ${providerEnvAssignments}${mcpEnvAssignments}${mcpOAuthEnvAssignments}
+      exec ${pkgs.opencode}/bin/opencode "$@"
+    '').overrideAttrs
+      (_: {
+        # Home Manager checks the wrapped package version to select the CLI config schema.
+        version = pkgs.opencode.version;
+      });
 in
 {
   config = lib.mkIf (features.dev.enable && features.dev.opencode.enable) {

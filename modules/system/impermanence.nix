@@ -154,7 +154,6 @@ in
     #
     # Device detection: Uses config.fileSystems."/".device (works with LUKS and direct devices)
     boot.initrd.systemd = {
-      enable = true;
       storePaths = [
         pkgs.btrfs-progs
         pkgs.uutils-coreutils-noprefix
