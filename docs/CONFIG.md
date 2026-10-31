@@ -684,16 +684,16 @@ features = {
 #### OpenCode
 
 OpenCode is the coding assistant configured by the development feature. It
-includes model providers, MCP integrations, agents, LSP servers, and formatters. Its
-default model is `openai/gpt-5.6-luna`.
+includes model providers, MCP integrations, agents, and formatters. Its default
+model is `openai/gpt-6-luna`. The generated server configuration uses OpenCode's
+native V2 schema; the terminal theme is configured separately in `cli.json`.
 
 | Option                               | Default                    | Purpose                             |
 | ------------------------------------ | -------------------------- | ----------------------------------- |
 | `features.dev.opencode.enable`       | `features.dev.enable`      | Install and configure OpenCode.     |
-| `features.dev.opencode.defaultModel` | `openai/gpt-5.6-luna`      | Model selected by default.          |
+| `features.dev.opencode.defaultModel` | `openai/gpt-6-luna`        | Model selected by default.          |
 | `features.dev.opencode.provider`     | Built-in providers         | Additional or overridden providers. |
 | `features.dev.opencode.mcp`          | `{}`                       | MCP servers for OpenCode.           |
-| `features.dev.opencode.lsp`          | Enabled selected languages | LSP servers and overrides.          |
 | `features.dev.opencode.formatter`    | Enabled selected languages | Formatters and overrides.           |
 | `features.dev.opencode.settings`     | `{}`                       | Additional OpenCode settings.       |
 
@@ -729,22 +729,19 @@ features.dev.opencode.provider."ollama-remote" = {
 Set `context` and `output` when the remote endpoint has limits. Use
 `apiKeySecret` for credentials.
 
-LSP servers are generated for the languages selected by
-`features.dev.languages`; custom servers and overrides belong under
-`features.dev.opencode.lsp`. Formatters are configured similarly under
-`features.dev.opencode.formatter`. OpenCode does not have a separate linter
-configuration: use the project’s lint or type-check commands through the
-agent workflow.
+Formatter entries are generated for the languages selected by
+`features.dev.languages`; custom formatters and overrides belong under
+`features.dev.opencode.formatter`. Use project lint, type-check, or compiler
+commands through the agent workflow for diagnostics and validation.
 
 Local and remote providers can be used together. Enable the relevant backend on
 the host that provides it.
 Both APIs have no authentication, so use a trusted network or an authenticated
 HTTPS gateway.
 
-The standard `openai` provider is included with its declared model list. Only
-this provider and enabled local or custom providers are enabled in the
-generated configuration, so unrelated models from the remote registry are not
-added to the model picker.
+The standard `openai` provider is included with its declared model list. A V2
+provider policy allows that provider and enabled local or custom providers and
+denies other providers by default.
 
 MCP servers are configured separately under `features.dev.opencode.mcp`. Remote
 servers can use a SOPS-managed token:

@@ -30,39 +30,6 @@ in
         default = { };
         description = "Additional OpenCode V2 settings, excluding generated model, providers, MCP servers, agents, LSP servers, and formatters.";
       };
-      lsp = lib.mkOption {
-        type = lib.types.attrsOf (
-          lib.types.submodule {
-            options = {
-              enable = lib.mkEnableOption "this OpenCode LSP server" // {
-                default = true;
-              };
-              command = lib.mkOption {
-                type = lib.types.listOf lib.types.str;
-                default = [ ];
-                description = "Command and arguments for the LSP server.";
-              };
-              extensions = lib.mkOption {
-                type = lib.types.listOf lib.types.str;
-                default = [ ];
-                description = "File extensions handled by the LSP server.";
-              };
-              env = lib.mkOption {
-                type = lib.types.attrsOf lib.types.str;
-                default = { };
-                description = "Environment variables for the LSP server.";
-              };
-              initialization = lib.mkOption {
-                type = lib.types.attrs;
-                default = { };
-                description = "Initialization options for the LSP server.";
-              };
-            };
-          }
-        );
-        default = { };
-        description = "Additional OpenCode LSP servers and overrides.";
-      };
       formatter = lib.mkOption {
         type = lib.types.attrsOf (
           lib.types.submodule {

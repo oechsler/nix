@@ -111,194 +111,6 @@ let
   providerSecretPath = provider: config.sops.secrets.${provider.apiKeySecret}.path;
   mcpSecretPath = server: config.sops.secrets.${server.tokenSecret}.path;
   mcpOAuthSecretPath = server: config.sops.secrets.${server.oauth.clientSecretSecret}.path;
-  defaultLsp = {
-    nixd = {
-      command = [
-        "${pkgs.nixd}/bin/nixd"
-        "--stdio"
-      ];
-      extensions = [ ".nix" ];
-    };
-    bash-language-server = {
-      command = [
-        "${pkgs.bash-language-server}/bin/bash-language-server"
-        "start"
-      ];
-      extensions = [
-        ".sh"
-        ".bash"
-        ".zsh"
-      ];
-    };
-    fish-lsp = {
-      command = [
-        "${pkgs.fish-lsp}/bin/fish-lsp"
-        "start"
-      ];
-      extensions = [ ".fish" ];
-    };
-    yaml-language-server = {
-      command = [
-        "${pkgs.yaml-language-server}/bin/yaml-language-server"
-        "--stdio"
-      ];
-      extensions = [
-        ".yaml"
-        ".yml"
-      ];
-    };
-    pyright = {
-      command = [
-        "${pkgs.pyright}/bin/pyright-langserver"
-        "--stdio"
-      ];
-      extensions = [ ".py" ];
-    };
-    gopls = {
-      command = [ "${pkgs.gopls}/bin/gopls" ];
-      extensions = [ ".go" ];
-    };
-    rust-analyzer = {
-      command = [ "${pkgs.rust-analyzer}/bin/rust-analyzer" ];
-      extensions = [ ".rs" ];
-    };
-    typescript-language-server = {
-      command = [
-        "${pkgs.typescript-language-server}/bin/typescript-language-server"
-        "--stdio"
-      ];
-      extensions = [
-        ".js"
-        ".jsx"
-        ".ts"
-        ".tsx"
-      ];
-    };
-    lua-language-server = {
-      command = [ "${pkgs.lua-language-server}/bin/lua-language-server" ];
-      extensions = [ ".lua" ];
-    };
-    jdtls = {
-      command = [ "${pkgs.jdt-language-server}/bin/jdtls" ];
-      extensions = [ ".java" ];
-    };
-    kotlin-language-server = {
-      command = [ "${pkgs.kotlin-language-server}/bin/kotlin-language-server" ];
-      extensions = [
-        ".kt"
-        ".kts"
-      ];
-    };
-    clangd = {
-      command = [ "${pkgs.clang-tools}/bin/clangd" ];
-      extensions = [
-        ".c"
-        ".h"
-        ".cc"
-        ".cpp"
-        ".cxx"
-        ".hpp"
-      ];
-    };
-    cmake-language-server = {
-      command = [ "${pkgs.cmake-language-server}/bin/cmake-language-server" ];
-      extensions = [
-        "CMakeLists.txt"
-        ".cmake"
-      ];
-    };
-    vscode-css-language-server = {
-      command = [
-        "${pkgs.vscode-langservers-extracted}/bin/vscode-css-language-server"
-        "--stdio"
-      ];
-      extensions = [
-        ".css"
-        ".scss"
-        ".less"
-      ];
-    };
-    vscode-html-language-server = {
-      command = [
-        "${pkgs.vscode-langservers-extracted}/bin/vscode-html-language-server"
-        "--stdio"
-      ];
-      extensions = [ ".html" ];
-    };
-    dockerfile-language-server = {
-      command = [
-        "${pkgs.dockerfile-language-server}/bin/docker-langserver"
-        "--stdio"
-      ];
-      extensions = [ "Dockerfile" ];
-    };
-    sqls = {
-      command = [ "${pkgs.sqls}/bin/sqls" ];
-      extensions = [ ".sql" ];
-    };
-    terraform-ls = {
-      command = [
-        "${pkgs.terraform-ls}/bin/terraform-ls"
-        "serve"
-      ];
-      extensions = [
-        ".tf"
-        ".tfvars"
-        ".hcl"
-      ];
-    };
-    marksman = {
-      command = [
-        "${pkgs.marksman}/bin/marksman"
-        "server"
-      ];
-      extensions = [ ".md" ];
-    };
-    vscode-json-language-server = {
-      command = [
-        "${pkgs.vscode-json-languageserver}/bin/vscode-json-language-server"
-        "--stdio"
-      ];
-      extensions = [
-        ".json"
-        ".jsonc"
-      ];
-    };
-    taplo = {
-      command = [
-        "${pkgs.taplo}/bin/taplo"
-        "lsp"
-        "stdio"
-      ];
-      extensions = [ ".toml" ];
-    };
-  };
-  lspLanguages = {
-    nixd = "nix";
-    bash-language-server = "shell";
-    fish-lsp = "shell";
-    yaml-language-server = "yaml";
-    pyright = "python";
-    gopls = "go";
-    rust-analyzer = "rust";
-    typescript-language-server = "typescript";
-    jdtls = "java";
-    kotlin-language-server = "kotlin";
-    lua-language-server = "lua";
-    clangd = "c";
-    marksman = "markdown";
-    vscode-json-language-server = "json";
-    taplo = "toml";
-    cmake-language-server = "cmake";
-    vscode-css-language-server = "css";
-    vscode-html-language-server = "html";
-    dockerfile-language-server = "docker";
-    sqls = "sql";
-    terraform-ls = "terraform";
-  };
-  enabledDefaultLsp = lib.filterAttrs (
-    name: _server: languageEnabled lspLanguages.${name}
-  ) defaultLsp;
   providerSecretChecks = lib.concatStringsSep "\n" (
     lib.mapAttrsToList (name: provider: ''
       if ! test -r ${providerSecretPath provider}; then
@@ -518,31 +330,21 @@ let
       inherit (formatter) environment;
     }
   ) (enabledDefaultFormatters // cfg.formatter);
-  lspSettings = lib.mapAttrs (
-    _name: server:
-    {
-      disabled = !(server.enable or true);
-    }
-    // lib.optionalAttrs (server.command != [ ]) { inherit (server) command; }
-    // lib.optionalAttrs (server.extensions != [ ]) { inherit (server) extensions; }
-    // lib.optionalAttrs ((server.env or { }) != { }) { inherit (server) env; }
-    // lib.optionalAttrs ((server.initialization or { }) != { }) {
-      inherit (server) initialization;
-    }
-  ) (enabledDefaultLsp // cfg.lsp);
   providerSettings = lib.mapAttrs (
     name: provider:
     {
       models = lib.mapAttrs (modelName: model: modelSpec.toOpenCode modelName model) provider.models;
-      whitelist = builtins.attrNames provider.models;
     }
     // lib.optionalAttrs (provider.name != null) { inherit (provider) name; }
-    // lib.optionalAttrs (provider.package != null) { npm = provider.package; }
+    // lib.optionalAttrs (provider.package != null) {
+      package =
+        if lib.hasPrefix "@ai-sdk/" provider.package then "aisdk:${provider.package}" else provider.package;
+    }
     //
       lib.optionalAttrs
         (provider.baseURL != null || provider.apiKeySecret != null || provider.apiKey != null)
         {
-          options =
+          settings =
             lib.optionalAttrs (provider.baseURL != null) { inherit (provider) baseURL; }
             // lib.optionalAttrs (provider.apiKeySecret != null || provider.apiKey != null) {
               apiKey = if provider.apiKey != null then provider.apiKey else "{env:${providerEnvName name}}";
@@ -576,8 +378,9 @@ let
     name: server:
     {
       inherit (server) type;
-      enabled = server.enable;
-      inherit (server) timeout;
+      disabled = !server.enable;
+      timeout.catalog = server.timeout;
+      timeout.execution = server.timeout;
     }
     // lib.optionalAttrs (server.type == "remote") {
       inherit (server) url;
@@ -597,12 +400,12 @@ let
     // lib.optionalAttrs (server.type == "remote" && server.oauth != null) {
       oauth =
         lib.optionalAttrs (server.oauth.clientId != null) {
-          clientId = server.oauth.clientId;
+          client_id = server.oauth.clientId;
         }
         //
           lib.optionalAttrs (server.oauth.clientSecretSecret != null || server.oauth.clientSecret != null)
             {
-              clientSecret =
+              client_secret =
                 if server.oauth.clientSecret != null then
                   server.oauth.clientSecret
                 else
@@ -610,10 +413,10 @@ let
             }
         // lib.optionalAttrs (server.oauth.scope != null) { scope = server.oauth.scope; }
         // lib.optionalAttrs (server.oauth.callbackPort != null) {
-          callbackPort = server.oauth.callbackPort;
+          callback_port = server.oauth.callbackPort;
         }
         // lib.optionalAttrs (server.oauth.redirectUri != null) {
-          redirectUri = server.oauth.redirectUri;
+          redirect_uri = server.oauth.redirectUri;
         };
     };
   mcpSettings = lib.mapAttrs mcpServerSettings cfg.mcp;
@@ -644,8 +447,9 @@ in
   config = lib.mkIf (features.dev.enable && features.dev.opencode.enable) {
     sops.secrets = providerSopsSecrets // mcpSopsSecrets // mcpOAuthSopsSecrets;
 
-    xdg.configFile."opencode/tui.json".text = builtins.toJSON {
-      theme = opencodeTheme;
+    xdg.configFile."opencode/cli.json".text = builtins.toJSON {
+      "$schema" = "https://opencode.ai/v2/cli.json";
+      theme.name = opencodeTheme;
     };
 
     programs.opencode = {
@@ -655,9 +459,9 @@ in
       settings =
         lib.removeAttrs cfg.settings [
           "agent"
+          "enabled_providers"
           "compaction"
           "formatter"
-          "lsp"
           "mcp"
           "model"
           "plugin"
@@ -668,39 +472,11 @@ in
         // {
           "$schema" = "https://opencode.ai/config.json";
           formatter = formatterSettings;
-          lsp = {
-            markdown = {
-              command = [
-                "${pkgs.marksman}/bin/marksman"
-                "server"
-              ];
-              extensions = [ ".md" ];
-            };
-            json = {
-              command = [
-                "${pkgs.vscode-json-languageserver}/bin/vscode-json-languageserver"
-                "--stdio"
-              ];
-              extensions = [
-                ".json"
-                ".jsonc"
-              ];
-            };
-            toml = {
-              command = [
-                "${pkgs.taplo}/bin/taplo"
-                "lsp"
-                "stdio"
-              ];
-              extensions = [ ".toml" ];
-            };
-          }
-          // lspSettings;
           model = cfg.defaultModel;
           default_agent = "build";
-          agent =
+          agents =
             let
-              configuredAgents = cfg.settings.agent or { };
+              configuredAgents = cfg.settings.agents or { };
             in
             configuredAgents
             // {
@@ -712,20 +488,16 @@ in
               };
             };
 
-          mcp = mcpSettings;
+          mcp.servers = mcpSettings;
 
           compaction =
             cfg.settings.compaction or {
               auto = true;
-              reserved = 20000;
+              buffer = 20000;
             };
 
-          experimental = (cfg.settings.experimental or { }) // {
-            policies = providerAccessPolicies;
-          };
-
-          enabled_providers = builtins.attrNames configuredProviders;
-          provider = providerSettings;
+          policies = providerAccessPolicies;
+          providers = providerSettings;
         };
     };
 

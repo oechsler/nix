@@ -144,11 +144,17 @@ in
     in
     {
       inherit (model) name;
-      id = modelName;
+      modelID = modelName;
     }
-    // lib.optionalAttrs (toolCall != null) { tool_call = toolCall; }
-    // lib.optionalAttrs (reasoning != null) { inherit reasoning; }
-    // lib.optionalAttrs (temperature != null) { inherit temperature; }
+    // lib.optionalAttrs (toolCall != null) {
+      capabilities.tools = toolCall;
+    }
+    // lib.optionalAttrs (reasoning != null) {
+      capabilities.reasoning.supported = reasoning;
+    }
+    // lib.optionalAttrs (temperature != null) {
+      capabilities.temperature = temperature;
+    }
     // lib.optionalAttrs (context != null && output != null) {
       limit = {
         inherit context output;

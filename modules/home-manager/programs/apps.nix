@@ -50,7 +50,7 @@ let
   hasHDR = displayHelpers.hasDesktopHDR displays.monitors || displays.defaults.hdr == 2;
   isKde = features.desktop.wm == "kde";
   chromium = import ../../lib/chromium.nix { inherit pkgs; };
-  vesktop = pkgs.vesktop;
+  inherit (pkgs) vesktop;
   wrapChromiumApp =
     package: binary:
     chromium.wrapHdrSdrApp {
