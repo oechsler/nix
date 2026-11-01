@@ -134,6 +134,8 @@
       # Status bar (after catppuccin plugin)
       set -g status 2
       set -g status-style "bg=default"
+      set -g window-status-style "nounderscore"
+      set -g window-status-current-style "nounderscore"
 
       set -g window-status-separator ""
       set -g window-status-format "#[fg=#{@thm_overlay_2},bg=default]#[fg=#{@thm_crust},bg=#{@thm_overlay_2}]#I #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #W#[fg=#{@thm_surface_0},bg=default] "
