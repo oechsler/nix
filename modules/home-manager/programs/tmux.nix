@@ -134,6 +134,8 @@
       # Status bar (after catppuccin plugin)
       set -g status 2
       set -g status-style "bg=default"
+      set -gF status-format[1] "#{status-format[0]}"
+      set -g status-format[0] ""
       set -g window-status-style "nounderscore"
       set -g window-status-current-style "nounderscore"
 
@@ -144,9 +146,8 @@
       set -g message-style "fg=#{@thm_fg},bg=#{@thm_surface_0},fill=#{@thm_surface_0},align=left"
       set -g message-command-style "fg=#{@thm_fg},bg=#{@thm_surface_0},fill=#{@thm_surface_0},align=left"
       set -g message-format "#[fg=#{@thm_${config.catppuccin.accent}},bg=#{@thm_surface_0}]#[fg=#{@thm_crust},bg=#{@thm_${config.catppuccin.accent}}] #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #{message}"
-      set -gF status-format[1] "#{status-format[0]}"
-      set -g status-format[0] ""
       set -g status-left-length 20
+      set -g status-right-length 80
       set -g status-left "#[fg=#{@thm_${config.catppuccin.accent}},bg=default]#[fg=#{@thm_crust},bg=#{@thm_${config.catppuccin.accent}}] #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #S#[fg=#{@thm_surface_0},bg=default] "
       set -g status-right "#[fg=#{@thm_${config.catppuccin.accent}},bg=default]#[fg=#{@thm_crust},bg=#{@thm_${config.catppuccin.accent}}] #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #{=/24/…:#{s|$HOME|~|:pane_current_path}}#[fg=#{@thm_surface_0},bg=default] #[fg=#{@thm_${config.catppuccin.accent}},bg=default]#[fg=#{@thm_crust},bg=#{@thm_${config.catppuccin.accent}}]󰒋 #[fg=#{@thm_fg},bg=#{@thm_surface_0}] #h#[fg=#{@thm_surface_0},bg=default]"
     '';
