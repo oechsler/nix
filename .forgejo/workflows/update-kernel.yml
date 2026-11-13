@@ -13,7 +13,7 @@ jobs:
   update:
     name: Check and update CachyOS kernel
     runs-on: native
-    timeout-minutes: 180
+    timeout-minutes: 25
 
     steps:
       - name: Set kernel repo variables
@@ -64,7 +64,8 @@ jobs:
         id: check-update
         run: |
           set -euo pipefail
-          if [ "${{ steps.current-kernel.outputs.commit }}" != "${{ steps.latest-kernel.outputs.commit }}" ]; then
+          if [ "${{ steps.current-kernel.outputs.commit }}" != "${{ steps.latest-kernel.outputs.commit }}" ] \
+            || [ "${{ steps.current-kernel.outputs.nixpkgs_kernel_commit }}" != "${{ steps.latest-kernel.outputs.nixpkgs_kernel_commit }}" ]; then
             echo "needs_update=true" >> "$GITHUB_OUTPUT"
           else
             echo "needs_update=false" >> "$GITHUB_OUTPUT"

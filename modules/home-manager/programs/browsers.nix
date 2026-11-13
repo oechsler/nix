@@ -56,7 +56,6 @@ let
   catppuccinFirefoxThemes = lib.importJSON "${config.catppuccin.sources.firefox}/themes.json";
   catppuccinFirefoxTheme =
     catppuccinFirefoxThemes.${config.catppuccin.flavor}.${config.catppuccin.accent};
-  catppuccinPalette = config.theme.catppuccinPalette;
   defaultCookieAllowlist = [
     "https://oechsler.it"
     "https://*.oechsler.it"

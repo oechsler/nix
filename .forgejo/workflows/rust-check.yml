@@ -4,16 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - flake.lock
-      - flake.nix
       - lint.nix
       - modules/packages/pam-lldap.nix
       - modules/packages/pam-lldap/**
   pull_request:
     branches: [main]
     paths:
-      - flake.lock
-      - flake.nix
       - lint.nix
       - modules/packages/pam-lldap.nix
       - modules/packages/pam-lldap/**
