@@ -1,0 +1,42 @@
+name: Validate PAM LLDAP Rust package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - flake.lock
+      - flake.nix
+      - lint.nix
+      - modules/packages/pam-lldap.nix
+      - modules/packages/pam-lldap/**
+  pull_request:
+    branches: [main]
+    paths:
+      - flake.lock
+      - flake.nix
+      - lint.nix
+      - modules/packages/pam-lldap.nix
+      - modules/packages/pam-lldap/**
+  workflow_dispatch:
+
+concurrency:
+  group: nix-ci-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  rust:
+    name: Build and test PAM LLDAP
+    runs-on: native
+    timeout-minutes: 29
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Build and test Rust check
+        run: |
+          nix build --max-jobs 2 --cores 2 --no-link --print-build-logs \
+            .#checks.x86_64-linux.rust

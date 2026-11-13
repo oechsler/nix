@@ -4,11 +4,15 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: nix-ci-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   validate:
-    name: Evaluate checks and hosts
+    name: Run checks and evaluate hosts
     runs-on: native
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     steps:
       - name: Checkout repository
@@ -17,9 +21,20 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Evaluate all check derivations
+      - name: Evaluate flake and all host derivations
+        run: nix flake check --no-build --show-trace
+
+      - name: Run source checks without build wrappers
         run: |
-          nix flake check --no-build --show-trace
+          nix shell --inputs-from . \
+            nixpkgs#nixfmt \
+            nixpkgs#statix \
+            nixpkgs#deadnix \
+            nixpkgs#shellcheck \
+            nixpkgs#shfmt \
+            nixpkgs#markdownlint-cli2 \
+            nixpkgs#prettier \
+            --command bash scripts/ci-lint.sh
 
       - name: Evaluate all host configurations
         run: |

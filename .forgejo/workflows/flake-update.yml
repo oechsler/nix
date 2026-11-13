@@ -5,6 +5,10 @@ on:
     - cron: "17 4 * * 1"
   workflow_dispatch:
 
+concurrency:
+  group: nix-ci-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   update:
     name: Update flake and rolling assets
@@ -37,6 +41,15 @@ jobs:
         run: |
           set -euo pipefail
           nix flake check --no-build --show-trace
+          nix shell --inputs-from . \
+            nixpkgs#nixfmt \
+            nixpkgs#statix \
+            nixpkgs#deadnix \
+            nixpkgs#shellcheck \
+            nixpkgs#shfmt \
+            nixpkgs#markdownlint-cli2 \
+            nixpkgs#prettier \
+            --command bash scripts/ci-lint.sh
           for host_dir in hosts/*; do
             [[ -f "$host_dir/configuration.nix" ]] || continue
             host=${host_dir##*/}

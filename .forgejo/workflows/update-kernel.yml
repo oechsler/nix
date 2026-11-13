@@ -5,6 +5,10 @@ on:
     - cron: "0 6 */14 * *"
   workflow_dispatch:
 
+concurrency:
+  group: nix-ci-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   update:
     name: Check and update CachyOS kernel
@@ -16,11 +20,13 @@ jobs:
         id: kernel-repo
         run: |
           set -euo pipefail
-          echo "KERNEL_REPO=github:xddxdd/nix-cachyos-kernel" >> "$GITHUB_OUTPUT"
-          echo "KERNEL_GITHUB_REPO=xddxdd/nix-cachyos-kernel" >> "$GITHUB_OUTPUT"
-          echo "KERNEL_BRANCH=master" >> "$GITHUB_OUTPUT"
-          echo "KERNEL_VERSION_JSON_URL=https://raw.githubusercontent.com/xddxdd/nix-cachyos-kernel/master/kernel-cachyos/version.json" >> "$GITHUB_OUTPUT"
-          echo "KERNEL_LOCK_URL=https://raw.githubusercontent.com/xddxdd/nix-cachyos-kernel/master/flake.lock" >> "$GITHUB_OUTPUT"
+          {
+            echo "KERNEL_REPO=github:xddxdd/nix-cachyos-kernel"
+            echo "KERNEL_GITHUB_REPO=xddxdd/nix-cachyos-kernel"
+            echo "KERNEL_BRANCH=master"
+            echo "KERNEL_VERSION_JSON_URL=https://raw.githubusercontent.com/xddxdd/nix-cachyos-kernel/master/kernel-cachyos/version.json"
+            echo "KERNEL_LOCK_URL=https://raw.githubusercontent.com/xddxdd/nix-cachyos-kernel/master/flake.lock"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -91,6 +97,15 @@ jobs:
         run: |
           set -euo pipefail
           nix flake check --no-build --show-trace
+          nix shell --inputs-from . \
+            nixpkgs#nixfmt \
+            nixpkgs#statix \
+            nixpkgs#deadnix \
+            nixpkgs#shellcheck \
+            nixpkgs#shfmt \
+            nixpkgs#markdownlint-cli2 \
+            nixpkgs#prettier \
+            --command bash scripts/ci-lint.sh
           for host_dir in hosts/*; do
             [[ -f "$host_dir/configuration.nix" ]] || continue
             host=${host_dir##*/}
