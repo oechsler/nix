@@ -5,8 +5,8 @@ on:
     branches: [main]
 
 jobs:
-  quality:
-    name: Code quality
+  validate:
+    name: Validate checks and hosts
     runs-on: native
     timeout-minutes: 30
 
@@ -19,7 +19,7 @@ jobs:
 
       - name: Run linters
         run: |
-          nix build --print-build-logs \
+          nix build --max-jobs 2 --cores 2 --print-build-logs \
             .#checks.x86_64-linux.format \
             .#checks.x86_64-linux.lint \
             .#checks.x86_64-linux.statix \
@@ -29,19 +29,6 @@ jobs:
             .#checks.x86_64-linux.markdownlint \
             .#checks.x86_64-linux.markdown-format \
             .#checks.x86_64-linux.rust
-
-  evaluate:
-    name: Evaluate configurations
-    needs: quality
-    runs-on: native
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Install Nix
-        uses: DeterminateSystems/nix-installer-action@main
 
       - name: Evaluate all host configurations
         run: |

@@ -36,13 +36,7 @@ jobs:
       - name: Validate checks
         run: |
           set -euo pipefail
-          # A fresh cache prevents stale derivation paths from a previous
-          # runner invocation from being reused after the lockfile update.
-          cache_dir=$(mktemp -d)
-          trap 'rm -rf "$cache_dir"' EXIT
-          export XDG_CACHE_HOME="$cache_dir"
-          nix eval --json --option eval-cache false '.#checks.x86_64-linux' >/dev/null
-          nix build --no-link --keep-going \
+          nix build --max-jobs 2 --cores 2 --no-link --print-build-logs \
             .#checks.x86_64-linux.format \
             .#checks.x86_64-linux.lint \
             .#checks.x86_64-linux.statix \
@@ -52,6 +46,12 @@ jobs:
             .#checks.x86_64-linux.markdownlint \
             .#checks.x86_64-linux.markdown-format \
             .#checks.x86_64-linux.rust
+          for host_dir in hosts/*; do
+            [[ -f "$host_dir/configuration.nix" ]] || continue
+            host=${host_dir##*/}
+            echo "Evaluating $host..."
+            nix eval --raw ".#nixosConfigurations.$host.config.system.build.toplevel.drvPath"
+          done
 
       - name: Push update branch
         id: push
@@ -68,7 +68,16 @@ jobs:
           git switch --create "$BRANCH"
           git add flake.lock modules/home-manager/programs/browsers.nix
           git commit -m "chore: update flake inputs and userstyles"
-          git push --force origin "$BRANCH"
+          for attempt in 1 2 3; do
+            if git push --force origin "$BRANCH"; then
+              break
+            fi
+            if [[ "$attempt" == 3 ]]; then
+              echo "Push failed after $attempt attempts" >&2
+              exit 1
+            fi
+            sleep "$((attempt * 2))"
+          done
           echo "changed=true" >> "$GITHUB_OUTPUT"
 
       - name: Open or update pull request
