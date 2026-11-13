@@ -10,7 +10,8 @@ if [[ $# -ne 2 ]]; then
 fi
 
 : "${BRANCH:?BRANCH is required}"
-: "${FORGEJO_TOKEN:?FORGEJO_TOKEN is required}"
+token="${FORGEJO_TOKEN:-${GITHUB_TOKEN:-${RENOVATE_TOKEN:-}}}"
+: "${token:?FORGEJO_TOKEN, GITHUB_TOKEN, or RENOVATE_TOKEN is required}"
 
 server="${FORGEJO_SERVER_URL:-${GITHUB_SERVER_URL:-}}"
 repo="${FORGEJO_REPOSITORY:-${GITHUB_REPOSITORY:-}}"
@@ -27,7 +28,7 @@ elif [[ -n "${GITHUB_API_URL:-}" && -z "${FORGEJO_SERVER_URL:-}" ]]; then
 else
 	api="$server/api/v1/repos/$repo"
 fi
-headers=(--header "Authorization: token $FORGEJO_TOKEN")
+headers=(--header "Authorization: token $token")
 
 find_open_pr() {
 	curl --fail --silent --show-error --retry 3 --retry-all-errors --get "$api/pulls" \

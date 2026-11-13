@@ -131,7 +131,6 @@ jobs:
       - name: Open or update pull request
         if: steps.push.outcome == 'success'
         env:
-          FORGEJO_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           BRANCH: automation/kernel-update
         run: |
           ./scripts/open-forgejo-pull-request.sh \
