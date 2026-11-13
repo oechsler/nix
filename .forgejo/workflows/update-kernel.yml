@@ -86,12 +86,7 @@ jobs:
           # GitHub rate-limits anonymous flake-ref resolution aggressively.
           # Use the repository's GitHub token for flake-ref resolution.
           NIX_CONFIG: "access-tokens = github.com=${{ secrets.GH_TOKEN }}"
-        run: |
-          set -euo pipefail
-          cache_dir=$(mktemp -d)
-          trap 'rm -rf "$cache_dir"' EXIT
-          export XDG_CACHE_HOME="$cache_dir"
-          nix flake update cachyos-kernel nixpkgs-kernel
+        run: nix flake update cachyos-kernel nixpkgs-kernel
 
       - name: Validate checks
         if: steps.check-update.outputs.needs_update == 'true'
@@ -102,11 +97,7 @@ jobs:
             nixpkgs#nixfmt \
             nixpkgs#statix \
             nixpkgs#deadnix \
-            nixpkgs#shellcheck \
-            nixpkgs#shfmt \
-            nixpkgs#markdownlint-cli2 \
-            nixpkgs#prettier \
-            --command bash scripts/ci-lint.sh
+            --command bash scripts/ci-lint.sh --nix-only
           for host_dir in hosts/*; do
             [[ -f "$host_dir/configuration.nix" ]] || continue
             host=${host_dir##*/}
