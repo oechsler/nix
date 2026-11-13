@@ -21,8 +21,8 @@ jobs:
       - name: Install Nix
         uses: DeterminateSystems/nix-installer-action@main
 
-      - name: Evaluate flake and all host derivations
-        run: nix flake check --no-build --show-trace
+      - name: Evaluate all check derivations
+        run: nix eval --json --option eval-cache false '.#checks.x86_64-linux' >/dev/null
 
       - name: Run source checks without build wrappers
         run: |

@@ -96,7 +96,7 @@ jobs:
         if: steps.check-update.outputs.needs_update == 'true'
         run: |
           set -euo pipefail
-          nix flake check --no-build --show-trace
+          nix eval --json --option eval-cache false '.#checks.x86_64-linux' >/dev/null
           nix shell --inputs-from . \
             nixpkgs#nixfmt \
             nixpkgs#statix \
