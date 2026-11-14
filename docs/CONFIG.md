@@ -685,8 +685,10 @@ features = {
 
 OpenCode is the coding assistant configured by the development feature. It
 includes model providers, MCP integrations, agents, and formatters. Its default
-model is `openai/gpt-6-luna`. The generated server configuration uses OpenCode's
-native V2 schema; the terminal theme is configured separately in `cli.json`.
+model is `openai/gpt-6-luna`. The standard OpenAI provider also exposes
+`gpt-6.1-terra` and `gpt-6.1-sol`. The generated server configuration uses
+OpenCode's native V2 schema; the terminal theme and enabled interface animations
+are configured separately in `cli.json`.
 
 | Option                               | Default                    | Purpose                             |
 | ------------------------------------ | -------------------------- | ----------------------------------- |

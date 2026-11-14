@@ -41,8 +41,8 @@ let
       apiKey = null;
       models = {
         "gpt-6-luna".name = "GPT-6 Luna";
-        "gpt-6-terra".name = "GPT-6 Terra";
-        "gpt-6-sol".name = "GPT-6 Sol";
+        "gpt-6.1-terra".name = "GPT-6.1 Terra";
+        "gpt-6.1-sol".name = "GPT-6.1 Sol";
       };
     };
   };
@@ -449,6 +449,7 @@ in
 
     xdg.configFile."opencode/cli.json".text = builtins.toJSON {
       "$schema" = "https://opencode.ai/v2/cli.json";
+      animations = true;
       theme.name = opencodeTheme;
     };
 
