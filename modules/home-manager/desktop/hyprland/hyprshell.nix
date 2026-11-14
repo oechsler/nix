@@ -19,7 +19,7 @@ let
     postPatch = (old.postPatch or "") + ''
       substituteInPlace crates/windows-lib/src/shared/workspaces.rs \
         --replace-fail 'set_cursor_from_name: Some("pointer"),' "" \
-        --replace-fail 'connect_clicked[sender, id = self.workspace_id] => move |_| sender.output_sender().emit(WorkspacesOutput::Clicked(id)),' ""
+        --replace-fail 'connect_clicked[sender, id = self.workspace_id.clone()] => move |_| sender.output_sender().emit(WorkspacesOutput::Clicked(id.clone())),' ""
       substituteInPlace crates/windows-lib/src/shared/workspace_clients.rs \
         --replace-fail 'set_cursor_from_name: Some("pointer"),' "" \
         --replace-fail 'connect_clicked[sender, id = self.id] => move |_| sender.output_sender().emit(WorkspaceClientsOutput::Clicked(id)),' ""
