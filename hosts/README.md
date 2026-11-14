@@ -52,6 +52,3 @@ configuration.
 Additional physical disks belong in the host's `disko.nix`, using the shared
 `additionalDisk` helper. It partitions, optionally encrypts, formats, and mounts
 the disk. See [INSTALL.md](../docs/INSTALL.md#additional-disks) for examples.
-
-When using this repository as a flake input from another repository, use the
-exported `lib.mkHost` function instead. See [docs/QUICKSTART.md](../docs/QUICKSTART.md).

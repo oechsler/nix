@@ -58,7 +58,7 @@ make it different.
 ## Getting started
 
 - **Fresh installation:** [docs/INSTALL.md](docs/INSTALL.md)
-- **Use this as a base:** [docs/QUICKSTART.md](docs/QUICKSTART.md)
+- **Add or manage a computer:** [hosts/README.md](hosts/README.md)
 - **Configuration reference:** [docs/CONFIG.md](docs/CONFIG.md)
 - **Security model:** [docs/SECURITY.md](docs/SECURITY.md)
 
@@ -95,9 +95,3 @@ features = {
 
 Most defaults are useful for a normal desktop or laptop. The full set of
 overrides, defaults, and examples is in [docs/CONFIG.md](docs/CONFIG.md).
-
-## Using as a flake input
-
-The flake exports `lib.mkHost` and `lib.mkDisko` for use from another
-repository. The current interface and a complete example are documented in
-[docs/QUICKSTART.md](docs/QUICKSTART.md).

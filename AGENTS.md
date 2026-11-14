@@ -5,8 +5,7 @@
 This is an opinionated, multi-host NixOS configuration. It contains reusable
 NixOS modules, Home Manager configuration, hardware and storage definitions,
 host-specific choices, an installer, local packages, encrypted secrets, and
-user documentation. The flake also exports `lib.mkHost` and `lib.mkDisko` for
-use by other repositories.
+user documentation for the author's computers.
 
 ## Start Here
 
@@ -20,8 +19,8 @@ use by other repositories.
 ## Architecture
 
 `flake.nix` discovers every `hosts/*/configuration.nix`, creates local
-`nixosConfigurations` and `diskoConfigurations`, exports reusable library
-functions, builds the installer ISO, and exposes the checks from `lint.nix`.
+`nixosConfigurations` and `diskoConfigurations`, builds the installer ISO, and
+exposes the checks from `lint.nix`.
 
 - `modules/system/features/`: public `features.*` options and defaults.
 - `modules/system/`: NixOS implementation, services, boot, hardware, storage,

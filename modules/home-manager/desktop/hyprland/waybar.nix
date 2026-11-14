@@ -169,7 +169,7 @@ let
     exec ${pkgs.uwsm}/bin/uwsm-app -- ${pkgs.waybar}/bin/waybar
   '';
 
-  waybar = pkgs.waybar;
+  inherit (pkgs) waybar;
 
 in
 {

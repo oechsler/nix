@@ -5,8 +5,6 @@
 # Structure:
 # - inputs: External dependencies (nixpkgs, home-manager, etc.)
 # - outputs:
-#   - lib.mkHost: Reusable function for building NixOS systems
-#   - lib.mkDisko: Helper for importing disko configurations (optional)
 #   - nixosConfigurations: Local host configurations (samuels-terra, samuels-razer, etc.)
 #   - diskoConfigurations: Disk layouts for local hosts
 #   - packages.installerIso: Graphical offline installer with all host closures
@@ -30,14 +28,12 @@
 #
 # Custom packages:
 # - hypr-dock: Application dock for Hyprland (local package)
-# - cachyos-kernel: Optimized Linux kernel (shared with external repos)
+# - cachyos-kernel: Optimized Linux kernel
 #
 # Usage (local hosts):
 #   nixos-rebuild switch --flake .#samuels-terra
 #   nixos-rebuild switch --flake .#samuels-razer
 #
-# Usage (as dependency in other repos):
-#   See lib.mkHost documentation in docs/QUICKSTART.md
 {
   description = "Samuel's NixOS configuration";
 
@@ -145,14 +141,11 @@
           ];
         };
 
-      # Base host builder with shared configuration
-      mkHostBase =
-        {
-          hostName,
-          hostPath,
-          extraModules ? [ ],
-          withHyprDock ? false,
-        }:
+      mkHost =
+        hostName:
+        let
+          hostPath = ./hosts/${hostName};
+        in
         lib.nixosSystem {
           inherit system;
           specialArgs = {
@@ -182,8 +175,8 @@
               ];
             }
           ]
-          ++ lib.optionals withHyprDock [
-            # Local-only overlay (only for this repo's hosts)
+          ++ [
+            # Add the local Hyprland dock package.
             {
               nixpkgs.overlays = [
                 (final: _prev: {
@@ -209,35 +202,10 @@
               };
             }
             (hostPath + "/configuration.nix")
-          ]
-          ++ extraModules;
+          ];
         };
 
-      # Internal mkHost for this repo's hosts (with hypr-dock overlay)
-      mkHost =
-        hostName:
-        mkHostBase {
-          inherit hostName;
-          hostPath = ./hosts/${hostName};
-          withHyprDock = true;
-        };
-
-      # Exported mkHost for use in other repos (without local overlays)
-      mkHostExternal =
-        {
-          hostName,
-          hostPath,
-          extraModules ? [ ],
-        }:
-        mkHostBase {
-          inherit
-            hostName
-            hostPath
-            extraModules
-            ;
-        };
-
-      # Internal mkDisko for this repo's hosts
+      # Build the disk layout using the matching evaluated host configuration.
       mkDisko =
         hostName:
         import ./hosts/${hostName}/disko.nix {
@@ -245,9 +213,6 @@
           inherit lib;
           config = nixosConfigurations.${hostName}.config;
         };
-
-      # Exported mkDisko for external use
-      mkDiskoExternal = hostPath: import (hostPath + "/disko.nix");
 
       pkgs = import nixpkgs { inherit system; };
 
@@ -351,21 +316,6 @@
       # Local Host Configurations
       #===========================
       inherit nixosConfigurations diskoConfigurations;
-
-      #===========================
-      # Exported Library Functions
-      #===========================
-      lib = {
-        mkHost = mkHostExternal;
-        mkDisko = mkDiskoExternal;
-      };
-
-      overlays = {
-        default = final: _prev: {
-          hypr-dock = final.callPackage ./modules/packages/hypr-dock.nix { };
-          pam-lldap = final.callPackage ./modules/packages/pam-lldap.nix { };
-        };
-      };
 
       # Packages and build artifacts. The installer output is intentionally
       # named separately from regular packages because it is a bootable image.
