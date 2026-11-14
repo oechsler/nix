@@ -135,12 +135,12 @@
             source = {
               repo = "peculiar-ragdoll/Dirk-Qwen3.8-27B-GGUF";
               file = "Dirk-Qwen3.8-27B-UD-Q4_K_XL.gguf";
-              revision = "b9903d8cb3ddaeed3bd246fa48c29e786ceaf6aa";
+              revision = "c4d587fbcd64d0e2c768465706cfa0705d91f2fa";
               sha256 = "711530303357f26d02539354f44bf60685045607d065ca78e83b84e112dd25be";
               mmproj = {
                 repo = "peculiar-ragdoll/Dirk-Qwen3.8-27B-GGUF";
                 file = "mmproj-F16.gguf";
-                revision = "b9903d8cb3ddaeed3bd246fa48c29e786ceaf6aa";
+                revision = "c4d587fbcd64d0e2c768465706cfa0705d91f2fa";
                 sha256 = "cbb841a9ee0636b2ec172f5bb8df2ea8dfeb01e90fe7c6126581d662a0b4e43e";
               };
             };
@@ -210,7 +210,8 @@
               };
             };
             temperature = true;
-            context = 32768;
+            # Five global-attention layers keep q4_0 KV-cache growth modest at 100k.
+            context = 102400;
             source = {
               repo = "ggml-org/gemma-4-26B-A4B-it-GGUF";
               file = "gemma-4-26B-A4B-it-Q4_0.gguf";
