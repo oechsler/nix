@@ -153,86 +153,87 @@
         "goland"
         "rustrover"
       ];
-      opencode = {
-        server = {
-          enable = true;
-          remote = true;
-        };
-        defaultModel = "llama-cpp-remote/tiel-coder-35b-a3b";
-        provider."llama-cpp-remote" = {
-          name = "llama.cpp (Remote)";
-          package = "@ai-sdk/openai-compatible";
-          baseURL = "http://samuels-ser9.sole-hops.ts.net:8080/v1";
-          models = {
-            "tiel-coder-35b-a3b" = {
-              name = "Tiel Coder 35B-A3B";
-              toolCall = true;
-              reasoning = true;
-              # TielCoder's pinned Sharp template has no documented native
-              # effort hierarchy, so profiles use budget ceilings only.
-              temperature = true;
-              context = 102400;
-              output = 16384;
-            };
-            "dirk-qwen3.8-27b" = {
-              name = "Dirk 27B";
-              toolCall = true;
-              reasoning = true;
-              reasoningProfile = {
-                budgets = {
-                  low = 256;
-                  medium = 512;
-                  high = 1024;
-                  xhigh = 2048;
-                };
-                nativeEffort = {
-                  low = "low";
-                  medium = "medium";
-                  high = "medium";
-                  xhigh = "xhigh";
-                };
-                effortTransport = "chat_template_kwargs";
+    };
+    llm.opencode = {
+      enable = true;
+      server = {
+        enable = true;
+        remote = true;
+      };
+      defaultModel = "llama-cpp-remote/tiel-coder-35b-a3b";
+      provider."llama-cpp-remote" = {
+        name = "llama.cpp (Remote)";
+        package = "@ai-sdk/openai-compatible";
+        baseURL = "http://samuels-ser9.sole-hops.ts.net:8080/v1";
+        models = {
+          "tiel-coder-35b-a3b" = {
+            name = "Tiel Coder 35B-A3B";
+            toolCall = true;
+            reasoning = true;
+            # TielCoder's pinned Sharp template has no documented native
+            # effort hierarchy, so profiles use budget ceilings only.
+            temperature = true;
+            context = 102400;
+            output = 16384;
+          };
+          "dirk-qwen3.8-27b" = {
+            name = "Dirk 27B";
+            toolCall = true;
+            reasoning = true;
+            reasoningProfile = {
+              budgets = {
+                low = 256;
+                medium = 512;
+                high = 1024;
+                xhigh = 2048;
               };
-              temperature = true;
-              context = 102400;
-              output = 16384;
-            };
-            "gemma-4-26b-a4b-it" = {
-              name = "Gemma 4 26B A4B";
-              toolCall = true;
-              reasoning = true;
-              reasoningProfile = {
-                budgets = {
-                  low = 0;
-                  medium = 512;
-                  high = 1024;
-                  xhigh = 2048;
-                };
-                chatTemplateKwargsByProfile = {
-                  low.enable_thinking = false;
-                  medium.enable_thinking = true;
-                  high.enable_thinking = true;
-                  xhigh.enable_thinking = true;
-                };
+              nativeEffort = {
+                low = "low";
+                medium = "medium";
+                high = "medium";
+                xhigh = "xhigh";
               };
-              temperature = true;
-              context = 32768;
-              output = 16384;
+              effortTransport = "chat_template_kwargs";
             };
+            temperature = true;
+            context = 102400;
+            output = 16384;
+          };
+          "gemma-4-26b-a4b-it" = {
+            name = "Gemma 4 26B A4B";
+            toolCall = true;
+            reasoning = true;
+            reasoningProfile = {
+              budgets = {
+                low = 0;
+                medium = 512;
+                high = 1024;
+                xhigh = 2048;
+              };
+              chatTemplateKwargsByProfile = {
+                low.enable_thinking = false;
+                medium.enable_thinking = true;
+                high.enable_thinking = true;
+                xhigh.enable_thinking = true;
+              };
+            };
+            temperature = true;
+            context = 32768;
+            output = 16384;
           };
         };
-        mcp.homeassistant = {
-          url = "https://homeassistant.at.oechsler.it/api/mcp";
-          tokenSecret = "opencode/mcp/homeassistant/token";
-        };
-        mcp.obsidian = {
-          enable = true;
-          # Local-only token enforced by Obsidian's local MCP endpoint; it is not
-          # a remotely usable credential.
-          insecureTls = true;
-          url = "https://127.0.0.1:27124/mcp/";
-          token = "7319249c2c302002ec534be8f09a05a1452ec85a5c49a330308fd32824de1554";
-        };
+      };
+      mcp.homeassistant = {
+        url = "https://homeassistant.at.oechsler.it/api/mcp";
+        tokenSecret = "opencode/mcp/homeassistant/token";
+      };
+      mcp.obsidian = {
+        enable = true;
+        # Local-only token enforced by Obsidian's local MCP endpoint; it is not
+        # a remotely usable credential.
+        insecureTls = true;
+        url = "https://127.0.0.1:27124/mcp/";
+        token = "7319249c2c302002ec534be8f09a05a1452ec85a5c49a330308fd32824de1554";
       };
     };
 

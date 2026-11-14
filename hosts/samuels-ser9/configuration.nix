@@ -155,12 +155,8 @@
           };
         };
       };
-    };
-
-    # --- Development ---
-    dev = {
-      enable = true;
       opencode = {
+        enable = true;
         defaultModel = "llama-cpp/tiel-coder-35b-a3b";
         server = {
           enable = true;
@@ -169,6 +165,10 @@
       };
     };
 
+    # --- Development ---
+    dev = {
+      enable = false;
+    };
     # --- Operations ---
     ops.enable = false;
   };

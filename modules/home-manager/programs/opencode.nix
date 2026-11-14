@@ -12,13 +12,13 @@
 
 let
   modelSpec = import ../../lib/opencode.nix { inherit lib; };
-  cfg = features.dev.opencode;
+  cfg = features.llm.opencode;
   selectedLanguages =
     if features.dev.languages == [ ] then
       (import ../../lib/development.nix).languageNames
     else
       features.dev.languages;
-  languageEnabled = name: builtins.elem name selectedLanguages;
+  languageEnabled = name: features.dev.enable && builtins.elem name selectedLanguages;
   localOllamaCfg = features.llm.ollama;
   localOllamaEnabled = features.llm.enable && localOllamaCfg.enable;
   localLlamaCppCfg = features.llm.llamaCpp;
@@ -478,7 +478,7 @@ let
   '';
 in
 {
-  config = lib.mkIf (features.dev.enable && features.dev.opencode.enable) {
+  config = lib.mkIf features.llm.opencode.enable {
     sops.secrets = providerSopsSecrets // mcpSopsSecrets // mcpOAuthSopsSecrets;
 
     xdg.configFile."opencode/cli.json" = {

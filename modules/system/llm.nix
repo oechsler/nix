@@ -5,6 +5,7 @@
 {
   imports = [
     ./llama-cpp.nix
+    ./llm-opencode.nix
     ./ollama.nix
   ];
 

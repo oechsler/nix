@@ -594,6 +594,131 @@ features.llm = {
 This is useful for comparison or migration, but both backends consume resources
 independently and may compete for the same memory and accelerator.
 
+#### OpenCode
+
+OpenCode is the client component in the LLM feature group. It can run without
+development toolchains or a locally hosted inference backend; it includes model
+providers, MCP integrations, agents, and optional formatters. Its default model
+is `openai/gpt-6-luna`. The standard OpenAI provider also exposes
+`gpt-6.1-terra` and `gpt-6.1-sol`. The generated server configuration uses
+OpenCode's native V2 schema; the terminal theme and enabled interface animations
+are configured separately in `cli.json`.
+
+| Option                                | Default               | Purpose                                               |
+| ------------------------------------- | --------------------- | ----------------------------------------------------- |
+| `features.llm.opencode.enable`        | `features.dev.enable` | Install and configure OpenCode independently.         |
+| `features.llm.opencode.defaultModel`  | `openai/gpt-6-luna`   | Model selected by default.                            |
+| `features.llm.opencode.provider`      | Built-in providers    | Additional or overridden providers.                   |
+| `features.llm.opencode.mcp`           | `{}`                  | MCP servers for OpenCode.                             |
+| `features.llm.opencode.formatter`     | `{}`                  | Additional formatters and overrides.                  |
+| `features.llm.opencode.settings`      | `{}`                  | Additional OpenCode settings.                         |
+| `features.llm.opencode.server.enable` | `false`               | Keep the shared server running as a user service.     |
+| `features.llm.opencode.server.remote` | `false`               | Enable OpenTunnel remote access; requires the server. |
+
+On a headless host, OpenCode can be enabled without activating development
+toolchains:
+
+```nix
+features = {
+  dev.enable = false;
+  llm.opencode = {
+    enable = true;
+    defaultModel = "llama-cpp/example-model";
+    server = {
+      enable = true;
+      remote = true;
+    };
+  };
+};
+```
+
+`features.llm.enable` controls local inference backends; OpenCode itself can be
+enabled independently with `features.llm.opencode.enable`. When
+`features.dev.enable` is false, OpenCode does not add the language-based default
+formatter set. Custom formatters can still be configured explicitly under
+`features.llm.opencode.formatter`.
+
+The shared server is the same V2 service used by the CLI and web/mobile clients;
+this does not create a separate `opencode serve` instance. When enabled, a
+systemd user unit starts OpenCode's managed shared background service and
+synchronizes the OpenTunnel setting before startup; it does not supervise a
+second server process. Remote access exposes the service over the internet, so
+enable it only on a trusted host and retain the server password.
+Enabling the server also enables systemd user lingering, so it starts at boot
+and remains available after logout. The host still needs to be powered on and
+connected to the network.
+
+Generate a short-lived pairing link whenever needed:
+
+```sh
+opencode pair --remote
+```
+
+Links expire after five minutes; authenticated browser/app sessions last up to
+30 days. Changing the OpenCode service password signs out all existing
+sessions. The server options do not manage that password or automatically
+revoke pairings.
+
+Each enabled local backend contributes a provider. Select an entry with
+`provider/name`:
+
+```nix
+features.llm.opencode.defaultModel = "ollama/example-model:latest";
+```
+
+The generated OpenCode V2 model filter disables discovered models not declared
+in Nix for configured providers. This compensates for OpenCode V2 currently
+ignoring the legacy provider `whitelist` and `blacklist` fields. It filters the
+model catalog; it is not a security boundary against a project or other config
+that explicitly enables additional models. Provider-supported variants remain
+settings on the same model, not separate models or server instances; selecting
+one does not reload llama.cpp or change the provider.
+
+Remote providers are configured separately. They need their own endpoint, model
+list, and credentials, and do not add models to local backends:
+
+```nix
+features.llm.opencode.provider."ollama-remote" = {
+  name = "Ollama (Remote)";
+  package = "@ai-sdk/openai-compatible";
+  baseURL = "https://ollama.example.com/v1";
+  apiKeySecret = "opencode/provider/ollama-remote/api-key";
+  models."example-model" = {
+    name = "Example Model";
+    context = 32768;
+    output = 16384;
+  };
+};
+```
+
+Set `context` and `output` when the remote endpoint has limits. Use
+`apiKeySecret` for credentials.
+
+When development tooling is enabled, formatter entries are generated for the
+languages selected by `features.dev.languages`; custom formatters and overrides
+belong under `features.llm.opencode.formatter`. Use project lint, type-check, or
+compiler commands through the agent workflow for diagnostics and validation.
+
+Local and remote providers can be used together. Enable the relevant backend on
+the host that provides it.
+Both APIs have no authentication, so use a trusted network or an authenticated
+HTTPS gateway.
+
+The standard `openai` provider is included with its declared model list. A V2
+provider policy allows that provider and enabled local or custom providers and
+denies other providers by default.
+
+MCP servers are configured separately under `features.llm.opencode.mcp`. Remote
+servers can use a SOPS-managed token:
+
+```nix
+features.llm.opencode.mcp.example-server = {
+  enable = true;
+  url = "https://mcp.example.com/api";
+  tokenSecret = "opencode/mcp/example-server/token";
+};
+```
+
 ### Development
 
 The Development feature provides the command-line tools, language servers,
@@ -642,8 +767,9 @@ are optional GUI tools; GoLand and RustRover are selected by default.
 | `features.dev.dbeaver.enable`    | `dev.enable`               | DBeaver database GUI.                                   |
 
 All development languages are enabled by default. Disable individual language
-toolchains when a host does not need them; this affects the system packages,
-Neovim, and OpenCode consistently:
+toolchains when a host does not need them; this affects the system packages and
+Neovim. OpenCode's built-in formatter selection follows these languages only
+when the development feature is enabled:
 
 ```nix
 features.dev.languages = [
@@ -657,7 +783,7 @@ Available language names are `c`, `cmake`, `css`, `docker`, `go`, `html`, `java`
 `javascript`, `json`, `kotlin`, `lua`, `markdown`, `nix`, `python`, `rust`,
 `scss`, `shell`, `sql`, `terraform`, `toml`, `typescript`, and `yaml`. The list
 is an allowlist: languages not listed are not installed or configured in Neovim
-and OpenCode.
+or selected for OpenCode's automatic formatters.
 
 #### JetBrains IDEs
 
@@ -680,107 +806,6 @@ needed.
 ```nix
 features = {
   dev.jetbrains.entries = [ "goland" "rustrover" ];
-};
-```
-
-#### OpenCode
-
-OpenCode is the coding assistant configured by the development feature. It
-includes model providers, MCP integrations, agents, and formatters. Its default
-model is `openai/gpt-6-luna`. The standard OpenAI provider also exposes
-`gpt-6.1-terra` and `gpt-6.1-sol`. The generated server configuration uses
-OpenCode's native V2 schema; the terminal theme and enabled interface animations
-are configured separately in `cli.json`.
-
-| Option                                | Default                    | Purpose                                               |
-| ------------------------------------- | -------------------------- | ----------------------------------------------------- |
-| `features.dev.opencode.enable`        | `features.dev.enable`      | Install and configure OpenCode.                       |
-| `features.dev.opencode.defaultModel`  | `openai/gpt-6-luna`        | Model selected by default.                            |
-| `features.dev.opencode.provider`      | Built-in providers         | Additional or overridden providers.                   |
-| `features.dev.opencode.mcp`           | `{}`                       | MCP servers for OpenCode.                             |
-| `features.dev.opencode.formatter`     | Enabled selected languages | Formatters and overrides.                             |
-| `features.dev.opencode.settings`      | `{}`                       | Additional OpenCode settings.                         |
-| `features.dev.opencode.server.enable` | `false`                    | Keep the shared server running as a user service.     |
-| `features.dev.opencode.server.remote` | `false`                    | Enable OpenTunnel remote access; requires the server. |
-
-The shared server is the same V2 service used by the CLI and web/mobile clients;
-this does not create a separate `opencode serve` instance. When enabled, a
-systemd user unit starts OpenCode's managed shared background service and
-synchronizes the OpenTunnel setting before startup; it does not supervise a
-second server process. Remote access exposes the service over the internet, so
-enable it only on a trusted host and retain the server password.
-Enabling the server also enables systemd user lingering, so it starts at boot
-and remains available after logout. The host still needs to be powered on and
-connected to the network.
-
-Generate a short-lived pairing link whenever needed:
-
-```sh
-opencode pair --remote
-```
-
-Links expire after five minutes; authenticated browser/app sessions last up to
-30 days. Changing the OpenCode service password signs out all existing
-sessions. The server options do not manage that password or automatically
-revoke pairings.
-
-Each enabled local backend contributes a provider. Select an entry with
-`provider/name`:
-
-```nix
-features.dev.opencode.defaultModel = "ollama/example-model:latest";
-```
-
-The generated OpenCode V2 model filter disables discovered models not declared
-in Nix for configured providers. This compensates for OpenCode V2 currently
-ignoring the legacy provider `whitelist` and `blacklist` fields. It filters the
-model catalog; it is not a security boundary against a project or other config
-that explicitly enables additional models. Provider-supported variants remain
-settings on the same model, not separate models or server instances; selecting
-one does not reload llama.cpp or change the provider.
-
-Remote providers are configured separately. They need their own endpoint, model
-list, and credentials, and do not add models to local backends:
-
-```nix
-features.dev.opencode.provider."ollama-remote" = {
-  name = "Ollama (Remote)";
-  package = "@ai-sdk/openai-compatible";
-  baseURL = "https://ollama.example.com/v1";
-  apiKeySecret = "opencode/provider/ollama-remote/api-key";
-  models."example-model" = {
-    name = "Example Model";
-    context = 32768;
-    output = 16384;
-  };
-};
-```
-
-Set `context` and `output` when the remote endpoint has limits. Use
-`apiKeySecret` for credentials.
-
-Formatter entries are generated for the languages selected by
-`features.dev.languages`; custom formatters and overrides belong under
-`features.dev.opencode.formatter`. Use project lint, type-check, or compiler
-commands through the agent workflow for diagnostics and validation.
-
-Local and remote providers can be used together. Enable the relevant backend on
-the host that provides it.
-Both APIs have no authentication, so use a trusted network or an authenticated
-HTTPS gateway.
-
-The standard `openai` provider is included with its declared model list. A V2
-provider policy allows that provider and enabled local or custom providers and
-denies other providers by default.
-
-MCP servers are configured separately under `features.dev.opencode.mcp`. Remote
-servers can use a SOPS-managed token:
-
-```nix
-features.dev.opencode.mcp.example-server = {
-  enable = true;
-  url = "https://mcp.example.com/api";
-  tokenSecret = "opencode/mcp/example-server/token";
 };
 ```
 
