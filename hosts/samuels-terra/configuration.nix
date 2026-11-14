@@ -154,6 +154,10 @@
         "rustrover"
       ];
       opencode = {
+        server = {
+          enable = true;
+          remote = true;
+        };
         defaultModel = "llama-cpp-remote/tiel-coder-35b-a3b";
         provider."llama-cpp-remote" = {
           name = "llama.cpp (Remote)";

@@ -692,14 +692,37 @@ model is `openai/gpt-6-luna`. The standard OpenAI provider also exposes
 OpenCode's native V2 schema; the terminal theme and enabled interface animations
 are configured separately in `cli.json`.
 
-| Option                               | Default                    | Purpose                             |
-| ------------------------------------ | -------------------------- | ----------------------------------- |
-| `features.dev.opencode.enable`       | `features.dev.enable`      | Install and configure OpenCode.     |
-| `features.dev.opencode.defaultModel` | `openai/gpt-6-luna`        | Model selected by default.          |
-| `features.dev.opencode.provider`     | Built-in providers         | Additional or overridden providers. |
-| `features.dev.opencode.mcp`          | `{}`                       | MCP servers for OpenCode.           |
-| `features.dev.opencode.formatter`    | Enabled selected languages | Formatters and overrides.           |
-| `features.dev.opencode.settings`     | `{}`                       | Additional OpenCode settings.       |
+| Option                                | Default                    | Purpose                                                              |
+| ------------------------------------- | -------------------------- | -------------------------------------------------------------------- |
+| `features.dev.opencode.enable`        | `features.dev.enable`      | Install and configure OpenCode.                                      |
+| `features.dev.opencode.defaultModel`  | `openai/gpt-6-luna`        | Model selected by default.                                           |
+| `features.dev.opencode.provider`      | Built-in providers         | Additional or overridden providers.                                  |
+| `features.dev.opencode.mcp`           | `{}`                       | MCP servers for OpenCode.                                            |
+| `features.dev.opencode.formatter`     | Enabled selected languages | Formatters and overrides.                                            |
+| `features.dev.opencode.settings`      | `{}`                       | Additional OpenCode settings.                                        |
+| `features.dev.opencode.server.enable` | `false`                    | Keep the shared server running as a user service.                    |
+| `features.dev.opencode.server.remote` | `false`                    | Enable OpenTunnel remote access; requires the server.                |
+
+The shared server is the same V2 service used by the CLI and web/mobile clients;
+this does not create a separate `opencode serve` instance. When enabled, a
+systemd user unit starts OpenCode's managed shared background service and
+synchronizes the OpenTunnel setting before startup; it does not supervise a
+second server process. Remote access exposes the service over the internet, so
+enable it only on a trusted host and retain the server password.
+Enabling the server also enables systemd user lingering, so it starts at boot
+and remains available after logout. The host still needs to be powered on and
+connected to the network.
+
+Generate a short-lived pairing link whenever needed:
+
+```sh
+opencode pair --remote
+```
+
+Links expire after five minutes; authenticated browser/app sessions last up to
+30 days. Changing the OpenCode service password signs out all existing
+sessions. The server options do not manage that password or automatically
+revoke pairings.
 
 Each enabled local backend contributes a provider. Select an entry with
 `provider/name`:

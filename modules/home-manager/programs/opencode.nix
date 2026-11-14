@@ -442,15 +442,28 @@ let
         # Home Manager checks the wrapped package version to select the CLI config schema.
         version = pkgs.opencode.version;
       });
+  opencodeServiceRemote = pkgs.writeShellScript "opencode-service-remote" ''
+    set -eu
+
+    desired=${if cfg.server.remote then "true" else "false"}
+    current="$(${opencodeWithSecrets}/bin/opencode service get remote)"
+
+    if [ "$current" != "$desired" ]; then
+      ${opencodeWithSecrets}/bin/opencode service set remote "$desired"
+    fi
+  '';
 in
 {
   config = lib.mkIf (features.dev.enable && features.dev.opencode.enable) {
     sops.secrets = providerSopsSecrets // mcpSopsSecrets // mcpOAuthSopsSecrets;
 
-    xdg.configFile."opencode/cli.json".text = builtins.toJSON {
-      "$schema" = "https://opencode.ai/v2/cli.json";
-      animations = true;
-      theme.name = opencodeTheme;
+    xdg.configFile."opencode/cli.json" = {
+      force = true;
+      text = builtins.toJSON {
+        "$schema" = "https://opencode.ai/v2/cli.json";
+        animations = true;
+        theme.name = opencodeTheme;
+      };
     };
 
     programs.opencode = {
@@ -500,6 +513,19 @@ in
           policies = providerAccessPolicies;
           providers = providerSettings;
         };
+    };
+
+    systemd.user.services.opencode-server = lib.mkIf cfg.server.enable {
+      Unit = {
+        Description = "OpenCode shared background server";
+      };
+      Service = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+        ExecStartPre = "${opencodeServiceRemote}";
+        ExecStart = "${opencodeWithSecrets}/bin/opencode service start";
+      };
+      Install.WantedBy = [ "default.target" ];
     };
 
   };

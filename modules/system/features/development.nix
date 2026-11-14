@@ -20,6 +20,10 @@ in
       enable = (lib.mkEnableOption "OpenCode AI coding agent") // {
         default = config.features.dev.enable;
       };
+      server = {
+        enable = lib.mkEnableOption "the persistent OpenCode background server";
+        remote = lib.mkEnableOption "OpenCode remote access through OpenTunnel";
+      };
       defaultModel = lib.mkOption {
         type = lib.types.str;
         default = "openai/gpt-6-luna";
@@ -251,16 +255,31 @@ in
     };
   };
 
-  # Android tooling cannot be built without accepting the Google Android SDK
-  # license, so accept it whenever android development is enabled.
-  config.nixpkgs.config = lib.mkIf config.features.dev.android.enable {
-    android_sdk.accept_license = true;
-  };
+  config = {
+    # Android tooling requires accepting Google's SDK license when enabled.
+    nixpkgs.config = lib.mkIf config.features.dev.android.enable {
+      android_sdk.accept_license = true;
+    };
 
-  config.assertions = lib.optional (config.features.dev.opencode.provider ? "ollama-remote") {
-    assertion =
-      !config.features.dev.opencode.provider."ollama-remote".enable
-      || config.features.dev.opencode.provider."ollama-remote".baseURL != null;
-    message = "The OpenCode provider 'ollama-remote' requires a baseURL endpoint.";
+    users.users.${config.user.name}.linger = lib.mkIf (
+      config.features.dev.enable
+      && config.features.dev.opencode.enable
+      && config.features.dev.opencode.server.enable
+    ) true;
+
+    assertions =
+      lib.optional (config.features.dev.opencode.provider ? "ollama-remote") {
+        assertion =
+          !config.features.dev.opencode.provider."ollama-remote".enable
+          || config.features.dev.opencode.provider."ollama-remote".baseURL != null;
+        message = "The OpenCode provider 'ollama-remote' requires a baseURL endpoint.";
+      }
+      ++ [
+        {
+          assertion =
+            !config.features.dev.opencode.server.remote || config.features.dev.opencode.server.enable;
+          message = "features.dev.opencode.server.remote requires features.dev.opencode.server.enable.";
+        }
+      ];
   };
 }

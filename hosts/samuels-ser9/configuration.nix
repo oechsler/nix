@@ -158,7 +158,16 @@
     };
 
     # --- Development ---
-    dev.enable = false;
+    dev = {
+      enable = true;
+      opencode = {
+        defaultModel = "llama-cpp/tiel-coder-35b-a3b";
+        server = {
+          enable = true;
+          remote = true;
+        };
+      };
+    };
 
     # --- Operations ---
     ops.enable = false;
