@@ -540,6 +540,7 @@ in
           };
 
           ecosystem.no_update_news = true;
+          ecosystem.no_donation_nag = true;
 
           input = {
             kb_layout = locale.keyboard;

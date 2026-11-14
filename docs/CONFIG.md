@@ -284,7 +284,9 @@ features = {
 The selected browser uses a managed profile with the configured dashboard,
 search engine, cookie allowlist, Catppuccin theme and website styles, and Dark
 Reader. Five color-coded containers are available: Blue, Orange, Green, Pink,
-and Purple. New tabs open without a container prompt. Fingerprinting protection
+and Purple. New tabs open without a container prompt. The built-in password
+manager is disabled; use Proton Pass to save and autofill passwords. Stylus
+applies managed Catppuccin styles to websites. Fingerprinting protection
 preserves the Catppuccin light/dark preference; Dark Reader handles dark-flavor
 web pages with its own color settings and is disabled for Latte.
 

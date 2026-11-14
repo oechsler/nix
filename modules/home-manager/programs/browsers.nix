@@ -403,7 +403,7 @@ in
           "privacy.clearOnShutdown.sessions" = false;
           "privacy.clearOnShutdown.siteSettings" = false;
 
-          # Vertical tabs — fixed on the right, no hover expansion or extra tools
+          # Vertical tabs with all built-in tools and extension shortcuts unpinned.
           "sidebar.verticalTabs" = true;
           "sidebar.revamp" = true;
           "sidebar.visibility" = "always-show";
@@ -447,6 +447,8 @@ in
           "browser.urlbar.quicksuggest.dataCollection.enabled" = false;
           "browser.search.suggest.enabled" = false;
 
+          # Disable Firefox's built-in password manager and its sidebar tool.
+          "browser.contextual-password-manager.enabled" = false;
           "signon.rememberSignons" = false;
           "signon.autofillForms" = false;
           "signon.firefoxRelay.feature" = "disabled";
