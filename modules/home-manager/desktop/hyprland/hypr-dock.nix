@@ -7,7 +7,7 @@
 # - Catppuccin theme integration
 # - Transparent background (alpha 0.85)
 # - Auto-start with graphical session
-# - Window previews (disabled by default)
+# - Window previews disabled
 #
 # Configuration:
 # - Position: Bottom center
@@ -49,7 +49,7 @@ let
       pinnedApps = features.desktop.pinnedApps.entries;
       iconSize = 36;
       position = "bottom";
-      previewMode = "live";
+      previewMode = "none";
     }
   );
   startScript = pkgs.writeShellScript "hypr-dock-start" ''
@@ -120,7 +120,7 @@ in
         ContextPos = 5
 
         [General.preview]
-        Mode = live
+        Mode = none
         FPS = 30
         BufferSize = 5
         ShowDelay = 500
