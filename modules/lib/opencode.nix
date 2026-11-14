@@ -93,6 +93,40 @@ let
       default = null;
       description = "Maximum input length in tokens.";
     };
+    inputModalities = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.listOf (
+          lib.types.enum [
+            "text"
+            "image"
+            "audio"
+            "video"
+            "pdf"
+          ]
+        )
+      );
+      default = null;
+      example = [
+        "text"
+        "image"
+      ];
+      description = "Input modalities supported by this model, when known.";
+    };
+    outputModalities = lib.mkOption {
+      type = lib.types.nullOr (
+        lib.types.listOf (
+          lib.types.enum [
+            "text"
+            "image"
+            "audio"
+            "video"
+          ]
+        )
+      );
+      default = null;
+      example = [ "text" ];
+      description = "Output modalities supported by this model, when known.";
+    };
   };
 in
 {
@@ -125,6 +159,33 @@ in
               type = lib.types.strMatching "[0-9a-fA-F]{64}";
               description = "Expected SHA256 of the GGUF file.";
             };
+            mmproj = lib.mkOption {
+              type = lib.types.nullOr (
+                lib.types.submodule {
+                  options = {
+                    repo = lib.mkOption {
+                      type = lib.types.str;
+                      description = "Hugging Face repository containing the multimodal projector.";
+                    };
+                    file = lib.mkOption {
+                      type = lib.types.str;
+                      description = "Projector GGUF filename in the repository.";
+                    };
+                    revision = lib.mkOption {
+                      type = lib.types.str;
+                      default = "main";
+                      description = "Hugging Face branch, tag, or commit for the projector.";
+                    };
+                    sha256 = lib.mkOption {
+                      type = lib.types.strMatching "[0-9a-fA-F]{64}";
+                      description = "Expected SHA256 of the projector GGUF file.";
+                    };
+                  };
+                }
+              );
+              default = null;
+              description = "Optional hash-pinned llama.cpp multimodal projector GGUF.";
+            };
           };
         };
         description = "Hash-pinned declarative GGUF source.";
@@ -141,20 +202,22 @@ in
       context = model.context or null;
       output = model.output or null;
       input = model.input or null;
+      inputModalities = model.inputModalities or null;
+      outputModalities = model.outputModalities or null;
+      capabilities =
+        lib.optionalAttrs (toolCall != null) { tools = toolCall; }
+        // lib.optionalAttrs (reasoning != null) { reasoning.supported = reasoning; }
+        // lib.optionalAttrs (inputModalities != null || outputModalities != null) {
+          input = if inputModalities == null then [ "text" ] else inputModalities;
+          output = if outputModalities == null then [ "text" ] else outputModalities;
+        }
+        // lib.optionalAttrs (temperature != null) { inherit temperature; };
     in
     {
       inherit (model) name;
       modelID = modelName;
     }
-    // lib.optionalAttrs (toolCall != null) {
-      capabilities.tools = toolCall;
-    }
-    // lib.optionalAttrs (reasoning != null) {
-      capabilities.reasoning.supported = reasoning;
-    }
-    // lib.optionalAttrs (temperature != null) {
-      capabilities.temperature = temperature;
-    }
+    // lib.optionalAttrs (capabilities != { }) { inherit capabilities; }
     // lib.optionalAttrs (context != null && output != null) {
       limit = {
         inherit context output;

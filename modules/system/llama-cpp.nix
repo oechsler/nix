@@ -20,6 +20,20 @@ let
       sha256 = model.source.sha256;
     }
   ) cfg.models;
+  mmprojFiles = lib.mapAttrs (
+    modelId: model:
+    let
+      mmproj = model.source.mmproj;
+    in
+    if mmproj == null then
+      null
+    else
+      pkgs.fetchurl {
+        name = "${modelId}-mmproj.gguf";
+        url = "https://huggingface.co/${mmproj.repo}/resolve/${mmproj.revision}/${mmproj.file}?download=true";
+        inherit (mmproj) sha256;
+      }
+  ) cfg.models;
   modelPreset = pkgs.writeText "llama-cpp-models.ini" (
     let
       modelSection =
@@ -40,6 +54,7 @@ let
           "cache-type-v = ${cfg.cacheTypeV}"
           "n-gpu-layers = ${toString (if cfg.backend == "cpu" then "auto" else cfg.gpuLayers)}"
         ]
+        ++ lib.optional (model.source.mmproj != null) "mmproj = ${mmprojFiles.${modelId}}"
         ++ lib.optional (cfg.fitTarget != null) "fit-target = ${toString cfg.fitTarget}"
         ++ lib.optional (cfg.threads != null) "threads = ${toString cfg.threads}"
         ++ lib.optional (cfg.threadsBatch != null) "threads-batch = ${toString cfg.threadsBatch}"

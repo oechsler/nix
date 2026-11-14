@@ -25,7 +25,7 @@ features = {
 ```
 
 After changing a host configuration, apply it with the repository's normal
-flake command, for example `sudo nixos-rebuild switch --flake .#samuels-terra`.
+flake command, for example `sudo nixos-rebuild switch --flake .#my-host`.
 
 ## Guide Map
 
@@ -536,6 +536,11 @@ features.llm.enable = true;
 Both backends use the same GPU and system memory. Running both is usually not
 useful on a small or unified-memory system.
 
+Models can declare optional `inputModalities` and `outputModalities` lists using
+`text`, `image`, `audio`, `video`, or `pdf`. This metadata is passed to OpenCode
+so it knows what a model can accept or produce; it does not add support that the
+model or backend lacks.
+
 #### Ollama
 
 Ollama manages its local service data for you. Use the options below when you
@@ -557,6 +562,19 @@ features.llm = {
   };
 };
 ```
+
+Declare each Ollama model's supported media so OpenCode can route image or other
+media inputs correctly:
+
+```nix
+features.llm.ollama.models."gemma3:12b" = {
+  name = "Gemma 3 12B";
+  inputModalities = [ "text" "image" ];
+};
+```
+
+The model must support the declared modality; metadata does not add capabilities
+to a text-only model.
 
 Set `server = true` only when another machine needs access. Ollama then listens
 on port `11434` without authentication. Use a trusted network or an authenticated
@@ -580,6 +598,14 @@ downloaded by the running service.
 Keep `server = false` unless another machine needs access. When remote access is
 enabled, the service has no built-in authentication and should only be exposed
 to a trusted network.
+
+For multimodal GGUFs, set `inputModalities` on the model. If the model needs a
+separate projector, add a hash-pinned `source.mmproj` with its Hugging Face
+`repo`, `file`, `revision`, and `sha256`; the generated llama.cpp preset loads
+it with that model. Declare only modalities supported by both the model and the
+backend. Metadata informs OpenCode's model capabilities; it does not enable
+backend features that are unavailable for that model or input format. Large
+projectors and long contexts also consume additional system or GPU memory.
 
 For a host that intentionally uses both backends, enable both child options:
 
@@ -704,9 +730,12 @@ the host that provides it.
 Both APIs have no authentication, so use a trusted network or an authenticated
 HTTPS gateway.
 
-The standard `openai` provider is included with its declared model list. A V2
-provider policy allows that provider and enabled local or custom providers and
-denies other providers by default.
+The standard `openai` provider is included with its declared model list by
+default. Disable it for a host with
+`features.llm.opencode.provider.openai.enable = false;`. Disabled providers are
+omitted from the generated configuration and denied by the provider policy; the
+model filter also disables any discovered OpenAI models. The policy allows only
+configured providers and denies others by default.
 
 MCP servers are configured separately under `features.llm.opencode.mcp`. Remote
 servers can use a SOPS-managed token:

@@ -170,6 +170,10 @@
             name = "Tiel Coder 35B-A3B";
             toolCall = true;
             reasoning = true;
+            inputModalities = [
+              "text"
+              "image"
+            ];
             # TielCoder's pinned Sharp template has no documented native
             # effort hierarchy, so profiles use budget ceilings only.
             temperature = true;
@@ -180,6 +184,10 @@
             name = "Dirk 27B";
             toolCall = true;
             reasoning = true;
+            inputModalities = [
+              "text"
+              "image"
+            ];
             reasoningProfile = {
               budgets = {
                 low = 256;
@@ -199,10 +207,76 @@
             context = 102400;
             output = 16384;
           };
+          "nail-qwen3.6-35b-a3b" = {
+            name = "Nail Qwen3.6 35B-A3B";
+            toolCall = true;
+            reasoning = true;
+            inputModalities = [
+              "text"
+              "image"
+            ];
+            temperature = true;
+            context = 102400;
+            output = 16384;
+          };
+          "sharp-spark-x2.6-4b" = {
+            name = "Sharp Spark X2.6 4B";
+            toolCall = true;
+            reasoning = true;
+            temperature = true;
+            context = 102400;
+            output = 16384;
+          };
           "gemma-4-26b-a4b-it" = {
             name = "Gemma 4 26B A4B";
             toolCall = true;
             reasoning = true;
+            inputModalities = [
+              "text"
+              "image"
+              "video"
+            ];
+            reasoningProfile = {
+              budgets = {
+                low = 0;
+                medium = 512;
+                high = 1024;
+                xhigh = 2048;
+              };
+              chatTemplateKwargsByProfile = {
+                low.enable_thinking = false;
+                medium.enable_thinking = true;
+                high.enable_thinking = true;
+                xhigh.enable_thinking = true;
+              };
+            };
+            temperature = true;
+            context = 32768;
+            output = 16384;
+          };
+          "gemma-4-12b-it" = {
+            name = "Gemma 4 12B";
+            toolCall = true;
+            reasoning = true;
+            inputModalities = [
+              "text"
+              "image"
+              "audio"
+              "video"
+            ];
+            temperature = true;
+            context = 102400;
+            output = 16384;
+          };
+          "gemma-4-31b-it" = {
+            name = "Gemma 4 31B";
+            toolCall = true;
+            reasoning = true;
+            inputModalities = [
+              "text"
+              "image"
+              "video"
+            ];
             reasoningProfile = {
               budgets = {
                 low = 0;

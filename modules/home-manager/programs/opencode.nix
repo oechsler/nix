@@ -52,6 +52,9 @@ let
     // lib.optionalAttrs localLlamaCppEnabled { "llama-cpp" = localLlamaCppProvider; }
     // cfg.provider
   );
+  allowedModels =
+    lib.mapAttrs (_: provider: builtins.attrNames provider.models) configuredProviders
+    // lib.optionalAttrs (!(configuredProviders ? openai)) { openai = [ ]; };
   localOllamaProvider = {
     enable = true;
     apiKeySecret = null;
@@ -361,19 +364,11 @@ let
       resource = "*";
     }
   ]
-  ++
-    lib.mapAttrsToList
-      (name: _provider: {
-        effect = "allow";
-        action = "provider.use";
-        resource = name;
-      })
-      (
-        configuredProviders
-        // {
-          openai = { };
-        }
-      );
+  ++ lib.mapAttrsToList (name: _provider: {
+    effect = "allow";
+    action = "provider.use";
+    resource = name;
+  }) configuredProviders;
   mcpServerSettings =
     name: server:
     {
@@ -455,9 +450,7 @@ let
   opencodeModelAllowlist = pkgs.writeText "opencode-model-allowlist.js" ''
     import { Plugin } from "@opencode/plugin"
 
-    const allowedModels = ${
-      builtins.toJSON (lib.mapAttrs (_: provider: builtins.attrNames provider.models) configuredProviders)
-    }
+    const allowedModels = ${builtins.toJSON allowedModels}
 
     export default Plugin.define({
       id: "nix-model-allowlist",
