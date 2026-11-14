@@ -452,6 +452,30 @@ let
       ${opencodeWithSecrets}/bin/opencode service set remote "$desired"
     fi
   '';
+  opencodeModelAllowlist = pkgs.writeText "opencode-model-allowlist.js" ''
+    import { Plugin } from "@opencode/plugin"
+
+    const allowedModels = ${
+      builtins.toJSON (lib.mapAttrs (_: provider: builtins.attrNames provider.models) configuredProviders)
+    }
+
+    export default Plugin.define({
+      id: "nix-model-allowlist",
+      async setup(ctx) {
+        await ctx.model.transform((editor) => {
+          for (const [providerID, allowed] of Object.entries(allowedModels)) {
+            for (const model of editor.list(providerID)) {
+              if (!allowed.includes(model.id)) {
+                editor.update(providerID, model.id, (entry) => {
+                  entry.enabled = false
+                })
+              }
+            }
+          }
+        })
+      },
+    })
+  '';
 in
 {
   config = lib.mkIf (features.dev.enable && features.dev.opencode.enable) {
@@ -465,6 +489,7 @@ in
         theme.name = opencodeTheme;
       };
     };
+    xdg.configFile."opencode/plugins/nix-model-allowlist.js".source = opencodeModelAllowlist;
 
     programs.opencode = {
       enable = true;

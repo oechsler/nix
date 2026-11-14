@@ -731,8 +731,11 @@ Each enabled local backend contributes a provider. Select an entry with
 features.dev.opencode.defaultModel = "ollama/example-model:latest";
 ```
 
-Local OpenAI-compatible providers are kept schema-compatible with OpenCode V2
-and only expose the models declared in Nix. Provider-supported variants remain
+The generated OpenCode V2 model filter disables discovered models not declared
+in Nix for configured providers. This compensates for OpenCode V2 currently
+ignoring the legacy provider `whitelist` and `blacklist` fields. It filters the
+model catalog; it is not a security boundary against a project or other config
+that explicitly enables additional models. Provider-supported variants remain
 settings on the same model, not separate models or server instances; selecting
 one does not reload llama.cpp or change the provider.
 
