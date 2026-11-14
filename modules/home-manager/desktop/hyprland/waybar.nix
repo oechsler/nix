@@ -169,16 +169,7 @@ let
     exec ${pkgs.uwsm}/bin/uwsm-app -- ${pkgs.waybar}/bin/waybar
   '';
 
-  waybar = pkgs.waybar.overrideAttrs (old: {
-    patches = (old.patches or [ ]) ++ [ ./waybar-sni-custom-icon.patch ];
-
-    postPatch = (old.postPatch or "") + ''
-      substituteInPlace src/modules/hyprland/workspace.cpp \
-        --replace-fail \
-          'm_ipc.getSocket1Reply("dispatch workspace " + std::to_string(id()));' \
-          'm_ipc.getSocket1Reply("dispatch hl.dsp.focus({ workspace = " + std::to_string(id()) + " })");'
-    '';
-  });
+  waybar = pkgs.waybar;
 
 in
 {
