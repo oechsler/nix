@@ -692,16 +692,16 @@ model is `openai/gpt-6-luna`. The standard OpenAI provider also exposes
 OpenCode's native V2 schema; the terminal theme and enabled interface animations
 are configured separately in `cli.json`.
 
-| Option                                | Default                    | Purpose                                                              |
-| ------------------------------------- | -------------------------- | -------------------------------------------------------------------- |
-| `features.dev.opencode.enable`        | `features.dev.enable`      | Install and configure OpenCode.                                      |
-| `features.dev.opencode.defaultModel`  | `openai/gpt-6-luna`        | Model selected by default.                                           |
-| `features.dev.opencode.provider`      | Built-in providers         | Additional or overridden providers.                                  |
-| `features.dev.opencode.mcp`           | `{}`                       | MCP servers for OpenCode.                                            |
-| `features.dev.opencode.formatter`     | Enabled selected languages | Formatters and overrides.                                            |
-| `features.dev.opencode.settings`      | `{}`                       | Additional OpenCode settings.                                        |
-| `features.dev.opencode.server.enable` | `false`                    | Keep the shared server running as a user service.                    |
-| `features.dev.opencode.server.remote` | `false`                    | Enable OpenTunnel remote access; requires the server.                |
+| Option                                | Default                    | Purpose                                               |
+| ------------------------------------- | -------------------------- | ----------------------------------------------------- |
+| `features.dev.opencode.enable`        | `features.dev.enable`      | Install and configure OpenCode.                       |
+| `features.dev.opencode.defaultModel`  | `openai/gpt-6-luna`        | Model selected by default.                            |
+| `features.dev.opencode.provider`      | Built-in providers         | Additional or overridden providers.                   |
+| `features.dev.opencode.mcp`           | `{}`                       | MCP servers for OpenCode.                             |
+| `features.dev.opencode.formatter`     | Enabled selected languages | Formatters and overrides.                             |
+| `features.dev.opencode.settings`      | `{}`                       | Additional OpenCode settings.                         |
+| `features.dev.opencode.server.enable` | `false`                    | Keep the shared server running as a user service.     |
+| `features.dev.opencode.server.remote` | `false`                    | Enable OpenTunnel remote access; requires the server. |
 
 The shared server is the same V2 service used by the CLI and web/mobile clients;
 this does not create a separate `opencode serve` instance. When enabled, a
