@@ -970,8 +970,7 @@ under their respective feature.
 Fluxer is installed from its official Flatpak when both `features.apps.enable`
 and `features.flatpak.enable` are enabled. It appears as a separate desktop app
 alongside Vesktop, which remains the Discord client, and is pinned immediately
-after Vesktop in the dock/taskbar. Fluxer starts minimized to the system tray at
-login; launching it manually opens its window normally.
+after Vesktop in the dock/taskbar.
 
 PhotoCraft is installed from its official, version-pinned Flatpak release bundle
 under the same feature flags. The project does not currently publish this bundle
