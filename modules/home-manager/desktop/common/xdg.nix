@@ -40,6 +40,56 @@ let
     "application/x-yaml"
     "application/toml"
   ];
+  officeMimeApplications = lib.optionalAttrs features.apps.enable {
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document" = [
+      "writer.desktop"
+    ];
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.template" = [ "writer.desktop" ];
+    "application/vnd.ms-word" = [ "writer.desktop" ];
+    "application/msword" = [ "writer.desktop" ];
+    "application/vnd.ms-word.document.macroEnabled.12" = [ "writer.desktop" ];
+    "application/vnd.ms-word.template.macroEnabled.12" = [ "writer.desktop" ];
+    "application/vnd.oasis.opendocument.text" = [ "writer.desktop" ];
+    "application/vnd.oasis.opendocument.text-template" = [ "writer.desktop" ];
+    "application/rtf" = [ "writer.desktop" ];
+    "text/rtf" = [ "writer.desktop" ];
+
+    "application/vnd.ms-powerpoint" = [ "impress.desktop" ];
+    "application/vnd.ms-powerpoint.presentation.macroEnabled.12" = [ "impress.desktop" ];
+    "application/vnd.ms-powerpoint.template.macroEnabled.12" = [ "impress.desktop" ];
+    "application/vnd.oasis.opendocument.presentation" = [ "impress.desktop" ];
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation" = [
+      "impress.desktop"
+    ];
+    "application/vnd.openxmlformats-officedocument.presentationml.template" = [
+      "impress.desktop"
+    ];
+    "application/vnd.openxmlformats-officedocument.presentationml.slideshow" = [
+      "impress.desktop"
+    ];
+
+    "application/vnd.ms-excel" = [ "calc.desktop" ];
+    "application/vnd.ms-excel.template.macroEnabled.12" = [ "calc.desktop" ];
+    "application/vnd.oasis.opendocument.spreadsheet" = [ "calc.desktop" ];
+    "application/vnd.oasis.opendocument.spreadsheet-template" = [ "calc.desktop" ];
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" = [
+      "calc.desktop"
+    ];
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.template" = [ "calc.desktop" ];
+    "application/vnd.ms-excel.sheet.macroEnabled.12" = [ "calc.desktop" ];
+    "application/vnd.ms-excel.sheet.binary.macroEnabled.12" = [ "calc.desktop" ];
+    "text/csv" = [ "calc.desktop" ];
+    "text/tab-separated-values" = [ "calc.desktop" ];
+  };
+  photocraftMimeTypes = [
+    "application/x-photocraft"
+    "image/x-paintnet"
+    "image/openraster"
+    "application/x-krita"
+    "image/vnd.adobe.photoshop"
+    "image/x-psd"
+    "image/x-psb"
+  ];
 in
 
 {
@@ -70,12 +120,17 @@ in
 
     mimeApps = {
       enable = true;
-      defaultApplications = lib.optionalAttrs browserEnabled (
-        lib.genAttrs editorMimeTypes (_: [ "nvim.desktop" ])
-        // {
-          "application/pdf" = [ "${browser}.desktop" ];
-        }
-      );
+      defaultApplications =
+        lib.optionalAttrs browserEnabled (
+          lib.genAttrs editorMimeTypes (_: [ "nvim.desktop" ])
+          // {
+            "application/pdf" = [ "${browser}.desktop" ];
+          }
+        )
+        // officeMimeApplications
+        // lib.optionalAttrs (features.apps.enable && features.flatpak.enable) (
+          lib.genAttrs photocraftMimeTypes (_: [ "ai.storyteller.photocraft.desktop" ])
+        );
     };
 
     # KDE rewrites mimeapps.list through System Settings and file dialogs.

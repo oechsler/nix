@@ -36,6 +36,11 @@ let
   flatpakInstalledTitle = translate "Flatpak installed" "Flatpak installiert";
   flatpakRemovedTitle = translate "Flatpak removed" "Flatpak entfernt";
   flatpakWatcherName = "Flatpak";
+  photocraftFlatpakBundle = pkgs.fetchurl {
+    name = "photocraft-0.23.1-linux-x86_64.flatpak";
+    url = "https://github.com/storytold/photocraft/releases/download/v0.23.1/photocraft-0.23.1-linux-x86_64.flatpak";
+    hash = "sha256-XJ3rWPB71U8yOl2YW+0pW0xbFXieAmUeLyA9Xo7yEaU=";
+  };
   packageIcon = "${config.theme.icons.package}/share/icons/Papirus/32x32/mimetypes/package-x-generic.svg";
   flatpakNotify = pkgs.writeShellScript "flatpak-qt-theme-notify" ''
     ${pkgs.systemd}/bin/systemd-run --machine=${config.user.name}@ \
@@ -200,6 +205,20 @@ in
           "com.github.tchx84.Flatseal" # Flatpak permission manager
           "io.github.flattool.Warehouse" # Flatpak manager with cleanup (replaces flatsweep)
           "org.fedoraproject.MediaWriter" # Fedora Media Writer for bootable USB drives
+        ]
+        ++ lib.optionals config.features.apps.enable [
+          {
+            # Use Fluxer's official Flatpak so releases arrive independently of nixpkgs.
+            appId = "app.fluxer.Fluxer";
+            flatpakref = "https://pkgs.fluxer.com/flatpak/fluxer.flatpakref";
+            sha256 = "175yln01inibjxmc6v603k9ydpzpm8kp4c696c5i1vjmaghrvqz9";
+          }
+          {
+            # PhotoCraft publishes a versioned Flatpak bundle rather than a Flathub listing.
+            appId = "ai.storyteller.photocraft";
+            bundle = "${photocraftFlatpakBundle}";
+            sha256 = "5c9deb58f07bd54f323a5d985bed295b4c5b15789e02651e2f203d5e8ef211a5";
+          }
         ];
       };
 

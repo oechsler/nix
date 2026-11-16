@@ -13,7 +13,7 @@ jobs:
   update:
     name: Check and update CachyOS kernel
     runs-on: native
-    timeout-minutes: 25
+    timeout-minutes: 45
 
     steps:
       - name: Set kernel repo variables

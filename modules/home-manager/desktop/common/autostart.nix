@@ -48,6 +48,31 @@ let
   mumbleDesktopFile =
     lib.replaceStrings [ "Exec=mumble %u" ] [ "Exec=${config.programs.mumble.launcher} %u" ]
       (builtins.readFile "${pkgs.mumble}/share/applications/info.mumble.Mumble.desktop");
+  fluxerStart = pkgs.writeShellScript "fluxer-autostart" ''
+    set -eu
+
+    config_file="$HOME/.var/app/app.fluxer.Fluxer/config/fluxer/settings.json"
+    config_dir="''${config_file%/*}"
+    ${pkgs.coreutils}/bin/mkdir -p "$config_dir"
+    temporary_file="$(${pkgs.coreutils}/bin/mktemp "$config_dir/settings.json.XXXXXX")"
+
+    if [ -f "$config_file" ]; then
+      if ! ${pkgs.jq}/bin/jq '.window_behavior = ((.window_behavior // {}) + {startMinimized: true})' \
+        "$config_file" > "$temporary_file"; then
+        ${pkgs.coreutils}/bin/rm -f "$temporary_file"
+        echo "Warning: could not set Fluxer's start-minimized preference."
+      else
+        ${pkgs.coreutils}/bin/chmod 0600 "$temporary_file"
+        ${pkgs.coreutils}/bin/mv -f "$temporary_file" "$config_file"
+      fi
+    else
+      printf '%s\n' '{"window_behavior":{"startMinimized":true}}' > "$temporary_file"
+      ${pkgs.coreutils}/bin/chmod 0600 "$temporary_file"
+      ${pkgs.coreutils}/bin/mv -f "$temporary_file" "$config_file"
+    fi
+
+    exec ${pkgs.flatpak}/bin/flatpak run app.fluxer.Fluxer --autostart
+  '';
 
   desktopSteamCondition = pkgs.writeShellScript "steam-desktop-condition" ''
     set -eu
@@ -114,6 +139,12 @@ in
           {
             name = "Vesktop";
             exec = "${config.programs.vesktop.package}/bin/vesktop --start-minimized";
+          }
+        ]
+        ++ lib.optionals (features.apps.enable && features.flatpak.enable) [
+          {
+            name = "Fluxer";
+            exec = "${fluxerStart}";
           }
         ]
         ++ lib.optionals mumbleEnabled [

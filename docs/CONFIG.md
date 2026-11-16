@@ -342,7 +342,8 @@ manager (`org.kde.dolphin` on KDE, `org.gnome.Nautilus` otherwise), and `kitty`.
 It is extended by feature toggles:
 
 - `features.dev.enable` adds Neovim
-- `features.apps.enable` adds Obsidian, Vesktop, Spotify
+- `features.apps.enable` adds Obsidian, Vesktop, and Spotify; with
+  `features.flatpak.enable`, it also adds Fluxer immediately after Vesktop
 - `features.apps.enable` plus `features.apps.mumble.enable` adds Mumble
 - `features.gaming.enable` adds Steam
 
@@ -438,24 +439,25 @@ Nautilus, Dolphin, and Yazi.
 
 #### Waybar Tray Icons
 
-Waybar's system tray uses Papirus-Dark icon names for common applications. This
-option applies to Hyprland; KDE manages tray icons through Plasma.
+Waybar's system tray uses Papirus icons for common applications. This option
+applies to Hyprland; KDE manages tray icons through Plasma.
 
-| Option                        | Default | Description                                                |
-| ----------------------------- | ------- | ---------------------------------------------------------- |
-| `features.desktop.tray.icons` | `{}`    | Custom StatusNotifierItem ID to Papirus icon name mappings |
+| Option                        | Default | Description                                                     |
+| ----------------------------- | ------- | --------------------------------------------------------------- |
+| `features.desktop.tray.icons` | `{}`    | Custom StatusNotifierItem ID to icon name or icon path mappings |
 
 Default mappings are feature-gated and automatically applied. Custom mappings
 override entries with the same StatusNotifierItem ID.
 
-| Feature Flag                | App         | StatusNotifierItem ID       | Papirus Icon            |
-| --------------------------- | ----------- | --------------------------- | ----------------------- |
-| `features.gaming.enable`    | Steam       | `steam`                     | `steam_tray_mono`       |
-| `features.apps.enable`      | Nextcloud   | `Nextcloud`                 | `state-ok`              |
-| `features.apps.enable`      | Mumble      | `Mumble`                    | `mumble-indicator`      |
-| `features.apps.enable`      | Proton Pass | `Proton Pass_status_icon_1` | `dialog-password-panel` |
-| `features.apps.enable`      | Vesktop     | `vesktop_status_icon_1`     | `discord-tray`          |
-| `features.tailscale.enable` | Trayscale   | `dev.deedles.Trayscale`     | `network-vpn`           |
+| Feature Flag                                       | App         | StatusNotifierItem ID       | Icon mapping                      |
+| -------------------------------------------------- | ----------- | --------------------------- | --------------------------------- |
+| `features.gaming.enable`                           | Steam       | `steam`                     | `steam_tray_mono`                 |
+| `features.apps.enable`                             | Nextcloud   | `Nextcloud`                 | `state-ok`                        |
+| `features.apps.enable`                             | Mumble      | `Mumble`                    | `mumble-indicator`                |
+| `features.apps.enable`                             | Proton Pass | `Proton Pass_status_icon_1` | `dialog-password-panel`           |
+| `features.apps.enable`                             | Vesktop     | `vesktop_status_icon_1`     | `discord-tray`                    |
+| `features.apps.enable` + `features.flatpak.enable` | Fluxer      | `Fluxer_status_icon_1`      | Scaled Fluxer tray logo (`24x24`) |
+| `features.tailscale.enable`                        | Trayscale   | `dev.deedles.Trayscale`     | `network-vpn`                     |
 
 ```nix
 features = {
@@ -965,6 +967,27 @@ under their respective feature.
 | `features.apps.mumble.quitBehavior`            | `"AlwaysMinimize"` | Close behavior.                                                      |
 | `features.apps.mumble.serverFilterMode`        | `"ShowAll"`        | Favorite-list filter.                                                |
 
+Fluxer is installed from its official Flatpak when both `features.apps.enable`
+and `features.flatpak.enable` are enabled. It appears as a separate desktop app
+alongside Vesktop, which remains the Discord client, and is pinned immediately
+after Vesktop in the dock/taskbar. Fluxer starts minimized to the system tray at
+login; launching it manually opens its window normally.
+
+PhotoCraft is installed from its official, version-pinned Flatpak release bundle
+under the same feature flags. The project does not currently publish this bundle
+on Flathub. It is the default app for PhotoCraft, Paint.NET, OpenRaster, Krita,
+and Photoshop PSD/PSB files; common image formats remain assigned to the image
+viewer.
+
+LibreOffice Writer, Impress, and Calc are the office applications and handle
+their respective Word/RTF/ODT, PowerPoint, and Excel/ODS/CSV formats by default.
+
+When Fluxer and Flatpak are enabled, Home Manager places the Catppuccin Fluxer
+CSS matching the configured flavor and accent in Fluxer's theme directory. In
+Fluxer, add that directory under **User Settings → Themes** and enable the
+imported theme once. Fluxer watches the directory, so later Nix updates refresh
+the CSS without replacing Fluxer's settings or theme library.
+
 ```nix
 features = {
   apps = {
@@ -1412,7 +1435,8 @@ autostart = {
 
 The default list is extended by feature toggles:
 
-- `features.apps.enable` adds Proton Pass and Vesktop
+- `features.apps.enable` adds Proton Pass and Vesktop; with
+  `features.flatpak.enable`, it also starts Fluxer at login
 - `features.apps.enable` plus `features.apps.mumble.enable` adds Mumble
 - `features.gaming.enable` adds Steam
 - `features.tailscale.enable` adds Trayscale

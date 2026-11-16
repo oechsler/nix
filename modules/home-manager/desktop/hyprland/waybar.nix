@@ -151,6 +151,9 @@ let
       "Proton Pass_status_icon_1" = papirusPanelIcon "dialog-password-panel";
       vesktop_status_icon_1 = papirusPanelIcon "discord-tray";
     }
+    // lib.optionalAttrs (features.apps.enable && features.flatpak.enable) {
+      Fluxer_status_icon_1 = "${./icons/fluxer-tray.svg}";
+    }
     // lib.optionalAttrs features.tailscale.enable (
       lib.listToAttrs [
         {

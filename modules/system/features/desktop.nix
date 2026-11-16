@@ -35,7 +35,7 @@
       tray.icons = lib.mkOption {
         type = lib.types.attrsOf lib.types.str;
         default = { };
-        description = "Custom StatusNotifierItem IDs to Papirus icon name mappings for Waybar.";
+        description = "Custom StatusNotifierItem IDs to icon names or icon paths for Waybar.";
       };
       pinnedApps = {
         entries = lib.mkOption {
@@ -51,6 +51,9 @@
             ++ lib.optionals config.features.apps.enable [ "md.Obsidian" ]
             ++ lib.optionals config.features.gaming.enable [ "steam" ]
             ++ lib.optionals config.features.apps.enable [ "vesktop" ]
+            ++ lib.optionals (config.features.apps.enable && config.features.flatpak.enable) [
+              "app.fluxer.Fluxer"
+            ]
             ++ lib.optional (
               config.features.apps.enable && config.features.apps.mumble.enable
             ) "info.mumble.Mumble"
