@@ -224,11 +224,11 @@ in
 
       # Apply the minimal Qt theme integration after declarative apps exist.
       systemd = {
+        # Path-triggered services must not pull the installer in for its own filesystem changes.
         services.flatpak-qt-theme = {
           description = "Apply runtime-specific Flatpak Qt theme overrides";
           wantedBy = [ "graphical.target" ];
           after = [ "flatpak-managed-install.service" ];
-          wants = [ "flatpak-managed-install.service" ];
           serviceConfig.Type = "oneshot";
           script = ''
             FLATPAK="${pkgs.flatpak}/bin/flatpak"
@@ -254,7 +254,6 @@ in
           description = "Notify about system Flatpak installations";
           wantedBy = [ "graphical.target" ];
           after = [ "flatpak-managed-install.service" ];
-          wants = [ "flatpak-managed-install.service" ];
           serviceConfig.Type = "oneshot";
           script = ''
             FLATPAK="${pkgs.flatpak}/bin/flatpak"
