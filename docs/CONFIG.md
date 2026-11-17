@@ -971,11 +971,11 @@ and `features.flatpak.enable` are enabled. It appears as a separate desktop app
 alongside Vesktop, which remains the Discord client, and is pinned immediately
 after Vesktop in the dock/taskbar.
 
-PhotoCraft is installed from its official, version-pinned Flatpak release bundle
-under the same feature flags. The project does not currently publish this bundle
-on Flathub. It is the default app for PhotoCraft, Paint.NET, OpenRaster, Krita,
-and Photoshop PSD/PSB files; common image formats remain assigned to the image
-viewer.
+PhotoCraft is installed from the FlatPark Flatpak remote under the same feature
+flags. FlatPark is an independent community package that tracks upstream
+PhotoCraft releases, so weekly Flatpak updates apply without changing a Nix hash.
+It is the default app for PhotoCraft, Paint.NET, OpenRaster, Krita, and Photoshop
+PSD/PSB files; common image formats remain assigned to the image viewer.
 
 LibreOffice Writer, Impress, and Calc are the office applications and handle
 their respective Word/RTF/ODT, PowerPoint, and Excel/ODS/CSV formats by default.
@@ -1032,6 +1032,8 @@ packages. Prefer a native Nix package when one provides what you need.
 | `features.flatpak.enable` | `true`  | Enable Flatpak and Flathub. |
 
 The module installs Flatseal, Warehouse, and Fedora Media Writer by default.
+Managed Flatpak applications are checked for updates weekly by a systemd timer,
+so normal Flathub application updates do not require a Nix hash change.
 Additional applications can be declared through the underlying nix-flatpak
 interface:
 
@@ -1044,6 +1046,11 @@ services.flatpak.packages = [
 
 Flatpak applications are sandboxed. Adjust permissions with Flatseal when an
 application needs access beyond its defaults.
+
+Applications sourced from versioned release bundles still require changing
+their URL and hash in Nix. Fluxer's Flatpak reference has a Nix-pinned
+reference-file hash, though the application payload itself is updated through
+its remote.
 
 Disable Flatpak when the host should only use declarative Nix packages:
 
