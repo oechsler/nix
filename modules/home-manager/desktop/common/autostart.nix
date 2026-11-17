@@ -44,10 +44,6 @@ let
     enable = hasHDR;
     name = "proton-pass-electron-hdr-sdr";
   };
-  mumbleEnabled = features.apps.enable && features.apps.mumble.enable;
-  mumbleDesktopFile =
-    lib.replaceStrings [ "Exec=mumble %u" ] [ "Exec=${config.programs.mumble.launcher} %u" ]
-      (builtins.readFile "${pkgs.mumble}/share/applications/info.mumble.Mumble.desktop");
   desktopSteamCondition = pkgs.writeShellScript "steam-desktop-condition" ''
     set -eu
 
@@ -121,12 +117,6 @@ in
             exec = "${pkgs.flatpak}/bin/flatpak run app.fluxer.Fluxer";
           }
         ]
-        ++ lib.optionals mumbleEnabled [
-          {
-            name = "Mumble";
-            exec = if isKde then config.programs.mumble.launcher else config.programs.mumble.command;
-          }
-        ]
         # Hyprland starts Steam through the dedicated service below. Steam gets
         # a longer delay because gamescope and Steam Input need the fully
         # initialized Wayland/uinput session before they are started.
@@ -136,12 +126,6 @@ in
             exec = "${pkgs.steam}/bin/steam -silent";
           }
         ];
-
-      home.file = lib.mkIf mumbleEnabled {
-        ${".local/share/applications/info.mumble.Mumble.desktop"} = {
-          text = mumbleDesktopFile;
-        };
-      };
 
       #---------------------------
       # Nextcloud XDG Autostart (declarative)

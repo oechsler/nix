@@ -55,7 +55,7 @@
           "MinimizeWhenConnected"
           "AlwaysQuit"
         ];
-        default = "AlwaysMinimize";
+        default = "MinimizeWhenConnected";
         description = "What Mumble does when its window is closed.";
       };
       serverFilterMode = lib.mkOption {

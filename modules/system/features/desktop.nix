@@ -54,9 +54,6 @@
             ++ lib.optionals (config.features.apps.enable && config.features.flatpak.enable) [
               "app.fluxer.Fluxer"
             ]
-            ++ lib.optional (
-              config.features.apps.enable && config.features.apps.mumble.enable
-            ) "info.mumble.Mumble"
             ++ lib.optionals config.features.apps.enable [ "spotify" ];
           description = "Pinned dock/taskbar apps as desktop file names (without .desktop suffix).";
         };

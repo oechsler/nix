@@ -344,11 +344,10 @@ It is extended by feature toggles:
 - `features.dev.enable` adds Neovim
 - `features.apps.enable` adds Obsidian, Vesktop, and Spotify; with
   `features.flatpak.enable`, it also adds Fluxer immediately after Vesktop
-- `features.apps.enable` plus `features.apps.mumble.enable` adds Mumble
 - `features.gaming.enable` adds Steam
 
-Mumble uses `info.mumble.Mumble`; each other entry is a desktop file name
-without the `.desktop` suffix, such as `"firefox"`.
+Each entry is a desktop file name without the `.desktop` suffix, such as
+`"firefox"`.
 
 #### KDE Desktop Options
 
@@ -951,21 +950,21 @@ Applications are the highest-level user-facing features. The general switch
 controls the desktop application set; application-specific options are grouped
 under their respective feature.
 
-| Option                                         | Default            | Description                                                          |
-| ---------------------------------------------- | ------------------ | -------------------------------------------------------------------- |
-| `features.apps.enable`                         | `true`             | General desktop applications.                                        |
-| `features.apps.nextcloud.enable`               | `apps.enable`      | Nextcloud desktop client and synchronization.                        |
-| `features.apps.mumble.enable`                  | `true`             | Install and configure Mumble when `features.apps.enable` is enabled. |
-| `features.apps.mumble.username`                | `user.name`        | Default Mumble username.                                             |
-| `features.apps.mumble.servers`                 | `[]`               | Favorite servers; `name` defaults to `host`, `port` to `64738`.      |
-| `features.apps.mumble.playMuteCue`             | `false`            | Play a cue when Mumble is muted or unmuted.                          |
-| `features.apps.mumble.channelExpansionMode`    | `AllChannels`      | Channel expansion mode in the Mumble server tree.                    |
-| `features.apps.mumble.disablePublicServerList` | `true`             | Disable Mumble's public server list.                                 |
-| `features.apps.mumble.autoConnectToLastServer` | `true`             | Connect to the last server automatically.                            |
-| `features.apps.mumble.reconnectAutomatically`  | `true`             | Reconnect after a lost connection.                                   |
-| `features.apps.mumble.hideInTray`              | `true`             | Keep Mumble in the system tray.                                      |
-| `features.apps.mumble.quitBehavior`            | `"AlwaysMinimize"` | Close behavior.                                                      |
-| `features.apps.mumble.serverFilterMode`        | `"ShowAll"`        | Favorite-list filter.                                                |
+| Option                                         | Default                   | Description                                                          |
+| ---------------------------------------------- | ------------------------- | -------------------------------------------------------------------- |
+| `features.apps.enable`                         | `true`                    | General desktop applications.                                        |
+| `features.apps.nextcloud.enable`               | `apps.enable`             | Nextcloud desktop client and synchronization.                        |
+| `features.apps.mumble.enable`                  | `true`                    | Install and configure Mumble when `features.apps.enable` is enabled. |
+| `features.apps.mumble.username`                | `user.name`               | Default Mumble username.                                             |
+| `features.apps.mumble.servers`                 | `[]`                      | Favorite servers; `name` defaults to `host`, `port` to `64738`.      |
+| `features.apps.mumble.playMuteCue`             | `false`                   | Play a cue when Mumble is muted or unmuted.                          |
+| `features.apps.mumble.channelExpansionMode`    | `AllChannels`             | Channel expansion mode in the Mumble server tree.                    |
+| `features.apps.mumble.disablePublicServerList` | `true`                    | Disable Mumble's public server list.                                 |
+| `features.apps.mumble.autoConnectToLastServer` | `true`                    | Connect to the last server automatically.                            |
+| `features.apps.mumble.reconnectAutomatically`  | `true`                    | Reconnect after a lost connection.                                   |
+| `features.apps.mumble.hideInTray`              | `true`                    | Keep Mumble in the system tray.                                      |
+| `features.apps.mumble.quitBehavior`            | `"MinimizeWhenConnected"` | Minimize on close while connected; otherwise quit.                   |
+| `features.apps.mumble.serverFilterMode`        | `"ShowAll"`               | Favorite-list filter.                                                |
 
 Fluxer is installed from its official Flatpak when both `features.apps.enable`
 and `features.flatpak.enable` are enabled. It appears as a separate desktop app
