@@ -1,0 +1,106 @@
+name: Update desktop applications
+
+on:
+  schedule:
+    - cron: "0 7 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: nix-ci-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  update:
+    name: Check and update desktop applications
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      NIX_CONFIG: "access-tokens = github.com=${{ secrets.GH_TOKEN }}"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN }}
+
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Update vendor package versions and hashes
+        id: update
+        run: |
+          set -euo pipefail
+          scripts/update-spotify.sh
+          scripts/update-proton-pass.sh
+          if git diff --quiet -- modules/packages/spotify.nix modules/packages/proton-pass.nix; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build Spicetify package
+        if: steps.update.outputs.changed == 'true'
+        run: >-
+          nix build
+          .#nixosConfigurations.samuels-terra.config.home-manager.users.samuel.programs.spicetify.spicedSpotify
+          --no-link
+          --print-build-logs
+
+      - name: Build Proton Pass package
+        if: steps.update.outputs.changed == 'true'
+        run: >-
+          nix build
+          .#nixosConfigurations.samuels-terra.pkgs.proton-pass
+          --no-link
+          --print-build-logs
+
+      - name: Validate checks and host configurations
+        if: steps.update.outputs.changed == 'true'
+        run: |
+          set -euo pipefail
+          nix eval --json --option eval-cache false '.#checks.x86_64-linux' >/dev/null
+          nix shell --inputs-from . \
+            nixpkgs#nixfmt \
+            nixpkgs#statix \
+            nixpkgs#deadnix \
+            --command bash scripts/ci-lint.sh --nix-only
+          for host_dir in hosts/*; do
+            [[ -f "$host_dir/configuration.nix" ]] || continue
+            host=${host_dir##*/}
+            echo "Evaluating $host..."
+            nix eval --raw ".#nixosConfigurations.$host.config.system.build.toplevel.drvPath"
+          done
+
+      - name: Push update branch
+        id: push
+        if: steps.update.outputs.changed == 'true'
+        env:
+          BRANCH: automation/application-updates
+        run: |
+          set -euo pipefail
+          git config user.name "Nix Automation"
+          git config user.email "nix-automation@oechsler.it"
+          git switch --create "$BRANCH"
+          git add modules/packages/spotify.nix modules/packages/proton-pass.nix
+          git commit -m "chore: update desktop applications"
+          for attempt in 1 2 3; do
+            if git push --force origin "$BRANCH"; then
+              break
+            fi
+            if [[ "$attempt" == 3 ]]; then
+              echo "Push failed after $attempt attempts" >&2
+              exit 1
+            fi
+            sleep "$((attempt * 2))"
+          done
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Open or update pull request
+        if: steps.push.outputs.changed == 'true'
+        env:
+          BRANCH: automation/application-updates
+          FORGEJO_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
+        run: |
+          ./scripts/open-forgejo-pull-request.sh \
+            "chore: update desktop applications" \
+            "Automated Spotify and Proton Pass updates from their official Linux release sources."

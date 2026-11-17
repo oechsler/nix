@@ -171,6 +171,7 @@
                 (_final: prev: {
                   coreutils-full = prev.uutils-coreutils-noprefix;
                   pam-lldap = prev.callPackage ./modules/packages/pam-lldap.nix { };
+                  proton-pass = import ./modules/packages/proton-pass.nix { pkgs = prev; };
                 })
               ];
             }

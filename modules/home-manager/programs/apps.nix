@@ -202,6 +202,7 @@ in
             enable = true;
             theme = spicePkgs.themes.catppuccin;
             colorScheme = theme.catppuccin.flavor;
+            spotifyPackage = import ../../packages/spotify.nix { inherit pkgs; };
             spotifyLaunchFlags = lib.optionalString hasHDR "--use-gl=egl";
           };
       }

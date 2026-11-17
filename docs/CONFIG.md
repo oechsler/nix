@@ -980,6 +980,14 @@ PSD/PSB files; common image formats remain assigned to the image viewer.
 LibreOffice Writer, Impress, and Calc are the office applications and handle
 their respective Word/RTF/ODT, PowerPoint, and Excel/ODS/CSV formats by default.
 
+Spotify is packaged with Spicetify and Catppuccin; Proton Pass also uses its
+official Linux package. Since Nixpkgs can lag behind vendor releases, scheduled
+CI checks both sources daily, updates their pinned versions and hashes, builds
+the applications, and opens a pull request. These updates are not applied to
+hosts until the reviewed change is merged and deployed. The general flake-input
+update also runs daily; the CachyOS kernel update remains on its separate,
+slower schedule.
+
 When Fluxer and Flatpak are enabled, Home Manager places the Catppuccin Fluxer
 CSS matching the configured flavor and accent in Fluxer's theme directory. In
 Fluxer, add that directory under **User Settings → Themes** and enable the
