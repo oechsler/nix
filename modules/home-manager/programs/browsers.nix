@@ -65,7 +65,7 @@ let
   stylusId = firefoxAddons.stylus.addonId;
   catppuccinUserstylesExport = pkgs.fetchurl {
     url = "https://github.com/catppuccin/userstyles/releases/download/all-userstyles-export/import.json";
-    hash = "sha256-HPna40zDZTMNbec2C6HWEI3k5cGNG/m0DnJhrcsZADo=";
+    hash = "sha256-3BmvmCeUsfDWG5VDHIqSlNubCE4edai9o8CPXpicn48=";
   };
   catppuccinUserstylesLibrary = pkgs.fetchurl {
     url = "https://userstyles.catppuccin.com/lib/std/v1.less";
