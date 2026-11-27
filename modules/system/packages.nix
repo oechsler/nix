@@ -197,10 +197,6 @@ in
             name = "flathub";
             location = "https://flathub.org/repo/flathub.flatpakrepo";
           }
-          {
-            name = "flatpark";
-            location = "https://dl.flatpark.org/flatpark.flatpakrepo";
-          }
         ];
 
         # Pre-installed Flatpaks
@@ -215,11 +211,6 @@ in
             appId = "app.fluxer.Fluxer";
             flatpakref = "https://pkgs.fluxer.com/flatpak/fluxer.flatpakref";
             sha256 = "175yln01inibjxmc6v603k9ydpzpm8kp4c696c5i1vjmaghrvqz9";
-          }
-          {
-            # FlatPark tracks upstream PhotoCraft releases through its Flatpak remote.
-            appId = "ai.storyteller.photocraft";
-            origin = "flatpark";
           }
         ];
       };
