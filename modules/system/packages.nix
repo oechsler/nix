@@ -198,8 +198,7 @@ in
             location = "https://flathub.org/repo/flathub.flatpakrepo";
           }
           {
-            # PhotoCraft's installed Flatpak records this remote name as its origin.
-            name = "photocraft-origin";
+            name = "flatpark";
             location = "https://dl.flatpark.org/flatpark.flatpakrepo";
           }
         ];
@@ -218,9 +217,9 @@ in
             sha256 = "175yln01inibjxmc6v603k9ydpzpm8kp4c696c5i1vjmaghrvqz9";
           }
           {
-            # Match the origin recorded by existing PhotoCraft installations.
+            # FlatPark tracks upstream PhotoCraft releases through its Flatpak remote.
             appId = "ai.storyteller.photocraft";
-            origin = "photocraft-origin";
+            origin = "flatpark";
           }
         ];
       };
