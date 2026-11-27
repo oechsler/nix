@@ -971,11 +971,12 @@ and `features.flatpak.enable` are enabled. It appears as a separate desktop app
 alongside Vesktop, which remains the Discord client, and is pinned immediately
 after Vesktop in the dock/taskbar.
 
-PhotoCraft is not installed declaratively because an existing installation may
-come from a different Flatpak remote. Install it separately if desired; when
-installed, it is the default app for PhotoCraft, Paint.NET, OpenRaster, Krita,
-and Photoshop PSD/PSB files. Common image formats remain assigned to the image
-viewer.
+PhotoCraft is installed from FlatPark when both `features.apps.enable` and
+`features.flatpak.enable` are enabled. The configured remote uses the origin
+name recorded by existing PhotoCraft installations, avoiding a duplicate install
+conflict. PhotoCraft is the default app for PhotoCraft, Paint.NET, OpenRaster,
+Krita, and Photoshop PSD/PSB files; common image formats remain assigned to the
+image viewer.
 
 LibreOffice Writer, Impress, and Calc are the office applications and handle
 their respective Word/RTF/ODT, PowerPoint, and Excel/ODS/CSV formats by default.
