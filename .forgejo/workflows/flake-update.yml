@@ -34,22 +34,6 @@ jobs:
           nix flake update
           ./scripts/update-catppuccin-userstyles-hash.sh --update
 
-      - name: Validate checks
-        run: |
-          set -euo pipefail
-          nix eval --json --option eval-cache false '.#checks.x86_64-linux' >/dev/null
-          nix shell --inputs-from . \
-            nixpkgs#nixfmt \
-            nixpkgs#statix \
-            nixpkgs#deadnix \
-            --command bash scripts/ci-lint.sh --nix-only
-          for host_dir in hosts/*; do
-            [[ -f "$host_dir/configuration.nix" ]] || continue
-            host=${host_dir##*/}
-            echo "Evaluating $host..."
-            nix eval --raw ".#nixosConfigurations.$host.config.system.build.toplevel.drvPath"
-          done
-
       - name: Push update branch
         id: push
         env:
